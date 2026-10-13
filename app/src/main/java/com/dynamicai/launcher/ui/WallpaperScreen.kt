@@ -135,6 +135,12 @@ fun WallpaperScreen(backgroundAlphaPercent: Int = 100, onClose: () -> Unit) {
 
         SectionHeader("Діагностика")
         Text(
+        Text(
+            text = "URI: " + (ctx.getSharedPreferences("dynamicai_wallpaper", android.content.Context.MODE_PRIVATE)
+                .getString("videoUri", "не вибрано")?.take(90) ?: "не вибрано"),
+            color = Color.Yellow, fontSize = 10.sp,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+        )
             text = "Остання подія: " + com.dynamicai.launcher.wallpaper.VideoWallpaperService.lastLog,
             color = Color.Yellow,
             fontSize = 11.sp,

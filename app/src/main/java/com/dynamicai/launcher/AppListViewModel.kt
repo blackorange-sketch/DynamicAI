@@ -12,6 +12,7 @@ import com.dynamicai.launcher.data.DockStorage
 import com.dynamicai.launcher.data.HiddenAppsStorage
 import com.dynamicai.launcher.data.LauncherSettings
 import com.dynamicai.launcher.data.SettingsStorage
+import com.dynamicai.launcher.system.ShizukuManager
 import com.dynamicai.launcher.data.WeatherRepository
 import com.dynamicai.launcher.data.WeatherState
 import com.dynamicai.launcher.folder.Folder
@@ -43,6 +44,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val hiddenStorage = HiddenAppsStorage(app)
     private val folderStorage = FolderStorage(app)
     private val appsCache = com.dynamicai.launcher.data.AppsCache(app)
+    val shizukuManager = ShizukuManager(app)
     private val weatherRepo = WeatherRepository(app)
 
     val llm = LiteRtLlmEngine(app)
@@ -75,6 +77,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _dockPkgs = MutableStateFlow<List<String>>(emptyList())
     val dockPkgs: StateFlow<List<String>> = _dockPkgs.asStateFlow()
+
+    private val _recentTasks = MutableStateFlow<List<ShizukuManager.RecentTask>>(emptyList())
+    val recentTasks: StateFlow<List<ShizukuManager.RecentTask>> = _recentTasks.asStateFlow()
 
     private val _response = MutableStateFlow("")
     val response: StateFlow<String> = _response.asStateFlow()
@@ -283,6 +288,26 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _weather.value = WeatherState.Loading
             _weather.value = weatherRepo.fetch()
+        }
+    }
+
+    fun loadRecentTasks() {
+        viewModelScope.launch {
+            _recentTasks.value = shizukuManager.getRecentTasks()
+        }
+    }
+
+    fun forceStopApp(packageName: String) {
+        viewModelScope.launch {
+            shizukuManager.forceStop(packageName)
+            loadRecentTasks()
+        }
+    }
+
+    fun forceStopAll() {
+        viewModelScope.launch {
+            _recentTasks.value.forEach { shizukuManager.forceStop(it.packageName) }
+            loadRecentTasks()
         }
     }
 

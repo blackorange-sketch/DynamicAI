@@ -84,6 +84,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val hidden by vm.hidden.collectAsStateWithLifecycle()
     val folders by vm.folders.collectAsStateWithLifecycle()
     val weather by vm.weather.collectAsStateWithLifecycle()
+    val recentTasks by vm.recentTasks.collectAsStateWithLifecycle()
     val downloadProgress by vm.downloadProgress.collectAsStateWithLifecycle()
 
     val ctx = LocalContext.current
@@ -94,6 +95,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var showSettings by remember { mutableStateOf(false) }
     var showWallpaper by remember { mutableStateOf(false) }
     var showDockEditor by remember { mutableStateOf(false) }
+    var showRecent by remember { mutableStateOf(false) }
     var showWeatherDetail by remember { mutableStateOf(false) }
     var searchMode by remember { mutableStateOf(false) }
     var menuApp by remember { mutableStateOf<AppInfo?>(null) }
@@ -305,6 +307,26 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             cityName = settings.cityName,
             backgroundAlphaPercent = settings.backgroundAlphaPercent,
             onClose = { showWeatherDetail = false }
+        )
+        return
+    }
+
+    if (showRecent) {
+        LaunchedEffect(Unit) { vm.loadRecentTasks() }
+        RecentScreen(
+            tasks = recentTasks,
+            onLaunch = { pkg ->
+                apps.firstOrNull { it.packageName == pkg }?.let { launchAppWithAnimation(it) }
+                    ?: run {
+                        val intent = ctx.packageManager.getLaunchIntentForPackage(pkg)
+                        intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        try { ctx.startActivity(intent) } catch (_: Exception) {}
+                    }
+            },
+            onForceStop = { vm.forceStopApp(it) },
+            onClearAll = { vm.forceStopAll() },
+            onDismiss = { showRecent = false },
+            visible = true
         )
         return
     }
@@ -621,7 +643,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                     }
                 },
                 onSearch = { searchMode = true },
-                onSwipeUp = { drawerOpen = true },
+                onSwipeUp = { showRecent = true },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
         }

@@ -317,8 +317,19 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             append("lastError='").append(llm.lastError).append("'\n")
             append("---\n")
         }
-        val result = llm.complete(prompt)
-        return diag + (result ?: "(null)")
+
+        // Спочатку сирий виклик (показує "сиру" відповідь)
+        val raw = llm.complete(prompt)
+        val rawText = raw ?: "(null)"
+
+        // Потім через LlmAgent (з systemPrompt + tool call)
+        val agentResult = try {
+            llmAgent.resolve(prompt)?.toString() ?: "(agent: null)"
+        } catch (t: Throwable) {
+            "(agent error: ${t.message})"
+        }
+
+        return diag + "RAW:\n" + rawText.take(400) + "\n\nAGENT:\n" + agentResult
     }
 
     fun isCommand(text: String) = parser.parse(text) !is com.dynamicai.launcher.command.Command.Raw

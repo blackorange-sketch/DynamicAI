@@ -447,7 +447,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 onVoice = { startVoice() },
                 onClose = { closeSearch() },
                 focusRequester = focusRequester,
-                modifier = Modifier.padding(vertical = 4.dp)
+                modifier = Modifier.padding(vertical = 2.dp)
             )
 
             if (response.isNotBlank()) {

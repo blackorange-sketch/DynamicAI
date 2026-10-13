@@ -42,21 +42,21 @@ fun LiquidSearchBar(
         modifier = modifier
             .fillMaxWidth()
             .liquidGlassDark(cornerRadius = 28.dp)
-            .padding(horizontal = 20.dp, vertical = 4.dp),
+            .padding(horizontal = 14.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.weight(1f)) {
             BasicTextField(
                 value = query,
                 onValueChange = onQueryChange,
-                textStyle = TextStyle(color = Color.White, fontSize = 18.sp),
+                textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
                 cursorBrush = SolidColor(Color.White),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() }),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 14.dp)
+                    .padding(vertical = 10.dp)
                     .then(
                         if (focusRequester != null) Modifier.focusRequester(focusRequester)
                         else Modifier
@@ -66,7 +66,7 @@ fun LiquidSearchBar(
                         Text(
                             "Пошук або команда…",
                             color = Color.White.copy(alpha = 0.5f),
-                            fontSize = 18.sp
+                            fontSize = 16.sp
                         )
                     }
                     inner()
@@ -105,7 +105,7 @@ private fun GlassIconButton(
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .size(40.dp)
+            .size(36.dp)
             .clip(CircleShape)
             .background(
                 brush = Brush.verticalGradient(
@@ -119,6 +119,6 @@ private fun GlassIconButton(
                 detectTapGestures { onClick() }
             }
     ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
     }
 }

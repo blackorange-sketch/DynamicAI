@@ -118,7 +118,7 @@ fun AppDrawer(
                     .navigationBarsPadding()
                     .padding(start = 12.dp, end = 48.dp)
             ) {
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
 
                 // Пошук
                 Row(
@@ -129,7 +129,7 @@ fun AppDrawer(
                         BasicTextField(
                             value = query,
                             onValueChange = { query = it },
-                            textStyle = TextStyle(color = Color.White, fontSize = 20.sp),
+                            textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
                             cursorBrush = SolidColor(Color.White),
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -139,10 +139,10 @@ fun AppDrawer(
                                     onDismiss()
                                 }
                             }),
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                             decorationBox = { inner ->
                                 if (query.isEmpty()) {
-                                    Text("Усі застосунки…", color = Color.Gray, fontSize = 20.sp)
+                                    Text("Усі застосунки…", color = Color.Gray, fontSize = 16.sp)
                                 }
                                 inner()
                             }

@@ -273,7 +273,7 @@ class FloatingDockService : Service() {
             iconRes = android.R.drawable.ic_menu_search,
             iconTint = Color.parseColor("#64B5F6")
         ) {
-            startActivity(Intent(this, MainActivity::class.java).apply {
+            startActivity(Intent(this, com.dynamicai.launcher.SearchOverlayActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             })
         })

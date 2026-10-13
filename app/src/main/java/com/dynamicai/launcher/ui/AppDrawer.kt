@@ -190,8 +190,8 @@ fun AppDrawer(
                                 val current = listState.firstVisibleItemIndex
                                 val d = kotlin.math.abs(idx - current)
                                 when {
-                                    d > 60 -> { listState.scrollToItem(idx - 5); listState.animateScrollToItem(idx) }
-                                    d > 20 -> { listState.scrollToItem(idx - 3); listState.animateScrollToItem(idx) }
+                                    d > 60 -> { listState.scrollToItem((idx - 5).coerceAtLeast(0)); listState.animateScrollToItem(idx) }
+                                    d > 20 -> { listState.scrollToItem((idx - 3).coerceAtLeast(0)); listState.animateScrollToItem(idx) }
                                     else -> listState.animateScrollToItem(idx)
                                 }
                             }

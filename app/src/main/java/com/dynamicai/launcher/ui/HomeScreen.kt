@@ -153,7 +153,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         // нічого не робимо
     }
 
-    BackHandler(enabled = showWeatherDetail) {
+    BackHandler(enabled = showRecent) {
+        showRecent = false
+    }
+    BackHandler(enabled = !showRecent && showWeatherDetail) {
         showWeatherDetail = false
     }
     BackHandler(enabled = !showWeatherDetail && showDockEditor) {

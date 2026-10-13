@@ -549,7 +549,7 @@ private fun ShizukuTestRow() {
             GlassChip("Завантажити tasks", false) {
                 scope.launch {
                     val list = manager.getRecentTasks()
-                    tasks = "Завдань: ${list.size}\n" + list.take(5).joinToString("\n") {
+                    tasks = "Знайдено: ${list.size}\n" + list.take(5).joinToString("\n") {
                         "• ${it.label} (${it.packageName})"
                     }
                 }

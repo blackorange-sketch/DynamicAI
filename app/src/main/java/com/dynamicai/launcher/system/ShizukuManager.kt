@@ -123,9 +123,24 @@ class ShizukuManager(private val context: Context) {
                     val idField = taskClass.getField("taskId")
                     val taskId = idField.getInt(taskInfo)
 
-                    val baseIntentField = taskClass.getField("baseIntent")
-                    val baseIntent = baseIntentField.get(taskInfo) as? android.content.Intent
-                    val pkg = baseIntent?.component?.packageName ?: continue
+                    // Спробувати topActivity (нові API)
+                    var pkg: String? = null
+                    try {
+                        val topActivityField = taskClass.getField("topActivity")
+                        val topActivity = topActivityField.get(taskInfo) as? android.content.ComponentName
+                        pkg = topActivity?.packageName
+                    } catch (_: Throwable) {}
+
+                    // Fallback — baseIntent (старі API)
+                    if (pkg.isNullOrBlank()) {
+                        try {
+                            val baseIntentField = taskClass.getField("baseIntent")
+                            val baseIntent = baseIntentField.get(taskInfo) as? android.content.Intent
+                            pkg = baseIntent?.component?.packageName
+                        } catch (_: Throwable) {}
+                    }
+
+                    if (pkg.isNullOrBlank()) continue
 
                     if (pkg == context.packageName) continue
                     if (isOurOwnOrSystem(pkg)) continue
@@ -143,6 +158,7 @@ class ShizukuManager(private val context: Context) {
         } catch (t: Throwable) {
             Log.e(TAG, "getRecentTasks failed", t)
         }
+        Log.d(TAG, "getRecentTasks — знайдено: ${result.size}")
         result
     }
 
@@ -150,10 +166,23 @@ class ShizukuManager(private val context: Context) {
         return try {
             val smClass = Class.forName("android.os.ServiceManager")
             val getServiceMethod = smClass.getMethod("getService", String::class.java)
-            val binder = getServiceMethod.invoke(null, "activity_task") as? IBinder ?: return null
+            val binder = getServiceMethod.invoke(null, "activity_task") as? IBinder
+                ?: run {
+                    Log.e(TAG, "activity_task binder == null")
+                    return null
+                }
+
+            Log.d(TAG, "binder: $binder")
+
+            // КЛЮЧОВЕ: обгортаємо binder через ShizukuBinderWrapper
+            val wrapped = rikka.shizuku.ShizukuBinderWrapper(binder)
+            Log.d(TAG, "wrapped: $wrapped")
+
             val stubClass = Class.forName("android.app.IActivityTaskManager\$Stub")
             val asInterfaceMethod = stubClass.getMethod("asInterface", IBinder::class.java)
-            asInterfaceMethod.invoke(null, binder)
+            val service = asInterfaceMethod.invoke(null, wrapped)
+            Log.d(TAG, "service: $service")
+            service
         } catch (t: Throwable) {
             Log.e(TAG, "getActivityTaskManagerService failed", t)
             null

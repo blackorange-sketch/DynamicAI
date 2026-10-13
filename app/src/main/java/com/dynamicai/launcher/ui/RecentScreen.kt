@@ -7,9 +7,10 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -49,22 +50,28 @@ fun RecentScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.85f))
-                .pointerInput(Unit) {
-                    detectVerticalDragGestures { _, dragAmount ->
-                        if (dragAmount > 60) onDismiss()
-                    }
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = { onDismiss() })
-                }
         ) {
-            Column(
+            // ==== Прозорий шар для тапу-закриття ====
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding()
-                    .pointerInput(Unit) { detectTapGestures { } },
-                verticalArrangement = Arrangement.Bottom
+                    .pointerInput(Unit) {
+                        detectTapGestures { onDismiss() }
+                    }
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures { _, dragAmount ->
+                            if (dragAmount > 60) onDismiss()
+                        }
+                    }
+            )
+
+            // ==== Контент знизу ====
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .navigationBarsPadding(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Заголовок
                 Row(
@@ -175,7 +182,6 @@ private fun RecentCard(
                 detectTapGestures { onLaunch() }
             }
     ) {
-        // Картка застосунку
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier

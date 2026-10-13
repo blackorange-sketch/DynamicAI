@@ -41,12 +41,17 @@ class VideoWallpaperService : WallpaperService() {
 
         override fun onVisibilityChanged(visible: Boolean) {
             this.visible = visible
-            if (visible) start() else pause()
+            if (visible) {
+                if (player == null) start()
+                else try { player?.start() } catch (_: Exception) {}
+            } else {
+                pause()
+            }
         }
 
         override fun onSurfaceCreated(holder: SurfaceHolder) {
             super.onSurfaceCreated(holder)
-            start()
+            if (prefs.getString("videoUri", null) != null) start()
         }
 
         override fun onSurfaceDestroyed(holder: SurfaceHolder) {
@@ -60,7 +65,11 @@ class VideoWallpaperService : WallpaperService() {
         }
 
         private fun start() {
-            val uriStr = prefs.getString("videoUri", null) ?: return
+            val uriStr = prefs.getString("videoUri", null)
+            if (uriStr.isNullOrBlank()) {
+                Log.d("VideoWallpaper", "no video set — waiting")
+                return
+            }
             val muted = prefs.getBoolean("muted", true)
             try {
                 val uri = Uri.parse(uriStr)

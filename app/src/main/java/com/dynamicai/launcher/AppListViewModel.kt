@@ -11,6 +11,7 @@ import com.dynamicai.launcher.data.CommandHistory
 import com.dynamicai.launcher.data.DockStorage
 import com.dynamicai.launcher.llm.LlmAgent
 import com.dynamicai.launcher.llm.LiteRtLlmEngine
+import com.dynamicai.launcher.llm.ModelDownloader
 import com.dynamicai.launcher.model.AppInfo
 import com.dynamicai.launcher.suggestion.ContactInfo
 import com.dynamicai.launcher.suggestion.ContactRepository
@@ -33,6 +34,10 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val contactRepo = ContactRepository(app)
 
     val llm = LiteRtLlmEngine(app)
+    val downloader = ModelDownloader(app)
+
+    private val _downloadProgress = MutableStateFlow<ModelDownloader.Progress?>(null)
+    val downloadProgress: StateFlow<ModelDownloader.Progress?> = _downloadProgress.asStateFlow()
     private val llmAgent = LlmAgent(llm)
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
@@ -131,6 +136,26 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
         val result = executor.execute(cmd, _apps.value)
         handleResult(result, s.label)
+    }
+
+    fun downloadModel() {
+        viewModelScope.launch {
+            downloader.download().collect { progress ->
+                _downloadProgress.value = progress
+                if (progress is ModelDownloader.Progress.Complete) {
+                    llm.initialize(progress.file)
+                    _downloadProgress.value = null
+                }
+            }
+        }
+    }
+
+    fun initLlmIfReady() {
+        if (downloader.isDownloaded && !llm.isReady) {
+            viewModelScope.launch {
+                llm.initialize(downloader.modelFile)
+            }
+        }
     }
 
     fun isCommand(text: String) = parser.parse(text) !is com.dynamicai.launcher.command.Command.Raw

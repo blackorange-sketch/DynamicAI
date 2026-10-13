@@ -4,8 +4,14 @@ import android.content.Context
 import java.io.File
 
 /**
- * Заглушка. Реальну реалізацію буде додано після підбору сумісної версії LiteRT-LM.
- * Наразі поводиться як NoOpLlmEngine — LLM неактивна.
+ * Підготовлена заглушка. Реальні виклики LiteRT-LM API буде додано,
+ * коли користувач буде готовий тестувати. Наразі:
+ *  - isReady = false
+ *  - initialize() повертає false
+ *  - complete() повертає null
+ *
+ * Це дозволяє тримати весь архітектурний каркас (Agent, ViewModel, UI)
+ * готовим, не блокуючи збірку.
  */
 class LiteRtLlmEngine(@Suppress("UNUSED_PARAMETER") private val context: Context) : LlmEngine {
     override val isReady: Boolean = false

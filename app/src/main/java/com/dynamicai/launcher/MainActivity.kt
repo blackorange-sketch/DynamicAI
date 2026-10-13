@@ -52,6 +52,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.dynamicai.launcher.llm.ModelDownloader
 import com.dynamicai.launcher.model.AppInfo
 import com.dynamicai.launcher.suggestion.ContactAction
 import com.dynamicai.launcher.suggestion.Suggestion
@@ -93,6 +94,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     var query by remember { mutableStateOf("") }
     var showSettings by remember { mutableStateOf(false) }
+    val downloadProgress by vm.downloadProgress.collectAsStateWithLifecycle()
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
@@ -141,6 +143,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         }
         try { voiceLauncher.launch(intent) } catch (_: Exception) {}
     }
+
+    LaunchedEffect(Unit) { vm.initLlmIfReady() }
 
     LaunchedEffect(query) { vm.updateQuery(query) }
 
@@ -352,6 +356,35 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             Dock(apps = dockApps, onLaunch = { vm.launch(it) }, modifier = Modifier.align(Alignment.BottomCenter))
         }
 
+        downloadProgress?.let { p ->
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text("Завантаження моделі", color = Color.White) },
+                text = {
+                    Column {
+                        when (p) {
+                            is ModelDownloader.Progress.Downloading -> {
+                                Text("${p.downloadedMb} / ${p.totalMb} MB", color = Color.White)
+                                Spacer(Modifier.height(8.dp))
+                                LinearProgressIndicator(
+                                    progress = { p.percent / 100f },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text("${p.percent}%", color = Color.Gray, fontSize = 12.sp)
+                            }
+                            is ModelDownloader.Progress.Error -> {
+                                Text("Помилка: ${p.message}", color = Color(0xFFFF6B6B))
+                            }
+                            else -> {}
+                        }
+                    }
+                },
+                confirmButton = {},
+                containerColor = Color(0xFF1A1A1A)
+            )
+        }
+
         if (showSettings) {
             AlertDialog(
                 onDismissRequest = { showSettings = false },
@@ -363,6 +396,24 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         }
                         TextButton(onClick = { vm.loadContacts(); showSettings = false }) {
                             Text("Оновити контакти", color = Color.White)
+                        }
+                        if (!vm.downloader.isDownloaded) {
+                            TextButton(onClick = {
+                                showSettings = false
+                                vm.downloadModel()
+                            }) {
+                                Text("Завантажити LLM (2.6 ГБ)", color = Color(0xFF64B5F6))
+                            }
+                        } else if (!vm.llm.isReady) {
+                            TextButton(onClick = {
+                                vm.initLlmIfReady()
+                                showSettings = false
+                            }) {
+                                Text("Ініціалізувати LLM", color = Color(0xFF64B5F6))
+                            }
+                        } else {
+                            Text("LLM активна ✓", color = Color(0xFF4CAF50), fontSize = 13.sp,
+                                modifier = Modifier.padding(top = 8.dp))
                         }
                         Text(
                             "DynamicAI · ${BuildConfig.VERSION_NAME}",

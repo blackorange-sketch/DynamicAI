@@ -20,7 +20,8 @@ class ShizukuManager(private val context: Context) {
         val id: Int,
         val packageName: String,
         val label: String,
-        val icon: android.graphics.drawable.Drawable?
+        val icon: android.graphics.drawable.Drawable?,
+        val snapshot: android.graphics.Bitmap? = null
     )
 
     @Volatile private var binderReceived = false
@@ -207,7 +208,10 @@ class ShizukuManager(private val context: Context) {
                     val label = pm.getApplicationLabel(appInfo).toString()
                     val icon = pm.getApplicationIcon(appInfo)
 
-                    result.add(RecentTask(taskId, pkg, label, icon))
+                    // Спробувати отримати snapshot
+                    val snapshot = try { getTaskSnapshot(taskId) } catch (_: Throwable) { null }
+
+                    result.add(RecentTask(taskId, pkg, label, icon, snapshot))
                 } catch (t: Throwable) {
                     diag.append("parseErr: ").append(t.message).append("\n")
                 }
@@ -221,6 +225,38 @@ class ShizukuManager(private val context: Context) {
 
         lastDiagnostic = diag.toString()
         result
+    }
+
+    private fun getTaskSnapshot(taskId: Int): android.graphics.Bitmap? {
+        return try {
+            val atm = getActivityTaskManagerService() ?: return null
+
+            // Викликаємо getTaskSnapshot(taskId, isLowResolution, takeSnapshotIfNeeded)
+            val method = atm.javaClass.getMethod(
+                "getTaskSnapshot",
+                Int::class.javaPrimitiveType,
+                Boolean::class.javaPrimitiveType,
+                Boolean::class.javaPrimitiveType
+            )
+            val snapshot = method.invoke(atm, taskId, false, true) ?: return null
+
+            // TaskSnapshot.getSnapshot() → HardwareBuffer
+            val getSnapshotMethod = snapshot.javaClass.getMethod("getSnapshot")
+            val hardwareBuffer = getSnapshotMethod.invoke(snapshot) ?: return null
+
+            // HardwareBuffer → Bitmap
+            val bitmapClass = Class.forName("android.graphics.Bitmap")
+            val wrapMethod = bitmapClass.getMethod(
+                "wrapHardwareBuffer",
+                Class.forName("android.hardware.HardwareBuffer"),
+                Class.forName("android.graphics.ColorSpace")
+            )
+            val bitmap = wrapMethod.invoke(null, hardwareBuffer, null) as? android.graphics.Bitmap
+            bitmap
+        } catch (t: Throwable) {
+            Log.e(TAG, "getTaskSnapshot failed for taskId=$taskId: ${t.message}")
+            null
+        }
     }
 
     private fun getActivityTaskManagerService(): Any? {

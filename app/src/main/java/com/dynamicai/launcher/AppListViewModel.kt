@@ -193,6 +193,10 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         updateQuery("")
     }
 
+    fun setResponse(text: String) {
+        _response.value = text
+    }
+
     fun isCommand(text: String) = parser.parse(text) !is com.dynamicai.launcher.command.Command.Raw
 
     fun executeCommand(text: String) {

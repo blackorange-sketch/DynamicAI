@@ -1278,27 +1278,6 @@ fun AppRow(
         }
     }
 }
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
-            contentDescription = app.label,
-            modifier = Modifier.size(iconSizeDp.dp),
-            tint = Color.Unspecified
-        )
-        if (showLabel) {
-            Spacer(Modifier.width(16.dp))
-            Text(
-                app.label,
-                color = if (inDock) Color(0xFF64B5F6) else Color.White,
-                fontSize = fontSizeSp.sp
-            )
-        }
-    }
-
-
-}
 
 private fun isScreenOn(ctx: android.content.Context): Boolean {
     return try {

@@ -74,7 +74,9 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         val e = engine ?: return@withContext null
         return@withContext try {
             e.createConversation().use { conversation ->
-                conversation.sendMessage(prompt)
+                val message = conversation.sendMessage(prompt)
+                // Message → String
+                message?.toString()
             }
         } catch (t: Throwable) {
             Log.e(TAG, "complete failed: ${t.message}", t)

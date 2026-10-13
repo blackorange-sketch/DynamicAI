@@ -314,10 +314,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                                 onLaunchApp = { app -> launchAppWithAnimation(app) }
                             )
                         }
-
-                    if (folders.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                    }
             }
 
             if (!showSearchField) {

@@ -94,6 +94,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var folderMenuApp by remember { mutableStateOf<AppInfo?>(null) }
     var folderMenuFolder by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
     var folderHeaderMenu by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
+    var showMainMenu by remember { mutableStateOf(false) }
+    var showNewFolderDialog by remember { mutableStateOf(false) }
+    var newFolderName by remember { mutableStateOf("") }
+    var newFolderSelection by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showCreateFolder by remember { mutableStateOf<AppInfo?>(null) }
     var createFolderName by remember { mutableStateOf("") }
     var addToFolderPicker by remember { mutableStateOf<AppInfo?>(null) }
@@ -265,7 +269,22 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         return
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = {
+                        // Тільки якщо ми на головному екрані (не в drawer/search/settings)
+                        if (!showSettings && !drawerOpen && !showSearchField && query.isBlank()) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            showMainMenu = true
+                        }
+                    }
+                )
+            }
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -726,6 +745,126 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             )
         }
 
+        // ==== Головне меню (long press на порожньому місці) ====
+        if (showMainMenu) {
+            AlertDialog(
+                onDismissRequest = { showMainMenu = false },
+                title = { Text("Меню", color = Color.White, fontSize = 18.sp) },
+                text = {
+                    Column {
+                        MenuItem("Створити папку") {
+                            newFolderName = ""
+                            newFolderSelection = emptySet()
+                            showMainMenu = false
+                            showNewFolderDialog = true
+                        }
+                        MenuItem("Оновити контакти") {
+                            vm.loadContacts()
+                            showMainMenu = false
+                        }
+                        MenuItem("Очистити історію команд") {
+                            vm.clearHistory()
+                            showMainMenu = false
+                        }
+                        MenuItem("Налаштування") {
+                            showMainMenu = false
+                            showSettings = true
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { showMainMenu = false }) { Text("Скасувати", color = Color.White) }
+                },
+                containerColor = Color(0xFF1A1A1A)
+            )
+        }
+
+        // ==== Діалог нової папки ====
+        if (showNewFolderDialog) {
+            AlertDialog(
+                onDismissRequest = { showNewFolderDialog = false },
+                title = { Text("Нова папка", color = Color.White) },
+                text = {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = newFolderName,
+                            onValueChange = { newFolderName = it },
+                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            decorationBox = { inner ->
+                                if (newFolderName.isEmpty()) {
+                                    Text("Назва папки", color = Color.Gray, fontSize = 16.sp)
+                                }
+                                inner()
+                            }
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text("Обери застосунки:", color = Color.Gray, fontSize = 13.sp)
+                        Spacer(Modifier.height(6.dp))
+                        androidx.compose.foundation.lazy.LazyColumn(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)
+                        ) {
+                            items(apps) { app ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .pointerInput(app.packageName) {
+                                            detectTapGestures {
+                                                newFolderSelection = if (app.packageName in newFolderSelection)
+                                                    newFolderSelection - app.packageName
+                                                else
+                                                    newFolderSelection + app.packageName
+                                            }
+                                        }
+                                        .padding(vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    androidx.compose.material3.Checkbox(
+                                        checked = app.packageName in newFolderSelection,
+                                        onCheckedChange = { checked ->
+                                            newFolderSelection = if (checked)
+                                                newFolderSelection + app.packageName
+                                            else
+                                                newFolderSelection - app.packageName
+                                        }
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Icon(
+                                        bitmap = app.icon.toBitmap(72, 72).asImageBitmap(),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(32.dp),
+                                        tint = Color.Unspecified
+                                    )
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(app.label, color = Color.White, fontSize = 15.sp)
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            if (newFolderName.isNotBlank() && newFolderSelection.isNotEmpty()) {
+                                vm.createFolder(newFolderName, newFolderSelection.toList())
+                            }
+                            showNewFolderDialog = false
+                        },
+                        enabled = newFolderName.isNotBlank() && newFolderSelection.isNotEmpty()
+                    ) { Text("Створити", color = Color(0xFF64B5F6)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showNewFolderDialog = false }) {
+                        Text("Скасувати", color = Color.White)
+                    }
+                },
+                containerColor = Color(0xFF1A1A1A)
+            )
+        }
+
         pendingChoice?.let { candidates ->
             AlertDialog(
                 onDismissRequest = { vm.dismissChoice() },
@@ -907,34 +1046,7 @@ fun AppRow(
         modifier = Modifier
             .fillMaxWidth()
             .pointerInput(app.packageName) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-
-                        // Чекаємо або відпускання, або таймаут 450 мс
-                        val released = withTimeoutOrNull(450L) {
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                val pointer = event.changes.firstOrNull { it.id == down.id }
-                                if (pointer == null || !pointer.pressed) return@withTimeoutOrNull true
-                            }
-                            @Suppress("UNREACHABLE_CODE") false
-                        }
-
-                        if (released == true) {
-                            onClick()
-                        } else {
-                            // Таймаут — long press
-                            onLongClick()
-                            // Чекаємо відпускання, щоб не запускати onClick
-                            while (true) {
-                                val event = awaitPointerEvent()
-                                val pointer = event.changes.firstOrNull { it.id == down.id }
-                                if (pointer == null || !pointer.pressed) break
-                            }
-                        }
-                    }
-                }
+                detectTapGestures(onTap = { onClick() })
             }
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically

@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.dynamicai.launcher.command.FuzzyMatcher
 import com.dynamicai.launcher.model.AppInfo
 import com.dynamicai.launcher.ui.AlphabetSidebar
 import com.dynamicai.launcher.ui.Dock
@@ -68,7 +69,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     LaunchedEffect(apps, query) {
         filtered = if (query.isBlank()) apps
-        else apps.filter { it.label.contains(query, ignoreCase = true) }
+        else apps
+            .map { it to FuzzyMatcher.score(it.label, query) }
+            .filter { it.second >= 35 }
+            .sortedByDescending { it.second }
+            .map { it.first }
     }
 
     val letters = remember(filtered) {
@@ -153,6 +158,28 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                     bottom = if (dockApps.isNotEmpty() && query.isBlank()) 96.dp else 8.dp
                 )
             ) {
+                if (filtered.isEmpty() && query.isNotBlank()) {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "Нічого не знайдено за запитом \"$query\"",
+                                color = Color.Gray,
+                                fontSize = 16.sp
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Спробуй: відкрий telegram · пошук kotlin · ліхтарик",
+                                color = Color.DarkGray,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
                 items(filtered, key = { it.packageName }) { app ->
                     AppRow(
                         app = app,

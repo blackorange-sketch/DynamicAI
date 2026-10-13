@@ -18,8 +18,8 @@ class CommandExecutor(private val context: Context) {
 
     private fun openApp(query: String, apps: List<AppInfo>): String {
         val target = apps
-            .map { it to score(it.label, query) }
-            .filter { it.second > 0 }
+            .map { it to FuzzyMatcher.score(it.label, query) }
+            .filter { it.second >= 35 }
             .maxByOrNull { it.second }
             ?.first
             ?: return "Не знайдено застосунок: \"$query\""
@@ -32,17 +32,6 @@ class CommandExecutor(private val context: Context) {
             "Відкриваю ${target.label}"
         } catch (e: Exception) {
             "Помилка: ${e.message}"
-        }
-    }
-
-    private fun score(label: String, query: String): Int {
-        val l = label.lowercase()
-        val q = query.lowercase()
-        return when {
-            l == q -> 100
-            l.startsWith(q) -> 80
-            l.contains(q) -> 60
-            else -> 0
         }
     }
 

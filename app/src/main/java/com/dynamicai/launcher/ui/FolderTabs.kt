@@ -75,7 +75,7 @@ fun FolderTabs(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f, fill = false)
+                    .weight(1f)
                     .padding(top = 2.dp),
                 contentPadding = PaddingValues(bottom = 8.dp)
             ) {

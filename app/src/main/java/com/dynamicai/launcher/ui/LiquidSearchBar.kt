@@ -8,9 +8,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -83,7 +81,7 @@ fun LiquidSearchBar(
                 )
             }
             GlassIconButton(
-                icon = Icons.Default.Mic,
+                icon = Icons.Default.Search,
                 tint = Color.White,
                 onClick = onVoice
             )

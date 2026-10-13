@@ -8,30 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -173,7 +150,7 @@ fun SettingsScreen(
             SwitchRow("Показувати пошук", settings.showSearchBar, Icons.Default.Search, Color(0xFF2196F3)) {
                 onSettingsChange(settings.copy(showSearchBar = it))
             }
-            SwitchRow("Показувати назви", settings.showLabels, Icons.Default.Visibility, Color(0xFF2196F3)) {
+            SwitchRow("Показувати назви", settings.showLabels, Icons.Default.Info, Color(0xFF2196F3)) {
                 onSettingsChange(settings.copy(showLabels = it))
             }
             ActionRow("Шпалери", Icons.Default.Star, Color(0xFFE91E63), onOpenWallpaper)
@@ -241,7 +218,7 @@ fun SettingsScreen(
             SwitchRow("Пауза при вимкненому екрані", settings.wpPauseOnScreenOff, Icons.Default.Star, Color(0xFF607D8B)) {
                 onSettingsChange(settings.copy(wpPauseOnScreenOff = it))
             }
-            SwitchRow("Пауза при низькому заряді", settings.wpPauseOnLowBattery, Icons.Default.Bolt, Color(0xFFFFC107)) {
+            SwitchRow("Пауза при низькому заряді", settings.wpPauseOnLowBattery, Icons.Default.Star, Color(0xFFFFC107)) {
                 onSettingsChange(settings.copy(wpPauseOnLowBattery = it))
             }
             FpsRow(
@@ -258,7 +235,7 @@ fun SettingsScreen(
         GlassCard {
             ActionRow("Оновити контакти", Icons.Default.Person, Color(0xFF4CAF50), onRefreshContacts)
             ActionRow("Очистити історію команд", Icons.Default.Delete, Color(0xFFFF6B6B), onClearHistory)
-            ActionRow("Показати всі приховані ($hiddenCount)", Icons.Default.Visibility, Color(0xFF9E9E9E), onClearHidden)
+            ActionRow("Показати всі приховані ($hiddenCount)", Icons.Default.Info, Color(0xFF9E9E9E), onClearHidden)
         }
 
         // ==== LLM ====
@@ -268,7 +245,7 @@ fun SettingsScreen(
         GlassSectionHeader("Локальна LLM")
         GlassCard {
             if (!llmDownloaded) {
-                ActionRow("Завантажити Gemma 4 E2B (~2.6 ГБ)", Icons.Default.ArrowDownward, Color(0xFF64B5F6), onDownloadLlm)
+                ActionRow("Завантажити Gemma 4 E2B (~2.6 ГБ)", Icons.Default.KeyboardArrowDown, Color(0xFF64B5F6), onDownloadLlm)
             } else if (!llmReady) {
                 Text(
                     "Модель завантажена. Рушій очікує на активацію",
@@ -423,7 +400,7 @@ private fun ActionRow(
         }
         Text(label, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
         Icon(
-            Icons.Default.ChevronRight,
+            Icons.Default.KeyboardArrowRight,
             contentDescription = null,
             tint = Color.White.copy(alpha = 0.3f),
             modifier = Modifier.size(18.dp)

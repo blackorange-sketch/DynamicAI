@@ -81,7 +81,30 @@ class VideoWallpaperService : WallpaperService() {
                         if (muted) 0f else 1f,
                         if (muted) 0f else 1f
                     )
-                    setOnPreparedListener { it.start() }
+                    setOnPreparedListener { mp ->
+                        // ==== Розрахунок пропорцій для центрування без розтягування ====
+                        try {
+                            val videoW = mp.videoWidth
+                            val videoH = mp.videoHeight
+                            val surfaceW = surfaceHolder.surfaceFrame.width()
+                            val surfaceH = surfaceHolder.surfaceFrame.height()
+
+                            if (videoW > 0 && videoH > 0 && surfaceW > 0 && surfaceH > 0) {
+                                // Масштаб "fill" — відео займає весь екран із збереженням пропорцій
+                                val scaleW = surfaceW.toFloat() / videoW
+                                val scaleH = surfaceH.toFloat() / videoH
+                                val scale = maxOf(scaleW, scaleH)
+
+                                val newW = (videoW * scale).toInt()
+                                val newH = (videoH * scale).toInt()
+                                surfaceHolder.setFixedSize(newW, newH)
+                                Log.d("VideoWallpaper", "video=${videoW}x$videoH scaled=${newW}x$newH")
+                            }
+                        } catch (t: Throwable) {
+                            Log.e("VideoWallpaper", "resize failed: ${t.message}")
+                        }
+                        mp.start()
+                    }
                     setOnErrorListener { _, what, extra ->
                         Log.e("VideoWallpaper", "error what=$what extra=$extra")
                         true

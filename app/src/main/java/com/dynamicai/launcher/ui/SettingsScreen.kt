@@ -516,8 +516,12 @@ private fun ShizukuTestRow() {
     val manager = remember { com.dynamicai.launcher.system.ShizukuManager(ctx) }
 
     LaunchedEffect(Unit) {
-        status = "Shizuku: " + (if (manager.isShizukuAvailable()) "✅" else "❌") +
-                " · Дозвіл: " + (if (manager.hasPermission()) "✅" else "❌")
+        status = buildString {
+            append("Installed: ").append(manager.isShizukuInstalled()).append("\n")
+            append("Binder received: ").append(manager.isBinderReceived()).append("\n")
+            append("Ping binder: ").append(manager.isShizukuAvailable()).append("\n")
+            append("Permission: ").append(manager.hasPermission())
+        }
     }
 
     Column(

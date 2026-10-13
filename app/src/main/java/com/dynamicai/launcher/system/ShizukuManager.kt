@@ -23,18 +23,28 @@ class ShizukuManager(private val context: Context) {
         val icon: android.graphics.drawable.Drawable?
     )
 
+    @Volatile private var binderReceived = false
+
     init {
         try {
             Shizuku.addBinderReceivedListenerSticky {
+                binderReceived = true
+                Log.d(TAG, "✅ Shizuku binder received (sticky)")
+            }
+            Shizuku.addBinderReceivedListener {
+                binderReceived = true
                 Log.d(TAG, "✅ Shizuku binder received")
             }
             Shizuku.addBinderDeadListener {
+                binderReceived = false
                 Log.d(TAG, "❌ Shizuku binder dead")
             }
         } catch (t: Throwable) {
             Log.e(TAG, "listener add failed", t)
         }
     }
+
+    fun isBinderReceived(): Boolean = binderReceived
 
     fun isShizukuAvailable(): Boolean {
         return try {

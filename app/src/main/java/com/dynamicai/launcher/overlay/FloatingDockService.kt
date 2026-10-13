@@ -131,6 +131,7 @@ class FloatingDockService : Service() {
                     .unregisterOnSharedPreferenceChangeListener(dockPrefsListener)
             } catch (_: Throwable) {}
         } catch (_: Exception) {}
+        try { hideSearchOverlay() } catch (_: Exception) {}
         try { if (::rootLayout.isInitialized) windowManager.removeView(rootLayout) } catch (_: Exception) {}
         if (instance === this) instance = null
         scope.cancel()
@@ -170,6 +171,94 @@ class FloatingDockService : Service() {
         rebuildContent()
         windowManager.addView(rootLayout, params)
         log("addView done, gravity=${params.gravity} y=${params.y}")
+    }
+
+
+    private fun showSearchOverlay() {
+        if (searchOverlayView != null) return
+        try {
+            val overlay = android.widget.FrameLayout(this).apply {
+                setBackgroundColor(0xB3000000.toInt())
+                layoutParams = android.widget.FrameLayout.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+
+            // Лінійний layout для поля пошуку
+            val container = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(dp(16), dp(80), dp(16), dp(16))
+            }
+
+            val editText = android.widget.EditText(this).apply {
+                hint = "Команда або пошук…"
+                setHintTextColor(0x99FFFFFF.toInt())
+                setTextColor(android.graphics.Color.WHITE)
+                textSize = 18f
+                setBackgroundColor(0xF01A1A1A.toInt())
+                setPadding(dp(16), dp(12), dp(16), dp(12))
+                maxLines = 1
+                setSingleLine(true)
+                requestFocus()
+                setOnEditorActionListener { _, actionId, _ ->
+                    if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                        hideSearchOverlay()
+                        true
+                    } else false
+                }
+            }
+            container.addView(editText)
+
+            val results = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(0, dp(8), 0, 0)
+            }
+            container.addView(results)
+
+            overlay.addView(container)
+            overlay.setOnClickListener { hideSearchOverlay() }
+            container.setOnClickListener { /* перехоплюємо */ }
+
+            val type = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
+
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                type,
+                WindowManager.LayoutParams.FLAG_DIM_BEHIND or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                android.graphics.PixelFormat.TRANSLUCENT
+            ).apply {
+                dimAmount = 0.7f
+                softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or
+                    WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+            }
+
+            windowManager.addView(overlay, params)
+            searchOverlayView = overlay
+            searchOverlayParams = params
+
+            mainHandler.postDelayed({
+                try {
+                    val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                    imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                } catch (_: Throwable) {}
+            }, 100)
+        } catch (t: Throwable) {
+            log("showSearchOverlay failed: ${t.message}")
+        }
+    }
+
+    private fun hideSearchOverlay() {
+        try {
+            searchOverlayView?.let { windowManager.removeView(it) }
+        } catch (_: Throwable) {}
+        searchOverlayView = null
+        searchOverlayParams = null
     }
 
     private fun applyPosition() {
@@ -288,9 +377,7 @@ class FloatingDockService : Service() {
             iconRes = android.R.drawable.ic_menu_search,
             iconTint = Color.parseColor("#64B5F6")
         ) {
-            startActivity(Intent(this, com.dynamicai.launcher.SearchOverlayActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            })
+showSearchOverlay()
         })
 
         column.addView(spacer(dp(8)))

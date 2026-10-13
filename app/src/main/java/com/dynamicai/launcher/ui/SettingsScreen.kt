@@ -520,6 +520,7 @@ private fun ShizukuTestRow() {
             append("Installed: ").append(manager.isShizukuInstalled()).append("\n")
             append("Binder received: ").append(manager.isBinderReceived()).append("\n")
             append("Ping binder: ").append(manager.isShizukuAvailable()).append("\n")
+            append("API version: ").append(manager.getShizukuVersion()).append("\n")
             append("Permission: ").append(manager.hasPermission())
         }
     }

@@ -1,6 +1,7 @@
 package com.dynamicai.launcher.ui
 
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -59,7 +60,7 @@ fun AlphabetSidebar(
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .width(32.dp)
+            .width(56.dp)
             .onGloballyPositioned { coords ->
                 sidebarHeight = coords.size.height.toFloat()
             }
@@ -114,9 +115,26 @@ fun AlphabetSidebar(
                     label = "waveScale"
                 )
 
+                val targetOffset = when {
+                    distance == 0 -> (-22).dp
+                    distance == 1 -> (-16).dp
+                    distance == 2 -> (-10).dp
+                    distance == 3 -> (-5).dp
+                    else -> 0.dp
+                }
+                val xOffset by animateDpAsState(
+                    targetValue = targetOffset,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    ),
+                    label = "waveOffset"
+                )
+
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
+                        .offset(x = xOffset)
                         .size(18.dp)
                         .scale(scale)
                         .clip(CircleShape)

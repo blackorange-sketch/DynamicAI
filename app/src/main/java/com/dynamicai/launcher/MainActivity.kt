@@ -97,7 +97,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .padding(start = 16.dp, end = 48.dp) // правий відступ під сайдбар
+                .padding(start = 16.dp, end = 64.dp) // правий відступ під сайдбар
         ) {
             Spacer(Modifier.height(24.dp))
 

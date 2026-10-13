@@ -1277,18 +1277,7 @@ fun AppRow(
             )
         }
     }
-}   iconSizeDp: Int,
-    fontSizeSp: Int,
-    showLabel: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(app.packageName) {
-                detectTapGestures(onTap = { onClick() })
-            }
+}
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

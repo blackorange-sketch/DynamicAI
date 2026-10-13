@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.ColorLens
@@ -71,6 +72,7 @@ fun SettingsScreen(
     onRequestOverlayPermission: () -> Unit,
     onOpenWallpaper: () -> Unit,
     onOpenDockEditor: () -> Unit,
+    onOpenFolderManager: () -> Unit,
     llmDownloaded: Boolean,
     llmReady: Boolean,
     versionName: String,
@@ -176,6 +178,7 @@ fun SettingsScreen(
             }
             ActionRow("Шпалери", Icons.Default.Palette, Color(0xFFE91E63), onOpenWallpaper)
             ActionRow("Застосунки у дока", Icons.Default.Dashboard, Color(0xFF9C27B0), onOpenDockEditor)
+            ActionRow("Керування папками", Icons.Default.CreateNewFolder, Color(0xFF64B5F6), onOpenFolderManager)
         }
 
         // ==== Плаваючий док ====
@@ -284,7 +287,7 @@ fun SettingsScreen(
             SwitchRow(
                 label = "Озвучувати відповіді (TTS)",
                 checked = settings.useTts,
-                icon = Icons.Default.Star,
+                icon = Icons.Default.VolumeUp,
                 tint = Color(0xFF4CAF50)
             ) {
                 onSettingsChange(settings.copy(useTts = it))

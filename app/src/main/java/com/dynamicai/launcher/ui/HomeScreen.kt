@@ -95,6 +95,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var showSettings by remember { mutableStateOf(false) }
     var showWallpaper by remember { mutableStateOf(false) }
     var showDockEditor by remember { mutableStateOf(false) }
+    var showFolderManager by remember { mutableStateOf(false) }
     var showRecent by remember { mutableStateOf(false) }
     var showWeatherDetail by remember { mutableStateOf(false) }
     var searchMode by remember { mutableStateOf(false) }
@@ -153,7 +154,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         // нічого не робимо
     }
 
-    BackHandler(enabled = showRecent) {
+    BackHandler(enabled = showFolderManager) {
+        showFolderManager = false
+    }
+    BackHandler(enabled = !showFolderManager && showRecent) {
         showRecent = false
     }
     BackHandler(enabled = !showRecent && showWeatherDetail) {
@@ -314,6 +318,19 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         return
     }
 
+    if (showFolderManager) {
+        FolderManagerScreen(
+            folders = folders,
+            apps = apps,
+            onAddApp = { folderId, pkg -> vm.addToFolder(folderId, pkg) },
+            onRemoveApp = { folderId, pkg -> vm.removeFromFolder(folderId, pkg) },
+            onDeleteFolder = { vm.deleteFolder(it) },
+            onCreateFolder = { vm.createFolder(it, emptyList()) },
+            onClose = { showFolderManager = false }
+        )
+        return
+    }
+
     if (showRecent) {
         LaunchedEffect(Unit) { vm.loadRecentTasks() }
         RecentScreen(
@@ -385,6 +402,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             versionName = BuildConfig.VERSION_NAME,
             onOpenWallpaper = { showWallpaper = true },
             onOpenDockEditor = { showDockEditor = true },
+            onOpenFolderManager = { showFolderManager = true },
             onClose = { showSettings = false },
             onTestLlm = { prompt -> vm.testLlm(prompt) }
         )

@@ -79,6 +79,7 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
+        android.util.Log.d("FloatingDock", "onCreate start")
         super.onCreate()
         try {
             savedStateController.performAttach()
@@ -218,9 +219,19 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     companion object {
         const val NOTIF_ID = 1001
         fun start(ctx: Context) {
-            val i = Intent(ctx, FloatingDockService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(i)
-            else ctx.startService(i)
+            android.util.Log.d("FloatingDock", "start() called")
+            try {
+                val i = Intent(ctx, FloatingDockService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    android.util.Log.d("FloatingDock", "calling startForegroundService")
+                    ctx.startForegroundService(i)
+                } else {
+                    android.util.Log.d("FloatingDock", "calling startService")
+                    ctx.startService(i)
+                }
+            } catch (t: Throwable) {
+                android.util.Log.e("FloatingDock", "start() failed", t)
+            }
         }
         fun stop(ctx: Context) {
             ctx.stopService(Intent(ctx, FloatingDockService::class.java))

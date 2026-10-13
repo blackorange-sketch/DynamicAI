@@ -128,7 +128,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .background(Color(0xFF1A1A1A), shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
                         .pointerInput("lat") {
-                            androidx.compose.foundation.gestures.detectTapGestures {
+                            detectTapGestures {
                                 // мінус 1
                                 onSettingsChange(settings.copy(weatherLat = settings.weatherLat - 1f))
                             }
@@ -141,7 +141,7 @@ fun SettingsScreen(
                     modifier = Modifier
                         .background(Color(0xFF1A1A1A), shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
                         .pointerInput("lon") {
-                            androidx.compose.foundation.gestures.detectTapGestures {
+                            detectTapGestures {
                                 onSettingsChange(settings.copy(weatherLon = settings.weatherLon + 1f))
                             }
                         }

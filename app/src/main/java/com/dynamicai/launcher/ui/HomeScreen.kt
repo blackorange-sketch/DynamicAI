@@ -1110,7 +1110,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             )
         }
     }
-}
 
 @Composable
 fun AppContextMenu(

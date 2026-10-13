@@ -16,6 +16,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -46,7 +47,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.pointer.awaitFirstDown
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -68,6 +68,7 @@ import com.dynamicai.launcher.suggestion.stableKey
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
 fun HomeScreen(vm: AppListViewModel = viewModel()) {
@@ -909,25 +910,28 @@ fun AppRow(
                 awaitPointerEventScope {
                     while (true) {
                         val down = awaitFirstDown(requireUnconsumed = false)
-                        val downTime = System.currentTimeMillis()
-                        var longPressTriggered = false
-                        val longPressJob = launch {
-                            delay(450)
-                            longPressTriggered = true
-                            onLongClick()
-                        }
-                        // Чекаємо поки палець піднято
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val pointer = event.changes.firstOrNull { it.id == down.id }
-                            if (pointer == null || !pointer.pressed) {
-                                break
+
+                        // Чекаємо або відпускання, або таймаут 450 мс
+                        val released = withTimeoutOrNull(450L) {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val pointer = event.changes.firstOrNull { it.id == down.id }
+                                if (pointer == null || !pointer.pressed) return@withTimeoutOrNull true
                             }
+                            @Suppress("UNREACHABLE_CODE") false
                         }
-                        longPressJob.cancel()
-                        val pressDuration = System.currentTimeMillis() - downTime
-                        if (!longPressTriggered && pressDuration < 450) {
+
+                        if (released == true) {
                             onClick()
+                        } else {
+                            // Таймаут — long press
+                            onLongClick()
+                            // Чекаємо відпускання, щоб не запускати onClick
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val pointer = event.changes.firstOrNull { it.id == down.id }
+                                if (pointer == null || !pointer.pressed) break
+                            }
                         }
                     }
                 }

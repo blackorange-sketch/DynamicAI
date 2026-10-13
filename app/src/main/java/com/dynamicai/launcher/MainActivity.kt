@@ -150,12 +150,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                             (it.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
                         }
                         if (idx >= 0) {
-                            val current = listState.firstVisibleItemIndex
-                            val distance = kotlin.math.abs(idx - current)
-                            if (distance > 40) {
-                                val mid = current + (idx - current) / 2
-                                listState.animateScrollToItem(mid)
-                            }
                             listState.animateScrollToItem(idx)
                         }
                     }

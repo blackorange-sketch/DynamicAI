@@ -499,40 +499,40 @@ private fun GlassChip(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 
-zukuTestRow() {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
-    var status by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("Перевірка…") }
-    var tasks by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-    var permCode by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(0) }
+@Composable
+private fun ShizukuTestRow() {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var status by remember { mutableStateOf("Перевірка…") }
+    var tasks by remember { mutableStateOf("") }
+    var permCode by remember { mutableStateOf(0) }
 
-    val manager = androidx.compose.runtime.remember {
-        com.dynamicai.launcher.system.ShizukuManager(ctx)
+    val manager = remember { ShizukuManager(ctx) }
+
+    LaunchedEffect(Unit) {
+        status = "Shizuku: " + (if (manager.isShizukuAvailable()) "✅" else "❌") +
+                " · Дозвіл: " + (if (manager.hasPermission()) "✅" else "❌")
     }
 
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        status = buildString {
-            append("Shizuku доступний: ")
-            append(if (manager.isShizukuAvailable()) "✅" else "❌")
-            append(" · Дозвіл: ")
-            append(if (manager.hasPermission()) "✅" else "❌")
-        }
-    }
-
-    androidx.compose.foundation.layout.Column(
-        modifier = androidx.compose.ui.Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    Column(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(status, color = Color.White, fontSize = 13.sp)
         if (tasks.isNotBlank()) {
-            Text(tasks, color = Color(0xFF64B5F6), fontSize = 11.sp,
-                modifier = androidx.compose.ui.Modifier.padding(top = 4.dp))
+            Text(
+                tasks,
+                color = Color(0xFF64B5F6),
+                fontSize = 11.sp,
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
-        androidx.compose.foundation.layout.Row(
-            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-            modifier = androidx.compose.ui.Modifier.padding(top = 6.dp)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(top = 6.dp)
         ) {
             GlassChip("Запит дозволу", false) {
-                manager.requestPermission(permCode++)
+                manager.requestPermission(permCode)
+                permCode++
             }
             GlassChip("Завантажити tasks", false) {
                 scope.launch {

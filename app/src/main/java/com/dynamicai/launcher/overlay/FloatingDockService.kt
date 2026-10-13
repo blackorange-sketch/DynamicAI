@@ -182,41 +182,68 @@ class FloatingDockService : Service() {
     private fun showSearchOverlay() {
         if (searchOverlayView != null) return
         try {
+            // ===== Overlay =====
             val overlay = android.widget.FrameLayout(this).apply {
-                setBackgroundColor(0xB3000000.toInt())
+                setBackgroundColor(0x66000000.toInt())
+                isFocusableInTouchMode = true
+                isFocusable = true
             }
 
+            // Закриття по тапу
+            overlay.setOnClickListener { hideSearchOverlay() }
+
+            // Back
+            overlay.setOnKeyListener { _, keyCode, event ->
+                if (keyCode == android.view.KeyEvent.KEYCODE_BACK &&
+                    event.action == android.view.KeyEvent.ACTION_UP) {
+                    hideSearchOverlay()
+                    true
+                } else false
+            }
+
+            // ===== Контейнер (зверху) =====
             val container = android.widget.LinearLayout(this).apply {
                 orientation = android.widget.LinearLayout.VERTICAL
-                setPadding(dp(16), dp(80), dp(16), dp(16))
+                setPadding(dp(12), dp(60), dp(12), dp(12))
+                isClickable = false
             }
 
-            // Поле введення
+            // ===== Поле введення =====
             val editText = android.widget.EditText(this).apply {
-                hint = "Команда або пошук…"
-                setHintTextColor(0x99FFFFFF.toInt())
+                hint = "Пошук або команда…"
+                setHintTextColor(0x80FFFFFF.toInt())
                 setTextColor(android.graphics.Color.WHITE)
-                textSize = 18f
-                setBackgroundColor(0xF01A1A1A.toInt())
-                setPadding(dp(16), dp(12), dp(16), dp(12))
-                maxLines = 1
+                textSize = 17f
                 setSingleLine(true)
-                setHint("Пошук або команда…")
+                setPadding(dp(20), dp(14), dp(20), dp(14))
+                background = android.graphics.drawable.GradientDrawable(
+                    android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                    intArrayOf(0xF01F1F1F.toInt(), 0xE00D0D0D.toInt())
+                ).apply {
+                    cornerRadius = dp(24).toFloat()
+                    setStroke(dp(1), 0x44FFFFFF)
+                }
             }
             container.addView(editText)
 
-            // Список підказок
+            // ===== Підказки =====
             val resultsList = android.widget.LinearLayout(this).apply {
                 orientation = android.widget.LinearLayout.VERTICAL
                 setPadding(0, dp(8), 0, 0)
             }
             container.addView(resultsList)
 
-            overlay.addView(container)
-            overlay.setOnClickListener { hideSearchOverlay() }
-            container.setOnClickListener { /* перехоплюємо */ }
+            // ===== LayoutParams — container притиснутий догори =====
+            val containerParams = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = android.view.Gravity.TOP
+            }
 
-            // Показ підказок при введенні
+            overlay.addView(container, containerParams)
+
+            // ===== Логіка підказок =====
             editText.addTextChangedListener(object : android.text.TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -224,9 +251,8 @@ class FloatingDockService : Service() {
                     val query = s?.toString().orEmpty().trim()
                     resultsList.removeAllViews()
                     if (query.isBlank()) return
-
-                    // Дії
                     val lower = query.lowercase()
+
                     com.dynamicai.launcher.suggestion.ActionCatalog.all
                         .map { a -> a to a.keywords.maxOf { kw -> com.dynamicai.launcher.command.FuzzyMatcher.score(kw, lower) } }
                         .filter { it.second >= 55 }
@@ -234,15 +260,28 @@ class FloatingDockService : Service() {
                         .take(3)
                         .forEach { (a, _) ->
                             resultsList.addView(makeResultRow("⚡", a.label) {
-                                val cmd = a.build()
-                                commandExecutor.execute(cmd, apps)
+                                commandExecutor.execute(a.build(), apps)
                                 hideSearchOverlay()
                             })
                         }
 
-                    // Застосунки
+                    com.dynamicai.launcher.command.SettingsRoutes.all().keys
+                        .map { it to com.dynamicai.launcher.command.FuzzyMatcher.score(it, lower) }
+                        .filter { it.second >= 60 }
+                        .sortedByDescending { it.second }
+                        .take(2)
+                        .forEach { (route, _) ->
+                            resultsList.addView(makeResultRow("⚙", "Налаштування: $route") {
+                                commandExecutor.execute(
+                                    com.dynamicai.launcher.command.Command.OpenSettings(route),
+                                    apps
+                                )
+                                hideSearchOverlay()
+                            })
+                        }
+
                     apps.filter { it.label.contains(query, ignoreCase = true) }
-                        .take(5)
+                        .take(6)
                         .forEach { app ->
                             resultsList.addView(makeResultRow("📱", app.label) {
                                 packageManager.getLaunchIntentForPackage(app.packageName)?.apply {
@@ -255,7 +294,7 @@ class FloatingDockService : Service() {
                 }
             })
 
-            // Обробка Enter
+            // ===== Enter =====
             editText.setOnEditorActionListener { _, actionId, event ->
                 if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
                     (event != null && event.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_DOWN)) {
@@ -276,6 +315,7 @@ class FloatingDockService : Service() {
                 } else false
             }
 
+            // ===== WindowManager =====
             val type = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             else
@@ -286,10 +326,11 @@ class FloatingDockService : Service() {
                 WindowManager.LayoutParams.MATCH_PARENT,
                 type,
                 WindowManager.LayoutParams.FLAG_DIM_BEHIND or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
                 android.graphics.PixelFormat.TRANSLUCENT
             ).apply {
-                dimAmount = 0.7f
+                dimAmount = 0.5f
                 softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or
                     WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
             }
@@ -298,8 +339,10 @@ class FloatingDockService : Service() {
             searchOverlayView = overlay
             searchOverlayParams = params
 
+            // Фокус + клавіатура
             mainHandler.postDelayed({
                 try {
+                    overlay.requestFocus()
                     editText.requestFocus()
                     val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
                     imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
@@ -311,23 +354,46 @@ class FloatingDockService : Service() {
     }
 
     private fun makeResultRow(emoji: String, label: String, onClick: () -> Unit): android.view.View {
-        return android.widget.LinearLayout(this).apply {
+        val row = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.HORIZONTAL
-            setPadding(dp(12), dp(10), dp(12), dp(10))
-            setBackgroundColor(0x14FFFFFF)
+            setPadding(dp(16), dp(14), dp(16), dp(14))
             isClickable = true
             setOnClickListener { onClick() }
-            addView(android.widget.TextView(this@FloatingDockService).apply {
-                text = emoji
-                textSize = 18f
-                setPadding(0, 0, dp(12), 0)
-            })
-            addView(android.widget.TextView(this@FloatingDockService).apply {
-                text = label
-                setTextColor(android.graphics.Color.WHITE)
-                textSize = 16f
-            })
+
+            // Glass-фон
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(0xE0202020.toInt(), 0xD00D0D0D.toInt())
+            ).apply {
+                cornerRadius = dp(16).toFloat()
+                setStroke(dp(1), 0x33FFFFFF)
+            }
+
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, dp(4), 0, dp(4))
+            }
         }
+
+        // Emoji-іконка
+        row.addView(android.widget.TextView(this).apply {
+            text = emoji
+            textSize = 20f
+            setPadding(0, 0, dp(14), 0)
+        })
+
+        // Текст
+        row.addView(android.widget.TextView(this).apply {
+            text = label
+            setTextColor(android.graphics.Color.WHITE)
+            textSize = 16f
+            maxLines = 1
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        })
+
+        return row
     }
 
     private fun hideSearchOverlay() {

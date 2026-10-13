@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">DynamicAI</string>
     <string name="wallpaper_description">Відео-шпалери DynamicAI</string>
+    <string name="accessibility_description">Перехоплення свайпу знизу для власного Recent</string>
 </resources>

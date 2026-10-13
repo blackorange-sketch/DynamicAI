@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SwipeUp
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.Visibility
@@ -242,6 +243,32 @@ fun SettingsScreen(
         }
 
         // ==== Дії ====
+        GlassSectionHeader("Жест свайпу знизу")
+        GlassCard {
+            val ctx = LocalContext.current
+            val enabled = com.dynamicai.launcher.accessibility.RecentGestureService.isEnabled(ctx)
+            SwitchRow(
+                label = if (enabled) "Жест увімкнено" else "Увімкнути жест",
+                checked = enabled,
+                icon = Icons.Default.SwipeUp,
+                tint = Color(0xFF9C27B0),
+                onChange = {
+                    try {
+                        ctx.startActivity(android.content.Intent(
+                            android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS
+                        ).apply {
+                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        })
+                    } catch (_: Throwable) {}
+                }
+            )
+            Text(
+                "Відкриє налаштування Accessibility. Знайди \"DynamicAI Gesture\" і увімкни.",
+                color = Color.Gray, fontSize = 11.sp,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            )
+        }
+
         GlassSectionHeader("Shizuku")
         ShizukuTestRow()
 

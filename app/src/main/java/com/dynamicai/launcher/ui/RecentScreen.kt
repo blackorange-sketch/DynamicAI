@@ -1,10 +1,6 @@
 package com.dynamicai.launcher.ui
 
-import androidx.compose.foundation.layout.offset
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -14,9 +10,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteSweep
@@ -31,7 +27,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
@@ -46,8 +41,6 @@ fun RecentScreen(
     onDismiss: () -> Unit,
     visible: Boolean
 ) {
-    val listState = rememberLazyListState()
-
     AnimatedVisibility(
         visible = visible,
         enter = slideInVertically { it } + fadeIn(),
@@ -58,10 +51,12 @@ fun RecentScreen(
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.85f))
         ) {
-            // Прозорий шар для тапу-закриття
+            // Прозорий шар для тапу-закриття (верхня половина)
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.35f)
+                    .align(Alignment.TopCenter)
                     .pointerInput(Unit) {
                         detectTapGestures { onDismiss() }
                     }
@@ -72,29 +67,37 @@ fun RecentScreen(
                     }
             )
 
+            // Контент у нижній частині — зручно для пальця
             Column(
                 modifier = Modifier
-                    .align(Alignment.Center)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.65f)
+                    .navigationBarsPadding()
             ) {
                 // Заголовок
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         "Нещодавні",
                         color = Color.White,
-                        fontSize = 20.sp,
+                        fontSize = 18.sp,
                         modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        "${tasks.size}",
+                        color = Color.White.copy(alpha = 0.4f),
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(end = 12.dp)
                     )
                     if (tasks.isNotEmpty()) {
                         Row(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
+                                .clip(RoundedCornerShape(18.dp))
                                 .background(
                                     brush = Brush.verticalGradient(
                                         listOf(
@@ -106,7 +109,7 @@ fun RecentScreen(
                                 .pointerInput(Unit) {
                                     detectTapGestures { onClearAll() }
                                 }
-                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
@@ -115,7 +118,7 @@ fun RecentScreen(
                                 tint = Color(0xFF64B5F6),
                                 modifier = Modifier.size(16.dp)
                             )
-                            Spacer(Modifier.width(6.dp))
+                            Spacer(Modifier.width(5.dp))
                             Text("Очистити", color = Color(0xFF64B5F6), fontSize = 13.sp)
                         }
                     }
@@ -135,26 +138,20 @@ fun RecentScreen(
                         )
                     }
                 } else {
-                    LazyRow(
-                        state = listState,
-                        modifier = Modifier.fillMaxWidth(),
-                        contentPadding = PaddingValues(horizontal = 40.dp),
-                        horizontalArrangement = Arrangement.spacedBy(20.dp)
+                    // Сітка 3×2
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(horizontal = 8.dp),
+                        contentPadding = PaddingValues(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(tasks, key = { it.id }) { task ->
-                            val visibleIndex = listState.firstVisibleItemIndex
-                            val index = tasks.indexOf(task)
-                            val distance = kotlin.math.abs(index - visibleIndex)
-                            val scale = when {
-                                distance == 0 -> 1.0f
-                                distance == 1 -> 0.9f
-                                distance == 2 -> 0.8f
-                                else -> 0.7f
-                            }
-
                             RecentCard(
                                 task = task,
-                                scale = scale,
                                 onLaunch = {
                                     onLaunch(task.packageName)
                                     onDismiss()
@@ -172,34 +169,49 @@ fun RecentScreen(
 @Composable
 private fun RecentCard(
     task: ShizukuManager.RecentTask,
-    scale: Float,
     onLaunch: () -> Unit,
     onForceStop: () -> Unit
 ) {
     var offsetY by remember { mutableStateOf(0f) }
-    var dragging by remember { mutableStateOf(false) }
 
-    val animatedScale by animateFloatAsState(
-        targetValue = scale,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
-        label = "cardScale"
-    )
+    val accentColor = remember(task.packageName) {
+        IconColors.extract(task.packageName, task.icon)
+    }
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Box(
         modifier = Modifier
-            .width(240.dp)
-            .graphicsLayerCompat(scale = animatedScale, offsetY = offsetY)
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .offset(y = offsetY.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        accentColor.copy(alpha = 0.5f),
+                        accentColor.copy(alpha = 0.15f),
+                        Color(0xFF0D0D0D)
+                    ),
+                    radius = 300f
+                )
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.3f),
+                        Color.White.copy(alpha = 0.05f)
+                    )
+                ),
+                shape = RoundedCornerShape(20.dp)
+            )
             .pointerInput(task.id) {
                 detectVerticalDragGestures(
-                    onDragStart = { dragging = true },
                     onDragEnd = {
-                        if (offsetY < -100f) onForceStop()
+                        if (offsetY < -60f) onForceStop()
                         offsetY = 0f
-                        dragging = false
                     },
                     onVerticalDrag = { _, drag ->
-                        offsetY = (offsetY + drag).coerceIn(-400f, 0f)
+                        offsetY = (offsetY + drag).coerceIn(-200f, 0f)
                     }
                 )
             }
@@ -207,97 +219,58 @@ private fun RecentCard(
                 detectTapGestures { onLaunch() }
             }
     ) {
-        // Картка застосунку
-        Box(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(400.dp)
-                .clip(RoundedCornerShape(28.dp))
-                .background(
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color(0xFF1F1F1F),
-                            Color(0xFF0D0D0D)
-                        )
-                    )
-                )
-                .border(
-                    width = 1.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.3f),
-                            Color.White.copy(alpha = 0.05f)
-                        )
-                    ),
-                    shape = RoundedCornerShape(28.dp)
-                )
+                .fillMaxSize()
+                .padding(6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            if (task.snapshot != null) {
-                // Показуємо snapshot
-                androidx.compose.foundation.Image(
-                    bitmap = task.snapshot.asImageBitmap(),
-                    contentDescription = task.label,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(28.dp)),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                // Fallback — іконка велика
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    task.icon?.let {
-                        androidx.compose.material3.Icon(
-                            bitmap = it.toBitmap(256, 256).asImageBitmap(),
-                            contentDescription = task.label,
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(120.dp)
-                        )
-                    }
-                }
-            }
-
-            // Нижній рядок з назвою + іконкою
-            Row(
+            // Іконка в glass-квадраті
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(
                         brush = Brush.verticalGradient(
                             listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.85f)
+                                Color.White.copy(alpha = 0.15f),
+                                Color.White.copy(alpha = 0.04f)
                             )
                         )
                     )
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .border(
+                        width = 0.5.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.35f),
+                                Color.White.copy(alpha = 0.1f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(14.dp)
+                    )
             ) {
                 task.icon?.let {
                     androidx.compose.material3.Icon(
-                        bitmap = it.toBitmap(48, 48).asImageBitmap(),
-                        contentDescription = null,
+                        bitmap = it.toBitmap(128, 128).asImageBitmap(),
+                        contentDescription = task.label,
                         tint = Color.Unspecified,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(38.dp)
                     )
-                    Spacer(Modifier.width(8.dp))
                 }
-                Text(
-                    task.label,
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    maxLines = 1
-                )
             }
+
+            Spacer(Modifier.height(6.dp))
+
+            // Назва
+            Text(
+                task.label,
+                color = Color.White,
+                fontSize = 11.sp,
+                maxLines = 1,
+                modifier = Modifier.padding(horizontal = 2.dp)
+            )
         }
     }
-}
-
-// Хелпер для scale + offsetY
-private fun Modifier.graphicsLayerCompat(scale: Float, offsetY: Float): Modifier {
-    return this
-        .scale(scale)
-        .offset(y = offsetY.dp)
 }

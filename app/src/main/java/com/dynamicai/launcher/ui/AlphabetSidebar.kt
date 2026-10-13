@@ -24,6 +24,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.PlatformTextStyle
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -156,11 +157,16 @@ fun AlphabetSidebar(
                         Text(
                             text = letter.toString(),
                             color = if (isActive) Color.Black else Color.White.copy(alpha = (1f - distance * 0.15f).coerceIn(0.5f, 1f)),
-                            fontSize = 11.sp,
                             maxLines = 1,
                             textAlign = TextAlign.Center,
                             style = androidx.compose.material3.LocalTextStyle.current.copy(
-                                platformStyle = PlatformTextStyle(includeFontPadding = false)
+                                fontSize = 11.sp,
+                                lineHeight = 11.sp,
+                                platformStyle = PlatformTextStyle(includeFontPadding = false),
+                                lineHeightStyle = LineHeightStyle(
+                                    alignment = LineHeightStyle.Alignment.Center,
+                                    trim = LineHeightStyle.Trim.Both
+                                )
                             )
                         )
                     }

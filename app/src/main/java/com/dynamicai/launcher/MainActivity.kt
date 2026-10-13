@@ -150,7 +150,22 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                             (it.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
                         }
                         if (idx >= 0) {
-                            listState.animateScrollToItem(idx)
+                            val current = listState.firstVisibleItemIndex
+                            val distance = kotlin.math.abs(idx - current)
+                            when {
+                                // Дуже далеко — миттєвий стрибок майже до цілі
+                                distance > 60 -> {
+                                    listState.scrollToItem(idx - 5)
+                                    listState.animateScrollToItem(idx)
+                                }
+                                // Середньо — стрибок ближче, плавна зупинка
+                                distance > 20 -> {
+                                    listState.scrollToItem(idx - 3)
+                                    listState.animateScrollToItem(idx)
+                                }
+                                // Близько — повністю плавно
+                                else -> listState.animateScrollToItem(idx)
+                            }
                         }
                     }
                 },

@@ -43,9 +43,13 @@ class VideoWallpaperService : WallpaperService() {
         }
 
         override fun onDestroy() {
-            super.onDestroy()
-            try { prefs.unregisterOnSharedPreferenceChangeListener(prefsListener) } catch (_: Exception) {}
-            releaseAll()
+            try {
+                super.onDestroy()
+                try { prefs.unregisterOnSharedPreferenceChangeListener(prefsListener) } catch (_: Exception) {}
+                releaseAll()
+            } catch (t: Throwable) {
+                log("onDestroy error: ${t.message}")
+            }
         }
 
         override fun onVisibilityChanged(visible: Boolean) {
@@ -58,13 +62,21 @@ class VideoWallpaperService : WallpaperService() {
         }
 
         override fun onSurfaceCreated(holder: SurfaceHolder) {
-            super.onSurfaceCreated(holder)
-            if (prefs.getString("videoUri", null) != null) start()
+            try {
+                super.onSurfaceCreated(holder)
+                if (prefs.getString("videoUri", null) != null) start()
+            } catch (t: Throwable) {
+                log("surfaceCreated error: ${t.message}")
+            }
         }
 
         override fun onSurfaceDestroyed(holder: SurfaceHolder) {
-            super.onSurfaceDestroyed(holder)
-            releaseAll()
+            try {
+                super.onSurfaceDestroyed(holder)
+                releaseAll()
+            } catch (t: Throwable) {
+                log("surfaceDestroyed error: ${t.message}")
+            }
         }
 
         private fun restart() {
@@ -73,6 +85,7 @@ class VideoWallpaperService : WallpaperService() {
         }
 
         private fun start() {
+            try {
             val uriStr = prefs.getString("videoUri", null)
             if (uriStr.isNullOrBlank()) {
                 log("no video set")
@@ -80,7 +93,6 @@ class VideoWallpaperService : WallpaperService() {
             }
             val muted = prefs.getBoolean("muted", true)
 
-            try {
                 val frame = surfaceHolder.surfaceFrame
                 val w = frame.width().takeIf { it > 0 } ?: 1080
                 val h = frame.height().takeIf { it > 0 } ?: 2400
@@ -127,6 +139,9 @@ class VideoWallpaperService : WallpaperService() {
                 glThread = gl
             } catch (t: Throwable) {
                 log("start failed: ${t.message}")
+            }
+            } catch (t: Throwable) {
+                log("start outer error: ${t.message}")
             }
         }
 

@@ -9,6 +9,7 @@ data class LauncherSettings(
     val menuIconSizeDp: Int = 56,
     val showSearchBar: Boolean = true,
     val showRecentButton: Boolean = true,
+    val useLlm: Boolean = true,
     val showLabels: Boolean = true,
     // Оверлей
     val overlayIconSizeDp: Int = 54,
@@ -40,6 +41,7 @@ class SettingsStorage(context: Context) {
         menuIconSizeDp = prefs.getInt("menuIconSizeDp", 56),
         showSearchBar = prefs.getBoolean("showSearchBar", true),
         showRecentButton = prefs.getBoolean("showRecentButton", true),
+        useLlm = prefs.getBoolean("useLlm", true),
         showLabels = prefs.getBoolean("showLabels", true),
         overlayIconSizeDp = prefs.getInt("overlayIconSizeDp", 54),
         overlayPosition = prefs.getString("overlayPosition", "right") ?: "right",
@@ -68,6 +70,7 @@ class SettingsStorage(context: Context) {
             .putInt("menuIconSizeDp", s.menuIconSizeDp)
             .putBoolean("showSearchBar", s.showSearchBar)
             .putBoolean("showRecentButton", s.showRecentButton)
+            .putBoolean("useLlm", s.useLlm)
             .putBoolean("showLabels", s.showLabels)
             .putInt("overlayIconSizeDp", s.overlayIconSizeDp)
             .putString("overlayPosition", s.overlayPosition)

@@ -2,6 +2,8 @@ package com.dynamicai.launcher.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -217,7 +219,9 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onChange(!checked) }
+            .pointerInput(checked) {
+                detectTapGestures(onTap = { onChange(!checked) })
+            }
             .padding(horizontal = 24.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -241,7 +245,9 @@ private fun ActionRow(label: String, onClick: () -> Unit) {
         fontSize = 15.sp,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .pointerInput(label) {
+                detectTapGestures(onTap = { onClick() })
+            }
             .padding(horizontal = 24.dp, vertical = 14.dp)
     )
 }

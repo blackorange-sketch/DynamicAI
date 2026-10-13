@@ -59,7 +59,7 @@ fun DockOverlayContent(
                     .size(width = 4.dp, height = 140.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .background(Color.White.copy(alpha = 0.55f))
-                    .clickable { expanded = true }
+                    .pointerInput(Unit) { detectTapGestures { expanded = true } }
             ) {}
         }
 
@@ -72,7 +72,7 @@ fun DockOverlayContent(
             Column(
                 modifier = Modifier
                     .padding(end = 8.dp)
-                    .clickable { }  // перехоплює тапи, щоб не проходили крізь
+                    .pointerInput(Unit) { detectTapGestures { } }  // перехоплює тапи, щоб не проходили крізь
                     .padding(vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally

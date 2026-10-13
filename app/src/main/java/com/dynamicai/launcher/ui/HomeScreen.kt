@@ -95,6 +95,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var folderMenuFolder by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
     var folderHeaderMenu by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
     var openFolder by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
+    var selectedTabFolderId by remember { mutableStateOf<String?>(null) }
     var showMainMenu by remember { mutableStateOf(false) }
     var showNewFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }

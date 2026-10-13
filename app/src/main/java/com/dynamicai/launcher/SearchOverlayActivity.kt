@@ -52,9 +52,18 @@ class SearchOverlayActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Прозоре вікно поверх інших
         window.setBackgroundDrawableResource(android.R.color.transparent)
-        window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_DIM_BEHIND or
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+        )
         window.setDimAmount(0.7f)
+
+        setShowWhenLocked(true)
+        setTurnScreenOn(true)
 
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
@@ -63,10 +72,8 @@ class SearchOverlayActivity : ComponentActivity() {
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        if (!isFinishing) finish()
-    }
+    // onPause — не закриваємо, щоб overlay залишався поверх іншої програми
+
 }
 
 @Composable

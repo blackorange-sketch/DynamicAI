@@ -27,11 +27,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val ctx = LocalContext.current
-            val colorScheme = if (android.os.Build.VERSION.SDK_INT >= 31) {
+            val baseScheme = if (android.os.Build.VERSION.SDK_INT >= 31) {
                 dynamicDarkColorScheme(ctx)
             } else {
                 darkColorScheme()
             }
+            val colorScheme = baseScheme.copy(
+                background = androidx.compose.ui.graphics.Color.Transparent,
+                surface = androidx.compose.ui.graphics.Color.Transparent
+            )
             MaterialTheme(colorScheme = colorScheme) {
                 HomeScreen()
             }

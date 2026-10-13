@@ -287,7 +287,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = {

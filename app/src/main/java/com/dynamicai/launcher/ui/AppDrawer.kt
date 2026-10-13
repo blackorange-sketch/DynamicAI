@@ -122,38 +122,22 @@ fun AppDrawer(
             ) {
                 Spacer(Modifier.height(8.dp))
 
-                // Пошук
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        BasicTextField(
-                            value = query,
-                            onValueChange = { query = it },
-                            textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
-                            cursorBrush = SolidColor(Color.White),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = {
-                                if (filtered.isNotEmpty()) {
-                                    onLaunch(filtered.first())
-                                    onDismiss()
-                                }
-                            }),
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                            decorationBox = { inner ->
-                                if (query.isEmpty()) {
-                                    Text("Усі застосунки…", color = Color.Gray, fontSize = 16.sp)
-                                }
-                                inner()
-                            }
-                        )
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, "Закрити", tint = Color.White)
-                    }
-                }
+                // Пошук — LiquidSearchBar
+                LiquidSearchBar(
+                    query = query,
+                    onQueryChange = { query = it },
+                    onSearch = {
+                        if (filtered.isNotEmpty()) {
+                            onLaunch(filtered.first())
+                            onDismiss()
+                        }
+                    },
+                    onVoice = {
+                        // Голос у меню — не реалізовано
+                    },
+                    onClose = onDismiss,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
 
                 HorizontalDivider(color = Color.DarkGray)
 

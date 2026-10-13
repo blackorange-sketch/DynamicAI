@@ -247,7 +247,7 @@ class FloatingDockService : Service() {
             ).apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dp(14).toFloat()
-                setStroke(dp(1), 0x66FFFFFF.toInt())
+                setStroke(dp(1), 0x44FFFFFF.toInt())
             }
             setPadding(dp(8), dp(6), dp(8), dp(6))
             addView(shadow)
@@ -333,7 +333,7 @@ class FloatingDockService : Service() {
             ).apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dp(26).toFloat()
-                setStroke(dp(1), 0x66FFFFFF.toInt())
+                setStroke(dp(1), 0x44FFFFFF.toInt())
             }
             addView(column)
         }
@@ -378,11 +378,13 @@ class FloatingDockService : Service() {
     private fun makeFolderIcon(name: String, firstApp: AppInfo): View {
         val size = settings.overlayIconSizeDp
         val frame = FrameLayout(this).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
-            background = GradientDrawable().apply {
+            layoutParams = LinearLayout.LayoutParams(dp(size + 8), dp(size + 8))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(0x14FFFFFF, 0x05FFFFFF)
+            ).apply {
                 shape = GradientDrawable.OVAL
-                setColor(0xFF3A3A3A.toInt())
-                setStroke(dp(2), Color.WHITE)
+                setStroke(dp(1), 0x55FFFFFF.toInt())
             }
             isClickable = true
             setOnClickListener {
@@ -406,7 +408,14 @@ class FloatingDockService : Service() {
     private fun makeAppIcon(app: AppInfo): View {
         val size = settings.overlayIconSizeDp
         val frame = FrameLayout(this).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
+            layoutParams = LinearLayout.LayoutParams(dp(size + 8), dp(size + 8))
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(0x14FFFFFF, 0x05FFFFFF)
+            ).apply {
+                shape = GradientDrawable.OVAL
+                setStroke(dp(1), 0x33FFFFFF)
+            }
             isClickable = true
             setOnClickListener {
                 packageManager.getLaunchIntentForPackage(app.packageName)?.apply {

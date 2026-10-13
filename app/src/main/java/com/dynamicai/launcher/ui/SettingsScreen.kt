@@ -9,6 +9,25 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Straighten
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -69,10 +88,10 @@ fun SettingsScreen(
         // ==== Погода ====
         GlassSectionHeader("Погода")
         GlassCard {
-            SwitchRow("Показувати погоду", settings.showWeather) {
+            SwitchRow("Показувати погоду", settings.showWeather, Icons.Default.WbSunny, Color(0xFFFFB300)) {
                 onSettingsChange(settings.copy(showWeather = it))
             }
-            SwitchRow("Використовувати GPS", settings.weatherUseGps) {
+            SwitchRow("Використовувати GPS", settings.weatherUseGps, Icons.Default.LocationOn, Color(0xFF4CAF50)) {
                 onSettingsChange(settings.copy(weatherUseGps = it))
             }
             CityInputRow(
@@ -133,21 +152,23 @@ fun SettingsScreen(
         // ==== Вигляд ====
         GlassSectionHeader("Вигляд")
         GlassCard {
-            SwitchRow("Показувати назви", settings.showLabels) {
+            SwitchRow("Показувати назви", settings.showLabels, Icons.Default.Visibility, Color(0xFF2196F3)) {
                 onSettingsChange(settings.copy(showLabels = it))
             }
-            ActionRow("Шпалери", onOpenWallpaper)
-            ActionRow("Застосунки у дока", onOpenDockEditor)
+            ActionRow("Шпалери", Icons.Default.Palette, Color(0xFFE91E63), onOpenWallpaper)
+            ActionRow("Застосунки у дока", Icons.Default.Dashboard, Color(0xFF9C27B0), onOpenDockEditor)
         }
 
         // ==== Плаваючий док ====
         GlassSectionHeader("Плаваючий док")
         GlassCard {
             if (!overlayPermissionGranted) {
-                ActionRow("Дозволити показ поверх інших", onRequestOverlayPermission)
+                ActionRow("Дозволити показ поверх інших", Icons.Default.Layers, Color(0xFF9C27B0), onRequestOverlayPermission)
             } else {
                 ActionRow(
                     if (overlayActive) "Вимкнути плаваючий док" else "Увімкнути плаваючий док",
+                    Icons.Default.Layers,
+                    if (overlayActive) Color(0xFFFF6B6B) else Color(0xFF4CAF50),
                     onToggleOverlay
                 )
             }
@@ -195,10 +216,10 @@ fun SettingsScreen(
         // ==== Енергозбереження ====
         GlassSectionHeader("Енергозбереження")
         GlassCard {
-            SwitchRow("Пауза при вимкненому екрані", settings.wpPauseOnScreenOff) {
+            SwitchRow("Пауза при вимкненому екрані", settings.wpPauseOnScreenOff, Icons.Default.Brightness6, Color(0xFF607D8B)) {
                 onSettingsChange(settings.copy(wpPauseOnScreenOff = it))
             }
-            SwitchRow("Пауза при низькому заряді", settings.wpPauseOnLowBattery) {
+            SwitchRow("Пауза при низькому заряді", settings.wpPauseOnLowBattery, Icons.Default.Bolt, Color(0xFFFFC107)) {
                 onSettingsChange(settings.copy(wpPauseOnLowBattery = it))
             }
             FpsRow(
@@ -210,16 +231,16 @@ fun SettingsScreen(
         // ==== Дії ====
         GlassSectionHeader("Дії")
         GlassCard {
-            ActionRow("Оновити контакти", onRefreshContacts)
-            ActionRow("Очистити історію команд", onClearHistory)
-            ActionRow("Показати всі приховані ($hiddenCount)", onClearHidden)
+            ActionRow("Оновити контакти", Icons.Default.People, Color(0xFF4CAF50), onRefreshContacts)
+            ActionRow("Очистити історію команд", Icons.Default.Delete, Color(0xFFFF6B6B), onClearHistory)
+            ActionRow("Показати всі приховані ($hiddenCount)", Icons.Default.Visibility, Color(0xFF9E9E9E), onClearHidden)
         }
 
         // ==== LLM ====
         GlassSectionHeader("Локальна LLM")
         GlassCard {
             if (!llmDownloaded) {
-                ActionRow("Завантажити Gemma 4 E2B (~2.6 ГБ)", onDownloadLlm)
+                ActionRow("Завантажити Gemma 4 E2B (~2.6 ГБ)", Icons.Default.Download, Color(0xFF64B5F6), onDownloadLlm)
             } else if (!llmReady) {
                 Text(
                     "Модель завантажена. Рушій очікує на активацію",
@@ -281,7 +302,13 @@ private fun SizeSliderRow(
 }
 
 @Composable
-private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+private fun SwitchRow(
+    label: String,
+    checked: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    tint: Color = Color(0xFF64B5F6),
+    onChange: (Boolean) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -289,6 +316,18 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (icon != null) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(tint.copy(alpha = 0.18f)),
+            ) {
+                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+        }
         Text(label, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
         Switch(
             checked = checked,
@@ -299,18 +338,51 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
             )
         )
     }
+    HorizontalDivider(
+        color = Color.White.copy(alpha = 0.06f),
+        thickness = 0.5.dp,
+        modifier = Modifier.padding(start = 16.dp)
+    )
 }
 
 @Composable
-private fun ActionRow(label: String, onClick: () -> Unit) {
-    Text(
-        label,
-        color = Color.White,
-        fontSize = 14.sp,
+private fun ActionRow(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    tint: Color = Color(0xFF64B5F6),
+    onClick: () -> Unit
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .pointerInput(label) { detectTapGestures { onClick() } }
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (icon != null) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(tint.copy(alpha = 0.18f)),
+            ) {
+                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+        }
+        Text(label, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Icon(
+            Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.3f),
+            modifier = Modifier.size(18.dp)
+        )
+    }
+    HorizontalDivider(
+        color = Color.White.copy(alpha = 0.06f),
+        thickness = 0.5.dp,
+        modifier = Modifier.padding(start = 16.dp)
     )
 }
 

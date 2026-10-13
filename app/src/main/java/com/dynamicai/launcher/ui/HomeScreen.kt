@@ -294,7 +294,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     LaunchedEffect(activeLetter) { if (activeLetter != null) showOverlay = true }
 
-    val showSearchField = settings.showSearchBar || searchMode || query.isNotBlank()
+    // Пошук активний — користувач взаємодіє
+    val searchActive = searchMode || query.isNotBlank()
+    // Поле пошуку видно (постійно або при активації)
+    val showSearchField = settings.showSearchBar || searchActive
 
     if (showWeatherDetail) {
         WeatherDetailScreen(
@@ -370,7 +373,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 detectTapGestures(
                     onLongPress = {
                         // Тільки якщо ми на головному екрані (не в drawer/search/settings)
-                        if (!showSettings && !drawerOpen && !showSearchField && query.isBlank()) {
+                        if (!showSettings && !drawerOpen && !searchActive) {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             showMainMenu = true
                         }
@@ -399,7 +402,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         ) {
             Spacer(Modifier.height(24.dp))
 
-            if (!showSearchField) {
+            if (!searchActive) {
                 if (!listVisible) {
                             HomeWidget(
                                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),

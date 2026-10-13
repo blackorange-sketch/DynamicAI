@@ -6,75 +6,64 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
-import android.content.SharedPreferences
 import android.content.Intent
+import android.content.SharedPreferences
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.graphics.PixelFormat
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
+import android.util.TypedValue
 import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Icon
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.unit.dp
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
 import androidx.core.graphics.drawable.toBitmap
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.setViewTreeLifecycleOwner
-import androidx.savedstate.SavedStateRegistry
-import androidx.savedstate.SavedStateRegistryController
-import androidx.savedstate.SavedStateRegistryOwner
-import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.dynamicai.launcher.MainActivity
-import com.dynamicai.launcher.data.DockStorage
-import com.dynamicai.launcher.data.SettingsStorage
-import com.dynamicai.launcher.data.LauncherSettings
-import com.dynamicai.launcher.model.AppInfo
 import com.dynamicai.launcher.data.AppRepository
+import com.dynamicai.launcher.data.DockStorage
+import com.dynamicai.launcher.data.LauncherSettings
+import com.dynamicai.launcher.data.SettingsStorage
+import com.dynamicai.launcher.model.AppInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
-class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
+class FloatingDockService : Service() {
 
     private lateinit var windowManager: WindowManager
-    private lateinit var dockView: ComposeView
+    private lateinit var rootLayout: FrameLayout
     private lateinit var params: WindowManager.LayoutParams
-    private val lifecycleRegistry = LifecycleRegistry(this)
-    private val savedStateController = SavedStateRegistryController.create(this)
-    override val lifecycle: Lifecycle get() = lifecycleRegistry
-    override val savedStateRegistry: SavedStateRegistry get() = savedStateController.savedStateRegistry
+    private lateinit var settings: LauncherSettings
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val repo by lazy { AppRepository(applicationContext) }
     private val dockStorage by lazy { DockStorage(applicationContext) }
     private val settingsStorage by lazy { SettingsStorage(applicationContext) }
-    private val settingsState = mutableStateOf(LauncherSettings())
+
+    @Volatile private var apps: List<AppInfo> = emptyList()
+    @Volatile private var expanded = false
+
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "updatedAt") {
-            val new = settingsStorage.load()
-            settingsState.value = new
-            updateLayoutParams(new)
+            try {
+                settings = settingsStorage.load()
+                rebuildContent()
+                applyPosition()
+                windowManager.updateViewLayout(rootLayout, params)
+                log("prefs updated")
+            } catch (t: Throwable) {
+                log("prefs update failed: ${t.message}")
+            }
         }
     }
-    private val allApps = mutableStateOf<List<AppInfo>>(emptyList())
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -82,73 +71,60 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         log("onCreate start")
         super.onCreate()
         try {
-            savedStateController.performAttach()
-            savedStateController.performRestore(android.os.Bundle())
-            lifecycleRegistry.currentState = Lifecycle.State.RESUMED
-
-            val loaded = settingsStorage.load()
-            log("Loaded settings: $loaded")
-            settingsState.value = loaded
-            applicationContext.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
+            settings = settingsStorage.load()
+            applicationContext
+                .getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
                 .registerOnSharedPreferenceChangeListener(prefsListener)
 
             startForeground(NOTIF_ID, buildNotification())
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
             attachDock()
+            log("onCreate done")
 
             scope.launch {
                 try {
-                    allApps.value = repo.loadInstalledApps()
+                    apps = repo.loadInstalledApps()
+                    rebuildContent()
+                    log("apps loaded: ${apps.size}")
                 } catch (t: Throwable) {
-                    android.util.Log.e("FloatingDock", "loadApps failed", t)
+                    log("load apps: ${t.message}")
                 }
             }
         } catch (t: Throwable) {
-            log("onCreate failed: ${t.message}")
+            log("onCreate failed: ${t::class.simpleName} — ${t.message}")
             stopSelf()
         }
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        log("onStartCommand")
+        return START_STICKY
+    }
 
     override fun onDestroy() {
         log("onDestroy")
         try {
-            applicationContext.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
+            applicationContext
+                .getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
                 .unregisterOnSharedPreferenceChangeListener(prefsListener)
         } catch (_: Exception) {}
-        try { if (::dockView.isInitialized) windowManager.removeView(dockView) } catch (_: Exception) {}
+        try { if (::rootLayout.isInitialized) windowManager.removeView(rootLayout) } catch (_: Exception) {}
         scope.cancel()
-        lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
         super.onDestroy()
     }
 
+    // ==== UI ====
+
+    private fun dp(v: Int): Int = TypedValue.applyDimension(
+        TypedValue.COMPLEX_UNIT_DIP, v.toFloat(), resources.displayMetrics
+    ).toInt()
+
     private fun attachDock() {
-        dockView = ComposeView(this).apply {
-            setViewTreeLifecycleOwner(this@FloatingDockService)
-            setViewTreeSavedStateRegistryOwner(this@FloatingDockService)
-            val settings = settingsState.value
-            setContent {
-                val s = settingsState.value
-                DockOverlayContent(
-                    appsFlow = { allApps.value },
-                    getDockPkgs = { dockStorage.getDockApps() },
-                    iconSizeDp = s.overlayIconSizeDp,
-                    handleLengthDp = s.overlayHandleLengthDp,
-                    handleAlphaPercent = s.overlayHandleAlphaPercent,
-                    onLaunch = { pkg ->
-                        packageManager.getLaunchIntentForPackage(pkg)?.apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            try { startActivity(this) } catch (_: Exception) {}
-                        }
-                    },
-                    onOpenSearch = {
-                        startActivity(Intent(this@FloatingDockService, MainActivity::class.java).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                        })
-                    }
-                )
-            }
+        rootLayout = FrameLayout(this).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
         }
 
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -164,32 +140,152 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
             WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
             PixelFormat.TRANSLUCENT
-        ).apply {
-            applyPosition(settingsStorage.load())
-        }
+        )
+        applyPosition()
 
-        log("addView: type=${params.type} flags=${params.flags} gravity=${params.gravity} x=${params.x} y=${params.y}")
-        windowManager.addView(dockView, params)
+        rebuildContent()
+        windowManager.addView(rootLayout, params)
+        log("addView done, gravity=${params.gravity} y=${params.y}")
     }
 
-    private fun applyPosition(s: LauncherSettings) {
-        val horizontalGravity = if (s.overlayPosition == "left") Gravity.START else Gravity.END
-        params.gravity = Gravity.CENTER_VERTICAL or horizontalGravity
+    private fun applyPosition() {
+        val horizontal = if (settings.overlayPosition == "left") Gravity.START else Gravity.END
+        params.gravity = Gravity.CENTER_VERTICAL or horizontal
         params.x = 0
-        // Зміщення від центру: -400..+400 px (безпечний діапазон)
-        val pct = s.overlayOffsetYPercent.coerceIn(0, 100)
+        val pct = settings.overlayOffsetYPercent.coerceIn(0, 100)
         params.y = ((pct - 50) * 8).coerceIn(-400, 400)
-        log("applyPosition: pct=$pct y=${params.y} gravity=${params.gravity}")
     }
 
-    private fun updateLayoutParams(s: LauncherSettings) {
-        if (!::params.isInitialized) return
-        try {
-            applyPosition(s)
-            if (::dockView.isInitialized) windowManager.updateViewLayout(dockView, params)
-        } catch (t: Throwable) {
-            log("updateLayoutParams: ${t.message}")
+    private fun rebuildContent() {
+        if (!::rootLayout.isInitialized) return
+        rootLayout.removeAllViews()
+        if (expanded) rootLayout.addView(buildExpanded()) else rootLayout.addView(buildHandle())
+    }
+
+    private fun buildHandle(): View {
+        val handle = View(this).apply {
+            layoutParams = FrameLayout.LayoutParams(dp(4), dp(settings.overlayHandleLengthDp))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(2).toFloat()
+                setColor(Color.WHITE)
+            }
+            alpha = settings.overlayHandleAlphaPercent / 100f
+            setPadding(0, 0, 0, 0)
         }
+        val wrapper = FrameLayout(this).apply {
+            setPadding(dp(3), 0, dp(3), 0)
+            addView(handle)
+            setOnClickListener {
+                expanded = true
+                rebuildContent()
+            }
+        }
+        return wrapper
+    }
+
+    private fun buildExpanded(): View {
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+        }
+
+        // Кнопка закриття
+        column.addView(makeCircleButton(
+            size = settings.overlayIconSizeDp,
+            bgColor = 0x33202020,
+            borderColor = 0x59FFFFFF.toInt(),
+            iconRes = android.R.drawable.ic_menu_close_clear_cancel,
+            iconTint = Color.WHITE
+        ) {
+            expanded = false
+            rebuildContent()
+        })
+
+        column.addView(spacer(dp(8)))
+
+        // Кнопка пошуку
+        column.addView(makeCircleButton(
+            size = settings.overlayIconSizeDp,
+            bgColor = 0x402196F3.toInt(),
+            borderColor = 0x9964B5F6.toInt(),
+            iconRes = android.R.drawable.ic_menu_search,
+            iconTint = Color.parseColor("#64B5F6")
+        ) {
+            startActivity(Intent(this, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            })
+        })
+
+        column.addView(spacer(dp(8)))
+
+        // Іконки застосунків з дока
+        val dockPkgs = dockStorage.getDockApps()
+        apps.filter { it.packageName in dockPkgs }.take(6).forEach { app ->
+            column.addView(makeAppIcon(app))
+            column.addView(spacer(dp(8)))
+        }
+
+        return column
+    }
+
+    private fun spacer(px: Int): View = View(this).apply {
+        layoutParams = LinearLayout.LayoutParams(1, px)
+    }
+
+    private fun makeCircleButton(
+        size: Int,
+        bgColor: Int,
+        borderColor: Int,
+        iconRes: Int,
+        iconTint: Int,
+        onTap: () -> Unit
+    ): View {
+        val frame = FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(bgColor)
+                setStroke(dp(1), borderColor)
+            }
+            isClickable = true
+            setOnClickListener { onTap() }
+        }
+        val icon = ImageView(this).apply {
+            setImageResource(iconRes)
+            imageTintList = ColorStateList.valueOf(iconTint)
+            layoutParams = FrameLayout.LayoutParams(dp(size / 2), dp(size / 2)).apply {
+                gravity = Gravity.CENTER
+            }
+        }
+        frame.addView(icon)
+        return frame
+    }
+
+    private fun makeAppIcon(app: AppInfo): View {
+        val size = settings.overlayIconSizeDp
+        val frame = FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(Color.parseColor("#EFEFEF"))
+                setStroke(dp(1), Color.WHITE)
+            }
+            isClickable = true
+            setOnClickListener {
+                packageManager.getLaunchIntentForPackage(app.packageName)?.apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    try { startActivity(this) } catch (_: Exception) {}
+                }
+            }
+        }
+        val icon = ImageView(this).apply {
+            setImageBitmap(app.icon.toBitmap(dp(size), dp(size)))
+            layoutParams = FrameLayout.LayoutParams(dp(size - 8), dp(size - 8)).apply {
+                gravity = Gravity.CENTER
+            }
+        }
+        frame.addView(icon)
+        return frame
     }
 
     private fun buildNotification(): Notification {
@@ -218,28 +314,32 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
     companion object {
         const val NOTIF_ID = 1001
+
         @Volatile var lastLog: String = "—"
+
         fun log(msg: String) {
             lastLog = msg
-            log(msg)
+            Log.d("FloatingDock", msg)
         }
+
         fun start(ctx: Context) {
-            log("start() called")
             try {
                 val i = Intent(ctx, FloatingDockService::class.java)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    log("calling startForegroundService")
-                    ctx.startForegroundService(i)
-                } else {
-                    log("calling startService")
-                    ctx.startService(i)
-                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(i)
+                else ctx.startService(i)
+                log("start() called")
             } catch (t: Throwable) {
-                log("start() failed: ${t.message}")
+                log("start() failed: ${t::class.simpleName} — ${t.message}")
             }
         }
+
         fun stop(ctx: Context) {
-            ctx.stopService(Intent(ctx, FloatingDockService::class.java))
+            try {
+                ctx.stopService(Intent(ctx, FloatingDockService::class.java))
+                log("stop() called")
+            } catch (t: Throwable) {
+                log("stop() failed: ${t.message}")
+            }
         }
     }
 }

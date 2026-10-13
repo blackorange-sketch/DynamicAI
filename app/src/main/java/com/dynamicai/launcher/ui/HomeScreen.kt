@@ -89,6 +89,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     var query by remember { mutableStateOf("") }
     var showSettings by remember { mutableStateOf(false) }
+    var showWallpaper by remember { mutableStateOf(false) }
     var searchMode by remember { mutableStateOf(false) }
     var menuApp by remember { mutableStateOf<AppInfo?>(null) }
     var folderMenuApp by remember { mutableStateOf<AppInfo?>(null) }
@@ -121,7 +122,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
 
 
-    BackHandler(enabled = showSettings) {
+    BackHandler(enabled = showWallpaper) {
+        showWallpaper = false
+    }
+    BackHandler(enabled = !showWallpaper && showSettings) {
         showSettings = false
     }
     BackHandler(enabled = !showSettings && openFolder != null) {
@@ -269,6 +273,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             llmDownloaded = vm.downloader.isDownloaded,
             llmReady = vm.llm.isReady,
             versionName = BuildConfig.VERSION_NAME,
+            onOpenWallpaper = { showWallpaper = true },
             onClose = { showSettings = false }
         )
         return
@@ -572,6 +577,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 onSwipeUp = { drawerOpen = true },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
+        }
+
+        if (showWallpaper) {
+            WallpaperScreen(onClose = { showWallpaper = false })
         }
 
         downloadProgress?.let { p ->

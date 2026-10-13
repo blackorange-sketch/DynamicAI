@@ -37,6 +37,7 @@ fun SettingsScreen(
     llmDownloaded: Boolean,
     llmReady: Boolean,
     versionName: String,
+    onOpenWallpaper: () -> Unit,
     onClose: () -> Unit
 ) {
     Column(
@@ -79,6 +80,7 @@ fun SettingsScreen(
         )
 
         Section("Вигляд")
+        ActionRow("Шпалери", onOpenWallpaper)
         SwitchRow(
             label = "Показувати назви застосунків",
             checked = settings.showLabels,

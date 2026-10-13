@@ -4,6 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -11,11 +14,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
@@ -28,6 +33,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dynamicai.launcher.model.AppInfo
 import com.dynamicai.launcher.ui.AlphabetSidebar
 import com.dynamicai.launcher.ui.Dock
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -51,6 +58,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    var scrollJob by remember { mutableStateOf<Job?>(null) }
+    var activeLetter by remember { mutableStateOf<Char?>(null) }
+    var showOverlay by remember { mutableStateOf(false) }
 
     LaunchedEffect(apps, query) {
         filtered = if (query.isBlank()) apps
@@ -65,6 +75,17 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     val dockApps = remember(dockPkgs, apps) {
         apps.filter { it.packageName in dockPkgs }
+    }
+
+    // Приховуємо оверлей через 600 мс після останнього тапу
+    LaunchedEffect(activeLetter) {
+        if (activeLetter != null) {
+            showOverlay = true
+            delay(600)
+            showOverlay = false
+            delay(300)
+            activeLetter = null
+        }
     }
 
     Box(
@@ -120,16 +141,50 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         if (letters.isNotEmpty() && query.isBlank()) {
             AlphabetSidebar(
                 letters = letters,
+                activeLetter = activeLetter,
                 onLetterClick = { letter ->
-                    val idx = filtered.indexOfFirst {
-                        (it.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
-                    }
-                    if (idx >= 0) {
-                        scope.launch { listState.animateScrollToItem(idx) }
+                    activeLetter = letter
+                    scrollJob?.cancel()
+                    scrollJob = scope.launch {
+                        val idx = filtered.indexOfFirst {
+                            (it.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
+                        }
+                        if (idx >= 0) {
+                            // Плавний скрол: якщо далеко — спершу наближаємось, потім точно
+                            val current = listState.firstVisibleItemIndex
+                            val distance = kotlin.math.abs(idx - current)
+                            if (distance > 40) {
+                                val mid = current + (idx - current) / 2
+                                listState.animateScrollToItem(mid)
+                            }
+                            listState.animateScrollToItem(idx)
+                        }
                     }
                 },
                 modifier = Modifier.align(Alignment.CenterEnd)
             )
+        }
+
+        // Велика літера по центру (niagara-style)
+        AnimatedVisibility(
+            visible = showOverlay && activeLetter != null,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.15f))
+            ) {
+                Text(
+                    text = activeLetter?.toString() ?: "",
+                    color = Color.White,
+                    fontSize = 64.sp
+                )
+            }
         }
 
         if (dockApps.isNotEmpty() && query.isBlank()) {

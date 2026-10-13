@@ -4,6 +4,11 @@ sealed class Command {
     data class OpenApp(val query: String) : Command()
     data class WebSearch(val query: String) : Command()
     data class Call(val name: String) : Command()
+    data class SetAlarm(val time: String, val label: String?) : Command()
+    data class SetTimer(val duration: String) : Command()
+    data class OpenSettings(val which: String?) : Command()
+    data class SetVolume(val level: Int) : Command()
     object ToggleFlashlight : Command()
-    data class Unknown(val raw: String) : Command()
+    object Unknown : Command()
+    data class Raw(val text: String) : Command()
 }

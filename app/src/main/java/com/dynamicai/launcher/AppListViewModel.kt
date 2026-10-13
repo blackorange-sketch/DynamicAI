@@ -10,6 +10,8 @@ import com.dynamicai.launcher.command.CommandResult
 import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.data.CommandHistory
 import com.dynamicai.launcher.data.DockStorage
+import com.dynamicai.launcher.llm.LlmEngine
+import com.dynamicai.launcher.llm.NoOpLlmEngine
 import com.dynamicai.launcher.model.AppInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +25,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val parser = CommandParser()
     private val executor = CommandExecutor(app)
     private val historyStorage = CommandHistory(app)
+    val llm: LlmEngine = NoOpLlmEngine()
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
     val apps: StateFlow<List<AppInfo>> = _apps.asStateFlow()

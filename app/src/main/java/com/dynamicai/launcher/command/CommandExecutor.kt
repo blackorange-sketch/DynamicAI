@@ -3,7 +3,10 @@ package com.dynamicai.launcher.command
 import android.content.Context
 import android.content.Intent
 import android.hardware.camera2.CameraManager
+import android.media.AudioManager
 import android.net.Uri
+import android.provider.AlarmClock
+import android.provider.Settings
 import com.dynamicai.launcher.model.AppInfo
 
 class CommandExecutor(private val context: Context) {
@@ -12,11 +15,16 @@ class CommandExecutor(private val context: Context) {
         is Command.OpenApp -> resolveOpenApp(cmd.query, apps)
         is Command.WebSearch -> webSearch(cmd.query)
         is Command.Call -> call(cmd.name)
+        is Command.SetAlarm -> setAlarm(cmd.time, cmd.label)
+        is Command.SetTimer -> setTimer(cmd.duration)
+        is Command.OpenSettings -> openSettings(cmd.which)
+        is Command.SetVolume -> changeVolume(cmd.level)
         Command.ToggleFlashlight -> toggleFlashlight()
-        is Command.Unknown -> CommandResult.Error("Не розумію команду: \"${cmd.raw}\"")
+        is Command.Raw -> CommandResult.Error("Не розумію команду: \"${cmd.text}\"")
+        Command.Unknown -> CommandResult.Error("Не розумію команду")
     }
 
-    private fun resolveOpenApp(query: String, apps: List<AppInfo>): CommandResult {
+    fun resolveOpenApp(query: String, apps: List<AppInfo>): CommandResult {
         val scored = apps
             .map { it to FuzzyMatcher.score(it.label, query) }
             .filter { it.second >= 35 }
@@ -69,14 +77,81 @@ class CommandExecutor(private val context: Context) {
     }
 
     private fun call(name: String): CommandResult {
-        val uri = Uri.parse("tel:${Uri.encode(name)}")
-        val intent = Intent(Intent.ACTION_DIAL, uri)
+        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(name)}"))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return try {
             context.startActivity(intent)
             CommandResult.Success("Набираю: $name")
         } catch (e: Exception) {
             CommandResult.Error("Помилка діалера: ${e.message}")
+        }
+    }
+
+    private fun setAlarm(time: String, label: String?): CommandResult {
+        val (hour, minute) = parseTime(time)
+            ?: return CommandResult.Error("Не розпізнав час: \"$time\"")
+
+        val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
+            putExtra(AlarmClock.EXTRA_HOUR, hour)
+            putExtra(AlarmClock.EXTRA_MINUTES, minute)
+            putExtra(AlarmClock.EXTRA_SKIP_UI, false)
+            label?.let { putExtra(AlarmClock.EXTRA_MESSAGE, it) }
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            context.startActivity(intent)
+            CommandResult.Success("Будильник на %02d:%02d".format(hour, minute))
+        } catch (e: Exception) {
+            CommandResult.Error("Не вдалось поставити будильник")
+        }
+    }
+
+    private fun setTimer(duration: String): CommandResult {
+        val (seconds, display) = parseDuration(duration)
+            ?: return CommandResult.Error("Не розпізнав тривалість: \"$duration\"")
+
+        val intent = Intent(AlarmClock.ACTION_SET_TIMER).apply {
+            putExtra(AlarmClock.EXTRA_LENGTH, seconds)
+            putExtra(AlarmClock.EXTRA_SKIP_UI, false)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        return try {
+            context.startActivity(intent)
+            CommandResult.Success("Таймер на $display")
+        } catch (e: Exception) {
+            CommandResult.Error("Не вдалось поставити таймер")
+        }
+    }
+
+    private fun openSettings(which: String?): CommandResult {
+        val intent = Intent(Settings.ACTION_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return try {
+            context.startActivity(intent)
+            CommandResult.Success("Відкриваю налаштування")
+        } catch (e: Exception) {
+            CommandResult.Error("Не вдалось відкрити налаштування")
+        }
+    }
+
+    private fun changeVolume(level: Int): CommandResult {
+        val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        val current = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+
+        val target = when {
+            level < 0 -> (current - 2).coerceAtLeast(0)
+            level > 100 -> max
+            level == 100 -> max
+            level == 1 -> (current + 2).coerceAtMost(max)
+            else -> level
+        }
+
+        return try {
+            am.setStreamVolume(AudioManager.STREAM_MUSIC, target, AudioManager.FLAG_SHOW_UI)
+            CommandResult.Success("Гучність: $target/$max")
+        } catch (e: Exception) {
+            CommandResult.Error("Помилка гучності: ${e.message}")
         }
     }
 
@@ -95,6 +170,52 @@ class CommandExecutor(private val context: Context) {
         } catch (e: Exception) {
             CommandResult.Error("Помилка ліхтарика: ${e.message}")
         }
+    }
+
+    private fun parseTime(input: String): Pair<Int, Int>? {
+        val s = input.trim().lowercase()
+        // "7:30", "7 30", "07:30", "7 годин 30 хвилин", "о 7"
+        val colon = Regex("(\\d{1,2})\\s*[:.\\s]\\s*(\\d{1,2})").find(s)
+        if (colon != null) {
+            val h = colon.groupValues[1].toIntOrNull() ?: return null
+            val m = colon.groupValues[2].toIntOrNull() ?: return null
+            if (h in 0..23 && m in 0..59) return h to m
+        }
+        val hourOnly = Regex("(\\d{1,2})").find(s)
+        if (hourOnly != null) {
+            val h = hourOnly.groupValues[1].toIntOrNull() ?: return null
+            if (h in 0..23) return h to 0
+        }
+        return null
+    }
+
+    private fun parseDuration(input: String): Pair<Int, String>? {
+        val s = input.trim().lowercase()
+        val hourRe = Regex("(\\d+)\\s*(год|годин|час|hour|h)")
+        val minRe = Regex("(\\d+)\\s*(хв|хвилин|мин|минут|min|m)")
+        val secRe = Regex("(\\d+)\\s*(сек|секунд|sec|s)")
+
+        var total = 0
+        val parts = mutableListOf<String>()
+
+        hourRe.find(s)?.let {
+            val v = it.groupValues[1].toInt()
+            total += v * 3600
+            parts.add("$v год")
+        }
+        minRe.find(s)?.let {
+            val v = it.groupValues[1].toInt()
+            total += v * 60
+            parts.add("$v хв")
+        }
+        secRe.find(s)?.let {
+            val v = it.groupValues[1].toInt()
+            total += v
+            parts.add("$v сек")
+        }
+
+        if (total == 0) return null
+        return total to parts.joinToString(" ")
     }
 
     private var flashlightOn = false

@@ -281,7 +281,7 @@ fun SettingsScreen(
             SwitchRow(
                 label = "Використовувати LLM для команд",
                 checked = settings.useLlm,
-                icon = Icons.Default.Build,
+                icon = Icons.Default.Settings,
                 tint = Color(0xFF9C27B0)
             ) {
                 onSettingsChange(settings.copy(useLlm = it))

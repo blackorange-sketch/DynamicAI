@@ -125,8 +125,8 @@ private fun FolderTab(
                         Color(0xFF64B5F6).copy(alpha = 0.6f),
                         Color(0xFF2196F3).copy(alpha = 0.3f)
                     ) else listOf(
-                        Color.Black.copy(alpha = 0.55f),
-                        Color.Black.copy(alpha = 0.4f)
+                        Color(0xE61F1F1F),
+                        Color(0xCC0D0D0D)
                     )
                 )
             )

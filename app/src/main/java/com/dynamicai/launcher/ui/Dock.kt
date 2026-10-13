@@ -1,6 +1,7 @@
 package com.dynamicai.launcher.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
@@ -50,10 +51,20 @@ fun Dock(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xE62A2A2A),
-                        Color(0xCC1A1A1A)
+                        Color(0xE61F1F1F),
+                        Color(0xCC0D0D0D)
                     )
                 )
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.4f),
+                        Color.White.copy(alpha = 0.08f)
+                    )
+                ),
+                shape = RoundedCornerShape(28.dp)
             )
             .padding(horizontal = 20.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
@@ -111,15 +122,38 @@ fun Dock(
                 }
             } else {
                 item.icon?.let {
-                    Icon(
-                        bitmap = it.toBitmap(96, 96).asImageBitmap(),
-                        contentDescription = item.label,
-                        tint = Color.Unspecified,
+                    Box(
+                        contentAlignment = Alignment.Center,
                         modifier = Modifier
-                            .size(iconSizeDp.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .size((iconSizeDp + 8).dp)
+                            .clip(RoundedCornerShape((iconSizeDp / 2 + 4).dp))
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.08f),
+                                        Color.White.copy(alpha = 0.02f)
+                                    )
+                                )
+                            )
+                            .border(
+                                width = 0.5.dp,
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.2f),
+                                        Color.White.copy(alpha = 0.04f)
+                                    )
+                                ),
+                                shape = RoundedCornerShape((iconSizeDp / 2 + 4).dp)
+                            )
                             .clickable { onLaunch(item) }
-                    )
+                    ) {
+                        Icon(
+                            bitmap = it.toBitmap(96, 96).asImageBitmap(),
+                            contentDescription = item.label,
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size(iconSizeDp.dp)
+                        )
+                    }
                 }
             }
         }

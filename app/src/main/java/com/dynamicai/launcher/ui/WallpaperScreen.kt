@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -18,34 +19,31 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dynamicai.launcher.data.LauncherSettings
 import com.dynamicai.launcher.wallpaper.VideoWallpaperService
 
 @Composable
 fun WallpaperScreen(
-    settings: com.dynamicai.launcher.data.LauncherSettings,
-    onSettingsChange: (com.dynamicai.launcher.data.LauncherSettings) -> Unit,
+    settings: LauncherSettings,
+    onSettingsChange: (LauncherSettings) -> Unit,
     onClose: () -> Unit
 ) {
     val ctx = LocalContext.current
     val backgroundAlphaPercent = settings.backgroundAlphaPercent
-    val pauseOnScreenOff = settings.wpPauseOnScreenOff
-    val pauseOnLowBattery = settings.wpPauseOnLowBattery
-    val fpsValue = settings.wpFps
     var muted by remember { mutableStateOf(VideoWallpaperService.getMuted(ctx)) }
     var hasVideo by remember { mutableStateOf(VideoWallpaperService.hasVideo(ctx)) }
     var lastLog by remember { mutableStateOf(VideoWallpaperService.lastLog) }
-    var uriText by remember { mutableStateOf(readUri(ctx)) }
 
     LaunchedEffect(Unit) {
         while (true) {
             lastLog = VideoWallpaperService.lastLog
-            uriText = readUri(ctx)
-            kotlinx.coroutines.delay(1000)
+            kotlinx.coroutines.delay(1500)
         }
     }
 
@@ -105,9 +103,10 @@ fun WallpaperScreen(
             .background(Color.Black.copy(alpha = backgroundAlphaPercent / 100f))
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onClose) {
@@ -116,140 +115,83 @@ fun WallpaperScreen(
             Text("Шпалери", color = Color.White, fontSize = 22.sp)
         }
 
-        SectionHeader("Системні шпалери")
-        ActionButton("Обрати шпалери (система)") { openSystemWallpaper() }
+        GlassSectionHeader("Системні")
+        GlassCard {
+            GlassActionRow("Обрати шпалери (система)") { openSystemWallpaper() }
+            Text(
+                "Галерея, системні, живі, Google Wallpapers",
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+        }
 
-        SectionHeader("Відео-шпалери DynamicAI")
-        ActionButton(if (hasVideo) "Змінити відео" else "Обрати відео") {
-            videoPicker.launch(arrayOf("video/*"))
+        GlassSectionHeader("Відео-шпалери DynamicAI")
+        GlassCard {
+            GlassActionRow(if (hasVideo) "Змінити відео" else "Обрати відео") {
+                videoPicker.launch(arrayOf("video/*"))
+            }
+
+            if (hasVideo) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Без звуку", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = muted,
+                        onCheckedChange = { m ->
+                            muted = m
+                            VideoWallpaperService.setMuted(ctx, m)
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFF64B5F6)
+                        )
+                    )
+                }
+                GlassActionRow("Активувати як live wallpaper") { activateLiveWallpaper() }
+                GlassActionRow("Прибрати відео") {
+                    VideoWallpaperService.clear(ctx)
+                    hasVideo = false
+                }
+            } else {
+                Text(
+                    "Обери відео → активуй як live wallpaper",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
         }
 
         if (hasVideo) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Без звуку", color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                Switch(
-                    checked = muted,
-                    onCheckedChange = { m ->
-                        muted = m
-                        VideoWallpaperService.setMuted(ctx, m)
-                    },
-                    colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF64B5F6))
-                )
-            }
-            ActionButton("Активувати як live wallpaper") { activateLiveWallpaper() }
-            ActionButton("Прибрати відео") {
-                VideoWallpaperService.clear(ctx)
-                hasVideo = false
-            }
-        }
-
-        SectionHeader("Енергозбереження")
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Пауза при вимкненому екрані", color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            Switch(
-                checked = pauseOnScreenOff,
-                onCheckedChange = { onSettingsChange(settings.copy(wpPauseOnScreenOff = it)) },
-                colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF64B5F6))
-            )
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Пауза при низькому заряді", color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            Switch(
-                checked = pauseOnLowBattery,
-                onCheckedChange = { onSettingsChange(settings.copy(wpPauseOnLowBattery = it)) },
-                colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF64B5F6))
-            )
-        }
-        Text(
-            "Обмеження FPS: $fpsValue",
-            color = Color.White,
-            fontSize = 15.sp,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
-        )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            listOf(15, 24, 30, 60).forEach { fps ->
+            GlassSectionHeader("Діагностика")
+            GlassCard {
                 Text(
-                    "$fps",
-                    color = if (fpsValue == fps) Color.White else Color.Gray,
-                    fontSize = 14.sp,
-                    modifier = Modifier
-                        .background(
-                            if (fpsValue == fps) Color(0xFF2196F3) else Color(0xFF1A1A1A),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
-                        )
-                        .pointerInput(fps) {
-                            detectTapGestures {
-                                onSettingsChange(settings.copy(wpFps = fps))
-                            }
-                        }
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                    "Остання подія: $lastLog",
+                    color = Color(0xFF64B5F6),
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
         }
-
-        SectionHeader("Діагностика")
-        Text(
-            text = "URI: $uriText",
-            color = Color.Yellow,
-            fontSize = 10.sp,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
-        )
-        Text(
-            text = "Остання подія: $lastLog",
-            color = Color.Yellow,
-            fontSize = 11.sp,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
-        )
 
         Spacer(Modifier.height(48.dp))
     }
 }
 
-private fun readUri(ctx: Context): String {
-    return ctx.getSharedPreferences("dynamicai_wallpaper", Context.MODE_PRIVATE)
-        .getString("videoUri", "не вибрано")
-        ?.take(80) ?: "не вибрано"
-}
-
 @Composable
-private fun SectionHeader(text: String) {
-    Text(
-        text,
-        color = Color(0xFF64B5F6),
-        fontSize = 13.sp,
-        modifier = Modifier.padding(start = 24.dp, top = 20.dp, bottom = 8.dp)
-    )
-}
-
-@Composable
-private fun ActionButton(label: String, onClick: () -> Unit) {
+private fun GlassActionRow(label: String, onClick: () -> Unit) {
     Text(
         label,
         color = Color.White,
-        fontSize = 15.sp,
+        fontSize = 14.sp,
         modifier = Modifier
             .fillMaxWidth()
             .pointerInput(label) { detectTapGestures { onClick() } }
-            .padding(horizontal = 24.dp, vertical = 14.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     )
 }

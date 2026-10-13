@@ -34,6 +34,7 @@ fun FolderTabs(
     iconSizeDp: Int,
     fontSizeSp: Int,
     onSelectFolder: (Folder) -> Unit,
+    onLongPressFolder: (Folder) -> Unit,
     onLaunchApp: (AppInfo) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -58,7 +59,8 @@ fun FolderTabs(
                 FolderTab(
                     label = folder.name,
                     selected = folder.id == selectedFolderId,
-                    onTap = { onSelectFolder(folder) }
+                    onTap = { onSelectFolder(folder) },
+                    onLongPress = { onLongPressFolder(folder) }
                 )
             }
         }
@@ -123,7 +125,8 @@ fun FolderTabs(
 private fun FolderTab(
     label: String,
     selected: Boolean,
-    onTap: () -> Unit
+    onTap: () -> Unit,
+    onLongPress: () -> Unit
 ) {
     Text(
         text = label,
@@ -133,7 +136,10 @@ private fun FolderTab(
             .clip(RoundedCornerShape(20.dp))
             .background(if (selected) Color(0xFF2196F3) else Color(0xFF1A1A1A))
             .pointerInput(label) {
-                detectTapGestures { onTap() }
+                detectTapGestures(
+                    onTap = { onTap() },
+                    onLongPress = { onLongPress() }
+                )
             }
             .padding(horizontal = 16.dp, vertical = 8.dp)
     )

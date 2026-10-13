@@ -368,8 +368,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         }
 
                         if (folders.isNotEmpty()) {
-                            Spacer(Modifier.height(8.dp))
-                            FolderTabs(
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = !listVisible,
+                                enter = androidx.compose.animation.fadeIn(),
+                                exit = androidx.compose.animation.fadeOut()
+                            ) {
+                                Spacer(Modifier.height(8.dp))
+                                FolderTabs(
                                 folders = folders,
                                 apps = apps,
                                 selectedFolderId = selectedTabFolderId,
@@ -379,8 +384,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                                     selectedTabFolderId = folder.id
                                     showListTemporarily()
                                 },
+                                onLongPressFolder = { folder ->
+                                    folderHeaderMenu = folder
+                                },
                                 onLaunchApp = { app -> launchAppWithAnimation(app) }
                             )
+                        }
                         }
             }
 

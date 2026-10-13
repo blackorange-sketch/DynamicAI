@@ -30,7 +30,8 @@ fun HomeWidget(
     modifier: Modifier = Modifier,
     onSettingsTap: (() -> Unit)? = null,
     weather: WeatherState = WeatherState.Loading,
-    showWeather: Boolean = true
+    showWeather: Boolean = true,
+    onWeatherTap: (() -> Unit)? = null
 ) {
     val ctx = LocalContext.current
     var now by remember { mutableStateOf(LocalDateTime.now()) }
@@ -102,7 +103,15 @@ fun HomeWidget(
 
             if (showWeather) {
                 Spacer(Modifier.height(10.dp))
-                WeatherRow(weather)
+                Box(
+                    modifier = Modifier.pointerInput(Unit) {
+                        detectTapGestures {
+                            onWeatherTap?.invoke()
+                        }
+                    }
+                ) {
+                    WeatherRow(weather)
+                }
             }
         }
 

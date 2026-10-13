@@ -92,6 +92,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var showSettings by remember { mutableStateOf(false) }
     var showWallpaper by remember { mutableStateOf(false) }
     var showDockEditor by remember { mutableStateOf(false) }
+    var showWeatherDetail by remember { mutableStateOf(false) }
     var searchMode by remember { mutableStateOf(false) }
     var menuApp by remember { mutableStateOf<AppInfo?>(null) }
     var folderMenuApp by remember { mutableStateOf<AppInfo?>(null) }
@@ -141,7 +142,17 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             }
     }
 
-    BackHandler(enabled = showDockEditor) {
+    // Поглинач back — на головному екрані back нічого не робить
+    BackHandler(enabled = !showDockEditor && !showWallpaper && !showSettings &&
+            openFolder == null && !drawerOpen && !searchMode && query.isBlank() &&
+            selectedTabFolderId == null) {
+        // нічого не робимо
+    }
+
+    BackHandler(enabled = showWeatherDetail) {
+        showWeatherDetail = false
+    }
+    BackHandler(enabled = !showWeatherDetail && showDockEditor) {
         showDockEditor = false
     }
     BackHandler(enabled = !showDockEditor && showWallpaper) {
@@ -195,6 +206,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     }
 
     LaunchedEffect(Unit) {
+        vm.startWeatherAutoRefresh { isScreenOn(ctx) }
+
         // Автозапуск плаваючого дока, якщо був увімкнений
         val overlayPrefs = ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
         val wasEnabled = overlayPrefs.getBoolean("overlayEnabled", false)
@@ -280,6 +293,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     LaunchedEffect(activeLetter) { if (activeLetter != null) showOverlay = true }
 
     val showSearchField = searchMode || query.isNotBlank()
+
+    if (showWeatherDetail) {
+        WeatherDetailScreen(
+            state = weather,
+            cityName = settings.cityName,
+            backgroundAlphaPercent = settings.backgroundAlphaPercent,
+            onClose = { showWeatherDetail = false }
+        )
+        return
+    }
 
     if (showDockEditor) {
         DockEditorScreen(
@@ -380,7 +403,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                                 onSettingsTap = { showSettings = true },
                                 weather = weather,
-                                showWeather = settings.showWeather
+                                showWeather = settings.showWeather,
+                                onWeatherTap = { showWeatherDetail = true }
                             )
                         }
 
@@ -1241,4 +1265,12 @@ fun AppRow(
             )
         }
     }
+
+
+private fun isScreenOn(ctx: android.content.Context): Boolean {
+    return try {
+        val pm = ctx.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+        pm.isInteractive
+    } catch (_: Throwable) { true }
+}
 }

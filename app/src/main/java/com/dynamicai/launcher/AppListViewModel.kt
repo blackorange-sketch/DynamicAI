@@ -261,6 +261,24 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         _response.value = text
     }
 
+    private var weatherJob: kotlinx.coroutines.Job? = null
+
+    fun startWeatherAutoRefresh(screenOnCheck: () -> Boolean) {
+        weatherJob?.cancel()
+        weatherJob = viewModelScope.launch {
+            // Перше завантаження
+            _weather.value = WeatherState.Loading
+            _weather.value = weatherRepo.fetch()
+
+            while (true) {
+                kotlinx.coroutines.delay(60 * 60 * 1000L)  // 1 година
+                if (screenOnCheck()) {
+                    _weather.value = weatherRepo.fetch()
+                }
+            }
+        }
+    }
+
     fun refreshWeather() {
         viewModelScope.launch {
             _weather.value = WeatherState.Loading

@@ -49,6 +49,8 @@ import kotlinx.coroutines.launch
 fun AppDrawer(
     apps: List<AppInfo>,
     backgroundAlphaPercent: Int,
+    iconSizeDp: Int,
+    fontSizeSp: Int,
     onLaunch: (AppInfo) -> Unit,
     onDismiss: () -> Unit,
     visible: Boolean
@@ -165,7 +167,7 @@ fun AppDrawer(
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
                     items(filtered, key = { it.packageName }) { app ->
-                        AppDrawerRow(app) {
+                        AppDrawerRow(app, iconSizeDp, fontSizeSp) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onLaunch(app)
                             onDismiss()

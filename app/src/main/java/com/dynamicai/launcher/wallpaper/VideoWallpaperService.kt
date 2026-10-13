@@ -44,8 +44,7 @@ class VideoWallpaperService : WallpaperService() {
             this.visible = visible
             if (visible) {
                 if (player == null) start() else try { player?.start() } catch (_: Exception) {}
-                glThread?.requestRender()
-            } else {
+                            } else {
                 try { player?.pause() } catch (_: Exception) {}
             }
         }

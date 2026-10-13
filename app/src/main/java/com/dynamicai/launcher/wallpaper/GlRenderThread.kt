@@ -44,6 +44,7 @@ class GlRenderThread(
     private var uScaleLoc = 0
 
     private lateinit var surfaceTexture: SurfaceTexture
+    private var glHandler: Handler? = null
     lateinit var videoSurface: Surface
         private set
 
@@ -72,21 +73,15 @@ class GlRenderThread(
         videoHeight = h
     }
 
-    fun requestRender() {
-        if (!::handler.isInitialized) return
-        handler.post { drawFrame() }
-    }
 
     private fun doStart() {
         try {
             setupEgl()
             setupGl()
-            surfaceTexture = SurfaceTexture(textureId).apply {
-                setOnFrameAvailableListener {
-                    // Прокидаємо кадр у рендер
-                    requestRender()
-                }
-            }
+            surfaceTexture = SurfaceTexture(textureId)
+            surfaceTexture.setOnFrameAvailableListener({ _ ->
+                handler.post { drawFrame() }
+            }, handler)
             videoSurface = Surface(surfaceTexture)
             onSurfaceTextureReady?.invoke(surfaceTexture)
             running = true
@@ -257,9 +252,11 @@ class GlRenderThread(
             GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureId)
             GLES20.glUniform1i(uTextureLoc, 0)
 
-            // Оновлюємо текстуру
-            if (::surfaceTexture.isInitialized) {
+            // Оновлюємо текстуру перед малюванням
+            try {
                 surfaceTexture.updateTexImage()
+            } catch (t: Throwable) {
+                Log.e("GlRenderThread", "updateTexImage in draw", t)
             }
 
             GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)

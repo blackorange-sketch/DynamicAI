@@ -301,11 +301,6 @@ class FloatingDockService : Service() {
         val size = settings.overlayIconSizeDp
         val frame = FrameLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#EFEFEF"))
-                setStroke(dp(1), Color.WHITE)
-            }
             isClickable = true
             setOnClickListener {
                 packageManager.getLaunchIntentForPackage(app.packageName)?.apply {
@@ -316,7 +311,7 @@ class FloatingDockService : Service() {
         }
         val icon = ImageView(this).apply {
             setImageBitmap(app.icon.toBitmap(dp(size), dp(size)))
-            layoutParams = FrameLayout.LayoutParams(dp(size - 8), dp(size - 8)).apply {
+            layoutParams = FrameLayout.LayoutParams(dp(size), dp(size)).apply {
                 gravity = Gravity.CENTER
             }
         }

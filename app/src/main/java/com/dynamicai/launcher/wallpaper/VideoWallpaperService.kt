@@ -66,7 +66,7 @@ class VideoWallpaperService : WallpaperService() {
                 val uri = Uri.parse(uriStr)
                 player = MediaPlayer().apply {
                     setDataSource(applicationContext, uri)
-                    setSurface(holder.surface)
+                    setSurface(surfaceHolder.surface)
                     isLooping = true
                     setVolume(
                         if (muted) 0f else 1f,

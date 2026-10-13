@@ -52,8 +52,8 @@ fun Dock(
             .padding(horizontal = 24.dp, vertical = 16.dp)
             .clip(RoundedCornerShape(28.dp))
             .background(Color(0xCC1A1A1A))
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Кнопка пошуку — перша, відрізняється кольором

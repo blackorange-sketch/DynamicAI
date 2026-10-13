@@ -244,9 +244,11 @@ class FloatingDockService : Service() {
     }
 
     private fun buildExpanded(): View {
+        // Внутрішня колонка з іконками
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(4), dp(4), dp(settings.overlayEdgePaddingDp), dp(4))
+            setPadding(dp(8), dp(10), dp(8), dp(10))
+            gravity = Gravity.CENTER_HORIZONTAL
         }
 
         // Кнопка закриття
@@ -303,7 +305,24 @@ class FloatingDockService : Service() {
             }
         }
 
-        return column
+        // Обгортка з підкладкою (темна напівпрозора, заокруглена)
+        val wrapper = FrameLayout(this).apply {
+            setPadding(dp(settings.overlayEdgePaddingDp), dp(8), 0, dp(8))
+        }
+
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(28).toFloat()
+                setColor(0xCC1A1A1A.toInt())
+                setStroke(dp(1), 0x33FFFFFF)
+            }
+            addView(column)
+        }
+
+        wrapper.addView(card)
+        return wrapper
     }
 
     private fun spacer(px: Int): View = View(this).apply {

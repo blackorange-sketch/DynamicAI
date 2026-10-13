@@ -23,7 +23,8 @@ data class LauncherSettings(
     val weatherUnit: String = "C",   // "C" | "F"
     val weatherUseGps: Boolean = true,
     val weatherLat: Float = 50.4501f,
-    val weatherLon: Float = 30.5234f
+    val weatherLon: Float = 30.5234f,
+    val cityName: String = ""
 )
 
 class SettingsStorage(context: Context) {
@@ -49,7 +50,8 @@ class SettingsStorage(context: Context) {
         weatherUnit = prefs.getString("weatherUnit", "C") ?: "C",
         weatherUseGps = prefs.getBoolean("weatherUseGps", true),
         weatherLat = prefs.getFloat("weatherLat", 50.4501f),
-        weatherLon = prefs.getFloat("weatherLon", 30.5234f)
+        weatherLon = prefs.getFloat("weatherLon", 30.5234f),
+        cityName = prefs.getString("cityName", "") ?: ""
     )
 
     fun save(s: LauncherSettings) {
@@ -74,6 +76,7 @@ class SettingsStorage(context: Context) {
             .putBoolean("weatherUseGps", s.weatherUseGps)
             .putFloat("weatherLat", s.weatherLat)
             .putFloat("weatherLon", s.weatherLon)
+            .putString("cityName", s.cityName)
             .putLong("updatedAt", System.currentTimeMillis())
             .commit()
     }

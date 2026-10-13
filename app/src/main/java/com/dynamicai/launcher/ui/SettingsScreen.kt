@@ -93,6 +93,32 @@ fun SettingsScreen(
         )
 
         Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 6.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            Text("Місто (вручну):", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            androidx.compose.foundation.text.BasicTextField(
+                value = settings.cityName,
+                onValueChange = { onSettingsChange(settings.copy(cityName = it)) },
+                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF64B5F6)),
+                singleLine = true,
+                modifier = Modifier
+                    .width(160.dp)
+                    .background(Color(0xFF1A1A1A), shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                decorationBox = { inner ->
+                    if (settings.cityName.isEmpty()) {
+                        Text("напр. Київ", color = Color.Gray, fontSize = 14.sp)
+                    }
+                    inner()
+                }
+            )
+        }
+
+        Row(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {

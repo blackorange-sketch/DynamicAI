@@ -15,7 +15,12 @@ class WeatherRepository(private val context: Context) {
     suspend fun fetch(): WeatherState = withContext(Dispatchers.IO) {
         try {
             val settings = settingsStorage.load()
-            val (lat, lon) = getCoordinates(settings) ?: (settings.weatherLat.toDouble() to settings.weatherLon.toDouble())
+            val (lat, lon) = when {
+                settings.cityName.isNotBlank() -> geocode(settings.cityName)
+                    ?: (settings.weatherLat.toDouble() to settings.weatherLon.toDouble())
+                else -> getCoordinates(settings)
+                    ?: (settings.weatherLat.toDouble() to settings.weatherLon.toDouble())
+            }
 
             val url = "https://api.open-meteo.com/v1/forecast" +
                     "?latitude=$lat&longitude=$lon" +
@@ -51,6 +56,29 @@ class WeatherRepository(private val context: Context) {
             )
         } catch (t: Throwable) {
             WeatherState.Error(t.message ?: "помилка")
+        }
+    }
+
+    private fun geocode(cityName: String): Pair<Double, Double>? {
+        return try {
+            val encoded = java.net.URLEncoder.encode(cityName, "UTF-8")
+            val url = "https://geocoding-api.open-meteo.com/v1/search?name=$encoded&count=1&language=uk&format=json"
+            val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 8_000
+                readTimeout = 8_000
+                requestMethod = "GET"
+            }
+            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            conn.disconnect()
+            val json = JSONObject(body)
+            val results = json.optJSONArray("results") ?: return null
+            if (results.length() == 0) return null
+            val first = results.getJSONObject(0)
+            val lat = first.getDouble("latitude")
+            val lon = first.getDouble("longitude")
+            lat to lon
+        } catch (_: Throwable) {
+            null
         }
     }
 

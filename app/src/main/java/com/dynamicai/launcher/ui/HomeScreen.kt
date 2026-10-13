@@ -360,11 +360,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             Spacer(Modifier.height(24.dp))
 
             if (!showSearchField) {
-                androidx.compose.animation.AnimatedVisibility(
-                            visible = !listVisible,
-                            enter = androidx.compose.animation.fadeIn(),
-                            exit = androidx.compose.animation.fadeOut()
-                        ) {
+                if (!listVisible) {
                             HomeWidget(
                                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                                 onSettingsTap = { showSettings = true },
@@ -374,11 +370,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         }
 
                         if (folders.isNotEmpty()) {
-                            androidx.compose.animation.AnimatedVisibility(
-                                visible = !listVisible,
-                                enter = androidx.compose.animation.fadeIn(),
-                                exit = androidx.compose.animation.fadeOut()
-                            ) {
+                            if (!listVisible) {
                                 Spacer(Modifier.height(8.dp))
                                 FolderTabs(
                                 folders = folders,

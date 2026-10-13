@@ -296,6 +296,17 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
             if (!showSearchField) {
                 HomeWidget(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
+
+                    if (folders.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        FoldersGrid(
+                            folders = folders,
+                            apps = apps,
+                            iconSizeDp = settings.dockIconSizeDp,
+                            onOpenFolder = { folder -> openFolder = folder },
+                            onLongPress = { folder -> folderHeaderMenu = folder }
+                        )
+                    }
             }
 
             if (!showSearchField) {

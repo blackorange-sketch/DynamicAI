@@ -40,6 +40,10 @@ object DeepLinks {
     fun maps(query: String): String =
         "geo:0,0?q=" + java.net.URLEncoder.encode(query, "UTF-8")
 
+    fun sms(phone: String): String = "smsto:${phone.filter { it.isDigit() || it == '+' }}"
+
+    fun email(address: String): String = "mailto:$address"
+
     fun spotify(query: String): String =
         "spotify:search:" + java.net.URLEncoder.encode(query, "UTF-8")
 }

@@ -147,6 +147,8 @@ class CommandExecutor(private val context: Context) {
             "youtube" -> DeepLinks.youtube(target)
             "maps" -> DeepLinks.maps(target)
             "spotify" -> DeepLinks.spotify(target)
+            "sms" -> DeepLinks.sms(target)
+            "email" -> DeepLinks.email(target)
             else -> return CommandResult.Error("Невідомий застосунок: $app")
         }
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))

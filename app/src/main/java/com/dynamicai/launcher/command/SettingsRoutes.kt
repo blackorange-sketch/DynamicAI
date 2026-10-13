@@ -71,4 +71,5 @@ object SettingsRoutes {
     )
 
     fun route(query: String): String? = map[query.lowercase().trim()]
+    fun all(): Map<String, String> = map
 }

@@ -77,11 +77,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         apps.filter { it.packageName in dockPkgs }
     }
 
-    // Приховуємо оверлей через 600 мс після останнього тапу
+    // Ховаємо оверлей через 700 мс після останньої взаємодії
     LaunchedEffect(activeLetter) {
         if (activeLetter != null) {
             showOverlay = true
-            delay(600)
+            delay(700)
             showOverlay = false
             delay(300)
             activeLetter = null
@@ -97,7 +97,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .padding(horizontal = 16.dp)
+                .padding(start = 16.dp, end = 48.dp) // правий відступ під сайдбар
         ) {
             Spacer(Modifier.height(24.dp))
 
@@ -142,7 +142,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             AlphabetSidebar(
                 letters = letters,
                 activeLetter = activeLetter,
-                onLetterClick = { letter ->
+                onLetterSelected = { letter ->
                     activeLetter = letter
                     scrollJob?.cancel()
                     scrollJob = scope.launch {
@@ -150,7 +150,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                             (it.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
                         }
                         if (idx >= 0) {
-                            // Плавний скрол: якщо далеко — спершу наближаємось, потім точно
                             val current = listState.firstVisibleItemIndex
                             val distance = kotlin.math.abs(idx - current)
                             if (distance > 40) {
@@ -161,11 +160,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         }
                     }
                 },
-                modifier = Modifier.align(Alignment.CenterEnd)
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
             )
         }
 
-        // Велика літера по центру (niagara-style)
+        // Оверлей з великою літерою
         AnimatedVisibility(
             visible = showOverlay && activeLetter != null,
             enter = fadeIn(),

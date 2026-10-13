@@ -266,15 +266,28 @@ fun SettingsScreen(
             } else if (!llmReady) {
                 Text(
                     "Модель завантажена. Рушій очікує на активацію",
-                    color = Color.Gray, fontSize = 13.sp,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    color = Color(0xFFFFA726), fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             } else {
                 Text(
-                    "LLM активна ✓",
-                    color = Color(0xFF4CAF50), fontSize = 13.sp,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    "LLM активна ✓ · CPU backend",
+                    color = Color(0xFF4CAF50), fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
+            }
+
+            // Toggle завжди видно
+            SwitchRow(
+                label = "Використовувати LLM для команд",
+                checked = settings.useLlm,
+                icon = Icons.Default.Psychology,
+                tint = Color(0xFF9C27B0)
+            ) {
+                onSettingsChange(settings.copy(useLlm = it))
+            }
+
+            if (llmReady) {
                 LlmTestRow(onTest = onTestLlm)
             }
         }

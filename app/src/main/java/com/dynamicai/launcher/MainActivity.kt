@@ -91,6 +91,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var showOverlay by remember { mutableStateOf(false) }
     var releaseJob by remember { mutableStateOf<Job?>(null) }
     var showSettings by remember { mutableStateOf(false) }
+    val downloadProgress by vm.downloadProgress.collectAsStateWithLifecycle()
+    val llmReady = vm.llm.isReady
 
     fun submit(text: String) {
         if (text.isBlank()) return
@@ -120,6 +122,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         } catch (_: Exception) {
         }
     }
+
+    LaunchedEffect(Unit) { vm.initLlmIfReady() }
 
     LaunchedEffect(apps, query) {
         filtered = if (query.isBlank()) apps
@@ -361,6 +365,38 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             )
         }
 
+        downloadProgress?.let { p ->
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text("Завантаження моделі", color = Color.White) },
+                text = {
+                    Column {
+                        when (p) {
+                            is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading -> {
+                                Text(
+                                    "${p.downloadedMb} / ${p.totalMb} MB",
+                                    color = Color.White
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                LinearProgressIndicator(
+                                    progress = { p.percent / 100f },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text("${p.percent}%", color = Color.Gray, fontSize = 12.sp)
+                            }
+                            is com.dynamicai.launcher.llm.ModelDownloader.Progress.Error -> {
+                                Text("Помилка: ${p.message}", color = Color(0xFFFF6B6B))
+                            }
+                            else -> {}
+                        }
+                    }
+                },
+                confirmButton = {},
+                containerColor = Color(0xFF1A1A1A)
+            )
+        }
+
         if (showSettings) {
             AlertDialog(
                 onDismissRequest = { showSettings = false },
@@ -372,6 +408,23 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                             showSettings = false
                         }) {
                             Text("Очистити історію команд", color = Color.White)
+                        }
+                        if (!vm.downloader.isDownloaded) {
+                            TextButton(onClick = {
+                                showSettings = false
+                                vm.downloadModel()
+                            }) {
+                                Text("Завантажити LLM (2.6 ГБ)", color = Color(0xFF64B5F6))
+                            }
+                        } else if (!vm.llm.isReady) {
+                            TextButton(onClick = {
+                                vm.initLlmIfReady()
+                                showSettings = false
+                            }) {
+                                Text("Ініціалізувати LLM", color = Color(0xFF64B5F6))
+                            }
+                        } else {
+                            Text("LLM активна ✓", color = Color(0xFF4CAF50), fontSize = 13.sp)
                         }
                         Text(
                             "DynamicAI · ${com.dynamicai.launcher.BuildConfig.VERSION_NAME}",

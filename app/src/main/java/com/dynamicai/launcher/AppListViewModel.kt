@@ -10,8 +10,9 @@ import com.dynamicai.launcher.command.CommandResult
 import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.data.CommandHistory
 import com.dynamicai.launcher.data.DockStorage
-import com.dynamicai.launcher.llm.LlmEngine
-import com.dynamicai.launcher.llm.NoOpLlmEngine
+import com.dynamicai.launcher.llm.LiteRtLlmEngine
+import com.dynamicai.launcher.llm.LlmAgent
+import com.dynamicai.launcher.llm.ModelDownloader
 import com.dynamicai.launcher.model.AppInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +26,12 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val parser = CommandParser()
     private val executor = CommandExecutor(app)
     private val historyStorage = CommandHistory(app)
-    val llm: LlmEngine = NoOpLlmEngine()
+    val llm = LiteRtLlmEngine(app)
+    private val llmAgent = LlmAgent(llm)
+    val downloader = ModelDownloader(app)
+
+    private val _downloadProgress = MutableStateFlow<ModelDownloader.Progress?>(null)
+    val downloadProgress: StateFlow<ModelDownloader.Progress?> = _downloadProgress.asStateFlow()
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
     val apps: StateFlow<List<AppInfo>> = _apps.asStateFlow()
@@ -73,8 +79,49 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     fun executeCommand(text: String) {
         if (text.isBlank()) return
         val cmd = parser.parse(text)
+
+        if (cmd is com.dynamicai.launcher.command.Command.Raw) {
+            // Пробуємо LLM як fallback
+            viewModelScope.launch {
+                _response.value = "Думаю…"
+                val llmCmd = llmAgent.resolve(text)
+                if (llmCmd != null) {
+                    val result = executor.execute(llmCmd, _apps.value)
+                    handleResult(result, text)
+                } else {
+                    _response.value = "Не розумію команду: \"$text\""
+                }
+            }
+            return
+        }
+
         val result = executor.execute(cmd, _apps.value)
         handleResult(result, text)
+    }
+
+    fun downloadModel() {
+        viewModelScope.launch {
+            downloader.download().collect { progress ->
+                _downloadProgress.value = progress
+                if (progress is ModelDownloader.Progress.Complete) {
+                    llm.initialize(progress.file)
+                    _downloadProgress.value = null
+                }
+            }
+        }
+    }
+
+    fun initLlmIfReady() {
+        if (downloader.isDownloaded && !llm.isReady) {
+            viewModelScope.launch {
+                llm.initialize(downloader.modelFile)
+            }
+        }
+    }
+
+    override fun onCleared() {
+        llm.close()
+        super.onCleared()
     }
 
     private fun handleResult(result: CommandResult, originalText: String) {

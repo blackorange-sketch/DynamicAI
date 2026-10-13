@@ -46,6 +46,15 @@ class ShizukuManager(private val context: Context) {
 
     fun isBinderReceived(): Boolean = binderReceived
 
+    fun isShizukuInstalled(): Boolean {
+        return try {
+            context.packageManager.getPackageInfo("moe.shizuku.privileged.api", 0)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     fun isShizukuAvailable(): Boolean {
         return try {
             Shizuku.pingBinder()

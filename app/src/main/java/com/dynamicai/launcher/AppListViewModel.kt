@@ -344,16 +344,28 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 handleResult(asApp, text)
                 return
             }
+            // Перевіряємо toggle + готовність LLM
+            val settings = settingsStorage.load()
+            if (!settings.useLlm || !llm.isReady) {
+                _response.value = "Не розумію команду: \"$text\""
+                return
+            }
+
             viewModelScope.launch {
-                _response.value = "Думаю…"
-                val llmCmd = llmAgent.resolve(text)
-                if (llmCmd != null) {
-                    val result = executor.execute(llmCmd, _apps.value)
-                    handleResult(result, text)
-                } else {
-                    _response.value = "Не розумію команду: \"$text\""
+                _response.value = "🧠 Думаю… (5-15 сек)"
+                try {
+                    val llmCmd = llmAgent.resolve(text)
+                    if (llmCmd != null) {
+                        val result = executor.execute(llmCmd, _apps.value)
+                        handleResult(result, text)
+                    } else {
+                        _response.value = "Не розумію команду: \"$text\""
+                    }
+                } catch (t: Throwable) {
+                    _response.value = "Помилка LLM: ${t.message}"
                 }
             }
+            return
             return
         }
 

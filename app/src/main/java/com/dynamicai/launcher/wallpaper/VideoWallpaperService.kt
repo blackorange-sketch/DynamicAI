@@ -4,6 +4,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.SurfaceTexture
 import android.net.Uri
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.BatteryManager
 import android.os.Handler
 import android.os.Looper
 import android.service.wallpaper.WallpaperService
@@ -24,28 +28,79 @@ class VideoWallpaperService : WallpaperService() {
         private var player: ExoPlayer? = null
         private var glThread: GlRenderThread? = null
         private var visible = false
+        private var screenOn = true
+        private var lowBattery = false
+        private var paused = false
         private val mainHandler = Handler(Looper.getMainLooper())
 
         private val prefs: SharedPreferences by lazy {
             applicationContext.getSharedPreferences("dynamicai_wallpaper", Context.MODE_PRIVATE)
         }
 
+        private val powerReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                when (intent?.action) {
+                    Intent.ACTION_SCREEN_OFF -> {
+                        screenOn = false
+                        applyPowerState()
+                    }
+                    Intent.ACTION_SCREEN_ON -> {
+                        screenOn = true
+                        applyPowerState()
+                    }
+                    Intent.ACTION_BATTERY_LOW -> {
+                        lowBattery = true
+                        applyPowerState()
+                    }
+                    Intent.ACTION_BATTERY_OKAY -> {
+                        lowBattery = false
+                        applyPowerState()
+                    }
+                    Intent.ACTION_POWER_CONNECTED -> {
+                        applyPowerState()
+                    }
+                }
+            }
+        }
+
         private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            if (key == "videoUri" || key == "muted") {
-                if (visible) restart()
+            when (key) {
+                "videoUri", "muted" -> if (visible) restart()
+                "wpPauseOnScreenOff", "wpPauseOnLowBattery" -> applyPowerState()
+                "wpFps" -> {
+                    val fps = prefs.getInt("wpFps", 30)
+                    try { glThread?.setFps(fps) } catch (_: Exception) {}
+                }
             }
         }
 
         override fun onCreate(surfaceHolder: SurfaceHolder) {
             super.onCreate(surfaceHolder)
             prefs.registerOnSharedPreferenceChangeListener(prefsListener)
+            // Слухаємо також головні налаштування
+            applicationContext.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
+                .registerOnSharedPreferenceChangeListener(prefsListener)
             setTouchEventsEnabled(false)
+
+            try {
+                val filter = IntentFilter().apply {
+                    addAction(Intent.ACTION_SCREEN_ON)
+                    addAction(Intent.ACTION_SCREEN_OFF)
+                    addAction(Intent.ACTION_BATTERY_LOW)
+                    addAction(Intent.ACTION_BATTERY_OKAY)
+                    addAction(Intent.ACTION_POWER_CONNECTED)
+                }
+                applicationContext.registerReceiver(powerReceiver, filter)
+            } catch (t: Throwable) {
+                log("registerReceiver failed: ${t.message}")
+            }
         }
 
         override fun onDestroy() {
             try {
                 super.onDestroy()
                 try { prefs.unregisterOnSharedPreferenceChangeListener(prefsListener) } catch (_: Exception) {}
+                try { applicationContext.unregisterReceiver(powerReceiver) } catch (_: Exception) {}
                 releaseAll()
             } catch (t: Throwable) {
                 log("onDestroy error: ${t.message}")
@@ -56,7 +111,12 @@ class VideoWallpaperService : WallpaperService() {
             try {
                 log("visibility=$visible")
                 this.visible = visible
-                if (player == null && prefs.getString("videoUri", null) != null) start()
+                if (visible) {
+                    if (player == null && prefs.getString("videoUri", null) != null) start()
+                    applyPowerState()
+                } else {
+                    applyPowerState()
+                }
             } catch (t: Throwable) {
                 log("visibility error: ${t.message}")
             }
@@ -77,6 +137,31 @@ class VideoWallpaperService : WallpaperService() {
                 releaseAll()
             } catch (t: Throwable) {
                 log("surfaceDestroyed error: ${t.message}")
+            }
+        }
+
+        private fun applyPowerState() {
+            val pauseOnScreenOff = prefs.getBoolean("pauseOnScreenOff", true)
+            val pauseOnLowBattery = prefs.getBoolean("pauseOnLowBattery", true)
+
+            val shouldPause = !visible
+                || (pauseOnScreenOff && !screenOn)
+                || (pauseOnLowBattery && lowBattery)
+
+            if (shouldPause && !paused) {
+                paused = true
+                mainHandler.post {
+                    try { player?.pause() } catch (_: Exception) {}
+                }
+                try { glThread?.pause() } catch (_: Exception) {}
+                log("paused (visible=$visible screenOn=$screenOn lowBattery=$lowBattery)")
+            } else if (!shouldPause && paused) {
+                paused = false
+                mainHandler.post {
+                    try { player?.play() } catch (_: Exception) {}
+                }
+                try { glThread?.resume() } catch (_: Exception) {}
+                log("resumed")
             }
         }
 
@@ -141,6 +226,7 @@ class VideoWallpaperService : WallpaperService() {
                         }
                     }
                 }
+                gl.setFps(prefs.getInt("wpFps", 30))
                 gl.start()
                 glThread = gl
             } catch (t: Throwable) {

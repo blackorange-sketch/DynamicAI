@@ -26,8 +26,16 @@ import androidx.compose.ui.unit.sp
 import com.dynamicai.launcher.wallpaper.VideoWallpaperService
 
 @Composable
-fun WallpaperScreen(backgroundAlphaPercent: Int = 100, onClose: () -> Unit) {
+fun WallpaperScreen(
+    settings: com.dynamicai.launcher.data.LauncherSettings,
+    onSettingsChange: (com.dynamicai.launcher.data.LauncherSettings) -> Unit,
+    onClose: () -> Unit
+) {
     val ctx = LocalContext.current
+    val backgroundAlphaPercent = settings.backgroundAlphaPercent
+    val pauseOnScreenOff = settings.wpPauseOnScreenOff
+    val pauseOnLowBattery = settings.wpPauseOnLowBattery
+    val fpsValue = settings.wpFps
     var muted by remember { mutableStateOf(VideoWallpaperService.getMuted(ctx)) }
     var hasVideo by remember { mutableStateOf(VideoWallpaperService.hasVideo(ctx)) }
     var lastLog by remember { mutableStateOf(VideoWallpaperService.lastLog) }
@@ -137,6 +145,65 @@ fun WallpaperScreen(backgroundAlphaPercent: Int = 100, onClose: () -> Unit) {
             ActionButton("Прибрати відео") {
                 VideoWallpaperService.clear(ctx)
                 hasVideo = false
+            }
+        }
+
+        SectionHeader("Енергозбереження")
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Пауза при вимкненому екрані", color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Switch(
+                checked = pauseOnScreenOff,
+                onCheckedChange = { onSettingsChange(settings.copy(wpPauseOnScreenOff = it)) },
+                colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF64B5F6))
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Пауза при низькому заряді", color = Color.White, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Switch(
+                checked = pauseOnLowBattery,
+                onCheckedChange = { onSettingsChange(settings.copy(wpPauseOnLowBattery = it)) },
+                colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF64B5F6))
+            )
+        }
+        Text(
+            "Обмеження FPS: $fpsValue",
+            color = Color.White,
+            fontSize = 15.sp,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(15, 24, 30, 60).forEach { fps ->
+                Text(
+                    "$fps",
+                    color = if (fpsValue == fps) Color.White else Color.Gray,
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .background(
+                            if (fpsValue == fps) Color(0xFF2196F3) else Color(0xFF1A1A1A),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                        )
+                        .pointerInput(fps) {
+                            detectTapGestures {
+                                onSettingsChange(settings.copy(wpFps = fps))
+                            }
+                        }
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                )
             }
         }
 

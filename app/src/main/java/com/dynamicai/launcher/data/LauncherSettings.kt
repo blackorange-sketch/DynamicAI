@@ -15,7 +15,10 @@ data class LauncherSettings(
     val overlayHandleAlphaPercent: Int = 55,
     val overlayAutoCollapseMs: Int = 0,      // 0 = вимкнено
     val overlayEdgePaddingDp: Int = 14,      // відступ риски від краю екрана
-    val backgroundAlphaPercent: Int = 100    // 0 = прозорий, 100 = чорний
+    val backgroundAlphaPercent: Int = 100,   // 0 = прозорий, 100 = чорний
+    val wpPauseOnScreenOff: Boolean = true,
+    val wpPauseOnLowBattery: Boolean = true,
+    val wpFps: Int = 30
 )
 
 class SettingsStorage(context: Context) {
@@ -33,7 +36,10 @@ class SettingsStorage(context: Context) {
         overlayHandleAlphaPercent = prefs.getInt("overlayHandleAlphaPercent", 55),
         overlayAutoCollapseMs = prefs.getInt("overlayAutoCollapseMs", 0),
         overlayEdgePaddingDp = prefs.getInt("overlayEdgePaddingDp", 14),
-        backgroundAlphaPercent = prefs.getInt("backgroundAlphaPercent", 100)
+        backgroundAlphaPercent = prefs.getInt("backgroundAlphaPercent", 100),
+        wpPauseOnScreenOff = prefs.getBoolean("wpPauseOnScreenOff", true),
+        wpPauseOnLowBattery = prefs.getBoolean("wpPauseOnLowBattery", true),
+        wpFps = prefs.getInt("wpFps", 30)
     )
 
     fun save(s: LauncherSettings) {
@@ -50,6 +56,9 @@ class SettingsStorage(context: Context) {
             .putInt("overlayAutoCollapseMs", s.overlayAutoCollapseMs)
             .putInt("overlayEdgePaddingDp", s.overlayEdgePaddingDp)
             .putInt("backgroundAlphaPercent", s.backgroundAlphaPercent)
+            .putBoolean("wpPauseOnScreenOff", s.wpPauseOnScreenOff)
+            .putBoolean("wpPauseOnLowBattery", s.wpPauseOnLowBattery)
+            .putInt("wpFps", s.wpFps)
             .putLong("updatedAt", System.currentTimeMillis())
             .commit()
     }

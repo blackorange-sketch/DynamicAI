@@ -250,7 +250,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val showSearchField = searchMode || query.isNotBlank()
 
     if (showWallpaper) {
-        WallpaperScreen(backgroundAlphaPercent = settings.backgroundAlphaPercent, onClose = { showWallpaper = false })
+        WallpaperScreen(
+            settings = settings,
+            onSettingsChange = { vm.updateSettings(it) },
+            onClose = { showWallpaper = false }
+        )
         return
     }
 

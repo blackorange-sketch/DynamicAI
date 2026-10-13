@@ -61,6 +61,39 @@ class GlRenderThread(
         thread.quitSafely()
     }
 
+    fun pause() {
+        if (!::handler.isInitialized) return
+        running = false
+        handler.postDelayed({
+            try {
+                if (::eglDisplay.isInitialized) {
+                    EGL14.eglSwapInterval(eglDisplay, 0)
+                }
+            } catch (_: Throwable) {}
+        }, 50)
+    }
+
+    fun resume() {
+        if (!::handler.isInitialized) return
+        if (running) return
+        running = true
+        handler.post(renderLoop)
+    }
+
+    private val renderLoop = object : Runnable {
+        override fun run() {
+            if (!running) return
+            drawFrame()
+            handler.postDelayed(this, frameDelayMs)
+        }
+    }
+
+    @Volatile var frameDelayMs: Long = 16
+
+    fun setFps(fps: Int) {
+        frameDelayMs = (1000L / fps.coerceIn(1, 60))
+    }
+
     fun updateVideoSize(w: Int, h: Int) {
         videoWidth = w
         videoHeight = h

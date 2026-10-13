@@ -16,10 +16,6 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
-/**
- * Простий OpenGL-рендер, який малює текстуру відео (SurfaceTexture)
- * на EGLSurface (surface WallpaperService) з FILL-масштабуванням.
- */
 class GlRenderThread(
     private val surface: Surface,
     private val surfaceWidth: Int,
@@ -30,12 +26,10 @@ class GlRenderThread(
     private lateinit var thread: HandlerThread
     private lateinit var handler: Handler
 
-    // EGL
     private var eglDisplay: EGLDisplay = EGL14.EGL_NO_DISPLAY
     private var eglContext: EGLContext = EGL14.EGL_NO_CONTEXT
     private var eglSurface: EGLSurface = EGL14.EGL_NO_SURFACE
 
-    // GL
     private var program = 0
     private var textureId = 0
     private var aPositionLoc = 0
@@ -44,15 +38,12 @@ class GlRenderThread(
     private var uScaleLoc = 0
 
     private lateinit var surfaceTexture: SurfaceTexture
-    private var glHandler: Handler? = null
     lateinit var videoSurface: Surface
         private set
 
-    // Розмір відео (заповнюється після onFrameAvailable)
     @Volatile private var videoWidth = 0
     @Volatile private var videoHeight = 0
 
-    // Колбек — повідомити MediaPlayer, що SurfaceTexture готовий
     var onSurfaceTextureReady: ((SurfaceTexture) -> Unit)? = null
 
     fun start() {
@@ -64,6 +55,7 @@ class GlRenderThread(
 
     fun stop() {
         if (!::handler.isInitialized) return
+        running = false
         handler.post { doStop() }
         thread.quitSafely()
     }
@@ -73,19 +65,26 @@ class GlRenderThread(
         videoHeight = h
     }
 
-
     private fun doStart() {
         try {
             setupEgl()
             setupGl()
+
             surfaceTexture = SurfaceTexture(textureId)
-            surfaceTexture.setOnFrameAvailableListener({ _ ->
-                handler.post { drawFrame() }
-            }, handler)
             videoSurface = Surface(surfaceTexture)
             onSurfaceTextureReady?.invoke(surfaceTexture)
             running = true
-            drawFrame()
+
+            // ==== Явний цикл рендера, 60 fps ====
+            val renderRunnable = object : Runnable {
+                override fun run() {
+                    if (!running) return
+                    drawFrame()
+                    handler.postDelayed(this, 16)
+                }
+            }
+            handler.post(renderRunnable)
+
             Log.d("GlRenderThread", "started, surface=${surfaceWidth}x$surfaceHeight")
         } catch (t: Throwable) {
             Log.e("GlRenderThread", "doStart failed", t)
@@ -200,6 +199,13 @@ class GlRenderThread(
     private fun drawFrame() {
         if (!running) return
         try {
+            // ==== Оновлення текстури (ключове!) ====
+            try {
+                surfaceTexture.updateTexImage()
+            } catch (t: Throwable) {
+                // Текстура ще не готова — це нормально на старті
+            }
+
             GLES20.glViewport(0, 0, surfaceWidth, surfaceHeight)
             GLES20.glClearColor(0f, 0f, 0f, 1f)
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
@@ -207,18 +213,15 @@ class GlRenderThread(
             val vw = videoWidth
             val vh = videoHeight
             if (vw > 0 && vh > 0) {
-                // Розрахунок FILL: скейл текстури так, щоб заповнити екран
                 val videoAspect = vw.toFloat() / vh
                 val surfaceAspect = surfaceWidth.toFloat() / surfaceHeight
 
                 val scaleX: Float
                 val scaleY: Float
                 if (videoAspect > surfaceAspect) {
-                    // Відео ширше — збільшуємо по X (обрізаємо по боках)
                     scaleX = surfaceAspect / videoAspect
                     scaleY = 1f
                 } else {
-                    // Відео вище — збільшуємо по Y (обрізаємо зверху/знизу)
                     scaleX = 1f
                     scaleY = videoAspect / surfaceAspect
                 }
@@ -227,37 +230,17 @@ class GlRenderThread(
                 GLES20.glUniform2f(uScaleLoc, 1f, 1f)
             }
 
-            val vertices = floatArrayOf(
-                -1f, -1f,   // bottom-left
-                 1f, -1f,   // bottom-right
-                -1f,  1f,   // top-left
-                 1f,  1f    // top-right
-            )
-            val texCoords = floatArrayOf(
-                0f, 1f,   // bottom-left
-                1f, 1f,   // bottom-right
-                0f, 0f,   // top-left
-                1f, 0f    // top-right
-            )
-
-            val vBuf = toFloatBuffer(vertices)
-            val tBuf = toFloatBuffer(texCoords)
+            val vertices = floatArrayOf(-1f, -1f, 1f, -1f, -1f, 1f, 1f, 1f)
+            val texCoords = floatArrayOf(0f, 1f, 1f, 1f, 0f, 0f, 1f, 0f)
 
             GLES20.glEnableVertexAttribArray(aPositionLoc)
-            GLES20.glVertexAttribPointer(aPositionLoc, 2, GLES20.GL_FLOAT, false, 0, vBuf)
+            GLES20.glVertexAttribPointer(aPositionLoc, 2, GLES20.GL_FLOAT, false, 0, toFloatBuffer(vertices))
             GLES20.glEnableVertexAttribArray(aTexCoordLoc)
-            GLES20.glVertexAttribPointer(aTexCoordLoc, 2, GLES20.GL_FLOAT, false, 0, tBuf)
+            GLES20.glVertexAttribPointer(aTexCoordLoc, 2, GLES20.GL_FLOAT, false, 0, toFloatBuffer(texCoords))
 
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0)
             GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureId)
             GLES20.glUniform1i(uTextureLoc, 0)
-
-            // Оновлюємо текстуру перед малюванням
-            try {
-                surfaceTexture.updateTexImage()
-            } catch (t: Throwable) {
-                Log.e("GlRenderThread", "updateTexImage in draw", t)
-            }
 
             GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4)
 

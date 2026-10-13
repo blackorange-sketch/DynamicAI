@@ -53,8 +53,7 @@ class VideoWallpaperService : WallpaperService() {
             this.visible = visible
             if (visible) {
                 if (player == null) start() else player?.play()
-                glThread?.resume()
-            }
+                            }
             // НЕ паузимо — хай відео грає
         }
 

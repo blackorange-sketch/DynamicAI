@@ -62,13 +62,13 @@ fun SettingsScreen(
         SizeSlider(
             label = "Іконки у списку",
             value = settings.iconSizeDp,
-            values = listOf(32, 40, 48, 56, 64),
+            values = listOf(28, 32, 40, 48, 56, 64),
             onChange = { onSettingsChange(settings.copy(iconSizeDp = it)) }
         )
         SizeSlider(
-            label = "Іконки у дока",
+            label = "Іконки у головному дока",
             value = settings.dockIconSizeDp,
-            values = listOf(32, 40, 48, 56, 64),
+            values = listOf(28, 34, 40, 46, 52, 58, 64),
             onChange = { onSettingsChange(settings.copy(dockIconSizeDp = it)) }
         )
         SizeSlider(
@@ -146,6 +146,13 @@ fun SettingsScreen(
             value = settings.overlayOffsetYPercent,
             values = listOf(10, 25, 40, 50, 60, 75, 90),
             onChange = { onSettingsChange(settings.copy(overlayOffsetYPercent = it)) }
+        )
+
+        SizeSlider(
+            label = "Відступ від краю екрана (dp)",
+            value = settings.overlayEdgePaddingDp,
+            values = listOf(0, 4, 8, 14, 20, 28, 40),
+            onChange = { onSettingsChange(settings.copy(overlayEdgePaddingDp = it)) }
         )
 
         Row(

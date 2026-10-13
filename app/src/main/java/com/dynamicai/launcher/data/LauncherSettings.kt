@@ -13,7 +13,8 @@ data class LauncherSettings(
     val overlayOffsetYPercent: Int = 50,     // 0..100, вертикальний центр дока
     val overlayHandleLengthDp: Int = 140,
     val overlayHandleAlphaPercent: Int = 55,
-    val overlayAutoCollapseMs: Int = 0       // 0 = вимкнено
+    val overlayAutoCollapseMs: Int = 0,      // 0 = вимкнено
+    val overlayEdgePaddingDp: Int = 14       // відступ риски від краю екрана
 )
 
 class SettingsStorage(context: Context) {
@@ -29,7 +30,8 @@ class SettingsStorage(context: Context) {
         overlayOffsetYPercent = prefs.getInt("overlayOffsetYPercent", 50),
         overlayHandleLengthDp = prefs.getInt("overlayHandleLengthDp", 140),
         overlayHandleAlphaPercent = prefs.getInt("overlayHandleAlphaPercent", 55),
-        overlayAutoCollapseMs = prefs.getInt("overlayAutoCollapseMs", 0)
+        overlayAutoCollapseMs = prefs.getInt("overlayAutoCollapseMs", 0),
+        overlayEdgePaddingDp = prefs.getInt("overlayEdgePaddingDp", 14)
     )
 
     fun save(s: LauncherSettings) {
@@ -44,6 +46,7 @@ class SettingsStorage(context: Context) {
             .putInt("overlayHandleLengthDp", s.overlayHandleLengthDp)
             .putInt("overlayHandleAlphaPercent", s.overlayHandleAlphaPercent)
             .putInt("overlayAutoCollapseMs", s.overlayAutoCollapseMs)
+            .putInt("overlayEdgePaddingDp", s.overlayEdgePaddingDp)
             .apply()
         // Повідомляємо сервіс про зміну
         prefs.edit().putLong("updatedAt", System.currentTimeMillis()).apply()

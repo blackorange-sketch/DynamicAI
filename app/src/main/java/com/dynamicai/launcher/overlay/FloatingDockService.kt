@@ -206,7 +206,7 @@ class FloatingDockService : Service() {
 
         // Обгортка: більша площа натискання
         val wrapper = FrameLayout(this).apply {
-            setPadding(dp(2), dp(8), dp(14), dp(8))
+            setPadding(dp(2), dp(8), dp(settings.overlayEdgePaddingDp), dp(8))
             addView(shadow)
             addView(handle)
             isClickable = true
@@ -222,7 +222,7 @@ class FloatingDockService : Service() {
     private fun buildExpanded(): View {
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(4), dp(4), dp(4), dp(4))
+            setPadding(dp(4), dp(4), dp(settings.overlayEdgePaddingDp), dp(4))
         }
 
         // Кнопка закриття

@@ -1,22 +1,34 @@
 package com.dynamicai.launcher
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
+import android.speech.RecognizerIntent
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
@@ -57,6 +70,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val apps by vm.apps.collectAsStateWithLifecycle()
     val dockPkgs by vm.dockPkgs.collectAsStateWithLifecycle()
     val response by vm.response.collectAsStateWithLifecycle()
+    val pendingChoice by vm.pendingChoice.collectAsStateWithLifecycle()
+    val history by vm.history.collectAsStateWithLifecycle()
+
     var query by remember { mutableStateOf("") }
     var filtered by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
 
@@ -66,6 +82,35 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var activeLetter by remember { mutableStateOf<Char?>(null) }
     var showOverlay by remember { mutableStateOf(false) }
     var releaseJob by remember { mutableStateOf<Job?>(null) }
+
+    fun submit(text: String) {
+        if (text.isBlank()) return
+        vm.executeCommand(text)
+        query = ""
+    }
+
+    val voiceLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val text = result.data
+                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+            if (!text.isNullOrBlank()) submit(text)
+        }
+    }
+
+    fun startVoice() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Скажи команду…")
+        }
+        try {
+            voiceLauncher.launch(intent)
+        } catch (_: Exception) {
+        }
+    }
 
     LaunchedEffect(apps, query) {
         filtered = if (query.isBlank()) apps
@@ -86,7 +131,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         apps.filter { it.packageName in dockPkgs }
     }
 
-    // Показуємо оверлей одразу при виборі літери
     LaunchedEffect(activeLetter) {
         if (activeLetter != null) showOverlay = true
     }
@@ -100,14 +144,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .padding(start = 16.dp, end = 64.dp) // правий відступ під сайдбар
+                .padding(start = 16.dp, end = 64.dp)
         ) {
             Spacer(Modifier.height(24.dp))
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(modifier = Modifier.weight(1f)) {
@@ -116,6 +160,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         onValueChange = { query = it },
                         textStyle = TextStyle(color = Color.White, fontSize = 20.sp),
                         cursorBrush = SolidColor(Color.White),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { submit(query) }),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp),
@@ -127,12 +174,38 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         }
                     )
                 }
+                IconButton(onClick = { startVoice() }) {
+                    Icon(Icons.Default.Mic, contentDescription = "Голос", tint = Color.White)
+                }
                 if (query.isNotBlank()) {
-                    IconButton(onClick = {
-                        vm.executeCommand(query)
-                        query = ""
-                    }) {
+                    IconButton(onClick = { submit(query) }) {
                         Icon(Icons.Default.Send, contentDescription = "Виконати", tint = Color.White)
+                    }
+                }
+            }
+
+            if (query.isBlank() && history.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    history.take(5).forEach { cmd ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color(0xFF1A1A1A))
+                                .clickable { submit(cmd) }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = if (cmd.length > 28) cmd.take(28) + "…" else cmd,
+                                color = Color.White,
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
             }
@@ -236,7 +309,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             )
         }
 
-        // Оверлей з великою літерою
         AnimatedVisibility(
             visible = showOverlay && activeLetter != null,
             enter = fadeIn(),
@@ -263,6 +335,42 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 apps = dockApps,
                 onLaunch = { vm.launch(it) },
                 modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
+
+        pendingChoice?.let { candidates ->
+            AlertDialog(
+                onDismissRequest = { vm.dismissChoice() },
+                title = { Text("Обери застосунок", color = Color.White) },
+                text = {
+                    Column {
+                        candidates.forEach { app ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { vm.onAppChosen(app) }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
+                                    contentDescription = app.label,
+                                    modifier = Modifier.size(36.dp),
+                                    tint = Color.Unspecified
+                                )
+                                Spacer(Modifier.width(12.dp))
+                                Text(app.label, color = Color.White, fontSize = 16.sp)
+                            }
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { vm.dismissChoice() }) {
+                        Text("Скасувати", color = Color.White)
+                    }
+                },
+                containerColor = Color(0xFF1A1A1A)
             )
         }
     }

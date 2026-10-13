@@ -9,28 +9,28 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Brightness6
-import androidx.compose.material.icons.filled.ColorLens
-import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Layers
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.ViewCarousel
-import androidx.compose.material.icons.filled.SwipeUp
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Straighten
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -103,10 +103,10 @@ fun SettingsScreen(
         // ==== Погода ====
         GlassSectionHeader("Погода")
         GlassCard {
-            SwitchRow("Показувати погоду", settings.showWeather, Icons.Default.WbSunny, Color(0xFFFFB300)) {
+            SwitchRow("Показувати погоду", settings.showWeather, Icons.Default.Star, Color(0xFFFFB300)) {
                 onSettingsChange(settings.copy(showWeather = it))
             }
-            SwitchRow("Використовувати GPS", settings.weatherUseGps, Icons.Default.LocationOn, Color(0xFF4CAF50)) {
+            SwitchRow("Використовувати GPS", settings.weatherUseGps, Icons.Default.Place, Color(0xFF4CAF50)) {
                 onSettingsChange(settings.copy(weatherUseGps = it))
             }
             CityInputRow(
@@ -167,7 +167,7 @@ fun SettingsScreen(
         // ==== Вигляд ====
         GlassSectionHeader("Вигляд")
         GlassCard {
-            SwitchRow("Показувати кнопку Recent", settings.showRecentButton, Icons.Default.ViewCarousel, Color(0xFF9C27B0)) {
+            SwitchRow("Показувати кнопку Recent", settings.showRecentButton, Icons.Default.Menu, Color(0xFF9C27B0)) {
                 onSettingsChange(settings.copy(showRecentButton = it))
             }
             SwitchRow("Показувати пошук", settings.showSearchBar, Icons.Default.Search, Color(0xFF2196F3)) {
@@ -176,20 +176,20 @@ fun SettingsScreen(
             SwitchRow("Показувати назви", settings.showLabels, Icons.Default.Visibility, Color(0xFF2196F3)) {
                 onSettingsChange(settings.copy(showLabels = it))
             }
-            ActionRow("Шпалери", Icons.Default.Palette, Color(0xFFE91E63), onOpenWallpaper)
-            ActionRow("Застосунки у дока", Icons.Default.Dashboard, Color(0xFF9C27B0), onOpenDockEditor)
-            ActionRow("Керування папками", Icons.Default.CreateNewFolder, Color(0xFF64B5F6), onOpenFolderManager)
+            ActionRow("Шпалери", Icons.Default.Star, Color(0xFFE91E63), onOpenWallpaper)
+            ActionRow("Застосунки у дока", Icons.Default.Home, Color(0xFF9C27B0), onOpenDockEditor)
+            ActionRow("Керування папками", Icons.Default.Add, Color(0xFF64B5F6), onOpenFolderManager)
         }
 
         // ==== Плаваючий док ====
         GlassSectionHeader("Плаваючий док")
         GlassCard {
             if (!overlayPermissionGranted) {
-                ActionRow("Дозволити показ поверх інших", Icons.Default.Layers, Color(0xFF9C27B0), onRequestOverlayPermission)
+                ActionRow("Дозволити показ поверх інших", Icons.Default.Info, Color(0xFF9C27B0), onRequestOverlayPermission)
             } else {
                 ActionRow(
                     if (overlayActive) "Вимкнути плаваючий док" else "Увімкнути плаваючий док",
-                    Icons.Default.Layers,
+                    Icons.Default.Info,
                     if (overlayActive) Color(0xFFFF6B6B) else Color(0xFF4CAF50),
                     onToggleOverlay
                 )
@@ -238,7 +238,7 @@ fun SettingsScreen(
         // ==== Енергозбереження ====
         GlassSectionHeader("Енергозбереження")
         GlassCard {
-            SwitchRow("Пауза при вимкненому екрані", settings.wpPauseOnScreenOff, Icons.Default.Brightness6, Color(0xFF607D8B)) {
+            SwitchRow("Пауза при вимкненому екрані", settings.wpPauseOnScreenOff, Icons.Default.Star, Color(0xFF607D8B)) {
                 onSettingsChange(settings.copy(wpPauseOnScreenOff = it))
             }
             SwitchRow("Пауза при низькому заряді", settings.wpPauseOnLowBattery, Icons.Default.Bolt, Color(0xFFFFC107)) {
@@ -256,7 +256,7 @@ fun SettingsScreen(
 
         GlassSectionHeader("Дії")
         GlassCard {
-            ActionRow("Оновити контакти", Icons.Default.People, Color(0xFF4CAF50), onRefreshContacts)
+            ActionRow("Оновити контакти", Icons.Default.Person, Color(0xFF4CAF50), onRefreshContacts)
             ActionRow("Очистити історію команд", Icons.Default.Delete, Color(0xFFFF6B6B), onClearHistory)
             ActionRow("Показати всі приховані ($hiddenCount)", Icons.Default.Visibility, Color(0xFF9E9E9E), onClearHidden)
         }
@@ -268,7 +268,7 @@ fun SettingsScreen(
         GlassSectionHeader("Локальна LLM")
         GlassCard {
             if (!llmDownloaded) {
-                ActionRow("Завантажити Gemma 4 E2B (~2.6 ГБ)", Icons.Default.Download, Color(0xFF64B5F6), onDownloadLlm)
+                ActionRow("Завантажити Gemma 4 E2B (~2.6 ГБ)", Icons.Default.ArrowDownward, Color(0xFF64B5F6), onDownloadLlm)
             } else if (!llmReady) {
                 Text(
                     "Модель завантажена. Рушій очікує на активацію",
@@ -287,7 +287,7 @@ fun SettingsScreen(
             SwitchRow(
                 label = "Озвучувати відповіді (TTS)",
                 checked = settings.useTts,
-                icon = Icons.Default.VolumeUp,
+                icon = Icons.Default.PlayArrow,
                 tint = Color(0xFF4CAF50)
             ) {
                 onSettingsChange(settings.copy(useTts = it))

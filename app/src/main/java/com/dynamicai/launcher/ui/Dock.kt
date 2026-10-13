@@ -9,7 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.ViewCarousel
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -115,7 +115,7 @@ fun Dock(
                     .clickable(onClick = onRecent)
             ) {
                 Icon(
-                    Icons.Default.ViewCarousel,
+                    Icons.Default.Menu,
                     contentDescription = "Нещодавні",
                     tint = Color(0xFFCE93D8),
                     modifier = Modifier.size((iconSizeDp * 0.5f).dp)

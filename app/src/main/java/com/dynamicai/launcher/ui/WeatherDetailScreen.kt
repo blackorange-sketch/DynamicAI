@@ -13,10 +13,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material.icons.filled.WindPower
-import androidx.compose.material.icons.filled.Thermostat
-import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -117,17 +117,17 @@ fun WeatherDetailScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         DetailItem(
-                            icon = { Icon(Icons.Default.WaterDrop, null, tint = Color(0xFF64B5F6)) },
+                            icon = { Icon(Icons.Default.Info, null, tint = Color(0xFF64B5F6)) },
                             value = "${state.humidity}%",
                             label = "Вологість"
                         )
                         DetailItem(
-                            icon = { Icon(Icons.Default.WindPower, null, tint = Color(0xFF81C784)) },
+                            icon = { Icon(Icons.Default.Refresh, null, tint = Color(0xFF81C784)) },
                             value = "${state.windSpeed} км/г",
                             label = "Вітер"
                         )
                         DetailItem(
-                            icon = { Icon(Icons.Default.Thermostat, null, tint = Color(0xFFFF8A65)) },
+                            icon = { Icon(Icons.Default.Info, null, tint = Color(0xFFFF8A65)) },
                             value = "${state.pressure}",
                             label = "Тиск"
                         )
@@ -144,7 +144,7 @@ fun WeatherDetailScreen(
                         ) {
                             if (state.uvIndex > 0) {
                                 DetailItem(
-                                    icon = { Icon(Icons.Default.WbSunny, null, tint = Color(0xFFFFC107)) },
+                                    icon = { Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107)) },
                                     value = "${state.uvIndex}",
                                     label = uvLabel(state.uvIndex)
                                 )

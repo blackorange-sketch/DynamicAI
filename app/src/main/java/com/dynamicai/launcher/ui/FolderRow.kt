@@ -8,7 +8,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,7 +53,7 @@ fun FolderRow(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    Icons.Default.CreateNewFolder,
+                    Icons.Default.Add,
                     contentDescription = null,
                     tint = Color(0xFF64B5F6),
                     modifier = Modifier.size(18.dp)

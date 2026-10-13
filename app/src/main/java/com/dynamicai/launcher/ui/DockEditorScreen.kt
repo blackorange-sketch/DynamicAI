@@ -7,8 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.*
@@ -113,14 +113,14 @@ fun DockEditorScreen(
                     )
                     if (inDock) {
                         Icon(
-                            Icons.Default.CheckCircle,
+                            Icons.Default.Check,
                             contentDescription = "У доку",
                             tint = Color(0xFF64B5F6),
                             modifier = Modifier.size(24.dp)
                         )
                     } else {
                         Icon(
-                            Icons.Default.RadioButtonUnchecked,
+                            Icons.Default.Add,
                             contentDescription = null,
                             tint = Color.Gray,
                             modifier = Modifier.size(24.dp)

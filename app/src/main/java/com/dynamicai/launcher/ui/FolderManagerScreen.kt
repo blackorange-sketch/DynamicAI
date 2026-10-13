@@ -14,7 +14,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
@@ -67,7 +67,7 @@ fun FolderManagerScreen(
             }
             Text("Папки", color = Color.White, fontSize = 22.sp, modifier = Modifier.weight(1f))
             IconButton(onClick = { showCreateDialog = true }) {
-                Icon(Icons.Default.CreateNewFolder, "Нова папка", tint = Color(0xFF64B5F6))
+                Icon(Icons.Default.Add, "Нова папка", tint = Color(0xFF64B5F6))
             }
         }
 
@@ -245,7 +245,7 @@ private fun FolderCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                Icons.Default.CreateNewFolder,
+                Icons.Default.Add,
                 contentDescription = null,
                 tint = Color(0xFF64B5F6),
                 modifier = Modifier.size(20.dp)

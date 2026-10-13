@@ -416,6 +416,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         
             }
 
+            if (showSearchField) {
             LiquidSearchBar(
                 query = query,
                 onQueryChange = { query = it },
@@ -434,6 +435,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 focusRequester = focusRequester,
                 modifier = Modifier.padding(vertical = 2.dp)
             )
+            }
 
             if (response.isNotBlank()) {
                 Text(

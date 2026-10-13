@@ -891,7 +891,6 @@ fun SuggestionContactRow(s: Suggestion.Contact, onClick: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppRow(
     app: AppInfo,
@@ -904,7 +903,12 @@ fun AppRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth()
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .pointerInput(app.packageName) {
+                detectTapGestures(
+                    onTap = { onClick() },
+                    onLongPress = { onLongClick() }
+                )
+            }
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

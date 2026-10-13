@@ -462,7 +462,7 @@ fun SuggestionContactRow(s: Suggestion.Contact, onClick: () -> Unit) {
         Spacer(Modifier.width(16.dp))
         Column {
             Text(s.name, color = Color.White, fontSize = 17.sp)
-            Text(s.actionLabel, color = Color.Gray, fontSize = 12.sp)
+            Text(s.subtitle, color = Color.Gray, fontSize = 12.sp)
         }
     }
 }

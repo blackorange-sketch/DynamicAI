@@ -59,6 +59,11 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private var pendingText: String = ""
 
     init {
+        viewModelScope.launch {
+            executor.flashlightOn.collect {
+                updateQuery("")
+            }
+        }
         _dockPkgs.value = dockStorage.getDockApps()
         _history.value = historyStorage.get()
         refresh()
@@ -73,7 +78,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateQuery(query: String) {
         viewModelScope.launch {
-            _suggestions.value = suggestionProvider.build(query, _apps.value, _contacts.value)
+            _suggestions.value = suggestionProvider.build(
+                query, _apps.value, _contacts.value, executor.flashlightOn.value
+            )
         }
     }
 

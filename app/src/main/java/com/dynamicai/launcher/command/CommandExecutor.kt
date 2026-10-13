@@ -8,6 +8,9 @@ import android.net.Uri
 import android.provider.AlarmClock
 import android.provider.Settings
 import com.dynamicai.launcher.model.AppInfo
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class CommandExecutor(private val context: Context) {
 
@@ -157,7 +160,30 @@ class CommandExecutor(private val context: Context) {
             context.startActivity(intent)
             CommandResult.Success("Відкриваю $app: $target")
         } catch (e: Exception) {
-            // fallback: спробувати звичайний веб-URL
+            // fallback 1: спробувати знайти мод-застосунок за ключовим словом
+            val keyword = when (app) {
+                "telegram" -> "telegram"
+                "instagram" -> "insta"
+                "whatsapp" -> "whatsapp"
+                "viber" -> "viber"
+                "signal" -> "signal"
+                else -> null
+            }
+            if (keyword != null) {
+                val pkg = findPackageByKeyword(keyword)
+                if (pkg != null) {
+                    val launch = context.packageManager.getLaunchIntentForPackage(pkg)
+                    if (launch != null) {
+                        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        try {
+                            context.startActivity(launch)
+                            return CommandResult.Success("Відкриваю $app ($pkg)")
+                        } catch (_: Exception) {}
+                    }
+                }
+            }
+
+            // fallback 2: спробувати звичайний веб-URL
             val webFallback = when (app) {
                 "telegram" -> "https://t.me/${target.removePrefix("@")}"
                 "whatsapp" -> DeepLinks.whatsapp(target)
@@ -209,9 +235,9 @@ class CommandExecutor(private val context: Context) {
                     .get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
             } ?: return CommandResult.Error("Ліхтарик недоступний")
 
-            val newState = !flashlightOn
+            val newState = !_flashlightOn.value
             cm.setTorchMode(id, newState)
-            flashlightOn = newState
+            _flashlightOn.value = newState
             CommandResult.Success(if (newState) "Ліхтарик увімкнено" else "Ліхтарик вимкнено")
         } catch (e: Exception) {
             CommandResult.Error("Помилка ліхтарика: ${e.message}")
@@ -263,5 +289,17 @@ class CommandExecutor(private val context: Context) {
         return total to parts.joinToString(" ")
     }
 
-    private var flashlightOn = false
+    private fun findPackageByKeyword(keyword: String): String? {
+        val pm = context.packageManager
+        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        return pm.queryIntentActivities(intent, 0)
+            .asSequence()
+            .mapNotNull { it.activityInfo?.packageName }
+            .filter { pkg -> pkg.contains(keyword, ignoreCase = true) }
+            .distinct()
+            .firstOrNull()
+    }
+
+    private val _flashlightOn = MutableStateFlow(false)
+    val flashlightOn: StateFlow<Boolean> = _flashlightOn.asStateFlow()
 }

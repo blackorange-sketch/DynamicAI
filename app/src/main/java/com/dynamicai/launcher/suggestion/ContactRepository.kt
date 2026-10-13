@@ -7,14 +7,13 @@ import kotlinx.coroutines.withContext
 
 data class ContactInfo(
     val name: String,
-    val phone: String?
+    val phones: List<String>
 )
 
 class ContactRepository(private val context: Context) {
 
     suspend fun loadAll(): List<ContactInfo> = withContext(Dispatchers.IO) {
-        val result = mutableListOf<ContactInfo>()
-        val seen = mutableSetOf<String>()
+        val byName = linkedMapOf<String, MutableList<String>>()
 
         val projection = arrayOf(
             ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
@@ -31,17 +30,17 @@ class ContactRepository(private val context: Context) {
                 val nameIdx = c.getColumnIndex(projection[0])
                 val phoneIdx = c.getColumnIndex(projection[1])
                 while (c.moveToNext()) {
-                    val name = c.getString(nameIdx) ?: continue
-                    val phone = c.getString(phoneIdx)
-                    val key = "$name|${phone.orEmpty()}"
-                    if (key in seen) continue
-                    seen.add(key)
-                    result.add(ContactInfo(name, phone))
-                    if (result.size >= 500) break
+                    val name = c.getString(nameIdx)?.trim() ?: continue
+                    val phone = c.getString(phoneIdx)?.trim()?.replace("\\s".toRegex(), "")
+                    if (phone.isNullOrBlank()) continue
+                    val list = byName.getOrPut(name) { mutableListOf() }
+                    if (phone !in list) list.add(phone)
+                    if (byName.size > 800) break
                 }
             }
         } catch (_: SecurityException) {
         }
-        result
+
+        byName.map { (name, phones) -> ContactInfo(name, phones) }
     }
 }

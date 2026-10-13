@@ -13,14 +13,15 @@ class SuggestionProvider(context: Context) {
     fun build(
         query: String,
         apps: List<AppInfo>,
-        contacts: List<ContactInfo>
+        contacts: List<ContactInfo>,
+        flashlightOn: Boolean
     ): List<Suggestion> {
         if (query.isBlank()) return apps.map { Suggestion.App(it, 0) }
 
         val q = query.lowercase().trim()
         val result = mutableListOf<Suggestion>()
 
-        // === 1. Дії (вбудовані + кастомні) ===
+        // === 1. Дії ===
         val builtIn = ActionCatalog.all.map { a ->
             val best = a.keywords.maxOf { kw -> FuzzyMatcher.score(kw, q) }
             Triple(a, best, false)
@@ -49,10 +50,11 @@ class SuggestionProvider(context: Context) {
             .sortedByDescending { it.second }
             .take(4)
             .forEach { (a, score, isCustom) ->
+                val label = if (a.id == "flashlight" && flashlightOn) "Вимкнути ліхтарик" else a.label
                 result.add(
                     Suggestion.Action(
                         id = a.id,
-                        label = a.label,
+                        label = label,
                         subtitle = a.subtitle,
                         command = a.build(),
                         score = score,
@@ -61,28 +63,62 @@ class SuggestionProvider(context: Context) {
                 )
             }
 
-        // === 2. Контакти ===
-        contacts
+        // === 2. Контакти з номерами ===
+        val matchedContacts = contacts
             .filter { it.name.lowercase().contains(q) }
             .sortedBy { it.name.length }
-            .take(3)
-            .forEach { contact ->
-                val baseScore = when {
-                    contact.name.lowercase() == q -> 96
-                    contact.name.lowercase().startsWith(q) -> 90
-                    else -> 80
-                }
-                val phone = contact.phone
-                if (!phone.isNullOrBlank()) {
-                    result.add(Suggestion.Contact(contact.name, "Подзвонити", ContactAction.CALL, phone, baseScore))
-                    result.add(Suggestion.Contact(contact.name, "Telegram", ContactAction.TELEGRAM, phone, baseScore - 1))
-                    result.add(Suggestion.Contact(contact.name, "WhatsApp", ContactAction.WHATSAPP, phone, baseScore - 2))
-                    result.add(Suggestion.Contact(contact.name, "SMS", ContactAction.SMS, phone, baseScore - 3))
-                    result.add(Suggestion.Contact(contact.name, "Viber", ContactAction.VIBER, phone, baseScore - 4))
-                } else {
-                    result.add(Suggestion.Contact(contact.name, "Telegram", ContactAction.TELEGRAM, contact.name, baseScore))
-                }
+            .take(2)
+
+        var contactRows = 0
+        for (contact in matchedContacts) {
+            val baseScore = when {
+                contact.name.lowercase() == q -> 96
+                contact.name.lowercase().startsWith(q) -> 92
+                else -> 84
             }
+            val phones = contact.phones.take(3)
+            if (phones.isEmpty()) continue
+
+            // Дзвінок — для кожного номера
+            phones.forEachIndexed { idx, phone ->
+                if (contactRows >= 8) break
+                result.add(
+                    Suggestion.Contact(
+                        name = contact.name,
+                        actionLabel = "Подзвонити",
+                        actionType = ContactAction.CALL,
+                        target = phone,
+                        phoneDisplay = formatPhone(phone),
+                        score = baseScore - idx
+                    )
+                )
+                contactRows++
+            }
+
+            // Інші дії — тільки для першого номера
+            val primary = phones.first()
+            val primaryDisplay = formatPhone(primary)
+            val others = listOf(
+                "Telegram" to ContactAction.TELEGRAM,
+                "WhatsApp" to ContactAction.WHATSAPP,
+                "SMS" to ContactAction.SMS,
+                "Viber" to ContactAction.VIBER
+            )
+            others.forEachIndexed { i, (label, action) ->
+                if (contactRows >= 8) return@forEachIndexed
+                result.add(
+                    Suggestion.Contact(
+                        name = contact.name,
+                        actionLabel = label,
+                        actionType = action,
+                        target = primary,
+                        phoneDisplay = primaryDisplay,
+                        score = baseScore - 2 - i
+                    )
+                )
+                contactRows++
+            }
+        }
 
         // === 3. Налаштування ===
         SettingsRoutes.all().keys

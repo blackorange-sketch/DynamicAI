@@ -36,9 +36,14 @@ sealed class Suggestion {
         val actionLabel: String,
         val actionType: ContactAction,
         val target: String,
+        val phoneDisplay: String?,
         override val score: Int
     ) : Suggestion() {
-        override val label: String get() = "$name · $actionLabel"
+        override val label: String get() = name
+        val subtitle: String get() = buildString {
+            append(actionLabel)
+            if (!phoneDisplay.isNullOrBlank()) append(" · ").append(phoneDisplay)
+        }
     }
 }
 
@@ -47,4 +52,16 @@ fun Suggestion.stableKey(): String = when (this) {
     is Suggestion.Action -> "action:$id"
     is Suggestion.Setting -> "setting:$route"
     is Suggestion.Contact -> "contact:$name:${actionType.name}:$target"
+}
+
+fun formatPhone(raw: String): String {
+    val digits = raw.filter { it.isDigit() || it == '+' }
+    return when {
+        digits.matches(Regex("\\+380\\d{9}")) ->
+            "+380 ${digits.substring(4, 6)} ${digits.substring(6, 9)} ${digits.substring(9, 11)} ${digits.substring(11, 13)}"
+        digits.matches(Regex("0\\d{9}")) ->
+            "0${digits.substring(1, 3)} ${digits.substring(3, 6)} ${digits.substring(6, 8)} ${digits.substring(8, 10)}"
+        digits.length > 7 -> digits
+        else -> raw
+    }
 }

@@ -173,27 +173,21 @@ class CommandExecutor(private val context: Context) {
     }
 
     private fun parseTime(input: String): Pair<Int, Int>? {
-        val s = input.trim().lowercase()
-        // "7:30", "7 30", "07:30", "7 годин 30 хвилин", "о 7"
-        val colon = Regex("(\\d{1,2})\\s*[:.\\s]\\s*(\\d{1,2})").find(s)
-        if (colon != null) {
-            val h = colon.groupValues[1].toIntOrNull() ?: return null
-            val m = colon.groupValues[2].toIntOrNull() ?: return null
-            if (h in 0..23 && m in 0..59) return h to m
-        }
-        val hourOnly = Regex("(\\d{1,2})").find(s)
-        if (hourOnly != null) {
-            val h = hourOnly.groupValues[1].toIntOrNull() ?: return null
-            if (h in 0..23) return h to 0
-        }
-        return null
+        val nums = Regex("\\d+").findAll(input)
+            .mapNotNull { it.value.toIntOrNull() }
+            .toList()
+        if (nums.isEmpty()) return null
+        val h = nums[0]
+        val m = nums.getOrNull(1) ?: 0
+        if (h !in 0..23 || m !in 0..59) return null
+        return h to m
     }
 
     private fun parseDuration(input: String): Pair<Int, String>? {
         val s = input.trim().lowercase()
-        val hourRe = Regex("(\\d+)\\s*(год|годин|час|hour|h)")
-        val minRe = Regex("(\\d+)\\s*(хв|хвилин|мин|минут|min|m)")
-        val secRe = Regex("(\\d+)\\s*(сек|секунд|sec|s)")
+        val hourRe = Regex("(\\d+)\\s*(год|годин|година|години|час|hour|hours|h)")
+        val minRe = Regex("(\\d+)\\s*(хв|хвилин|хвилина|хвилини|мин|минут|minute|minutes|min)")
+        val secRe = Regex("(\\d+)\\s*(сек|секунд|секунда|секунди|second|seconds|sec)")
 
         var total = 0
         val parts = mutableListOf<String>()
@@ -214,7 +208,12 @@ class CommandExecutor(private val context: Context) {
             parts.add("$v сек")
         }
 
-        if (total == 0) return null
+        if (total == 0) {
+            // Без одиниць — вважаємо хвилинами
+            val n = Regex("\\d+").find(s)?.value?.toIntOrNull() ?: return null
+            if (n <= 0) return null
+            return n * 60 to "$n хв"
+        }
         return total to parts.joinToString(" ")
     }
 

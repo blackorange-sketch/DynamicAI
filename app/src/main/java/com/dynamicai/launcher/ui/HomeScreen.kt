@@ -118,15 +118,18 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var listTimerJob by remember { mutableStateOf<Job?>(null) }
     var releaseJob by remember { mutableStateOf<Job?>(null) }
 
-    BackHandler(enabled = drawerOpen) { drawerOpen = false }
-    BackHandler(enabled = !drawerOpen && (searchMode || query.isNotBlank())) {
-        query = ""
-        searchMode = false
-        keyboard?.hide()
-    }
 
-    BackHandler(enabled = drawerOpen) { drawerOpen = false }
-    BackHandler(enabled = !drawerOpen && (searchMode || query.isNotBlank())) {
+
+    BackHandler(enabled = showSettings) {
+        showSettings = false
+    }
+    BackHandler(enabled = !showSettings && openFolder != null) {
+        openFolder = null
+    }
+    BackHandler(enabled = !showSettings && openFolder == null && drawerOpen) {
+        drawerOpen = false
+    }
+    BackHandler(enabled = !showSettings && openFolder == null && !drawerOpen && (searchMode || query.isNotBlank())) {
         query = ""
         searchMode = false
         keyboard?.hide()
@@ -303,7 +306,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                             folders = folders,
                             apps = apps,
                             iconSizeDp = settings.dockIconSizeDp,
-                            onOpenFolder = { folder -> openFolder = folder },
+                            onOpenFolder = { folder ->
+                                    try {
+                                        android.util.Log.d("FolderOpen", "folder=${folder.id} pkgs=${folder.packageNames.size}")
+                                        openFolder = folder
+                                    } catch (t: Throwable) {
+                                        vm.setResponse("Folder error: ${t.message}")
+                                    }
+                                },
                             onLongPress = { folder -> folderHeaderMenu = folder }
                         )
                     }
@@ -595,8 +605,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             )
         }
 
+        val drawerApps = remember(apps, hidden, folders) {
+            val folderPkgs = folders.flatMap { it.packageNames }.toSet()
+            apps.filter { it.packageName !in hidden && it.packageName !in folderPkgs }
+        }
         AppDrawer(
-            apps = apps,
+            apps = drawerApps,
             onLaunch = { app -> launchAppWithAnimation(app) },
             onDismiss = { drawerOpen = false },
             visible = drawerOpen

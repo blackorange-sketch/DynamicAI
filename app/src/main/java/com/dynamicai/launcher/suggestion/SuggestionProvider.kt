@@ -80,7 +80,7 @@ class SuggestionProvider(context: Context) {
             if (phones.isEmpty()) continue
 
             // Дзвінок — для кожного номера
-            phones.forEachIndexed { idx, phone ->
+            for ((idx, phone) in phones.withIndex()) {
                 if (contactRows >= 8) break
                 result.add(
                     Suggestion.Contact(
@@ -104,8 +104,9 @@ class SuggestionProvider(context: Context) {
                 "SMS" to ContactAction.SMS,
                 "Viber" to ContactAction.VIBER
             )
-            others.forEachIndexed { i, (label, action) ->
-                if (contactRows >= 8) return@forEachIndexed
+            for ((i, entry) in others.withIndex()) {
+                if (contactRows >= 8) break
+                val (label, action) = entry
                 result.add(
                     Suggestion.Contact(
                         name = contact.name,

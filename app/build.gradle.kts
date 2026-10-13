@@ -9,6 +9,10 @@ android {
     compileSdk = 35
 
     defaultConfig {
+        ndk {
+            abiFilters += listOf("arm64-v8a")
+        }
+
         applicationId = "com.dynamicai.launcher"
         minSdk = 33
         targetSdk = 35

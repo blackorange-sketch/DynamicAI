@@ -29,45 +29,34 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
             return@withContext false
         }
 
-        // Спробуємо GPU
-        try {
-            val config = EngineConfig(
-                modelPath = modelFile.absolutePath,
-                backend = Backend.GPU(),
-                cacheDir = context.cacheDir.path
-            )
-            val e = Engine(config)
-            e.initialize()
-            engine = e
-            _isReady = true
-            lastError = ""
-            Log.d(TAG, "✅ GPU init OK")
-            return@withContext true
-        } catch (t: Throwable) {
-            Log.e(TAG, "GPU init failed: ${t.message}", t)
-            lastError = "GPU: ${t.message}"
+        // Спочатку пробуємо GPU, але якщо OpenCL нема — CPU
+        val backends = listOf(
+            "GPU" to { Backend.GPU() },
+            "CPU" to { Backend.CPU() }
+        )
+
+        for ((name, factory) in backends) {
+            try {
+                val config = EngineConfig(
+                    modelPath = modelFile.absolutePath,
+                    backend = factory(),
+                    cacheDir = context.cacheDir.path
+                )
+                val e = Engine(config)
+                e.initialize()
+                engine = e
+                _isReady = true
+                lastError = ""
+                Log.d(TAG, "✅ Init OK with $name")
+                return@withContext true
+            } catch (t: Throwable) {
+                Log.e(TAG, "$name init failed: ${t.message}", t)
+                lastError = "$name: ${t.message}"
+            }
         }
 
-        // Fallback CPU
-        try {
-            val config = EngineConfig(
-                modelPath = modelFile.absolutePath,
-                backend = Backend.CPU(),
-                cacheDir = context.cacheDir.path
-            )
-            val e = Engine(config)
-            e.initialize()
-            engine = e
-            _isReady = true
-            lastError = ""
-            Log.d(TAG, "✅ CPU init OK")
-            true
-        } catch (t: Throwable) {
-            Log.e(TAG, "CPU init failed: ${t.message}", t)
-            lastError = "CPU: ${t.message}"
-            _isReady = false
-            false
-        }
+        _isReady = false
+        false
     }
 
     override suspend fun complete(prompt: String): String? = withContext(Dispatchers.IO) {

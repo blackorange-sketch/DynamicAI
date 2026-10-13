@@ -82,23 +82,44 @@ class VideoWallpaperService : WallpaperService() {
                         if (muted) 0f else 1f
                     )
                     setOnPreparedListener { mp ->
-                        // ==== Розрахунок пропорцій для центрування без розтягування ====
                         try {
                             val videoW = mp.videoWidth
                             val videoH = mp.videoHeight
                             val surfaceW = surfaceHolder.surfaceFrame.width()
                             val surfaceH = surfaceHolder.surfaceFrame.height()
 
-                            if (videoW > 0 && videoH > 0 && surfaceW > 0 && surfaceH > 0) {
-                                // Масштаб "fill" — відео займає весь екран із збереженням пропорцій
-                                val scaleW = surfaceW.toFloat() / videoW
-                                val scaleH = surfaceH.toFloat() / videoH
-                                val scale = maxOf(scaleW, scaleH)
+                            Log.d("VideoWallpaper", "video=${videoW}x$videoH surface=${surfaceW}x$surfaceH")
 
-                                val newW = (videoW * scale).toInt()
-                                val newH = (videoH * scale).toInt()
-                                surfaceHolder.setFixedSize(newW, newH)
-                                Log.d("VideoWallpaper", "video=${videoW}x$videoH scaled=${newW}x$newH")
+                            if (videoW > 0 && videoH > 0 && surfaceW > 0 && surfaceH > 0) {
+                                // Перевіряємо чи співвідношення сторін різні
+                                val videoAspect = videoW.toFloat() / videoH
+                                val surfaceAspect = surfaceW.toFloat() / surfaceH
+                                val diff = kotlin.math.abs(videoAspect - surfaceAspect)
+
+                                if (diff > 0.05f) {
+                                    // Пропорції не збігаються — встановлюємо surface розмір
+                                    // так, щоб відео масштабувалось без спотворення (fill).
+                                    if (videoAspect > surfaceAspect) {
+                                        // Відео ширше за екран — обрізаємо по боках
+                                        val newH = (surfaceW / videoAspect).toInt()
+                                        surfaceHolder.setFixedSize(surfaceW, newH)
+                                        Log.d("VideoWallpaper", "setFixedSize width: ${surfaceW}x$newH")
+                                    } else {
+                                        // Відео вище за екран — обрізаємо зверху/знизу
+                                        val newW = (surfaceH * videoAspect).toInt()
+                                        surfaceHolder.setFixedSize(newW, surfaceH)
+                                        Log.d("VideoWallpaper", "setFixedSize height: ${newW}x$surfaceH")
+                                    }
+                                }
+
+                                // Ключове: scaling mode
+                                try {
+                                    mp.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
+                                } catch (_: Exception) {
+                                    try {
+                                        mp.setVideoScalingMode(MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT)
+                                    } catch (_: Exception) {}
+                                }
                             }
                         } catch (t: Throwable) {
                             Log.e("VideoWallpaper", "resize failed: ${t.message}")

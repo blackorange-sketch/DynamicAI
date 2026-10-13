@@ -81,6 +81,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val hidden by vm.hidden.collectAsStateWithLifecycle()
     val folders by vm.folders.collectAsStateWithLifecycle()
+    val weather by vm.weather.collectAsStateWithLifecycle()
     val downloadProgress by vm.downloadProgress.collectAsStateWithLifecycle()
 
     val ctx = LocalContext.current
@@ -364,7 +365,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                             enter = androidx.compose.animation.fadeIn(),
                             exit = androidx.compose.animation.fadeOut()
                         ) {
-                            HomeWidget(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
+                            HomeWidget(
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                onSettingsTap = { showSettings = true },
+                                weather = weather
+                            )
                         }
 
                         if (folders.isNotEmpty()) {

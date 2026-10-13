@@ -12,6 +12,8 @@ import com.dynamicai.launcher.data.DockStorage
 import com.dynamicai.launcher.data.HiddenAppsStorage
 import com.dynamicai.launcher.data.LauncherSettings
 import com.dynamicai.launcher.data.SettingsStorage
+import com.dynamicai.launcher.data.WeatherRepository
+import com.dynamicai.launcher.data.WeatherState
 import com.dynamicai.launcher.folder.Folder
 import com.dynamicai.launcher.folder.FolderStorage
 import com.dynamicai.launcher.llm.LlmAgent
@@ -41,6 +43,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val hiddenStorage = HiddenAppsStorage(app)
     private val folderStorage = FolderStorage(app)
     private val appsCache = com.dynamicai.launcher.data.AppsCache(app)
+    private val weatherRepo = WeatherRepository(app)
 
     val llm = LiteRtLlmEngine(app)
     val downloader = ModelDownloader(app)
@@ -63,6 +66,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _hidden = MutableStateFlow(hiddenStorage.get())
     val hidden: StateFlow<Set<String>> = _hidden.asStateFlow()
+
+    private val _weather = MutableStateFlow<WeatherState>(WeatherState.Loading)
+    val weather: StateFlow<WeatherState> = _weather.asStateFlow()
 
     private val _folders = MutableStateFlow(folderStorage.get())
     val folders: StateFlow<List<Folder>> = _folders.asStateFlow()
@@ -88,6 +94,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         _dockPkgs.value = dockStorage.getDockApps()
+        refreshWeather()
         _history.value = historyStorage.get()
         refresh()
     }
@@ -127,6 +134,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleDock(pkg: String) {
         dockStorage.toggle(pkg)
         _dockPkgs.value = dockStorage.getDockApps()
+        refreshWeather()
     }
 
     fun executeSuggestion(s: Suggestion) {
@@ -241,6 +249,13 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setResponse(text: String) {
         _response.value = text
+    }
+
+    fun refreshWeather() {
+        viewModelScope.launch {
+            _weather.value = WeatherState.Loading
+            _weather.value = weatherRepo.fetch()
+        }
     }
 
     fun isCommand(text: String) = parser.parse(text) !is com.dynamicai.launcher.command.Command.Raw

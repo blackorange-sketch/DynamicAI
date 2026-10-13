@@ -2,18 +2,12 @@ package com.dynamicai.launcher.wallpaper
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.graphics.PixelFormat
+import android.graphics.SurfaceTexture
+import android.media.MediaPlayer
 import android.net.Uri
 import android.service.wallpaper.WallpaperService
 import android.util.Log
-import android.view.Gravity
 import android.view.SurfaceHolder
-import android.view.SurfaceView
-import android.widget.FrameLayout
-import androidx.media3.common.MediaItem
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.ui.AspectRatioFrameLayout
 
 class VideoWallpaperService : WallpaperService() {
 
@@ -21,12 +15,8 @@ class VideoWallpaperService : WallpaperService() {
 
     inner class VideoEngine : Engine() {
 
-        private var player: ExoPlayer? = null
+        private var player: MediaPlayer? = null
         private var visible = false
-        private var container: FrameLayout? = null
-        private var surfaceView: SurfaceView? = null
-        private var aspectFrame: AspectRatioFrameLayout? = null
-
         private val prefs: SharedPreferences by lazy {
             applicationContext.getSharedPreferences("dynamicai_wallpaper", Context.MODE_PRIVATE)
         }
@@ -41,40 +31,6 @@ class VideoWallpaperService : WallpaperService() {
             super.onCreate(surfaceHolder)
             prefs.registerOnSharedPreferenceChangeListener(prefsListener)
             setTouchEventsEnabled(false)
-
-            // Створюємо ієрархію View для правильних пропорцій
-            val containerLayout = FrameLayout(this@VideoWallpaperService).apply {
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-                )
-                setBackgroundColor(android.graphics.Color.BLACK)
-            }
-
-            val aspect = AspectRatioFrameLayout(this@VideoWallpaperService).apply {
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-                ).apply {
-                    gravity = Gravity.CENTER
-                }
-                resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-            }
-
-            val surface = SurfaceView(this@VideoWallpaperService).apply {
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-                )
-                holder.setFormat(PixelFormat.TRANSLUCENT)
-            }
-
-            aspect.addView(surface)
-            containerLayout.addView(aspect)
-
-            container = containerLayout
-            surfaceView = surface
-            aspectFrame = aspect
         }
 
         override fun onDestroy() {
@@ -86,10 +42,20 @@ class VideoWallpaperService : WallpaperService() {
         override fun onVisibilityChanged(visible: Boolean) {
             this.visible = visible
             if (visible) {
-                if (player == null) start() else player?.play()
+                if (player == null) start() else try { player?.start() } catch (_: Exception) {}
             } else {
-                player?.pause()
+                try { player?.pause() } catch (_: Exception) {}
             }
+        }
+
+        override fun onSurfaceCreated(holder: SurfaceHolder) {
+            super.onSurfaceCreated(holder)
+            if (prefs.getString("videoUri", null) != null) start()
+        }
+
+        override fun onSurfaceDestroyed(holder: SurfaceHolder) {
+            super.onSurfaceDestroyed(holder)
+            releasePlayer()
         }
 
         private fun restart() {
@@ -104,39 +70,68 @@ class VideoWallpaperService : WallpaperService() {
                 return
             }
             val muted = prefs.getBoolean("muted", true)
-            val surface = surfaceView?.holder?.surface ?: return
 
             try {
-                val p = ExoPlayer.Builder(applicationContext).build().apply {
-                    setMediaItem(MediaItem.fromUri(Uri.parse(uriStr)))
-                    repeatMode = Player.REPEAT_MODE_ALL
-                    volume = if (muted) 0f else 1f
-                    playWhenReady = true
-                    setVideoSurface(surface)
+                val uri = Uri.parse(uriStr)
+                player = MediaPlayer().apply {
+                    setDataSource(applicationContext, uri)
+                    setSurface(surfaceHolder.surface)
+                    isLooping = true
+                    setVolume(if (muted) 0f else 1f, if (muted) 0f else 1f)
 
-                    addListener(object : Player.Listener {
-                        override fun onVideoSizeChanged(videoSize: androidx.media3.common.VideoSize) {
-                            val aspect = if (videoSize.height > 0)
-                                videoSize.width.toFloat() / videoSize.height.toFloat()
-                            else 0f
-                            aspectFrame?.setAspectRatio(aspect)
-                            Log.d("VideoWallpaper", "videoSize=${videoSize.width}x${videoSize.height} aspect=$aspect")
+                    setOnPreparedListener { mp ->
+                        try {
+                            val videoW = mp.videoWidth
+                            val videoH = mp.videoHeight
+                            val surfaceFrame = surfaceHolder.surfaceFrame
+                            val surfaceW = surfaceFrame.width()
+                            val surfaceH = surfaceFrame.height()
+
+                            Log.d("VideoWallpaper", "video=${videoW}x$videoH surface=${surfaceW}x$surfaceH")
+
+                            if (videoW > 0 && videoH > 0 && surfaceW > 0 && surfaceH > 0) {
+                                val videoAspect = videoW.toFloat() / videoH
+                                val surfaceAspect = surfaceW.toFloat() / surfaceH
+
+                                // FILL: масштабуємо так, щоб відео ЗАПОВНИЛО екран,
+                                // зберігаючи пропорції. Зайве обрізається (краї не видно).
+                                val newW: Int
+                                val newH: Int
+                                if (videoAspect > surfaceAspect) {
+                                    // Відео ширше за екран — обмежуємо по ВИСОТІ
+                                    // (обрізаємо по боках, видно центральну частину)
+                                    newH = surfaceH
+                                    newW = (surfaceH * videoAspect).toInt()
+                                } else {
+                                    // Відео вище за екран — обмежуємо по ШИРИНІ
+                                    // (обрізаємо зверху/знизу, видно центральну частину)
+                                    newW = surfaceW
+                                    newH = (surfaceW / videoAspect).toInt()
+                                }
+
+                                surfaceHolder.setFixedSize(newW, newH)
+                                Log.d("VideoWallpaper", "FILL ${newW}x$newH (video aspect=$videoAspect)")
+                            }
+                        } catch (t: Throwable) {
+                            Log.e("VideoWallpaper", "resize failed: ${t.message}", t)
                         }
+                        mp.start()
+                    }
 
-                        override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                            Log.e("VideoWallpaper", "error: ${error.message}")
-                        }
-                    })
+                    setOnErrorListener { _, what, extra ->
+                        Log.e("VideoWallpaper", "error what=$what extra=$extra")
+                        true
+                    }
 
-                    prepare()
+                    prepareAsync()
                 }
-                player = p
             } catch (t: Throwable) {
                 Log.e("VideoWallpaper", "start failed: ${t.message}", t)
             }
         }
 
         private fun releasePlayer() {
+            try { player?.stop() } catch (_: Exception) {}
             try { player?.release() } catch (_: Exception) {}
             player = null
         }

@@ -73,8 +73,6 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.media3:media3-exoplayer:1.5.1")
-    implementation("androidx.media3:media3-ui:1.5.1")
     implementation("androidx.savedstate:savedstate-ktx:1.2.1")
     implementation("com.google.ai.edge.litertlm:litertlm-android:0.16.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

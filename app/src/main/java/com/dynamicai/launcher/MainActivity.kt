@@ -122,8 +122,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         }
     }
 
-    LaunchedEffect(Unit) { vm.initLlmIfReady() }
-
     LaunchedEffect(apps, query) {
         filtered = if (query.isBlank()) apps
         else apps

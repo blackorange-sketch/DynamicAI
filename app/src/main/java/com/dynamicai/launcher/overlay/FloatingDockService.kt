@@ -28,6 +28,7 @@ import com.dynamicai.launcher.MainActivity
 import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.data.DockStorage
 import com.dynamicai.launcher.data.LauncherSettings
+import com.dynamicai.launcher.folder.FolderStorage
 import com.dynamicai.launcher.data.SettingsStorage
 import com.dynamicai.launcher.model.AppInfo
 import kotlinx.coroutines.CoroutineScope
@@ -47,6 +48,7 @@ class FloatingDockService : Service() {
     private val repo by lazy { AppRepository(applicationContext) }
     private val dockStorage by lazy { DockStorage(applicationContext) }
     private val settingsStorage by lazy { SettingsStorage(applicationContext) }
+    private val folderStorage by lazy { FolderStorage(applicationContext) }
 
     @Volatile private var apps: List<AppInfo> = emptyList()
 
@@ -276,11 +278,29 @@ class FloatingDockService : Service() {
 
         column.addView(spacer(dp(8)))
 
-        // Іконки застосунків з дока
+        // Іконки з дока — і застосунки, і папки
         val dockPkgs = dockStorage.getDockApps()
-        apps.filter { it.packageName in dockPkgs }.take(6).forEach { app ->
-            column.addView(makeAppIcon(app))
-            column.addView(spacer(dp(8)))
+        val folders = folderStorage.get()
+        var rendered = 0
+        val maxItems = 8
+
+        for (pkg in dockPkgs) {
+            if (rendered >= maxItems) break
+            if (pkg.startsWith("folder:")) {
+                val fid = pkg.removePrefix("folder:")
+                val folder = folders.firstOrNull { it.id == fid } ?: continue
+                val firstApp = apps.firstOrNull { it.packageName in folder.packageNames }
+                if (firstApp != null) {
+                    column.addView(makeFolderIcon(folder.name, firstApp))
+                    column.addView(spacer(dp(8)))
+                    rendered++
+                }
+            } else {
+                val app = apps.firstOrNull { it.packageName == pkg } ?: continue
+                column.addView(makeAppIcon(app))
+                column.addView(spacer(dp(8)))
+                rendered++
+            }
         }
 
         return column
@@ -312,6 +332,34 @@ class FloatingDockService : Service() {
             setImageResource(iconRes)
             imageTintList = ColorStateList.valueOf(iconTint)
             layoutParams = FrameLayout.LayoutParams(dp(size / 2), dp(size / 2)).apply {
+                gravity = Gravity.CENTER
+            }
+        }
+        frame.addView(icon)
+        return frame
+    }
+
+    private fun makeFolderIcon(name: String, firstApp: AppInfo): View {
+        val size = settings.overlayIconSizeDp
+        val frame = FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(0xFF3A3A3A.toInt())
+                setStroke(dp(2), Color.WHITE)
+            }
+            isClickable = true
+            setOnClickListener {
+                // Відкриваємо лаунчер із папкою
+                val intent = Intent(this@FloatingDockService, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                }
+                try { startActivity(intent) } catch (_: Exception) {}
+            }
+        }
+        val icon = ImageView(this).apply {
+            setImageBitmap(firstApp.icon.toBitmap(dp(size * 7 / 10), dp(size * 7 / 10)))
+            layoutParams = FrameLayout.LayoutParams(dp(size * 7 / 10), dp(size * 7 / 10)).apply {
                 gravity = Gravity.CENTER
             }
         }

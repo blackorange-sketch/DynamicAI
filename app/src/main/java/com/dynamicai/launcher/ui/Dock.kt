@@ -73,7 +73,7 @@ fun Dock(
             )
         }
 
-        items.take(4).forEach { item ->
+        items.forEach { item ->
             if (item.isFolder) {
                 // Папка — рамка з декількома мінііконками
                 Box(

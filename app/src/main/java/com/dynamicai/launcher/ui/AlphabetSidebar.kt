@@ -61,7 +61,7 @@ fun AlphabetSidebar(
             .width(32.dp)
             .onGloballyPositioned { coords ->
                 sidebarHeight = coords.size.height.toFloat()
-                sidebarTop = coords.positionInParent().y
+                sidebarTop = coords.positionInRoot().y
             }
             .pointerInput(letters) {
                 detectDragGestures(

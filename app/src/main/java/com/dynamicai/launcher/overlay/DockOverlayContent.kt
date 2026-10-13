@@ -82,7 +82,7 @@ fun DockOverlayContent(
                     size = 52,
                     background = Color(0x33202020),
                     border = Color.White.copy(alpha = 0.35f),
-                    onClick = { expanded = false }
+                    onTap = { expanded = false }
                 ) {
                     Icon(
                         Icons.Default.Close,
@@ -97,7 +97,7 @@ fun DockOverlayContent(
                     size = 52,
                     background = Color(0xFF2196F3).copy(alpha = 0.25f),
                     border = Color(0xFF64B5F6).copy(alpha = 0.6f),
-                    onClick = onOpenSearch
+                    onTap = onOpenSearch
                 ) {
                     Icon(
                         Icons.Default.Search,
@@ -121,7 +121,7 @@ private fun CircleIconButton(
     size: Int,
     background: Color,
     border: Color,
-    onClick: () -> Unit,
+    onTap: () -> Unit,
     content: @Composable () -> Unit
 ) {
     Box(
@@ -131,7 +131,9 @@ private fun CircleIconButton(
             .clip(CircleShape)
             .background(background)
             .border(width = 1.5.dp, color = border, shape = CircleShape)
-            .clickable(onClick = onClick)
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { onTap() })
+            }
     ) {
         content()
     }

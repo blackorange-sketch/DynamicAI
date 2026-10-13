@@ -249,6 +249,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     val showSearchField = searchMode || query.isNotBlank()
 
+    if (showWallpaper) {
+        WallpaperScreen(onClose = { showWallpaper = false })
+        return
+    }
+
     if (showSettings) {
         SettingsScreen(
             settings = settings,
@@ -577,10 +582,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 onSwipeUp = { drawerOpen = true },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
-        }
-
-        if (showWallpaper) {
-            WallpaperScreen(onClose = { showWallpaper = false })
         }
 
         downloadProgress?.let { p ->

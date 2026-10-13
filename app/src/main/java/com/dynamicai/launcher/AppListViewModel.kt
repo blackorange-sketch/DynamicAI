@@ -311,8 +311,14 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    suspend fun testLlm(prompt: String): String? {
-        return llm.complete(prompt)
+    suspend fun testLlm(prompt: String): String {
+        val diag = buildString {
+            append("isReady=").append(llm.isReady).append("\n")
+            append("lastError='").append(llm.lastError).append("'\n")
+            append("---\n")
+        }
+        val result = llm.complete(prompt)
+        return diag + (result ?: "(null)")
     }
 
     fun isCommand(text: String) = parser.parse(text) !is com.dynamicai.launcher.command.Command.Raw

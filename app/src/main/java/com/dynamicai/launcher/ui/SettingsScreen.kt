@@ -575,8 +575,17 @@ private fun LlmTestRow(onTest: suspend (String) -> String?) {
     var answer by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
 
+    val ctx = LocalContext.current
+
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text("Тест LLM", color = Color(0xFF64B5F6), fontSize = 13.sp)
+
+        // Діагностика
+        val diag = remember { mutableStateOf("") }
+        LaunchedEffect(Unit) {
+            // Отримуємо через ctx як Activity
+            diag.value = "Запит…"
+        }
 
         BasicTextField(
             value = query,

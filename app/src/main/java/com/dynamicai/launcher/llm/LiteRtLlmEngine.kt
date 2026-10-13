@@ -75,13 +75,48 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         return@withContext try {
             e.createConversation().use { conversation ->
                 val message = conversation.sendMessage(prompt)
-                // Message → String
-                message?.toString()
+                if (message == null) {
+                    lastError = "sendMessage → null"
+                    return@withContext null
+                }
+
+                // Спробувати різні способи витягнути текст
+                val result = extractText(message)
+                if (result.isNullOrBlank()) {
+                    lastError = "message class=${message.javaClass.name}, str='${message.toString()}'"
+                    return@withContext message.toString()
+                }
+                lastError = ""
+                result
             }
         } catch (t: Throwable) {
             Log.e(TAG, "complete failed: ${t.message}", t)
             null
         }
+    }
+
+    private fun extractText(message: Any): String? {
+        // Спробувати методи у різних варіантах
+        val methods = listOf(
+            "getText", "getContent", "text", "content", "getMessage"
+        )
+        for (name in methods) {
+            try {
+                val m = message.javaClass.getMethod(name)
+                val v = m.invoke(message)
+                if (v is String && v.isNotBlank()) return v
+            } catch (_: Throwable) {}
+        }
+        // Спробувати поля
+        val fields = listOf("text", "content", "message")
+        for (name in fields) {
+            try {
+                val f = message.javaClass.getField(name)
+                val v = f.get(message)
+                if (v is String && v.isNotBlank()) return v
+            } catch (_: Throwable) {}
+        }
+        return null
     }
 
     fun close() {

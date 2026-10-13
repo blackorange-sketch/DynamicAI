@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,6 +55,7 @@ class MainActivity : ComponentActivity() {
 fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val apps by vm.apps.collectAsStateWithLifecycle()
     val dockPkgs by vm.dockPkgs.collectAsStateWithLifecycle()
+    val response by vm.response.collectAsStateWithLifecycle()
     var query by remember { mutableStateOf("") }
     var filtered by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
 
@@ -96,21 +99,49 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         ) {
             Spacer(Modifier.height(24.dp))
 
-            BasicTextField(
-                value = query,
-                onValueChange = { query = it },
-                textStyle = TextStyle(color = Color.White, fontSize = 20.sp),
-                cursorBrush = SolidColor(Color.White),
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                decorationBox = { inner ->
-                    if (query.isEmpty()) {
-                        Text("Пошук або команда…", color = Color.Gray, fontSize = 20.sp)
-                    }
-                    inner()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    BasicTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        textStyle = TextStyle(color = Color.White, fontSize = 20.sp),
+                        cursorBrush = SolidColor(Color.White),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        decorationBox = { inner ->
+                            if (query.isEmpty()) {
+                                Text("Пошук або команда…", color = Color.Gray, fontSize = 20.sp)
+                            }
+                            inner()
+                        }
+                    )
                 }
-            )
+                if (query.isNotBlank()) {
+                    IconButton(onClick = {
+                        vm.executeCommand(query)
+                        query = ""
+                    }) {
+                        Icon(Icons.Default.Send, contentDescription = "Виконати", tint = Color.White)
+                    }
+                }
+            }
+
+            if (response.isNotBlank()) {
+                Text(
+                    text = response,
+                    color = Color(0xFF64B5F6),
+                    fontSize = 14.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+            }
 
             HorizontalDivider(color = Color.DarkGray)
 
@@ -163,10 +194,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         }
                     }
                 },
-                onLetterReleased = {
+                onLetterReleased = { isTap ->
                     releaseJob?.cancel()
                     releaseJob = scope.launch {
-                        delay(120)
+                        delay(if (isTap) 350 else 100)
                         showOverlay = false
                         delay(180)
                         activeLetter = null

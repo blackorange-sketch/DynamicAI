@@ -35,7 +35,7 @@ fun AlphabetSidebar(
     letters: List<Char>,
     activeLetter: Char?,
     onLetterSelected: (Char) -> Unit,
-    onLetterReleased: () -> Unit = {},
+    onLetterReleased: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -83,15 +83,15 @@ fun AlphabetSidebar(
                         change.consume()
                         select(letterAtOffset(change.position.y))
                     },
-                    onDragEnd = { lastLetter = null; onLetterReleased() },
-                    onDragCancel = { lastLetter = null; onLetterReleased() }
+                    onDragEnd = { lastLetter = null; onLetterReleased(false) },
+                    onDragCancel = { lastLetter = null; onLetterReleased(false) }
                 )
             }
             .pointerInput(letters) {
                 detectTapGestures(
                     onTap = { offset ->
                         select(letterAtOffset(offset.y))
-                        onLetterReleased()
+                        onLetterReleased(true)
                     }
                 )
             },

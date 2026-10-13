@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
@@ -28,6 +29,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
@@ -257,16 +259,42 @@ private fun AppGridItem(
             .pointerInput(app.packageName) {
                 detectTapGestures { onTap() }
             }
-            .padding(vertical = 4.dp)
+            .padding(vertical = 6.dp)
     ) {
-        Icon(
-            bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
-            contentDescription = app.label,
-            modifier = Modifier.size(iconSizeDp.dp),
-            tint = Color.Unspecified
-        )
+        // Glass-обгортка навколо іконки
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size((iconSizeDp + 16).dp)
+                .clip(RoundedCornerShape((iconSizeDp / 2 + 8).dp))
+                .background(
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.08f),
+                            Color.White.copy(alpha = 0.02f)
+                        )
+                    )
+                )
+                .border(
+                    width = 0.5.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.2f),
+                            Color.White.copy(alpha = 0.04f)
+                        )
+                    ),
+                    shape = RoundedCornerShape((iconSizeDp / 2 + 8).dp)
+                )
+        ) {
+            Icon(
+                bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
+                contentDescription = app.label,
+                modifier = Modifier.size(iconSizeDp.dp),
+                tint = Color.Unspecified
+            )
+        }
         if (fontSizeSp > 0) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 text = app.label,
                 color = Color.White,

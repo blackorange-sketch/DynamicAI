@@ -122,11 +122,11 @@ private fun FolderTab(
             .background(
                 brush = androidx.compose.ui.graphics.Brush.verticalGradient(
                     if (selected) listOf(
-                        Color(0xFF64B5F6).copy(alpha = 0.5f),
-                        Color(0xFF2196F3).copy(alpha = 0.25f)
+                        Color(0xFF64B5F6).copy(alpha = 0.6f),
+                        Color(0xFF2196F3).copy(alpha = 0.3f)
                     ) else listOf(
-                        Color.White.copy(alpha = 0.1f),
-                        Color.White.copy(alpha = 0.02f)
+                        Color.Black.copy(alpha = 0.55f),
+                        Color.Black.copy(alpha = 0.4f)
                     )
                 )
             )
@@ -137,7 +137,7 @@ private fun FolderTab(
                         Color(0xFF64B5F6).copy(alpha = 0.7f),
                         Color(0xFF64B5F6).copy(alpha = 0.2f)
                     ) else listOf(
-                        Color.White.copy(alpha = 0.25f),
+                        Color.White.copy(alpha = 0.15f),
                         Color.White.copy(alpha = 0.05f)
                     )
                 ),

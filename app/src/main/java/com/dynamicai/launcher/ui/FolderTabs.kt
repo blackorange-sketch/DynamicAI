@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,7 +40,7 @@ fun FolderTabs(
     if (folders.isEmpty()) return
 
     val selectedFolder = folders.firstOrNull { it.id == selectedFolderId }
-    val folderApps = remember(selectedFolder, apps) {
+    val folderApps: List<AppInfo> = remember(selectedFolder, apps) {
         if (selectedFolder == null) emptyList()
         else apps.filter { it.packageName in selectedFolder.packageNames }
     }

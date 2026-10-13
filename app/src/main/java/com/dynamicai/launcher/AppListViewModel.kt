@@ -12,6 +12,8 @@ import com.dynamicai.launcher.data.DockStorage
 import com.dynamicai.launcher.data.HiddenAppsStorage
 import com.dynamicai.launcher.data.LauncherSettings
 import com.dynamicai.launcher.data.SettingsStorage
+import com.dynamicai.launcher.folder.Folder
+import com.dynamicai.launcher.folder.FolderStorage
 import com.dynamicai.launcher.llm.LlmAgent
 import com.dynamicai.launcher.llm.LiteRtLlmEngine
 import com.dynamicai.launcher.llm.ModelDownloader
@@ -37,6 +39,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val contactRepo = ContactRepository(app)
     private val settingsStorage = SettingsStorage(app)
     private val hiddenStorage = HiddenAppsStorage(app)
+    private val folderStorage = FolderStorage(app)
 
     val llm = LiteRtLlmEngine(app)
     val downloader = ModelDownloader(app)
@@ -59,6 +62,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _hidden = MutableStateFlow(hiddenStorage.get())
     val hidden: StateFlow<Set<String>> = _hidden.asStateFlow()
+
+    private val _folders = MutableStateFlow(folderStorage.get())
+    val folders: StateFlow<List<Folder>> = _folders.asStateFlow()
 
     private val _dockPkgs = MutableStateFlow<List<String>>(emptyList())
     val dockPkgs: StateFlow<List<String>> = _dockPkgs.asStateFlow()
@@ -94,7 +100,10 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateQuery(query: String) {
         viewModelScope.launch {
-            val visibleApps = _apps.value.filter { it.packageName !in _hidden.value }
+            val foldersPkgs = _folders.value.flatMap { it.packageNames }.toSet()
+            val visibleApps = _apps.value.filter {
+                it.packageName !in _hidden.value && it.packageName !in foldersPkgs
+            }
             _suggestions.value = suggestionProvider.build(
                 query, visibleApps, _contacts.value, executor.flashlightOn.value
             )
@@ -192,6 +201,33 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         _hidden.value = emptySet()
         updateQuery("")
     }
+
+    fun createFolder(name: String, initialPkgs: List<String>): Folder {
+        val f = folderStorage.create(name, initialPkgs)
+        _folders.value = folderStorage.get()
+        updateQuery("")
+        return f
+    }
+
+    fun deleteFolder(id: String) {
+        folderStorage.remove(id)
+        _folders.value = folderStorage.get()
+        updateQuery("")
+    }
+
+    fun addToFolder(folderId: String, pkg: String) {
+        folderStorage.addApp(folderId, pkg)
+        _folders.value = folderStorage.get()
+        updateQuery("")
+    }
+
+    fun removeFromFolder(folderId: String, pkg: String) {
+        folderStorage.removeApp(folderId, pkg)
+        _folders.value = folderStorage.get()
+        updateQuery("")
+    }
+
+    fun folderOf(pkg: String): Folder? = folderStorage.folderOf(pkg)
 
     fun setResponse(text: String) {
         _response.value = text

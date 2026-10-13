@@ -78,6 +78,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val suggestions by vm.suggestions.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     val hidden by vm.hidden.collectAsStateWithLifecycle()
+    val folders by vm.folders.collectAsStateWithLifecycle()
     val downloadProgress by vm.downloadProgress.collectAsStateWithLifecycle()
 
     val ctx = LocalContext.current
@@ -88,6 +89,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var showSettings by remember { mutableStateOf(false) }
     var searchMode by remember { mutableStateOf(false) }
     var menuApp by remember { mutableStateOf<AppInfo?>(null) }
+    var folderMenuApp by remember { mutableStateOf<AppInfo?>(null) }
+    var folderMenuFolder by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
+    var folderHeaderMenu by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
+    var showCreateFolder by remember { mutableStateOf<AppInfo?>(null) }
+    var createFolderName by remember { mutableStateOf("") }
+    var addToFolderPicker by remember { mutableStateOf<AppInfo?>(null) }
     var overlayActive by remember { mutableStateOf(false) }
     var drawerOpen by remember { mutableStateOf(false) }
     var overlayPermissionGranted by remember {
@@ -404,6 +411,23 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         }
                     }
                 }
+                if (query.isBlank()) {
+                    items(folders, key = { "folder:${it.id}" }) { folder ->
+                        val folderApps = apps.filter { it.packageName in folder.packageNames }
+                        FolderRow(
+                            folder = folder,
+                            apps = folderApps,
+                            iconSizeDp = settings.iconSizeDp,
+                            onLaunch = { app -> launchAppWithAnimation(app) },
+                            onLongPressApp = { app, f ->
+                                folderMenuApp = app
+                                folderMenuFolder = f
+                            },
+                            onLongPressHeader = { f -> folderHeaderMenu = f }
+                        )
+                    }
+                }
+
                 items(suggestions, key = { it.stableKey() }) { s ->
                     when (s) {
                         is Suggestion.Action -> SuggestionActionRow(s) {
@@ -534,6 +558,172 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             visible = drawerOpen
         )
 
+        // Діалог створення папки
+        showCreateFolder?.let { app ->
+            AlertDialog(
+                onDismissRequest = { showCreateFolder = null; createFolderName = "" },
+                title = { Text("Нова папка", color = Color.White) },
+                text = {
+                    Column {
+                        Text("Застосунок: ${app.label}", color = Color.Gray, fontSize = 13.sp)
+                        Spacer(Modifier.height(12.dp))
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = createFolderName,
+                            onValueChange = { createFolderName = it },
+                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            decorationBox = { inner ->
+                                if (createFolderName.isEmpty()) {
+                                    Text("Назва папки", color = Color.Gray, fontSize = 16.sp)
+                                }
+                                inner()
+                            }
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (createFolderName.isNotBlank()) {
+                            vm.createFolder(createFolderName, listOf(app.packageName))
+                        }
+                        showCreateFolder = null
+                        createFolderName = ""
+                    }) { Text("Створити", color = Color(0xFF64B5F6)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showCreateFolder = null; createFolderName = "" }) {
+                        Text("Скасувати", color = Color.White)
+                    }
+                },
+                containerColor = Color(0xFF1A1A1A)
+            )
+        }
+
+        // Діалог вибору папки (додати застосунок до існуючої)
+        addToFolderPicker?.let { app ->
+            AlertDialog(
+                onDismissRequest = { addToFolderPicker = null },
+                title = { Text("Додати ${app.label} до…", color = Color.White) },
+                text = {
+                    Column {
+                        if (folders.isEmpty()) {
+                            Text("Немає папок", color = Color.Gray, fontSize = 14.sp)
+                        } else {
+                            folders.forEach { f ->
+                                Text(
+                                    f.name,
+                                    color = Color.White,
+                                    fontSize = 16.sp,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .pointerInput(f.id) {
+                                            detectTapGestures {
+                                                vm.addToFolder(f.id, app.packageName)
+                                                addToFolderPicker = null
+                                            }
+                                        }
+                                        .padding(vertical = 12.dp)
+                                )
+                            }
+                        }
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { addToFolderPicker = null }) {
+                        Text("Скасувати", color = Color.White)
+                    }
+                },
+                containerColor = Color(0xFF1A1A1A)
+            )
+        }
+
+        // Діалог long-press на застосунок у папці
+        folderMenuApp?.let { app ->
+            AlertDialog(
+                onDismissRequest = { folderMenuApp = null; folderMenuFolder = null },
+                title = { Text(app.label, color = Color.White, fontSize = 18.sp) },
+                text = {
+                    Column {
+                        Text(
+                            "Прибрати з папки",
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .pointerInput(app.packageName) {
+                                    detectTapGestures {
+                                        folderMenuFolder?.let { f ->
+                                            vm.removeFromFolder(f.id, app.packageName)
+                                        }
+                                        folderMenuApp = null
+                                        folderMenuFolder = null
+                                    }
+                                }
+                                .padding(vertical = 12.dp)
+                        )
+                        Text(
+                            "Запустити",
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .pointerInput(app.packageName) {
+                                    detectTapGestures {
+                                        launchAppWithAnimation(app)
+                                        folderMenuApp = null
+                                        folderMenuFolder = null
+                                    }
+                                }
+                                .padding(vertical = 12.dp)
+                        )
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { folderMenuApp = null; folderMenuFolder = null }) {
+                        Text("Скасувати", color = Color.White)
+                    }
+                },
+                containerColor = Color(0xFF1A1A1A)
+            )
+        }
+
+        // Діалог long-press на заголовок папки
+        folderHeaderMenu?.let { folder ->
+            AlertDialog(
+                onDismissRequest = { folderHeaderMenu = null },
+                title = { Text(folder.name, color = Color.White, fontSize = 18.sp) },
+                text = {
+                    Column {
+                        Text(
+                            "Видалити папку (застосунки залишаться)",
+                            color = Color(0xFFFF6B6B),
+                            fontSize = 15.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .pointerInput(folder.id) {
+                                    detectTapGestures {
+                                        vm.deleteFolder(folder.id)
+                                        folderHeaderMenu = null
+                                    }
+                                }
+                                .padding(vertical = 12.dp)
+                        )
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { folderHeaderMenu = null }) {
+                        Text("Скасувати", color = Color.White)
+                    }
+                },
+                containerColor = Color(0xFF1A1A1A)
+            )
+        }
+
         pendingChoice?.let { candidates ->
             AlertDialog(
                 onDismissRequest = { vm.dismissChoice() },
@@ -567,20 +757,46 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         }
 
         menuApp?.let { app ->
-            AppContextMenu(
-                app = app,
-                inDock = app.packageName in dockPkgs,
-                onDismiss = { menuApp = null },
-                onToggleDock = { vm.toggleDock(app.packageName); menuApp = null },
-                onHide = { vm.hideApp(app.packageName); menuApp = null },
-                onInfo = {
-                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.parse("package:${app.packageName}")
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val inFolder = vm.folderOf(app.packageName)
+            AlertDialog(
+                onDismissRequest = { menuApp = null },
+                title = { Text(app.label, color = Color.White, fontSize = 18.sp) },
+                text = {
+                    Column {
+                        if (inFolder == null) {
+                            MenuItem(if (app.packageName in dockPkgs) "Прибрати з дока" else "Додати в док") {
+                                vm.toggleDock(app.packageName); menuApp = null
+                            }
+                            MenuItem("Створити папку з цим застосунком") {
+                                showCreateFolder = app; menuApp = null
+                            }
+                            MenuItem("Додати до існуючої папки") {
+                                addToFolderPicker = app; menuApp = null
+                            }
+                        } else {
+                            MenuItem("Прибрати з папки «${inFolder.name}»") {
+                                vm.removeFromFolder(inFolder.id, app.packageName)
+                                menuApp = null
+                            }
+                        }
+                        MenuItem("Приховати зі списку") {
+                            vm.hideApp(app.packageName); menuApp = null
+                        }
+                        MenuItem("Інформація про застосунок") {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.parse("package:${app.packageName}")
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            try { ctx.startActivity(intent) } catch (_: Exception) {}
+                            menuApp = null
+                        }
                     }
-                    try { ctx.startActivity(intent) } catch (_: Exception) {}
-                    menuApp = null
-                }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { menuApp = null }) { Text("Скасувати", color = Color.White) }
+                },
+                containerColor = Color(0xFF1A1A1A)
             )
         }
     }

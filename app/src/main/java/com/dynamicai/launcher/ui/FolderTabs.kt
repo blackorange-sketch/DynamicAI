@@ -46,8 +46,12 @@ fun FolderTabs(
         else apps.filter { it.packageName in selectedFolder.packageNames }
     }
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        // ==== Таби (без "Усі") ====
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Color.Black.copy(alpha = 0.92f))
+    ) {
+        // ==== Таби ====
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -64,7 +68,6 @@ fun FolderTabs(
                 )
             }
         }
-        }
 
         // ==== Список застосунків ====
         AnimatedVisibility(
@@ -75,7 +78,6 @@ fun FolderTabs(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
                     .padding(top = 2.dp),
                 contentPadding = PaddingValues(bottom = 8.dp)
             ) {

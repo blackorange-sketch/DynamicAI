@@ -55,6 +55,7 @@ class GlRenderThread(
 
     fun stop() {
         if (!::handler.isInitialized) return
+        VideoWallpaperService.log("GL stop()")
         running = false
         handler.post { doStop() }
         thread.quitSafely()
@@ -92,6 +93,7 @@ class GlRenderThread(
     }
 
     private fun doStop() {
+        VideoWallpaperService.log("GL doStop()")
         running = false
         try {
             if (::surfaceTexture.isInitialized) surfaceTexture.release()
@@ -198,12 +200,12 @@ class GlRenderThread(
 
     private fun drawFrame() {
         if (!running) return
+        if (!::surfaceTexture.isInitialized) return
         try {
-            // ==== Оновлення текстури (ключове!) ====
             try {
                 surfaceTexture.updateTexImage()
             } catch (t: Throwable) {
-                // Текстура ще не готова — це нормально на старті
+                // ignore
             }
 
             GLES20.glViewport(0, 0, surfaceWidth, surfaceHeight)

@@ -1,6 +1,8 @@
 package com.dynamicai.launcher.ui
 
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -96,14 +98,19 @@ fun AlphabetSidebar(
                 // Wave: близькість до активної літери → більша шкала
                 val distance = if (activeIndex != null) abs(index - activeIndex) else 99
                 val targetScale = when {
-                    distance == 0 -> 1.6f
-                    distance == 1 -> 1.3f
-                    distance == 2 -> 1.15f
+                    distance == 0 -> 2.2f
+                    distance == 1 -> 1.8f
+                    distance == 2 -> 1.45f
+                    distance == 3 -> 1.2f
+                    distance == 4 -> 1.08f
                     else -> 1f
                 }
                 val scale by animateFloatAsState(
                     targetValue = targetScale,
-                    animationSpec = tween(durationMillis = 180),
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    ),
                     label = "waveScale"
                 )
 
@@ -117,7 +124,7 @@ fun AlphabetSidebar(
                 ) {
                     Text(
                         text = letter.toString(),
-                        color = if (isActive) Color.Black else Color.White,
+                        color = if (isActive) Color.Black else Color.White.copy(alpha = (1f - distance * 0.15f).coerceIn(0.5f, 1f)),
                         fontSize = 11.sp
                     )
                 }

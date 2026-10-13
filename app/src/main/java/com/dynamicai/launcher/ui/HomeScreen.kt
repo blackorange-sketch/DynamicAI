@@ -385,7 +385,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             versionName = BuildConfig.VERSION_NAME,
             onOpenWallpaper = { showWallpaper = true },
             onOpenDockEditor = { showDockEditor = true },
-            onClose = { showSettings = false }
+            onClose = { showSettings = false },
+            onTestLlm = { prompt -> vm.testLlm(prompt) }
         )
         return
     }

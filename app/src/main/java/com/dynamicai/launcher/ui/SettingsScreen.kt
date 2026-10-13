@@ -74,7 +74,8 @@ fun SettingsScreen(
     llmDownloaded: Boolean,
     llmReady: Boolean,
     versionName: String,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onTestLlm: suspend (String) -> String? = { null }
 ) {
     Column(
         modifier = Modifier
@@ -274,7 +275,7 @@ fun SettingsScreen(
                     color = Color(0xFF4CAF50), fontSize = 13.sp,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                 )
-                LlmTestRow()
+                LlmTestRow(onTest = onTestLlm)
             }
         }
 
@@ -568,8 +569,7 @@ private fun ShizukuTestRow() {
 
 
 @Composable
-private fun LlmTestRow() {
-    val ctx = LocalContext.current
+private fun LlmTestRow(onTest: suspend (String) -> String?) {
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("Відкрий телеграм") }
     var answer by remember { mutableStateOf("") }
@@ -602,14 +602,11 @@ private fun LlmTestRow() {
             loading = true
             answer = ""
             scope.launch {
-                // Отримуємо ViewModel з Activity
-                val activity = ctx as? android.app.Activity
-                val vm = androidx.lifecycle.ViewModelProvider(
-                    activity ?: return@launch
-                )[com.dynamicai.launcher.AppListViewModel::class.java]
-
-                val result = vm.testLlm(query)
-                answer = result ?: "(порожньо)"
+                answer = try {
+                    onTest(query) ?: "(порожньо)"
+                } catch (t: Throwable) {
+                    "Помилка: ${t.message}"
+                }
                 loading = false
             }
         }

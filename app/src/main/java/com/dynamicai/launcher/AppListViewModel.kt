@@ -101,10 +101,20 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refresh() {
         viewModelScope.launch {
-            val loaded = repo.loadInstalledApps()
-            _apps.value = loaded
-            try { appsCache.save(loaded) } catch (_: Exception) {}
-            updateQuery("")
+            // 1. Одразу показуємо кешований список (миттєво)
+            val cached = try { repo.loadCached() } catch (_: Throwable) { emptyList() }
+            if (cached.isNotEmpty()) {
+                _apps.value = cached
+                updateQuery("")
+            }
+
+            // 2. Паралельно оновлюємо повний список
+            try {
+                val loaded = repo.loadInstalledApps()
+                _apps.value = loaded
+                try { appsCache.save(loaded) } catch (_: Exception) {}
+                updateQuery("")
+            } catch (_: Throwable) {}
         }
     }
 

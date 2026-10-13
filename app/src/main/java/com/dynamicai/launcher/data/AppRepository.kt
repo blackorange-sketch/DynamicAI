@@ -11,14 +11,34 @@ import kotlinx.coroutines.withContext
 class AppRepository(private val context: Context) {
 
     private val pm: PackageManager = context.packageManager
+    private val cache = AppsCache(context)
 
+    /**
+     * Швидке завантаження:
+     * 1. Якщо є кеш — повертаємо його одразу (label без іконок).
+     * 2. Іконки підвантажуються окремо.
+     */
+    suspend fun loadCached(): List<AppInfo> = withContext(Dispatchers.IO) {
+        cache.load().map { cached ->
+            AppInfo(
+                label = cached.label,
+                packageName = cached.packageName,
+                icon = loadIconOnly(cached.packageName),
+                isSystem = cached.isSystem
+            )
+        }
+    }
+
+    /**
+     * Повне сканування всіх застосунків (для оновлення кешу).
+     */
     suspend fun loadInstalledApps(): List<AppInfo> = withContext(Dispatchers.IO) {
         val intent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
         val resolveInfos = pm.queryIntentActivities(
             intent,
-            android.content.pm.PackageManager.MATCH_ALL
+            PackageManager.MATCH_ALL
         )
 
         val result = ArrayList<AppInfo>(resolveInfos.size)
@@ -36,6 +56,14 @@ class AppRepository(private val context: Context) {
 
         result.sortBy { it.label.lowercase() }
         result
+    }
+
+    private fun loadIconOnly(packageName: String): android.graphics.drawable.Drawable {
+        return try {
+            pm.getApplicationIcon(packageName)
+        } catch (_: Throwable) {
+            pm.defaultActivityIcon
+        }
     }
 
     fun launchApp(packageName: String): Boolean {

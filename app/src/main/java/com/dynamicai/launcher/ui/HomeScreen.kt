@@ -250,7 +250,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val showSearchField = searchMode || query.isNotBlank()
 
     if (showWallpaper) {
-        WallpaperScreen(onClose = { showWallpaper = false })
+        WallpaperScreen(backgroundAlphaPercent = settings.backgroundAlphaPercent, onClose = { showWallpaper = false })
         return
     }
 
@@ -287,6 +287,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(Color.Black.copy(alpha = settings.backgroundAlphaPercent / 100f))
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = {
@@ -617,6 +618,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         }
         AppDrawer(
             apps = drawerApps,
+            backgroundAlphaPercent = settings.backgroundAlphaPercent,
             onLaunch = { app -> launchAppWithAnimation(app) },
             onDismiss = { drawerOpen = false },
             visible = drawerOpen

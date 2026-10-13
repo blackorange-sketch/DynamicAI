@@ -14,7 +14,8 @@ data class LauncherSettings(
     val overlayHandleLengthDp: Int = 140,
     val overlayHandleAlphaPercent: Int = 55,
     val overlayAutoCollapseMs: Int = 0,      // 0 = вимкнено
-    val overlayEdgePaddingDp: Int = 14       // відступ риски від краю екрана
+    val overlayEdgePaddingDp: Int = 14,      // відступ риски від краю екрана
+    val backgroundAlphaPercent: Int = 100    // 0 = прозорий, 100 = чорний
 )
 
 class SettingsStorage(context: Context) {
@@ -31,7 +32,8 @@ class SettingsStorage(context: Context) {
         overlayHandleLengthDp = prefs.getInt("overlayHandleLengthDp", 140),
         overlayHandleAlphaPercent = prefs.getInt("overlayHandleAlphaPercent", 55),
         overlayAutoCollapseMs = prefs.getInt("overlayAutoCollapseMs", 0),
-        overlayEdgePaddingDp = prefs.getInt("overlayEdgePaddingDp", 14)
+        overlayEdgePaddingDp = prefs.getInt("overlayEdgePaddingDp", 14),
+        backgroundAlphaPercent = prefs.getInt("backgroundAlphaPercent", 100)
     )
 
     fun save(s: LauncherSettings) {
@@ -47,6 +49,7 @@ class SettingsStorage(context: Context) {
             .putInt("overlayHandleAlphaPercent", s.overlayHandleAlphaPercent)
             .putInt("overlayAutoCollapseMs", s.overlayAutoCollapseMs)
             .putInt("overlayEdgePaddingDp", s.overlayEdgePaddingDp)
+            .putInt("backgroundAlphaPercent", s.backgroundAlphaPercent)
             .putLong("updatedAt", System.currentTimeMillis())
             .commit()
     }

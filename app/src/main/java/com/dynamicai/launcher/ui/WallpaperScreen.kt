@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import com.dynamicai.launcher.wallpaper.VideoWallpaperService
 
 @Composable
-fun WallpaperScreen(onClose: () -> Unit) {
+fun WallpaperScreen(backgroundAlphaPercent: Int = 100, onClose: () -> Unit) {
     val ctx = LocalContext.current
     var muted by remember { mutableStateOf(VideoWallpaperService.getMuted(ctx)) }
     var hasVideo by remember { mutableStateOf(VideoWallpaperService.hasVideo(ctx)) }
@@ -83,7 +83,7 @@ fun WallpaperScreen(onClose: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color.Black.copy(alpha = backgroundAlphaPercent / 100f))
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {

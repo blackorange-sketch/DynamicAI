@@ -43,7 +43,7 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color.Black.copy(alpha = settings.backgroundAlphaPercent / 100f))
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
     ) {
@@ -77,6 +77,21 @@ fun SettingsScreen(
             value = settings.fontSizeSp,
             values = listOf(14, 16, 18, 20, 22, 24),
             onChange = { onSettingsChange(settings.copy(fontSizeSp = it)) }
+        )
+
+        Section("Фон лаунчера")
+        SizeSlider(
+            label = "Затемнення фону (%)",
+            value = settings.backgroundAlphaPercent,
+            values = listOf(0, 20, 40, 60, 80, 100),
+            onChange = { onSettingsChange(settings.copy(backgroundAlphaPercent = it)) }
+        )
+        Text(
+            if (settings.backgroundAlphaPercent == 0) "Повністю прозорий — видно шпалери"
+            else if (settings.backgroundAlphaPercent < 50) "Напівпрозорий — легка підкладка"
+            else "Затемнений — краща читабельність",
+            color = Color.Gray, fontSize = 12.sp,
+            modifier = Modifier.padding(start = 24.dp, top = 4.dp)
         )
 
         Section("Вигляд")

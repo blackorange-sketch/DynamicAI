@@ -48,6 +48,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun AppDrawer(
     apps: List<AppInfo>,
+    backgroundAlphaPercent: Int,
     onLaunch: (AppInfo) -> Unit,
     onDismiss: () -> Unit,
     visible: Boolean
@@ -92,7 +93,7 @@ fun AppDrawer(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF0D0D0D))
+                .background(Color.Black.copy(alpha = backgroundAlphaPercent / 100f))
                 .pointerInput(Unit) {
                     // Свайп вниз закриває drawer
                     detectVerticalDragGestures { _, dragAmount ->

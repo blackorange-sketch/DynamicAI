@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,6 +36,8 @@ fun Dock(
     iconSizeDp: Int,
     onLaunch: (DockItem) -> Unit,
     onSearch: () -> Unit,
+    onRecent: () -> Unit,
+    showRecentButton: Boolean = true,
     onSwipeUp: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -92,6 +95,32 @@ fun Dock(
                 tint = Color(0xFFB3E5FC),
                 modifier = Modifier.size((iconSizeDp * 0.5f).dp)
             )
+        }
+
+        // Кнопка Recent (опційна)
+        if (showRecentButton) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(iconSizeDp.dp)
+                    .clip(CircleShape)
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFF9C27B0).copy(alpha = 0.4f),
+                                Color(0xFF673AB7).copy(alpha = 0.15f)
+                            )
+                        )
+                    )
+                    .clickable(onClick = onRecent)
+            ) {
+                Icon(
+                    Icons.Default.ViewCarousel,
+                    contentDescription = "Нещодавні",
+                    tint = Color(0xFFCE93D8),
+                    modifier = Modifier.size((iconSizeDp * 0.5f).dp)
+                )
+            }
         }
 
         items.forEach { item ->

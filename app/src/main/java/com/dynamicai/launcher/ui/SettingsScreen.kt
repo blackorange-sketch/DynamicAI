@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material.icons.filled.SwipeUp
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Straighten
@@ -163,6 +164,9 @@ fun SettingsScreen(
         // ==== Вигляд ====
         GlassSectionHeader("Вигляд")
         GlassCard {
+            SwitchRow("Показувати кнопку Recent", settings.showRecentButton, Icons.Default.ViewCarousel, Color(0xFF9C27B0)) {
+                onSettingsChange(settings.copy(showRecentButton = it))
+            }
             SwitchRow("Показувати пошук", settings.showSearchBar, Icons.Default.Search, Color(0xFF2196F3)) {
                 onSettingsChange(settings.copy(showSearchBar = it))
             }
@@ -243,66 +247,6 @@ fun SettingsScreen(
         }
 
         // ==== Дії ====
-        GlassSectionHeader("Жест свайпу знизу")
-        GlassCard {
-            val ctx = LocalContext.current
-            var gestureEnabled by remember { mutableStateOf(
-                com.dynamicai.launcher.accessibility.RecentGestureService.isEnabled(ctx)
-            ) }
-            var serviceConnected by remember { mutableStateOf(
-                com.dynamicai.launcher.accessibility.RecentGestureService.isConnected
-            ) }
-
-            // Оновлюємо стан періодично — поки екран відкритий
-            LaunchedEffect(Unit) {
-                while (true) {
-                    gestureEnabled = com.dynamicai.launcher.accessibility.RecentGestureService.isEnabled(ctx)
-                    serviceConnected = com.dynamicai.launcher.accessibility.RecentGestureService.isConnected
-                    kotlinx.coroutines.delay(1000)
-                }
-            }
-
-            SwitchRow(
-                label = when {
-                    serviceConnected -> "Жест активний ✓"
-                    gestureEnabled -> "Жест увімкнено (очікування…)"
-                    else -> "Увімкнути жест"
-                },
-                checked = gestureEnabled,
-                icon = Icons.Default.SwipeUp,
-                tint = if (serviceConnected) Color(0xFF4CAF50) else Color(0xFF9C27B0),
-                onChange = {
-                    if (!gestureEnabled) {
-                        try {
-                            ctx.startActivity(android.content.Intent(
-                                android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS
-                            ).apply {
-                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                            })
-                        } catch (_: Throwable) {}
-                    }
-                }
-            )
-            ActionRow(
-                label = "Відкрити налаштування Accessibility",
-                icon = Icons.Default.Settings,
-                tint = Color(0xFF64B5F6)
-            ) {
-                try {
-                    ctx.startActivity(android.content.Intent(
-                        android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS
-                    ).apply {
-                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                    })
-                } catch (_: Throwable) {}
-            }
-            Text(
-                "Знайди \"DynamicAI Gesture\" і увімкни. Потім повернись сюди — статус оновиться через 1-2 сек.",
-                color = Color.Gray, fontSize = 11.sp,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-            )
-        }
-
         GlassSectionHeader("Shizuku")
         ShizukuTestRow()
 

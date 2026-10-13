@@ -212,17 +212,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         overlayPermissionGranted = Settings.canDrawOverlays(ctx)
     }
 
-    // Підключаємо колбек жесту
-    DisposableEffect(Unit) {
-        com.dynamicai.launcher.accessibility.RecentGestureService.onSwipeUp = {
-            showRecent = true
-            vm.loadRecentTasks()
-        }
-        onDispose {
-            com.dynamicai.launcher.accessibility.RecentGestureService.onSwipeUp = null
-        }
-    }
-
     LaunchedEffect(Unit) {
         vm.startWeatherAutoRefresh { isScreenOn(ctx) }
 

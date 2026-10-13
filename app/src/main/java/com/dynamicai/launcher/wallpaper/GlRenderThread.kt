@@ -64,13 +64,6 @@ class GlRenderThread(
     fun pause() {
         if (!::handler.isInitialized) return
         running = false
-        handler.postDelayed({
-            try {
-                if (::eglDisplay.isInitialized) {
-                    EGL14.eglSwapInterval(eglDisplay, 0)
-                }
-            } catch (_: Throwable) {}
-        }, 50)
     }
 
     fun resume() {

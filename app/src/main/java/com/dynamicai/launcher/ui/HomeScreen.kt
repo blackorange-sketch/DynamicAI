@@ -90,6 +90,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var query by remember { mutableStateOf("") }
     var showSettings by remember { mutableStateOf(false) }
     var showWallpaper by remember { mutableStateOf(false) }
+    var showDockEditor by remember { mutableStateOf(false) }
     var searchMode by remember { mutableStateOf(false) }
     var menuApp by remember { mutableStateOf<AppInfo?>(null) }
     var folderMenuApp by remember { mutableStateOf<AppInfo?>(null) }
@@ -122,7 +123,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
 
 
-    BackHandler(enabled = showWallpaper) {
+    BackHandler(enabled = showDockEditor) {
+        showDockEditor = false
+    }
+    BackHandler(enabled = !showDockEditor && showWallpaper) {
         showWallpaper = false
     }
     BackHandler(enabled = !showWallpaper && showSettings) {
@@ -249,6 +253,17 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     val showSearchField = searchMode || query.isNotBlank()
 
+    if (showDockEditor) {
+        DockEditorScreen(
+            apps = apps,
+            dockPkgs = dockPkgs,
+            hidden = hidden,
+            onToggle = { vm.toggleDock(it) },
+            onClose = { showDockEditor = false }
+        )
+        return
+    }
+
     if (showWallpaper) {
         WallpaperScreen(
             settings = settings,
@@ -283,6 +298,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             llmReady = vm.llm.isReady,
             versionName = BuildConfig.VERSION_NAME,
             onOpenWallpaper = { showWallpaper = true },
+            onOpenDockEditor = { showDockEditor = true },
             onClose = { showSettings = false }
         )
         return

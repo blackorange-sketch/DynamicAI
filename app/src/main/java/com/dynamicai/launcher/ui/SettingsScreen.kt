@@ -38,6 +38,7 @@ fun SettingsScreen(
     llmReady: Boolean,
     versionName: String,
     onOpenWallpaper: () -> Unit,
+    onOpenDockEditor: () -> Unit,
     onClose: () -> Unit
 ) {
     Column(
@@ -96,6 +97,7 @@ fun SettingsScreen(
 
         Section("Вигляд")
         ActionRow("Шпалери", onOpenWallpaper)
+        ActionRow("Застосунки у дока", onOpenDockEditor)
         SwitchRow(
             label = "Показувати назви застосунків",
             checked = settings.showLabels,

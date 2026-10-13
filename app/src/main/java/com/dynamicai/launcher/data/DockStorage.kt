@@ -12,13 +12,13 @@ class DockStorage(context: Context) {
     fun addToDock(pkg: String) {
         val current = getDockApps().toMutableSet()
         current.add(pkg)
-        prefs.edit().putStringSet("apps", current).apply()
+        prefs.edit().putStringSet("apps", current).commit()
     }
 
     fun removeFromDock(pkg: String) {
         val current = getDockApps().toMutableSet()
         current.remove(pkg)
-        prefs.edit().putStringSet("apps", current).apply()
+        prefs.edit().putStringSet("apps", current).commit()
     }
 
     fun toggle(pkg: String) {

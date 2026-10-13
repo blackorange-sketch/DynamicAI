@@ -25,11 +25,26 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v5
 
-      - name: Build debug APK
-        run: gradle assembleDebug --no-daemon
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > $RUNNER_TEMP/release.keystore
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> $GITHUB_ENV
+          echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+          echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
+          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+          echo "VERSION_CODE=${{ github.run_number }}" >> $GITHUB_ENV
+          echo "VERSION_NAME=0.1.${{ github.run_number }}" >> $GITHUB_ENV
+
+      - name: Build release APK
+        run: gradle assembleRelease --no-daemon
+
+      - name: Rename APK
+        run: |
+          mkdir -p out
+          cp app/build/outputs/apk/release/app-release.apk out/DynamicAI-${{ github.run_number }}.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v5
         with:
-          name: app-debug
-          path: app/build/outputs/apk/debug/*.apk
+          name: DynamicAI-release
+          path: out/*.apk

@@ -4,19 +4,20 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -24,8 +25,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.PlatformTextStyle
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
@@ -42,16 +43,13 @@ fun AlphabetSidebar(
     var sidebarHeight by remember { mutableStateOf(0f) }
     var lastLetter by remember { mutableStateOf<Char?>(null) }
 
-    // Індекс активної літери для розрахунку хвилі
     val activeIndex = letters.indexOf(activeLetter).takeIf { it >= 0 }
-
-    val density = LocalDensity.current
-    val paddingPx = with(density) { 24.dp.toPx() }
 
     fun letterAtOffset(y: Float): Char? {
         if (sidebarHeight <= 0f || letters.isEmpty()) return null
-        val innerH = sidebarHeight - paddingPx * 2f
+        val innerH = sidebarHeight - dp(48).value * 3
         if (innerH <= 0f) return null
+        val paddingPx = with(LocalDensity.current) { 24.dp.toPx() }
         val localY = (y - paddingPx).coerceIn(0f, innerH - 0.001f)
         val rel = localY / innerH
         val idx = (rel * letters.size).toInt().coerceIn(0, letters.size - 1)
@@ -70,15 +68,13 @@ fun AlphabetSidebar(
     Box(
         modifier = modifier
             .fillMaxHeight()
-            .width(56.dp)
+            .width(34.dp)
             .onGloballyPositioned { coords ->
                 sidebarHeight = coords.size.height.toFloat()
             }
             .pointerInput(letters) {
                 detectDragGestures(
-                    onDragStart = { offset ->
-                        select(letterAtOffset(offset.y))
-                    },
+                    onDragStart = { offset -> select(letterAtOffset(offset.y)) },
                     onDrag = { change, _ ->
                         change.consume()
                         select(letterAtOffset(change.position.y))
@@ -97,23 +93,49 @@ fun AlphabetSidebar(
             },
         contentAlignment = Alignment.Center
     ) {
+        // Glass-підкладка для стрічки
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width(22.dp)
+                .padding(vertical = 20.dp)
+                .clip(RoundedCornerShape(11.dp))
+                .background(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xF0202020),
+                            Color(0xE00D0D0D)
+                        )
+                    )
+                )
+                .border(
+                    width = 0.5.dp,
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.3f),
+                            Color.White.copy(alpha = 0.08f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(11.dp)
+                )
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxHeight()
                 .padding(vertical = 24.dp),
+            verticalArrangement = Arrangement.SpaceEvenly,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             letters.forEachIndexed { index, letter ->
                 val isActive = letter == activeLetter
 
-                // Wave: близькість до активної літери → більша шкала
                 val distance = if (activeIndex != null) abs(index - activeIndex) else 99
                 val targetScale = when {
-                    distance == 0 -> 2.2f
-                    distance == 1 -> 1.8f
-                    distance == 2 -> 1.45f
-                    distance == 3 -> 1.2f
-                    distance == 4 -> 1.08f
+                    distance == 0 -> 2.0f
+                    distance == 1 -> 1.6f
+                    distance == 2 -> 1.3f
+                    distance == 3 -> 1.12f
                     else -> 1f
                 }
                 val scale by animateFloatAsState(
@@ -126,10 +148,9 @@ fun AlphabetSidebar(
                 )
 
                 val targetOffset = when {
-                    distance == 0 -> (-22).dp
-                    distance == 1 -> (-16).dp
-                    distance == 2 -> (-10).dp
-                    distance == 3 -> (-5).dp
+                    distance == 0 -> (-14).dp
+                    distance == 1 -> (-10).dp
+                    distance == 2 -> (-6).dp
                     else -> 0.dp
                 }
                 val xOffset by animateDpAsState(
@@ -151,14 +172,32 @@ fun AlphabetSidebar(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .offset(x = xOffset)
-                            .size(18.dp)
+                            .size(20.dp)
                             .scale(scale)
                             .clip(CircleShape)
-                            .background(if (isActive) Color.White else Color.Transparent)
+                            .background(
+                                brush = if (isActive) {
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color(0xFF64B5F6),
+                                            Color(0xFF2196F3)
+                                        )
+                                    )
+                                } else {
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color.Transparent,
+                                            Color.Transparent
+                                        )
+                                    )
+                                }
+                            )
                     ) {
                         Text(
                             text = letter.toString(),
-                            color = if (isActive) Color.Black else Color.White.copy(alpha = (1f - distance * 0.15f).coerceIn(0.5f, 1f)),
+                            color = if (isActive) Color.White else Color.White.copy(
+                                alpha = (1f - distance * 0.12f).coerceIn(0.4f, 1f)
+                            ),
                             maxLines = 1,
                             textAlign = TextAlign.Center,
                             style = androidx.compose.material3.LocalTextStyle.current.copy(

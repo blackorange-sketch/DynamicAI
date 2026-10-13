@@ -301,22 +301,22 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             if (!showSearchField) {
                 HomeWidget(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
 
+                        if (folders.isNotEmpty()) {
+                            Spacer(Modifier.height(8.dp))
+                            FolderTabs(
+                                folders = folders,
+                                apps = apps,
+                                selectedFolderId = selectedTabFolderId,
+                                iconSizeDp = settings.iconSizeDp,
+                                onSelectFolder = { folder ->
+                                    selectedTabFolderId = folder?.id
+                                },
+                                onLaunchApp = { app -> launchAppWithAnimation(app) }
+                            )
+                        }
+
                     if (folders.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
-                        FoldersGrid(
-                            folders = folders,
-                            apps = apps,
-                            iconSizeDp = settings.dockIconSizeDp,
-                            onOpenFolder = { folder ->
-                                    try {
-                                        android.util.Log.d("FolderOpen", "folder=${folder.id} pkgs=${folder.packageNames.size}")
-                                        openFolder = folder
-                                    } catch (t: Throwable) {
-                                        vm.setResponse("Folder error: ${t.message}")
-                                    }
-                                },
-                            onLongPress = { folder -> folderHeaderMenu = folder }
-                        )
                     }
             }
 

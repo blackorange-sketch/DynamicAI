@@ -697,11 +697,8 @@ private fun BluetoothTestRow() {
             GlassChip("Підключити", false) {
                 scope.launch {
                     val ok = manager.connect(nameInput)
-                    diagnostic = (if (ok) "✅ Спроба підключення
-
-" else "❌ Помилка
-
-") + manager.getDiagnostic()
+                    val prefix = if (ok) "OK підключення" else "Помилка"
+                    diagnostic = prefix + "\n\n" + manager.getDiagnostic()
                 }
             }
         }

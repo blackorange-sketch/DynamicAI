@@ -53,12 +53,13 @@ class VideoWallpaperService : WallpaperService() {
         }
 
         override fun onVisibilityChanged(visible: Boolean) {
-            log("visibility=$visible")
-            this.visible = visible
-            if (visible) {
-                if (player == null) start() else player?.play()
-                            }
-            // НЕ паузимо — хай відео грає
+            try {
+                log("visibility=$visible")
+                this.visible = visible
+                if (player == null && prefs.getString("videoUri", null) != null) start()
+            } catch (t: Throwable) {
+                log("visibility error: ${t.message}")
+            }
         }
 
         override fun onSurfaceCreated(holder: SurfaceHolder) {
@@ -86,12 +87,12 @@ class VideoWallpaperService : WallpaperService() {
 
         private fun start() {
             try {
-            val uriStr = prefs.getString("videoUri", null)
-            if (uriStr.isNullOrBlank()) {
-                log("no video set")
-                return
-            }
-            val muted = prefs.getBoolean("muted", true)
+                val uriStr = prefs.getString("videoUri", null)
+                if (uriStr.isNullOrBlank()) {
+                    log("no video set")
+                    return
+                }
+                val muted = prefs.getBoolean("muted", true)
 
                 val frame = surfaceHolder.surfaceFrame
                 val w = frame.width().takeIf { it > 0 } ?: 1080
@@ -99,7 +100,6 @@ class VideoWallpaperService : WallpaperService() {
 
                 val gl = GlRenderThread(surfaceHolder.surface, w, h)
                 gl.onSurfaceTextureReady = { st ->
-                    // Переносимо створення ExoPlayer на main-потік
                     mainHandler.post {
                         try {
                             val surface = Surface(st)
@@ -139,9 +139,6 @@ class VideoWallpaperService : WallpaperService() {
                 glThread = gl
             } catch (t: Throwable) {
                 log("start failed: ${t.message}")
-            }
-            } catch (t: Throwable) {
-                log("start outer error: ${t.message}")
             }
         }
 

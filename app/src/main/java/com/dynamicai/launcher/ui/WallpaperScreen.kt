@@ -2,6 +2,7 @@ package com.dynamicai.launcher.ui
 
 import android.app.WallpaperManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -29,6 +30,16 @@ fun WallpaperScreen(backgroundAlphaPercent: Int = 100, onClose: () -> Unit) {
     val ctx = LocalContext.current
     var muted by remember { mutableStateOf(VideoWallpaperService.getMuted(ctx)) }
     var hasVideo by remember { mutableStateOf(VideoWallpaperService.hasVideo(ctx)) }
+    var lastLog by remember { mutableStateOf(VideoWallpaperService.lastLog) }
+    var uriText by remember { mutableStateOf(readUri(ctx)) }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            lastLog = VideoWallpaperService.lastLog
+            uriText = readUri(ctx)
+            kotlinx.coroutines.delay(1000)
+        }
+    }
 
     fun openSystemWallpaper() {
         try {
@@ -97,17 +108,13 @@ fun WallpaperScreen(backgroundAlphaPercent: Int = 100, onClose: () -> Unit) {
             Text("Шпалери", color = Color.White, fontSize = 22.sp)
         }
 
-        // ==== Системні ====
         SectionHeader("Системні шпалери")
         ActionButton("Обрати шпалери (система)") { openSystemWallpaper() }
-        Hint("Галерея, системні, живі, Google Wallpapers")
 
-        // ==== Своє відео ====
         SectionHeader("Відео-шпалери DynamicAI")
         ActionButton(if (hasVideo) "Змінити відео" else "Обрати відео") {
             videoPicker.launch(arrayOf("video/*"))
         }
-        Hint("Формати: mp4, webm, mkv · рекомендується до 30 сек і 1080p")
 
         if (hasVideo) {
             Row(
@@ -135,19 +142,26 @@ fun WallpaperScreen(backgroundAlphaPercent: Int = 100, onClose: () -> Unit) {
 
         SectionHeader("Діагностика")
         Text(
-            text = "URI: " + (ctx.getSharedPreferences("dynamicai_wallpaper", android.content.Context.MODE_PRIVATE)
-                .getString("videoUri", "не вибрано") ?: "не вибрано").take(90),
-            color = Color.Yellow, fontSize = 10.sp,
+            text = "URI: $uriText",
+            color = Color.Yellow,
+            fontSize = 10.sp,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
         )
         Text(
-            text = "Остання подія: " + com.dynamicai.launcher.wallpaper.VideoWallpaperService.lastLog,
-            color = Color.Yellow, fontSize = 11.sp,
+            text = "Остання подія: $lastLog",
+            color = Color.Yellow,
+            fontSize = 11.sp,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
         )
 
         Spacer(Modifier.height(48.dp))
     }
+}
+
+private fun readUri(ctx: Context): String {
+    return ctx.getSharedPreferences("dynamicai_wallpaper", Context.MODE_PRIVATE)
+        .getString("videoUri", "не вибрано")
+        ?.take(80) ?: "не вибрано"
 }
 
 @Composable
@@ -170,15 +184,5 @@ private fun ActionButton(label: String, onClick: () -> Unit) {
             .fillMaxWidth()
             .pointerInput(label) { detectTapGestures { onClick() } }
             .padding(horizontal = 24.dp, vertical = 14.dp)
-    )
-}
-
-@Composable
-private fun Hint(text: String) {
-    Text(
-        text,
-        color = Color.Gray,
-        fontSize = 12.sp,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 2.dp)
     )
 }

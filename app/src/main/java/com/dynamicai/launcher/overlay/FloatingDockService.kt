@@ -85,7 +85,9 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             savedStateController.performRestore(android.os.Bundle())
             lifecycleRegistry.currentState = Lifecycle.State.RESUMED
 
-            settingsState.value = settingsStorage.load()
+            val loaded = settingsStorage.load()
+            android.util.Log.d("FloatingDock", "Loaded settings: $loaded")
+            settingsState.value = loaded
             applicationContext.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
                 .registerOnSharedPreferenceChangeListener(prefsListener)
 
@@ -109,6 +111,7 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
     override fun onDestroy() {
+        android.util.Log.d("FloatingDock", "onDestroy")
         try {
             applicationContext.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
                 .unregisterOnSharedPreferenceChangeListener(prefsListener)
@@ -164,23 +167,18 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             applyPosition(settingsStorage.load())
         }
 
+        android.util.Log.d("FloatingDock", "addView: type=${params.type} flags=${params.flags} gravity=${params.gravity} x=${params.x} y=${params.y}")
         windowManager.addView(dockView, params)
     }
 
     private fun applyPosition(s: LauncherSettings) {
-        val verticalGravity = when {
-            s.overlayOffsetYPercent < 33 -> Gravity.TOP
-            s.overlayOffsetYPercent > 66 -> Gravity.BOTTOM
-            else -> Gravity.CENTER_VERTICAL
-        }
         val horizontalGravity = if (s.overlayPosition == "left") Gravity.START else Gravity.END
-        params.gravity = verticalGravity or horizontalGravity
+        params.gravity = Gravity.CENTER_VERTICAL or horizontalGravity
         params.x = 0
-        params.y = when {
-            s.overlayOffsetYPercent < 33 -> (s.overlayOffsetYPercent * 20)
-            s.overlayOffsetYPercent > 66 -> ((100 - s.overlayOffsetYPercent) * 20)
-            else -> (s.overlayOffsetYPercent - 50) * 20
-        }
+        // Зміщення від центру: -400..+400 px (безпечний діапазон)
+        val pct = s.overlayOffsetYPercent.coerceIn(0, 100)
+        params.y = ((pct - 50) * 8).coerceIn(-400, 400)
+        android.util.Log.d("FloatingDock", "applyPosition: pct=$pct y=${params.y} gravity=${params.gravity}")
     }
 
     private fun updateLayoutParams(s: LauncherSettings) {

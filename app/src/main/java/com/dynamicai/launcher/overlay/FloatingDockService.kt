@@ -51,6 +51,11 @@ class FloatingDockService : Service() {
     private val folderStorage by lazy { FolderStorage(applicationContext) }
 
     @Volatile private var apps: List<AppInfo> = emptyList()
+    private var searchOverlayView: android.view.View? = null
+    private var searchOverlayParams: WindowManager.LayoutParams? = null
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val commandParser by lazy { com.dynamicai.launcher.command.CommandParser() }
+    private val commandExecutor by lazy { com.dynamicai.launcher.command.CommandExecutor(applicationContext) }
 
     private val dockPrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "apps") {
@@ -179,18 +184,14 @@ class FloatingDockService : Service() {
         try {
             val overlay = android.widget.FrameLayout(this).apply {
                 setBackgroundColor(0xB3000000.toInt())
-                layoutParams = android.widget.FrameLayout.LayoutParams(
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT
-                )
             }
 
-            // Лінійний layout для поля пошуку
             val container = android.widget.LinearLayout(this).apply {
                 orientation = android.widget.LinearLayout.VERTICAL
                 setPadding(dp(16), dp(80), dp(16), dp(16))
             }
 
+            // Поле введення
             val editText = android.widget.EditText(this).apply {
                 hint = "Команда або пошук…"
                 setHintTextColor(0x99FFFFFF.toInt())
@@ -200,25 +201,80 @@ class FloatingDockService : Service() {
                 setPadding(dp(16), dp(12), dp(16), dp(12))
                 maxLines = 1
                 setSingleLine(true)
-                requestFocus()
-                setOnEditorActionListener { _, actionId, _ ->
-                    if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
-                        hideSearchOverlay()
-                        true
-                    } else false
-                }
+                setHint("Пошук або команда…")
             }
             container.addView(editText)
 
-            val results = android.widget.LinearLayout(this).apply {
+            // Список підказок
+            val resultsList = android.widget.LinearLayout(this).apply {
                 orientation = android.widget.LinearLayout.VERTICAL
                 setPadding(0, dp(8), 0, 0)
             }
-            container.addView(results)
+            container.addView(resultsList)
 
             overlay.addView(container)
             overlay.setOnClickListener { hideSearchOverlay() }
             container.setOnClickListener { /* перехоплюємо */ }
+
+            // Показ підказок при введенні
+            editText.addTextChangedListener(object : android.text.TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                override fun afterTextChanged(s: android.text.Editable?) {
+                    val query = s?.toString().orEmpty().trim()
+                    resultsList.removeAllViews()
+                    if (query.isBlank()) return
+
+                    // Дії
+                    val lower = query.lowercase()
+                    com.dynamicai.launcher.suggestion.ActionCatalog.all
+                        .map { a -> a to a.keywords.maxOf { kw -> com.dynamicai.launcher.command.FuzzyMatcher.score(kw, lower) } }
+                        .filter { it.second >= 55 }
+                        .sortedByDescending { it.second }
+                        .take(3)
+                        .forEach { (a, _) ->
+                            resultsList.addView(makeResultRow("⚡", a.label) {
+                                val cmd = a.build()
+                                commandExecutor.execute(cmd, apps)
+                                hideSearchOverlay()
+                            })
+                        }
+
+                    // Застосунки
+                    apps.filter { it.label.contains(query, ignoreCase = true) }
+                        .take(5)
+                        .forEach { app ->
+                            resultsList.addView(makeResultRow("📱", app.label) {
+                                packageManager.getLaunchIntentForPackage(app.packageName)?.apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    try { startActivity(this) } catch (_: Exception) {}
+                                }
+                                hideSearchOverlay()
+                            })
+                        }
+                }
+            })
+
+            // Обробка Enter
+            editText.setOnEditorActionListener { _, actionId, event ->
+                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
+                    (event != null && event.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_DOWN)) {
+                    val text = editText.text.toString().trim()
+                    if (text.isNotBlank()) {
+                        val cmd = commandParser.parse(text)
+                        val result = commandExecutor.execute(cmd, apps)
+                        if (result is com.dynamicai.launcher.command.CommandResult.Success) {
+                            hideSearchOverlay()
+                        } else if (result is com.dynamicai.launcher.command.CommandResult.Error) {
+                            android.widget.Toast.makeText(
+                                this@FloatingDockService, result.message,
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                    true
+                } else false
+            }
 
             val type = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -244,12 +300,33 @@ class FloatingDockService : Service() {
 
             mainHandler.postDelayed({
                 try {
+                    editText.requestFocus()
                     val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
                     imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
                 } catch (_: Throwable) {}
             }, 100)
         } catch (t: Throwable) {
             log("showSearchOverlay failed: ${t.message}")
+        }
+    }
+
+    private fun makeResultRow(emoji: String, label: String, onClick: () -> Unit): android.view.View {
+        return android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            setBackgroundColor(0x14FFFFFF)
+            isClickable = true
+            setOnClickListener { onClick() }
+            addView(android.widget.TextView(this@FloatingDockService).apply {
+                text = emoji
+                textSize = 18f
+                setPadding(0, 0, dp(12), 0)
+            })
+            addView(android.widget.TextView(this@FloatingDockService).apply {
+                text = label
+                setTextColor(android.graphics.Color.WHITE)
+                textSize = 16f
+            })
         }
     }
 

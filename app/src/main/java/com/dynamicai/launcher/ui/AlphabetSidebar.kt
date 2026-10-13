@@ -32,7 +32,6 @@ fun AlphabetSidebar(
 ) {
     val haptic = LocalHapticFeedback.current
     var sidebarHeight by remember { mutableStateOf(0f) }
-    var sidebarTop by remember { mutableStateOf(0f) }
     var lastLetter by remember { mutableStateOf<Char?>(null) }
 
     // Індекс активної літери для розрахунку хвилі
@@ -40,7 +39,7 @@ fun AlphabetSidebar(
 
     fun letterAtOffset(y: Float): Char? {
         if (sidebarHeight <= 0f || letters.isEmpty()) return null
-        val localY = y - sidebarTop
+        val localY = y
         val rel = (localY / sidebarHeight).coerceIn(0f, 0.9999f)
         val idx = (rel * letters.size).toInt().coerceIn(0, letters.size - 1)
         return letters[idx]
@@ -61,7 +60,6 @@ fun AlphabetSidebar(
             .width(32.dp)
             .onGloballyPositioned { coords ->
                 sidebarHeight = coords.size.height.toFloat()
-                sidebarTop = coords.positionInRoot().y
             }
             .pointerInput(letters) {
                 detectDragGestures(

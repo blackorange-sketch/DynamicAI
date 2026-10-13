@@ -9,6 +9,9 @@ import com.dynamicai.launcher.command.CommandResult
 import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.data.CommandHistory
 import com.dynamicai.launcher.data.DockStorage
+import com.dynamicai.launcher.data.HiddenAppsStorage
+import com.dynamicai.launcher.data.LauncherSettings
+import com.dynamicai.launcher.data.SettingsStorage
 import com.dynamicai.launcher.llm.LlmAgent
 import com.dynamicai.launcher.llm.LiteRtLlmEngine
 import com.dynamicai.launcher.llm.ModelDownloader
@@ -32,6 +35,8 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val historyStorage = CommandHistory(app)
     private val suggestionProvider = SuggestionProvider(app)
     private val contactRepo = ContactRepository(app)
+    private val settingsStorage = SettingsStorage(app)
+    private val hiddenStorage = HiddenAppsStorage(app)
 
     val llm = LiteRtLlmEngine(app)
     val downloader = ModelDownloader(app)
@@ -48,6 +53,12 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _suggestions = MutableStateFlow<List<Suggestion>>(emptyList())
     val suggestions: StateFlow<List<Suggestion>> = _suggestions.asStateFlow()
+
+    private val _settings = MutableStateFlow(settingsStorage.load())
+    val settings: StateFlow<LauncherSettings> = _settings.asStateFlow()
+
+    private val _hidden = MutableStateFlow(hiddenStorage.get())
+    val hidden: StateFlow<Set<String>> = _hidden.asStateFlow()
 
     private val _dockPkgs = MutableStateFlow<List<String>>(emptyList())
     val dockPkgs: StateFlow<List<String>> = _dockPkgs.asStateFlow()
@@ -83,8 +94,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateQuery(query: String) {
         viewModelScope.launch {
+            val visibleApps = _apps.value.filter { it.packageName !in _hidden.value }
             _suggestions.value = suggestionProvider.build(
-                query, _apps.value, _contacts.value, executor.flashlightOn.value
+                query, visibleApps, _contacts.value, executor.flashlightOn.value
             )
         }
     }
@@ -156,6 +168,29 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 llm.initialize(downloader.modelFile)
             }
         }
+    }
+
+    fun updateSettings(newSettings: LauncherSettings) {
+        settingsStorage.save(newSettings)
+        _settings.value = newSettings
+    }
+
+    fun hideApp(pkg: String) {
+        hiddenStorage.hide(pkg)
+        _hidden.value = hiddenStorage.get()
+        updateQuery("")
+    }
+
+    fun unhideApp(pkg: String) {
+        hiddenStorage.show(pkg)
+        _hidden.value = hiddenStorage.get()
+        updateQuery("")
+    }
+
+    fun clearHidden() {
+        hiddenStorage.clear()
+        _hidden.value = emptySet()
+        updateQuery("")
     }
 
     fun isCommand(text: String) = parser.parse(text) !is com.dynamicai.launcher.command.Command.Raw

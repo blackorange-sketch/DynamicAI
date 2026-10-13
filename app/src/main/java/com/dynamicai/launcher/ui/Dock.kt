@@ -3,11 +3,15 @@ package com.dynamicai.launcher.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -22,26 +26,45 @@ import com.dynamicai.launcher.model.AppInfo
 @Composable
 fun Dock(
     apps: List<AppInfo>,
+    iconSizeDp: Int,
     onLaunch: (String) -> Unit,
+    onSearch: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 24.dp, vertical = 16.dp)
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xFF1A1A1A))
+            .clip(RoundedCornerShape(28.dp))
+            .background(Color(0xCC1A1A1A))
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        apps.take(5).forEach { app ->
+        // Кнопка пошуку — перша, відрізняється кольором
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(iconSizeDp.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF2196F3).copy(alpha = 0.2f))
+                .clickable(onClick = onSearch)
+        ) {
+            Icon(
+                Icons.Default.Search,
+                contentDescription = "Пошук",
+                tint = Color(0xFF64B5F6),
+                modifier = Modifier.size((iconSizeDp * 0.5f).dp)
+            )
+        }
+
+        apps.take(4).forEach { app ->
             Icon(
                 bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
                 contentDescription = app.label,
                 tint = Color.Unspecified,
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(iconSizeDp.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .clickable { onLaunch(app.packageName) }
             )

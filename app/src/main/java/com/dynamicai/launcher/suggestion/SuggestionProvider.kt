@@ -63,19 +63,17 @@ class SuggestionProvider(context: Context) {
                 )
             }
 
-        // === 2. Контакти з номерами ===
+        // === 2. Контакти з номерами (скоринг за якістю збігу) ===
         val matchedContacts = contacts
-            .filter { it.name.lowercase().contains(q) }
-            .sortedBy { it.name.length }
+            .map { it to contactScore(it.name, q) }
+            .filter { it.second > 0 }
+            .sortedByDescending { it.second }
+            .map { it.first }
             .take(2)
 
         var contactRows = 0
         for (contact in matchedContacts) {
-            val baseScore = when {
-                contact.name.lowercase() == q -> 96
-                contact.name.lowercase().startsWith(q) -> 92
-                else -> 84
-            }
+            val baseScore = contactScore(contact.name, q)
             val phones = contact.phones.take(3)
             if (phones.isEmpty()) continue
 
@@ -148,6 +146,30 @@ class SuggestionProvider(context: Context) {
                 result.add(Suggestion.App(app, score))
             }
 
-        return result
+        return result.sortedByDescending { it.score }
+    }
+
+    private fun contactScore(name: String, q: String): Int {
+        val n = name.lowercase().trim()
+        val nt = com.dynamicai.launcher.command.FuzzyMatcher.transliterate(n)
+        val qt = com.dynamicai.launcher.command.FuzzyMatcher.transliterate(q)
+
+        fun score(a: String, b: String): Int = when {
+            a == b -> 100
+            a.startsWith("$b ") -> 98
+            a.startsWith(b) -> 92
+            a.split(" ", "-", "_", ".", ",").any { it == b } -> 85
+            a.contains("$b ") -> 80
+            a.contains(" $b") -> 78
+            a.contains(b) -> 55   // підрядок — низький пріоритет
+            else -> 0
+        }
+
+        return maxOf(
+            score(n, q),
+            score(nt, qt),
+            score(n, qt),
+            score(nt, q)
+        )
     }
 }

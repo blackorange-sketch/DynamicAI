@@ -89,7 +89,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var searchMode by remember { mutableStateOf(false) }
     var menuApp by remember { mutableStateOf<AppInfo?>(null) }
     var overlayActive by remember { mutableStateOf(false) }
-    var launchingApp by remember { mutableStateOf<AppInfo?>(null) }
+    var drawerOpen by remember { mutableStateOf(false) }
     var overlayPermissionGranted by remember {
         mutableStateOf(Settings.canDrawOverlays(ctx))
     }
@@ -102,13 +102,15 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var showOverlay by remember { mutableStateOf(false) }
     var releaseJob by remember { mutableStateOf<Job?>(null) }
 
-    BackHandler(enabled = searchMode || query.isNotBlank()) {
+    BackHandler(enabled = drawerOpen) { drawerOpen = false }
+    BackHandler(enabled = !drawerOpen && (searchMode || query.isNotBlank())) {
         query = ""
         searchMode = false
         keyboard?.hide()
     }
 
-    BackHandler(enabled = searchMode || query.isNotBlank()) {
+    BackHandler(enabled = drawerOpen) { drawerOpen = false }
+    BackHandler(enabled = !drawerOpen && (searchMode || query.isNotBlank())) {
         query = ""
         searchMode = false
         keyboard?.hide()
@@ -161,14 +163,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     }
 
     fun launchAppWithAnimation(app: AppInfo) {
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        launchingApp = app
-        scope.launch {
-            delay(220)
-            vm.launch(app.packageName)
-            delay(300)
-            launchingApp = null
-        }
+        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        vm.launch(app.packageName)
     }
 
     fun submit(text: String) {
@@ -249,6 +245,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 .padding(start = 16.dp, end = 64.dp)
         ) {
             Spacer(Modifier.height(24.dp))
+
+            if (!showSearchField) {
+                HomeWidget(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
+            }
 
             if (!showSearchField) {
                 Row(
@@ -465,6 +465,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                     if (app != null) launchAppWithAnimation(app)
                 },
                 onSearch = { searchMode = true },
+                onSwipeUp = { drawerOpen = true },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
         }
@@ -497,24 +498,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             )
         }
 
-        launchingApp?.let { app ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.85f))
-                    .pointerInput(Unit) { detectTapGestures { } },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    bitmap = app.icon.toBitmap(192, 192).asImageBitmap(),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(110.dp)
-                        .clip(RoundedCornerShape(24.dp)),
-                    tint = Color.Unspecified
-                )
-            }
-        }
+        AppDrawer(
+            apps = apps,
+            onLaunch = { app -> launchAppWithAnimation(app) },
+            onDismiss = { drawerOpen = false },
+            visible = drawerOpen
+        )
 
         pendingChoice?.let { candidates ->
             AlertDialog(

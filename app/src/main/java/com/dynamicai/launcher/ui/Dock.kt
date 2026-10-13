@@ -1,6 +1,7 @@
 package com.dynamicai.launcher.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
@@ -29,11 +31,17 @@ fun Dock(
     iconSizeDp: Int,
     onLaunch: (String) -> Unit,
     onSearch: () -> Unit,
+    onSwipeUp: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { _, dragAmount ->
+                    if (dragAmount < -20) onSwipeUp()
+                }
+            }
             .padding(horizontal = 24.dp, vertical = 16.dp)
             .clip(RoundedCornerShape(28.dp))
             .background(Color(0xCC1A1A1A))

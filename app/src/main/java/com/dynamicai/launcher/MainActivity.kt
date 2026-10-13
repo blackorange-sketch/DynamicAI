@@ -11,6 +11,17 @@ import androidx.compose.ui.platform.LocalContext
 import com.dynamicai.launcher.ui.HomeScreen
 
 class MainActivity : ComponentActivity() {
+
+    override fun onResume() {
+        super.onResume()
+        try { com.dynamicai.launcher.overlay.FloatingDockService.hide(this) } catch (_: Exception) {}
+    }
+
+    override fun onPause() {
+        super.onPause()
+        try { com.dynamicai.launcher.overlay.FloatingDockService.show(this) } catch (_: Exception) {}
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

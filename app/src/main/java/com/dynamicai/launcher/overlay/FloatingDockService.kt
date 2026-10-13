@@ -76,6 +76,7 @@ class FloatingDockService : Service() {
                 .getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
                 .registerOnSharedPreferenceChangeListener(prefsListener)
 
+            instance = this
             startForeground(NOTIF_ID, buildNotification())
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
             attachDock()
@@ -109,6 +110,7 @@ class FloatingDockService : Service() {
                 .unregisterOnSharedPreferenceChangeListener(prefsListener)
         } catch (_: Exception) {}
         try { if (::rootLayout.isInitialized) windowManager.removeView(rootLayout) } catch (_: Exception) {}
+        if (instance === this) instance = null
         scope.cancel()
         super.onDestroy()
     }
@@ -351,6 +353,16 @@ class FloatingDockService : Service() {
         fun log(msg: String) {
             lastLog = msg
             Log.d("FloatingDock", msg)
+        }
+
+        @Volatile private var instance: FloatingDockService? = null
+
+        fun hide(ctx: Context) {
+            instance?.rootLayout?.visibility = View.GONE
+        }
+
+        fun show(ctx: Context) {
+            instance?.rootLayout?.visibility = View.VISIBLE
         }
 
         fun start(ctx: Context) {

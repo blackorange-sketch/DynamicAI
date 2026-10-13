@@ -660,45 +660,85 @@ private fun BluetoothTestRow() {
     val manager = remember { com.dynamicai.launcher.system.BluetoothManager(ctx) }
     var diagnostic by remember { mutableStateOf("") }
     var nameInput by remember { mutableStateOf("") }
+    var hasPermission by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
+    val permLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        hasPermission = result.values.all { it }
         diagnostic = manager.getDiagnostic()
     }
 
+    fun checkPermission(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < 31) return true
+        return androidx.core.content.ContextCompat.checkSelfPermission(
+            ctx, android.Manifest.permission.BLUETOOTH_CONNECT
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    }
+
+    fun requestPermissions() {
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            permLauncher.launch(arrayOf(
+                android.Manifest.permission.BLUETOOTH_CONNECT,
+                android.Manifest.permission.BLUETOOTH_SCAN
+            ))
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        hasPermission = checkPermission()
+        if (!hasPermission) {
+            requestPermissions()
+        } else {
+            diagnostic = manager.getDiagnostic()
+        }
+    }
+
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text(
-            diagnostic.ifBlank { "Перевірка…" },
-            color = Color(0xFF81C784), fontSize = 11.sp
-        )
+        if (!hasPermission) {
+            Text(
+                "❌ Потрібен дозвіл Bluetooth",
+                color = Color(0xFFFF6B6B), fontSize = 12.sp
+            )
+            Spacer(Modifier.height(6.dp))
+            GlassChip("Дати дозвіл", false) {
+                requestPermissions()
+            }
+        } else {
+            Text(
+                diagnostic.ifBlank { "Перевірка…" },
+                color = Color(0xFF81C784), fontSize = 11.sp
+            )
 
-        BasicTextField(
-            value = nameInput,
-            onValueChange = { nameInput = it },
-            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
-            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 8.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color.White.copy(alpha = 0.08f))
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            decorationBox = { inner ->
-                if (nameInput.isEmpty()) {
-                    Text("Назва пристрою (напр. Toyota)", color = Color.Gray, fontSize = 14.sp)
+            BasicTextField(
+                value = nameInput,
+                onValueChange = { nameInput = it },
+                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                decorationBox = { inner ->
+                    if (nameInput.isEmpty()) {
+                        Text("Назва пристрою (напр. Toyota)", color = Color.Gray, fontSize = 14.sp)
+                    }
+                    inner()
                 }
-                inner()
-            }
-        )
+            )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            GlassChip("Оновити", false) {
-                diagnostic = manager.getDiagnostic()
-            }
-            GlassChip("Підключити", false) {
-                scope.launch {
-                    val ok = manager.connect(nameInput)
-                    val prefix = if (ok) "OK підключення" else "Помилка"
-                    diagnostic = prefix + "\n\n" + manager.getDiagnostic()
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                GlassChip("Оновити", false) {
+                    diagnostic = manager.getDiagnostic()
+                }
+                GlassChip("Підключити", false) {
+                    scope.launch {
+                        val ok = manager.connect(nameInput)
+                        val prefix = if (ok) "OK підключення" else "Помилка"
+                        diagnostic = prefix + "\n\n" + manager.getDiagnostic()
+                    }
                 }
             }
         }

@@ -232,13 +232,13 @@ private fun AppDrawerRow(app: AppInfo, onTap: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .pointerInput(app.packageName) {
-                androidx.compose.foundation.gestures.detectTapGestures { onTap() }
+                detectTapGestures { onTap() }
             }
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        androidx.compose.material3.Icon(
-            bitmap = androidx.core.graphics.drawable.toBitmap(app.icon, 96, 96).asImageBitmap(),
+        Icon(
+            bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
             contentDescription = app.label,
             modifier = Modifier.size(44.dp),
             tint = Color.Unspecified

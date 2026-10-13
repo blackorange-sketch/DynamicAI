@@ -26,6 +26,7 @@ fun SettingsScreen(
     settings: LauncherSettings,
     onSettingsChange: (LauncherSettings) -> Unit,
     hiddenCount: Int,
+    foldersCount: Int,
     onClearHistory: () -> Unit,
     onRefreshContacts: () -> Unit,
     onClearHidden: () -> Unit,
@@ -204,19 +205,6 @@ fun SettingsScreen(
             checked = settings.showLabels,
             onChange = { onSettingsChange(settings.copy(showLabels = it)) }
         )
-
-        Section("Діагностика")
-        Text(
-            "Папок: ${com.dynamicai.launcher.folder.FolderStorage(LocalContext.current).get().size}",
-            color = Color.Yellow, fontSize = 12.sp,
-            modifier = Modifier.padding(horizontal = 24.dp)
-        )
-        Text(
-            "Налаштування: iconSize=${settings.iconSizeDp} dock=${settings.dockIconSizeDp}",
-            color = Color.Yellow, fontSize = 12.sp,
-            modifier = Modifier.padding(horizontal = 24.dp)
-        )
-
         Section("Дії")
         ActionRow("Оновити контакти", onRefreshContacts)
         ActionRow("Очистити історію команд", onClearHistory)

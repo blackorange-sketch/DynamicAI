@@ -195,6 +195,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     }
 
     LaunchedEffect(Unit) {
+        // Автозапуск плаваючого дока, якщо був увімкнений
+        val overlayPrefs = ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
+        val wasEnabled = overlayPrefs.getBoolean("overlayEnabled", false)
+        if (wasEnabled && Settings.canDrawOverlays(ctx)) {
+            try {
+                com.dynamicai.launcher.overlay.FloatingDockService.start(ctx)
+                overlayActive = true
+            } catch (_: Throwable) {}
+        }
+
         vm.initLlmIfReady()
         val granted = ContextCompat.checkSelfPermission(
             ctx, Manifest.permission.READ_CONTACTS
@@ -296,6 +306,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             settings = settings,
             onSettingsChange = { vm.updateSettings(it) },
             hiddenCount = hidden.size,
+            foldersCount = folders.size,
             onClearHistory = { vm.clearHistory() },
             onRefreshContacts = { vm.loadContacts() },
             onClearHidden = { vm.clearHidden() },
@@ -306,9 +317,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 if (overlayActive) {
                     com.dynamicai.launcher.overlay.FloatingDockService.stop(ctx)
                     overlayActive = false
+                    ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
+                        .edit().putBoolean("overlayEnabled", false).commit()
                 } else {
                     com.dynamicai.launcher.overlay.FloatingDockService.start(ctx)
                     overlayActive = true
+                    ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
+                        .edit().putBoolean("overlayEnabled", true).commit()
                 }
             },
             onRequestOverlayPermission = { requestOverlayPermission() },

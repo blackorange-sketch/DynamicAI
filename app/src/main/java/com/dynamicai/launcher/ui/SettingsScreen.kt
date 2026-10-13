@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.Visibility
@@ -152,6 +153,9 @@ fun SettingsScreen(
         // ==== Вигляд ====
         GlassSectionHeader("Вигляд")
         GlassCard {
+            SwitchRow("Показувати пошук", settings.showSearchBar, Icons.Default.Search, Color(0xFF2196F3)) {
+                onSettingsChange(settings.copy(showSearchBar = it))
+            }
             SwitchRow("Показувати назви", settings.showLabels, Icons.Default.Visibility, Color(0xFF2196F3)) {
                 onSettingsChange(settings.copy(showLabels = it))
             }

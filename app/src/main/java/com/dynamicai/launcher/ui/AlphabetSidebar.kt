@@ -96,33 +96,6 @@ fun AlphabetSidebar(
             },
         contentAlignment = Alignment.Center
     ) {
-        // Glass-підкладка для стрічки
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .width(22.dp)
-                .padding(vertical = 20.dp)
-                .clip(RoundedCornerShape(11.dp))
-                .background(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color(0xF0202020),
-                            Color(0xE00D0D0D)
-                        )
-                    )
-                )
-                .border(
-                    width = 0.5.dp,
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.3f),
-                            Color.White.copy(alpha = 0.08f)
-                        )
-                    ),
-                    shape = RoundedCornerShape(11.dp)
-                )
-        )
-
         Column(
             modifier = Modifier
                 .fillMaxHeight()
@@ -175,7 +148,7 @@ fun AlphabetSidebar(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .offset(x = xOffset)
-                            .size(20.dp)
+                            .size(22.dp)
                             .scale(scale)
                             .clip(CircleShape)
                             .background(
@@ -189,11 +162,21 @@ fun AlphabetSidebar(
                                 } else {
                                     Brush.verticalGradient(
                                         listOf(
-                                            Color.Transparent,
-                                            Color.Transparent
+                                            Color.White.copy(alpha = 0.10f),
+                                            Color.White.copy(alpha = 0.02f)
                                         )
                                     )
                                 }
+                            )
+                            .border(
+                                width = 0.5.dp,
+                                brush = Brush.verticalGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = if (isActive) 0.7f else 0.2f),
+                                        Color.White.copy(alpha = if (isActive) 0.3f else 0.05f)
+                                    )
+                                ),
+                                shape = CircleShape
                             )
                     ) {
                         Text(

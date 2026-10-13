@@ -51,6 +51,86 @@ fun FolderTabs(
         modifier = modifier
             .fillMaxWidth()
     ) {
+        // Список застосунків ЗВЕРХУ
+        AnimatedVisibility(
+            visible = selectedFolder != null,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp)
+                    .padding(top = 4.dp),
+                contentPadding = PaddingValues(bottom = 4.dp)
+            ) {
+                items(folderApps, key = { it.packageName }) { app ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.06f),
+                                        Color.White.copy(alpha = 0.015f)
+                                    )
+                                )
+                            )
+                            .pointerInput(app.packageName) {
+                                detectTapGestures { onLaunchApp(app) }
+                            }
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size((iconSizeDp + 8).dp)
+                                .clip(RoundedCornerShape((iconSizeDp / 2 + 4).dp))
+                                .background(
+                                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                        listOf(
+                                            Color.White.copy(alpha = 0.08f),
+                                            Color.White.copy(alpha = 0.02f)
+                                        )
+                                    )
+                                )
+                        ) {
+                            androidx.compose.material3.Icon(
+                                bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
+                                contentDescription = app.label,
+                                modifier = Modifier.size(iconSizeDp.dp),
+                                tint = Color.Unspecified
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Text(app.label, color = Color.White, fontSize = fontSizeSp.sp)
+                    }
+                }
+            }
+        }
+
+        // Таби ЗНИЗУ
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 4.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            folders.forEach { folder ->
+                FolderTab(
+                    label = folder.name,
+                    selected = folder.id == selectedFolderId,
+                    onTap = { onSelectFolder(folder) },
+                    onLongPress = { onLongPressFolder(folder) }
+                )
+            }
+        }
+    }.fillMaxWidth()
+    ) {
         // ==== Таби ====
         Row(
             modifier = Modifier

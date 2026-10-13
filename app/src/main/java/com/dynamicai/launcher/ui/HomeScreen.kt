@@ -403,34 +403,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 if (!listVisible) {
                             HomeWidget(
                                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                                onSettingsTap = { showSettings = true },
+                                onSettingsLongPress = { showSettings = true },
                                 weather = weather,
                                 showWeather = settings.showWeather,
                                 onWeatherTap = { showWeatherDetail = true }
                             )
                         }
 
-                        if (folders.isNotEmpty()) {
-                            if (!listVisible) {
-                                Spacer(Modifier.height(8.dp))
-                                FolderTabs(
-                                folders = folders,
-                                apps = apps,
-                                selectedFolderId = selectedTabFolderId,
-                                iconSizeDp = settings.iconSizeDp,
-                                fontSizeSp = settings.fontSizeSp,
-                                onSelectFolder = { folder ->
-                                    selectedTabFolderId =
-                                        if (selectedTabFolderId == folder.id) null
-                                        else folder.id
-                                },
-                                onLongPressFolder = { folder ->
-                                    folderHeaderMenu = folder
-                                },
-                                onLaunchApp = { app -> launchAppWithAnimation(app) }
-                            )
-                        }
-                        }
+                        
             }
 
             LiquidSearchBar(
@@ -569,6 +549,36 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 modifier = Modifier.size(120.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
             ) {
                 Text(activeLetter?.toString() ?: "", color = Color.White, fontSize = 64.sp)
+            }
+        }
+
+        // Папки над доком
+        if (folders.isNotEmpty() && !listVisible && query.isBlank()) {
+            val selectedTabFolder = folders.firstOrNull { it.id == selectedTabFolderId }
+            if (selectedTabFolder != null) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = if (dockPkgs.isNotEmpty()) 100.dp else 20.dp)
+                        .padding(horizontal = 16.dp)
+                ) {
+                    FolderTabs(
+                        folders = folders,
+                        apps = apps,
+                        selectedFolderId = selectedTabFolderId,
+                        iconSizeDp = settings.iconSizeDp,
+                        fontSizeSp = settings.fontSizeSp,
+                        onSelectFolder = { folder ->
+                            selectedTabFolderId =
+                                if (selectedTabFolderId == folder.id) null
+                                else folder.id
+                        },
+                        onLongPressFolder = { folder ->
+                            folderHeaderMenu = folder
+                        },
+                        onLaunchApp = { app -> launchAppWithAnimation(app) }
+                    )
+                }
             }
         }
 

@@ -653,8 +653,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 showRecentButton = settings.showRecentButton,
                 onSwipeUp = {
                     if (settings.showRecentButton) {
+                        // Recent увімкнено — показуємо його
                         showRecent = true
                         vm.loadRecentTasks()
+                    } else {
+                        // Recent вимкнено — показуємо AppDrawer (всі застосунки)
+                        drawerOpen = true
                     }
                 },
                 modifier = Modifier.align(Alignment.BottomCenter)

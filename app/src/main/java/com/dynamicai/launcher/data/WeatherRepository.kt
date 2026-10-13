@@ -7,6 +7,9 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 class WeatherRepository(private val context: Context) {
 
@@ -24,9 +27,10 @@ class WeatherRepository(private val context: Context) {
 
             val url = "https://api.open-meteo.com/v1/forecast" +
                     "?latitude=$lat&longitude=$lon" +
-                    "&current=temperature_2m,weather_code" +
-                    "&daily=temperature_2m_max,temperature_2m_min" +
-                    "&timezone=auto"
+                    "&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,surface_pressure" +
+                    "&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max" +
+                    "&timezone=auto" +
+                    "&forecast_days=7"
 
             val conn = (URL(url).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 10_000
@@ -41,18 +45,69 @@ class WeatherRepository(private val context: Context) {
             val daily = json.getJSONObject("daily")
 
             val tempC = current.getDouble("temperature_2m").toInt()
+            val feels = current.getDouble("apparent_temperature").toInt()
+            val humidity = current.getInt("relative_humidity_2m")
+            val wind = current.getDouble("wind_speed_10m").toInt()
+            val pressure = current.getDouble("surface_pressure").toInt()
             val code = current.getInt("weather_code")
-            val tMaxC = daily.getJSONArray("temperature_2m_max").getDouble(0).toInt()
-            val tMinC = daily.getJSONArray("temperature_2m_min").getDouble(0).toInt()
+
+            val tMaxArr = daily.getJSONArray("temperature_2m_max")
+            val tMinArr = daily.getJSONArray("temperature_2m_min")
+            val codeArr = daily.getJSONArray("weather_code")
+            val uvArr = daily.optJSONArray("uv_index_max")
+            val sunriseArr = daily.optJSONArray("sunrise")
+            val sunsetArr = daily.optJSONArray("sunset")
+
+            val tMaxC = tMaxArr.getDouble(0).toInt()
+            val tMinC = tMinArr.getDouble(0).toInt()
+            val uv = uvArr?.optDouble(0, 0.0)?.toInt() ?: 0
+
+            val sunrise = sunriseArr?.optString(0, "")?.takeLast(5) ?: ""
+            val sunset = sunsetArr?.optString(0, "")?.takeLast(5) ?: ""
 
             val toF = settings.weatherUnit == "F"
+            val convert = { c: Int -> if (toF) (c * 9 / 5 + 32) else c }
+
+            // Прогноз на 7 днів
+            val forecast = mutableListOf<WeatherState.DailyForecast>()
+            val today = LocalDate.now()
+            val dateFmt = DateTimeFormatter.ofPattern("d MMM", Locale("uk", "UA"))
+            val dayFmt = DateTimeFormatter.ofPattern("EEEE", Locale("uk", "UA"))
+
+            for (i in 0 until minOf(7, tMaxArr.length())) {
+                val fcCode = codeArr.getInt(i)
+                val date = today.plusDays(i.toLong())
+                val dayName = if (i == 0) "Сьогодні"
+                    else if (i == 1) "Завтра"
+                    else date.format(dayFmt).replaceFirstChar { it.uppercase() }
+
+                forecast.add(
+                    WeatherState.DailyForecast(
+                        date = date.format(dateFmt),
+                        dayName = dayName,
+                        tempMin = convert(tMinArr.getDouble(i).toInt()),
+                        tempMax = convert(tMaxArr.getDouble(i).toInt()),
+                        icon = weatherIcon(fcCode),
+                        description = weatherDescription(fcCode)
+                    )
+                )
+            }
+
             WeatherState.Data(
-                tempC = if (toF) cToF(tempC) else tempC,
-                tempMin = if (toF) cToF(tMinC) else tMinC,
-                tempMax = if (toF) cToF(tMaxC) else tMaxC,
+                tempC = convert(tempC),
+                tempMin = convert(tMinC),
+                tempMax = convert(tMaxC),
                 description = weatherDescription(code),
                 icon = weatherIcon(code),
-                unit = if (toF) "F" else "C"
+                unit = if (toF) "F" else "C",
+                feelsLike = convert(feels),
+                humidity = humidity,
+                windSpeed = wind,
+                pressure = pressure,
+                uvIndex = uv,
+                sunrise = sunrise,
+                sunset = sunset,
+                forecast = forecast
             )
         } catch (t: Throwable) {
             WeatherState.Error(t.message ?: "помилка")
@@ -74,15 +129,9 @@ class WeatherRepository(private val context: Context) {
             val results = json.optJSONArray("results") ?: return null
             if (results.length() == 0) return null
             val first = results.getJSONObject(0)
-            val lat = first.getDouble("latitude")
-            val lon = first.getDouble("longitude")
-            lat to lon
-        } catch (_: Throwable) {
-            null
-        }
+            first.getDouble("latitude") to first.getDouble("longitude")
+        } catch (_: Throwable) { null }
     }
-
-    private fun cToF(c: Int): Int = (c * 9 / 5 + 32)
 
     private fun getCoordinates(settings: LauncherSettings): Pair<Double, Double>? {
         if (!settings.weatherUseGps) return null
@@ -101,9 +150,7 @@ class WeatherRepository(private val context: Context) {
                 }
             }
             null
-        } catch (_: Throwable) {
-            null
-        }
+        } catch (_: Throwable) { null }
     }
 
     private fun weatherDescription(code: Int): String = when (code) {

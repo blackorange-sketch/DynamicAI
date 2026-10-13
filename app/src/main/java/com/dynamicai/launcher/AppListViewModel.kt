@@ -75,7 +75,13 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         val cmd = parser.parse(text)
 
         if (cmd is com.dynamicai.launcher.command.Command.Raw) {
-            // Пробуємо LLM як fallback
+            // Спершу пробуємо як назву застосунку (Niagara-style)
+            val asApp = executor.resolveOpenApp(text, _apps.value)
+            if (asApp is CommandResult.Success || asApp is CommandResult.ChooseApp) {
+                handleResult(asApp, text)
+                return
+            }
+            // Потім LLM (зараз вимкнено)
             viewModelScope.launch {
                 _response.value = "Думаю…"
                 val llmCmd = llmAgent.resolve(text)

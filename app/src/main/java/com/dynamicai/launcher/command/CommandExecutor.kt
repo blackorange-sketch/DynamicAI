@@ -18,6 +18,7 @@ class CommandExecutor(private val context: Context) {
         is Command.SetAlarm -> setAlarm(cmd.time, cmd.label)
         is Command.SetTimer -> setTimer(cmd.duration)
         is Command.OpenSettings -> openSettings(cmd.which)
+        is Command.DeepLink -> openDeepLink(cmd.app, cmd.target)
         is Command.SetVolume -> changeVolume(cmd.level)
         Command.ToggleFlashlight -> toggleFlashlight()
         is Command.Raw -> CommandResult.Error("Не розумію команду: \"${cmd.text}\"")
@@ -124,13 +125,56 @@ class CommandExecutor(private val context: Context) {
     }
 
     private fun openSettings(which: String?): CommandResult {
-        val intent = Intent(Settings.ACTION_SETTINGS)
+        val action = if (which.isNullOrBlank()) Settings.ACTION_SETTINGS
+                     else SettingsRoutes.route(which)
+        if (action == null) return CommandResult.Error("Невідомий розділ налаштувань: \"$which\"")
+        val intent = Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return try {
+            context.startActivity(intent)
+            CommandResult.Success("Відкриваю: ${which ?: "налаштування"}")
+        } catch (e: Exception) {
+            CommandResult.Error("Налаштування: ${e::class.simpleName} — ${e.message}")
+        }
+    }
+
+    private fun openDeepLink(app: String, target: String): CommandResult {
+        val uri = when (app) {
+            "telegram" -> DeepLinks.telegram(target)
+            "whatsapp" -> DeepLinks.whatsapp(target)
+            "instagram" -> DeepLinks.instagram(target)
+            "viber" -> DeepLinks.viber(target)
+            "signal" -> DeepLinks.signal(target)
+            "youtube" -> DeepLinks.youtube(target)
+            "maps" -> DeepLinks.maps(target)
+            "spotify" -> DeepLinks.spotify(target)
+            else -> return CommandResult.Error("Невідомий застосунок: $app")
+        }
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return try {
             context.startActivity(intent)
-            CommandResult.Success("Відкриваю налаштування")
+            CommandResult.Success("Відкриваю $app: $target")
         } catch (e: Exception) {
-            CommandResult.Error("Не вдалось відкрити налаштування")
+            // fallback: спробувати звичайний веб-URL
+            val webFallback = when (app) {
+                "telegram" -> "https://t.me/${target.removePrefix("@")}"
+                "whatsapp" -> DeepLinks.whatsapp(target)
+                "instagram" -> "https://instagram.com/${target.removePrefix("@")}"
+                "youtube" -> DeepLinks.youtube(target)
+                "maps" -> "https://www.google.com/maps/search/" + Uri.encode(target)
+                "spotify" -> "https://open.spotify.com/search/" + Uri.encode(target)
+                else -> null
+            }
+            if (webFallback != null) {
+                try {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(webFallback))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                    return CommandResult.Success("Відкриваю $app (web): $target")
+                } catch (_: Exception) {}
+            }
+            CommandResult.Error("$app: ${e::class.simpleName} — ${e.message}")
         }
     }
 

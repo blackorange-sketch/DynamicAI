@@ -8,6 +8,7 @@ sealed class WeatherState {
         val tempMin: Int,
         val tempMax: Int,
         val description: String,
-        val icon: String
+        val icon: String,
+        val unit: String = "C"
     ) : WeatherState()
 }

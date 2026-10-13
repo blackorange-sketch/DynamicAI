@@ -80,6 +80,81 @@ fun SettingsScreen(
             onChange = { onSettingsChange(settings.copy(fontSizeSp = it)) }
         )
 
+        Section("Погода")
+        SwitchRow(
+            label = "Показувати погоду",
+            checked = settings.showWeather,
+            onChange = { onSettingsChange(settings.copy(showWeather = it)) }
+        )
+        SwitchRow(
+            label = "Використовувати GPS",
+            checked = settings.weatherUseGps,
+            onChange = { onSettingsChange(settings.copy(weatherUseGps = it)) }
+        )
+
+        Row(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Button(
+                onClick = { onSettingsChange(settings.copy(weatherUnit = "C")) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (settings.weatherUnit == "C") Color(0xFF2196F3) else Color(0xFF2A2A2A)
+                )
+            ) { Text("°C", color = Color.White) }
+            Button(
+                onClick = { onSettingsChange(settings.copy(weatherUnit = "F")) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (settings.weatherUnit == "F") Color(0xFF2196F3) else Color(0xFF2A2A2A)
+                )
+            ) { Text("°F", color = Color.White) }
+        }
+
+        if (!settings.weatherUseGps) {
+            Text(
+                "Координати (широта, довгота):",
+                color = Color.Gray, fontSize = 12.sp,
+                modifier = Modifier.padding(start = 24.dp, top = 4.dp)
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    "%.2f".format(settings.weatherLat),
+                    color = Color.White, fontSize = 15.sp,
+                    modifier = Modifier
+                        .background(Color(0xFF1A1A1A), shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                        .pointerInput("lat") {
+                            androidx.compose.foundation.gestures.detectTapGestures {
+                                // мінус 1
+                                onSettingsChange(settings.copy(weatherLat = settings.weatherLat - 1f))
+                            }
+                        }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                )
+                Text(
+                    "%.2f".format(settings.weatherLon),
+                    color = Color.White, fontSize = 15.sp,
+                    modifier = Modifier
+                        .background(Color(0xFF1A1A1A), shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                        .pointerInput("lon") {
+                            androidx.compose.foundation.gestures.detectTapGestures {
+                                onSettingsChange(settings.copy(weatherLon = settings.weatherLon + 1f))
+                            }
+                        }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                )
+            }
+            Text(
+                "Тап по числу — змінити (lat -1, lon +1)",
+                color = Color.DarkGray, fontSize = 11.sp,
+                modifier = Modifier.padding(start = 24.dp)
+            )
+        }
+
         Section("Фон лаунчера")
         SizeSlider(
             label = "Затемнення фону (%)",

@@ -49,7 +49,6 @@ fun FolderTabs(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(Color.Black.copy(alpha = 0.92f))
     ) {
         // ==== Таби ====
         Row(

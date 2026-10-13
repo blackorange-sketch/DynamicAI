@@ -18,7 +18,12 @@ data class LauncherSettings(
     val backgroundAlphaPercent: Int = 100,   // 0 = прозорий, 100 = чорний
     val wpPauseOnScreenOff: Boolean = true,
     val wpPauseOnLowBattery: Boolean = true,
-    val wpFps: Int = 30
+    val wpFps: Int = 30,
+    val showWeather: Boolean = true,
+    val weatherUnit: String = "C",   // "C" | "F"
+    val weatherUseGps: Boolean = true,
+    val weatherLat: Float = 50.4501f,
+    val weatherLon: Float = 30.5234f
 )
 
 class SettingsStorage(context: Context) {
@@ -39,7 +44,12 @@ class SettingsStorage(context: Context) {
         backgroundAlphaPercent = prefs.getInt("backgroundAlphaPercent", 100),
         wpPauseOnScreenOff = prefs.getBoolean("wpPauseOnScreenOff", true),
         wpPauseOnLowBattery = prefs.getBoolean("wpPauseOnLowBattery", true),
-        wpFps = prefs.getInt("wpFps", 30)
+        wpFps = prefs.getInt("wpFps", 30),
+        showWeather = prefs.getBoolean("showWeather", true),
+        weatherUnit = prefs.getString("weatherUnit", "C") ?: "C",
+        weatherUseGps = prefs.getBoolean("weatherUseGps", true),
+        weatherLat = prefs.getFloat("weatherLat", 50.4501f),
+        weatherLon = prefs.getFloat("weatherLon", 30.5234f)
     )
 
     fun save(s: LauncherSettings) {
@@ -59,6 +69,11 @@ class SettingsStorage(context: Context) {
             .putBoolean("wpPauseOnScreenOff", s.wpPauseOnScreenOff)
             .putBoolean("wpPauseOnLowBattery", s.wpPauseOnLowBattery)
             .putInt("wpFps", s.wpFps)
+            .putBoolean("showWeather", s.showWeather)
+            .putString("weatherUnit", s.weatherUnit)
+            .putBoolean("weatherUseGps", s.weatherUseGps)
+            .putFloat("weatherLat", s.weatherLat)
+            .putFloat("weatherLon", s.weatherLon)
             .putLong("updatedAt", System.currentTimeMillis())
             .commit()
     }

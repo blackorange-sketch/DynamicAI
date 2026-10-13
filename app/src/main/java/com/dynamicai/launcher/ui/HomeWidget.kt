@@ -29,7 +29,8 @@ import java.util.Locale
 fun HomeWidget(
     modifier: Modifier = Modifier,
     onSettingsTap: (() -> Unit)? = null,
-    weather: WeatherState = WeatherState.Loading
+    weather: WeatherState = WeatherState.Loading,
+    showWeather: Boolean = true
 ) {
     val ctx = LocalContext.current
     var now by remember { mutableStateOf(LocalDateTime.now()) }
@@ -99,10 +100,10 @@ fun HomeWidget(
                     }
             )
 
-            Spacer(Modifier.height(10.dp))
-
-            // Погода
-            WeatherRow(weather)
+            if (showWeather) {
+                Spacer(Modifier.height(10.dp))
+                WeatherRow(weather)
+            }
         }
 
         // Кнопка налаштувань — у правому верхньому кутку віджета
@@ -133,7 +134,7 @@ private fun WeatherRow(state: WeatherState) {
                 Spacer(Modifier.width(10.dp))
                 Column {
                     Text(
-                        "${state.tempC}°C · ${state.description}",
+                        "${state.tempC}°${state.unit} · ${state.description}",
                         color = Color.White,
                         fontSize = 16.sp
                     )

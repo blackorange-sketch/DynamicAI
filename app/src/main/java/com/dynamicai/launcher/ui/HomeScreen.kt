@@ -368,7 +368,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                             HomeWidget(
                                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                                 onSettingsTap = { showSettings = true },
-                                weather = weather
+                                weather = weather,
+                                showWeather = settings.showWeather
                             )
                         }
 
@@ -398,23 +399,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         }
                         }
             }
-
-            if (showSearchField == false) {
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = listVisible == false,
-                    enter = androidx.compose.animation.fadeIn(),
-                    exit = androidx.compose.animation.fadeOut()
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        IconButton(onClick = { showSettings = true }) {
-                            Icon(Icons.Default.Settings, contentDescription = "Налаштування", tint = Color.White)
-                        }
-                    }
-                    Spacer(Modifier.height(4.dp))
-                }
             }
 
             if (showSearchField) {

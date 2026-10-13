@@ -10,9 +10,13 @@ import java.net.URL
 
 class WeatherRepository(private val context: Context) {
 
+    private val settingsStorage = SettingsStorage(context)
+
     suspend fun fetch(): WeatherState = withContext(Dispatchers.IO) {
         try {
-            val (lat, lon) = getCoordinates() ?: return@withContext WeatherState.Error("немає локації")
+            val settings = settingsStorage.load()
+            val (lat, lon) = getCoordinates(settings) ?: (settings.weatherLat.toDouble() to settings.weatherLon.toDouble())
+
             val url = "https://api.open-meteo.com/v1/forecast" +
                     "?latitude=$lat&longitude=$lon" +
                     "&current=temperature_2m,weather_code" +
@@ -31,24 +35,29 @@ class WeatherRepository(private val context: Context) {
             val current = json.getJSONObject("current")
             val daily = json.getJSONObject("daily")
 
-            val temp = current.getDouble("temperature_2m").toInt()
+            val tempC = current.getDouble("temperature_2m").toInt()
             val code = current.getInt("weather_code")
-            val tMax = daily.getJSONArray("temperature_2m_max").getDouble(0).toInt()
-            val tMin = daily.getJSONArray("temperature_2m_min").getDouble(0).toInt()
+            val tMaxC = daily.getJSONArray("temperature_2m_max").getDouble(0).toInt()
+            val tMinC = daily.getJSONArray("temperature_2m_min").getDouble(0).toInt()
 
+            val toF = settings.weatherUnit == "F"
             WeatherState.Data(
-                tempC = temp,
-                tempMin = tMin,
-                tempMax = tMax,
+                tempC = if (toF) cToF(tempC) else tempC,
+                tempMin = if (toF) cToF(tMinC) else tMinC,
+                tempMax = if (toF) cToF(tMaxC) else tMaxC,
                 description = weatherDescription(code),
-                icon = weatherIcon(code)
+                icon = weatherIcon(code),
+                unit = if (toF) "F" else "C"
             )
         } catch (t: Throwable) {
             WeatherState.Error(t.message ?: "помилка")
         }
     }
 
-    private fun getCoordinates(): Pair<Double, Double>? {
+    private fun cToF(c: Int): Int = (c * 9 / 5 + 32)
+
+    private fun getCoordinates(settings: LauncherSettings): Pair<Double, Double>? {
+        if (!settings.weatherUseGps) return null
         return try {
             val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
             val providers = listOf(
@@ -63,10 +72,9 @@ class WeatherRepository(private val context: Context) {
                     if (loc != null) return loc.latitude to loc.longitude
                 }
             }
-            // Fallback — Київ
-            50.4501 to 30.5234
+            null
         } catch (_: Throwable) {
-            50.4501 to 30.5234
+            null
         }
     }
 

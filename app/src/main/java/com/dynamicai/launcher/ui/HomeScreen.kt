@@ -123,6 +123,23 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
 
 
+    // Скидаємо таймер при прокручуванні списку
+    LaunchedEffect(listState) {
+        androidx.compose.runtime.snapshotFlow { listState.isScrollInProgress }
+            .collect { scrolling ->
+                if (scrolling && listVisible) {
+                    listTimerJob?.cancel()
+                } else if (!scrolling && listVisible) {
+                    listTimerJob?.cancel()
+                    listTimerJob = scope.launch {
+                        delay(3000)
+                        listVisible = false
+                        activeLetter = null
+                    }
+                }
+            }
+    }
+
     BackHandler(enabled = showDockEditor) {
         showDockEditor = false
     }
@@ -320,6 +337,19 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 )
             }
     ) {
+        // Затемнення фону коли список/пошук/drawer активний
+        androidx.compose.animation.AnimatedVisibility(
+            visible = listVisible || searchMode || query.isNotBlank(),
+            enter = androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.85f))
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -329,7 +359,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             Spacer(Modifier.height(24.dp))
 
             if (!showSearchField) {
-                HomeWidget(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
+                androidx.compose.animation.AnimatedVisibility(
+                            visible = !listVisible,
+                            enter = androidx.compose.animation.fadeIn(),
+                            exit = androidx.compose.animation.fadeOut()
+                        ) {
+                            HomeWidget(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
+                        }
 
                         if (folders.isNotEmpty()) {
                             Spacer(Modifier.height(8.dp))
@@ -348,16 +384,22 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         }
             }
 
-            if (!showSearchField) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+            if (showSearchField == false) {
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = listVisible == false,
+                    enter = androidx.compose.animation.fadeIn(),
+                    exit = androidx.compose.animation.fadeOut()
                 ) {
-                    IconButton(onClick = { showSettings = true }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Налаштування", tint = Color.White)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        IconButton(onClick = { showSettings = true }) {
+                            Icon(Icons.Default.Settings, contentDescription = "Налаштування", tint = Color.White)
+                        }
                     }
+                    Spacer(Modifier.height(4.dp))
                 }
-                Spacer(Modifier.height(4.dp))
             }
 
             if (showSearchField) {

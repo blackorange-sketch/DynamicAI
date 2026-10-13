@@ -93,7 +93,7 @@ fun AppDrawer(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = backgroundAlphaPercent / 100f))
+                .background(Color.Black.copy(alpha = kotlin.math.max(0.9f, backgroundAlphaPercent / 100f)))
                 .pointerInput(Unit) {
                     // Свайп вниз закриває drawer
                     detectVerticalDragGestures { _, dragAmount ->

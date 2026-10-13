@@ -36,10 +36,11 @@ class LlmAgent(private val engine: LlmEngine) {
 Відповідь: {"tool": "set_volume", "args": {"level": "up"}}
 
 Якщо запит не підходить до жодної функції — відповідай {"tool": "unknown", "args": {}}.
-.trimIndent()
+""".trimIndent()
 
     suspend fun resolve(userText: String): Command? {
         if (!engine.isReady) return null
+
         val prompt = "$systemPrompt\n\nЗапит: \"$userText\"\nВідповідь:"
         val raw = engine.complete(prompt) ?: return null
         return parseToolCall(raw, userText)
@@ -62,7 +63,7 @@ class LlmAgent(private val engine: LlmEngine) {
             }
             "set_timer" -> arg("duration")?.let { Command.SetTimer(it) }
             "toggle_flashlight" -> Command.ToggleFlashlight
-            "open_settings" -> Command.OpenSettings(null)
+            "open_settings" -> Command.OpenSettings(arg("section"))
             "set_volume" -> {
                 val lvl = arg("level") ?: return null
                 Command.SetVolume(
@@ -75,6 +76,7 @@ class LlmAgent(private val engine: LlmEngine) {
                     }
                 )
             }
+            "unknown" -> Command.Raw(original)
             else -> null
         }
     }

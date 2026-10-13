@@ -230,7 +230,7 @@ fun AppDrawer(
 }
 
 @Composable
-private fun AppDrawerRow(app: AppInfo, onTap: () -> Unit) {
+private fun AppDrawerRow(app: AppInfo, iconSizeDp: Int, fontSizeSp: Int, onTap: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -243,10 +243,10 @@ private fun AppDrawerRow(app: AppInfo, onTap: () -> Unit) {
         Icon(
             bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
             contentDescription = app.label,
-            modifier = Modifier.size(44.dp),
+            modifier = Modifier.size(iconSizeDp.dp),
             tint = Color.Unspecified
         )
         Spacer(Modifier.width(16.dp))
-        Text(app.label, color = Color.White, fontSize = 18.sp)
+        Text(app.label, color = Color.White, fontSize = fontSizeSp.sp)
     }
 }

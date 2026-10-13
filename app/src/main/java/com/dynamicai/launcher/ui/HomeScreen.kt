@@ -1267,10 +1267,11 @@ fun AppRow(
     }
 
 
+}
+
 private fun isScreenOn(ctx: android.content.Context): Boolean {
     return try {
         val pm = ctx.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
         pm.isInteractive
     } catch (_: Throwable) { true }
-}
 }

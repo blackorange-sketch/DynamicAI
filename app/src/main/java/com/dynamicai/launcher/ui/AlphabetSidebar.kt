@@ -35,6 +35,7 @@ fun AlphabetSidebar(
     letters: List<Char>,
     activeLetter: Char?,
     onLetterSelected: (Char) -> Unit,
+    onLetterReleased: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -82,14 +83,15 @@ fun AlphabetSidebar(
                         change.consume()
                         select(letterAtOffset(change.position.y))
                     },
-                    onDragEnd = { lastLetter = null },
-                    onDragCancel = { lastLetter = null }
+                    onDragEnd = { lastLetter = null; onLetterReleased() },
+                    onDragCancel = { lastLetter = null; onLetterReleased() }
                 )
             }
             .pointerInput(letters) {
                 detectTapGestures(
                     onTap = { offset ->
                         select(letterAtOffset(offset.y))
+                        onLetterReleased()
                     }
                 )
             },
@@ -118,7 +120,7 @@ fun AlphabetSidebar(
                     targetValue = targetScale,
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow
+                        stiffness = Spring.StiffnessMedium
                     ),
                     label = "waveScale"
                 )
@@ -134,7 +136,7 @@ fun AlphabetSidebar(
                     targetValue = targetOffset,
                     animationSpec = spring(
                         dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessLow
+                        stiffness = Spring.StiffnessMedium
                     ),
                     label = "waveOffset"
                 )

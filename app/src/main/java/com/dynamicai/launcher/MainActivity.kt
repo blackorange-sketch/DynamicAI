@@ -61,6 +61,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var scrollJob by remember { mutableStateOf<Job?>(null) }
     var activeLetter by remember { mutableStateOf<Char?>(null) }
     var showOverlay by remember { mutableStateOf(false) }
+    var releaseJob by remember { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(apps, query) {
         filtered = if (query.isBlank()) apps
@@ -77,15 +78,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         apps.filter { it.packageName in dockPkgs }
     }
 
-    // Ховаємо оверлей через 700 мс після останньої взаємодії
+    // Показуємо оверлей одразу при виборі літери
     LaunchedEffect(activeLetter) {
-        if (activeLetter != null) {
-            showOverlay = true
-            delay(700)
-            showOverlay = false
-            delay(300)
-            activeLetter = null
-        }
+        if (activeLetter != null) showOverlay = true
     }
 
     Box(
@@ -143,7 +138,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 letters = letters,
                 activeLetter = activeLetter,
                 onLetterSelected = { letter ->
+                    releaseJob?.cancel()
                     activeLetter = letter
+                    showOverlay = true
                     scrollJob?.cancel()
                     scrollJob = scope.launch {
                         val idx = filtered.indexOfFirst {
@@ -153,20 +150,26 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                             val current = listState.firstVisibleItemIndex
                             val distance = kotlin.math.abs(idx - current)
                             when {
-                                // Дуже далеко — миттєвий стрибок майже до цілі
                                 distance > 60 -> {
                                     listState.scrollToItem(idx - 5)
                                     listState.animateScrollToItem(idx)
                                 }
-                                // Середньо — стрибок ближче, плавна зупинка
                                 distance > 20 -> {
                                     listState.scrollToItem(idx - 3)
                                     listState.animateScrollToItem(idx)
                                 }
-                                // Близько — повністю плавно
                                 else -> listState.animateScrollToItem(idx)
                             }
                         }
+                    }
+                },
+                onLetterReleased = {
+                    releaseJob?.cancel()
+                    releaseJob = scope.launch {
+                        delay(120)
+                        showOverlay = false
+                        delay(180)
+                        activeLetter = null
                     }
                 },
                 modifier = Modifier

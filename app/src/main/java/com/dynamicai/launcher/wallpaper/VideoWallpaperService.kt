@@ -87,39 +87,40 @@ class VideoWallpaperService : WallpaperService() {
 
                 val gl = GlRenderThread(surfaceHolder.surface, w, h)
                 gl.onSurfaceTextureReady = { st ->
-                    try {
-                        val surface = Surface(st)
-                        val exo = ExoPlayer.Builder(applicationContext)
-                            .setLooper(mainHandler.looper)
-                            .build()
+                    // Переносимо створення ExoPlayer на main-потік
+                    mainHandler.post {
+                        try {
+                            val surface = Surface(st)
+                            val exo = ExoPlayer.Builder(applicationContext).build()
 
-                        exo.setVideoSurface(surface)
-                        exo.setMediaItem(MediaItem.fromUri(Uri.parse(uriStr)))
-                        exo.repeatMode = Player.REPEAT_MODE_ALL
-                        exo.volume = if (muted) 0f else 1f
-                        exo.playWhenReady = true
+                            exo.setVideoSurface(surface)
+                            exo.setMediaItem(MediaItem.fromUri(Uri.parse(uriStr)))
+                            exo.repeatMode = Player.REPEAT_MODE_ALL
+                            exo.volume = if (muted) 0f else 1f
+                            exo.playWhenReady = true
 
-                        exo.addListener(object : Player.Listener {
-                            override fun onVideoSizeChanged(videoSize: VideoSize) {
-                                val vw = videoSize.width
-                                val vh = videoSize.height
-                                gl.updateVideoSize(vw, vh)
-                                log("videoSize=${vw}x$vh surface=${w}x$h")
-                            }
+                            exo.addListener(object : Player.Listener {
+                                override fun onVideoSizeChanged(videoSize: VideoSize) {
+                                    val vw = videoSize.width
+                                    val vh = videoSize.height
+                                    gl.updateVideoSize(vw, vh)
+                                    log("videoSize=${vw}x$vh surface=${w}x$h")
+                                }
 
-                            override fun onPlaybackStateChanged(state: Int) {
-                                log("state=$state")
-                            }
+                                override fun onPlaybackStateChanged(state: Int) {
+                                    log("state=$state")
+                                }
 
-                            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                                log("error: ${error.message}")
-                            }
-                        })
+                                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                                    log("error: ${error.message}")
+                                }
+                            })
 
-                        exo.prepare()
-                        player = exo
-                    } catch (t: Throwable) {
-                        log("exo init failed: ${t.message}")
+                            exo.prepare()
+                            player = exo
+                        } catch (t: Throwable) {
+                            log("exo init failed: ${t.message}")
+                        }
                     }
                 }
                 gl.start()
@@ -130,8 +131,10 @@ class VideoWallpaperService : WallpaperService() {
         }
 
         private fun releaseAll() {
-            try { player?.release() } catch (_: Exception) {}
-            player = null
+            mainHandler.post {
+                try { player?.release() } catch (_: Exception) {}
+                player = null
+            }
             try { glThread?.stop() } catch (_: Exception) {}
             glThread = null
         }

@@ -98,22 +98,82 @@ class ShizukuManager(private val context: Context) {
         }
     }
 
+    @Volatile var lastDiagnostic: String = ""
+
     suspend fun getRecentTasks(maxCount: Int = 20): List<RecentTask> = withContext(Dispatchers.IO) {
+        val diag = StringBuilder()
+        diag.append("pingBinder=").append(isShizukuAvailable()).append("\n")
+        diag.append("hasPermission=").append(hasPermission()).append("\n")
+
         if (!isShizukuAvailable() || !hasPermission()) {
+            lastDiagnostic = diag.toString()
             return@withContext emptyList()
         }
 
         val result = mutableListOf<RecentTask>()
 
         try {
-            val activityTaskManager = getActivityTaskManagerService() ?: return@withContext emptyList()
+            val activityTaskManager = getActivityTaskManagerService()
+            if (activityTaskManager == null) {
+                diag.append("service=null\n")
+                lastDiagnostic = diag.toString()
+                return@withContext emptyList()
+            }
+            diag.append("service=").append(activityTaskManager.javaClass.name).append("\n")
 
-            val getTasksMethod: Method = activityTaskManager.javaClass.getMethod(
-                "getTasks",
-                Int::class.javaPrimitiveType
-            )
+            // Спробувати кілька сигнатур getTasks
+            var tasks: List<*>? = null
+            var methodUsed = ""
 
-            val tasks = getTasksMethod.invoke(activityTaskManager, maxCount) as? List<*> ?: emptyList<Any>()
+            // Спроба 1: getTasks(int)
+            try {
+                val m1 = activityTaskManager.javaClass.getMethod("getTasks", Int::class.javaPrimitiveType)
+                tasks = m1.invoke(activityTaskManager, maxCount) as? List<*>
+                methodUsed = "getTasks(int)"
+            } catch (t: Throwable) {
+                diag.append("getTasks(int) failed: ").append(t.message).append("\n")
+            }
+
+            // Спроба 2: getTasks(int, boolean, boolean)
+            if (tasks == null) {
+                try {
+                    val m2 = activityTaskManager.javaClass.getMethod(
+                        "getTasks",
+                        Int::class.javaPrimitiveType,
+                        Boolean::class.javaPrimitiveType,
+                        Boolean::class.javaPrimitiveType
+                    )
+                    tasks = m2.invoke(activityTaskManager, maxCount, false, false) as? List<*>
+                    methodUsed = "getTasks(int,bool,bool)"
+                } catch (t: Throwable) {
+                    diag.append("getTasks(3args) failed: ").append(t.message).append("\n")
+                }
+            }
+
+            // Спроба 3: getTasks(int, boolean, boolean, int)
+            if (tasks == null) {
+                try {
+                    val m3 = activityTaskManager.javaClass.getMethod(
+                        "getTasks",
+                        Int::class.javaPrimitiveType,
+                        Boolean::class.javaPrimitiveType,
+                        Boolean::class.javaPrimitiveType,
+                        Int::class.javaPrimitiveType
+                    )
+                    tasks = m3.invoke(activityTaskManager, maxCount, false, false, 0) as? List<*>
+                    methodUsed = "getTasks(int,bool,bool,int)"
+                } catch (t: Throwable) {
+                    diag.append("getTasks(4args) failed: ").append(t.message).append("\n")
+                }
+            }
+
+            diag.append("methodUsed=").append(methodUsed).append("\n")
+            diag.append("tasksRaw=").append(tasks?.size ?: -1).append("\n")
+
+            if (tasks == null) {
+                lastDiagnostic = diag.toString()
+                return@withContext emptyList()
+            }
 
             for (taskObj in tasks) {
                 try {
@@ -123,27 +183,22 @@ class ShizukuManager(private val context: Context) {
                     val idField = taskClass.getField("taskId")
                     val taskId = idField.getInt(taskInfo)
 
-                    // Спробувати topActivity (нові API)
                     var pkg: String? = null
                     try {
-                        val topActivityField = taskClass.getField("topActivity")
-                        val topActivity = topActivityField.get(taskInfo) as? android.content.ComponentName
-                        pkg = topActivity?.packageName
+                        val topField = taskClass.getField("topActivity")
+                        val top = topField.get(taskInfo) as? android.content.ComponentName
+                        pkg = top?.packageName
                     } catch (_: Throwable) {}
 
-                    // Fallback — baseIntent (старі API)
                     if (pkg.isNullOrBlank()) {
                         try {
-                            val baseIntentField = taskClass.getField("baseIntent")
-                            val baseIntent = baseIntentField.get(taskInfo) as? android.content.Intent
-                            pkg = baseIntent?.component?.packageName
+                            val baseField = taskClass.getField("baseIntent")
+                            val base = baseField.get(taskInfo) as? android.content.Intent
+                            pkg = base?.component?.packageName
                         } catch (_: Throwable) {}
                     }
 
                     if (pkg.isNullOrBlank()) continue
-
-                    if (pkg == context.packageName) continue
-                    if (isOurOwnOrSystem(pkg)) continue
 
                     val pm = context.packageManager
                     val appInfo = try {
@@ -153,12 +208,18 @@ class ShizukuManager(private val context: Context) {
                     val icon = pm.getApplicationIcon(appInfo)
 
                     result.add(RecentTask(taskId, pkg, label, icon))
-                } catch (_: Throwable) {}
+                } catch (t: Throwable) {
+                    diag.append("parseErr: ").append(t.message).append("\n")
+                }
             }
+
+            diag.append("final=").append(result.size)
         } catch (t: Throwable) {
             Log.e(TAG, "getRecentTasks failed", t)
+            diag.append("outerErr=").append(t.message)
         }
-        Log.d(TAG, "getRecentTasks — знайдено: ${result.size}")
+
+        lastDiagnostic = diag.toString()
         result
     }
 

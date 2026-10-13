@@ -2,7 +2,6 @@ package com.dynamicai.launcher.wallpaper
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.graphics.SurfaceTexture
 import android.media.MediaPlayer
 import android.net.Uri
 import android.service.wallpaper.WallpaperService
@@ -16,7 +15,9 @@ class VideoWallpaperService : WallpaperService() {
     inner class VideoEngine : Engine() {
 
         private var player: MediaPlayer? = null
+        private var glThread: GlRenderThread? = null
         private var visible = false
+
         private val prefs: SharedPreferences by lazy {
             applicationContext.getSharedPreferences("dynamicai_wallpaper", Context.MODE_PRIVATE)
         }
@@ -36,13 +37,14 @@ class VideoWallpaperService : WallpaperService() {
         override fun onDestroy() {
             super.onDestroy()
             try { prefs.unregisterOnSharedPreferenceChangeListener(prefsListener) } catch (_: Exception) {}
-            releasePlayer()
+            releaseAll()
         }
 
         override fun onVisibilityChanged(visible: Boolean) {
             this.visible = visible
             if (visible) {
                 if (player == null) start() else try { player?.start() } catch (_: Exception) {}
+                glThread?.requestRender()
             } else {
                 try { player?.pause() } catch (_: Exception) {}
             }
@@ -53,13 +55,18 @@ class VideoWallpaperService : WallpaperService() {
             if (prefs.getString("videoUri", null) != null) start()
         }
 
+        override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+            super.onSurfaceChanged(holder, format, width, height)
+            Log.d("VideoWallpaper", "surfaceChanged ${width}x$height")
+        }
+
         override fun onSurfaceDestroyed(holder: SurfaceHolder) {
             super.onSurfaceDestroyed(holder)
-            releasePlayer()
+            releaseAll()
         }
 
         private fun restart() {
-            releasePlayer()
+            releaseAll()
             start()
         }
 
@@ -72,68 +79,51 @@ class VideoWallpaperService : WallpaperService() {
             val muted = prefs.getBoolean("muted", true)
 
             try {
-                val uri = Uri.parse(uriStr)
-                player = MediaPlayer().apply {
-                    setDataSource(applicationContext, uri)
-                    setSurface(surfaceHolder.surface)
-                    isLooping = true
-                    setVolume(if (muted) 0f else 1f, if (muted) 0f else 1f)
+                val frame = surfaceHolder.surfaceFrame
+                val w = frame.width().takeIf { it > 0 } ?: 1080
+                val h = frame.height().takeIf { it > 0 } ?: 2400
 
-                    setOnPreparedListener { mp ->
-                        try {
-                            val videoW = mp.videoWidth
-                            val videoH = mp.videoHeight
-                            val surfaceFrame = surfaceHolder.surfaceFrame
-                            val surfaceW = surfaceFrame.width()
-                            val surfaceH = surfaceFrame.height()
+                val gl = GlRenderThread(surfaceHolder.surface, w, h)
+                gl.onSurfaceTextureReady = { st ->
+                    try {
+                        val mp = MediaPlayer().apply {
+                            setDataSource(applicationContext, Uri.parse(uriStr))
+                            setSurface(android.view.Surface(st))
+                            isLooping = true
+                            setVolume(if (muted) 0f else 1f, if (muted) 0f else 1f)
 
-                            Log.d("VideoWallpaper", "video=${videoW}x$videoH surface=${surfaceW}x$surfaceH")
-
-                            if (videoW > 0 && videoH > 0 && surfaceW > 0 && surfaceH > 0) {
-                                val videoAspect = videoW.toFloat() / videoH
-                                val surfaceAspect = surfaceW.toFloat() / surfaceH
-
-                                // FILL: масштабуємо так, щоб відео ЗАПОВНИЛО екран,
-                                // зберігаючи пропорції. Зайве обрізається (краї не видно).
-                                val newW: Int
-                                val newH: Int
-                                if (videoAspect > surfaceAspect) {
-                                    // Відео ширше за екран — обмежуємо по ВИСОТІ
-                                    // (обрізаємо по боках, видно центральну частину)
-                                    newH = surfaceH
-                                    newW = (surfaceH * videoAspect).toInt()
-                                } else {
-                                    // Відео вище за екран — обмежуємо по ШИРИНІ
-                                    // (обрізаємо зверху/знизу, видно центральну частину)
-                                    newW = surfaceW
-                                    newH = (surfaceW / videoAspect).toInt()
-                                }
-
-                                surfaceHolder.setFixedSize(newW, newH)
-                                Log.d("VideoWallpaper", "FILL ${newW}x$newH (video aspect=$videoAspect)")
+                            setOnVideoSizeChangedListener { _, vw, vh ->
+                                gl.updateVideoSize(vw, vh)
+                                Log.d("VideoWallpaper", "videoSize=${vw}x$vh surface=${w}x$h")
                             }
-                        } catch (t: Throwable) {
-                            Log.e("VideoWallpaper", "resize failed: ${t.message}", t)
+
+                            setOnPreparedListener { it.start() }
+
+                            setOnErrorListener { _, what, extra ->
+                                Log.e("VideoWallpaper", "error what=$what extra=$extra")
+                                true
+                            }
+
+                            prepareAsync()
                         }
-                        mp.start()
+                        player = mp
+                    } catch (t: Throwable) {
+                        Log.e("VideoWallpaper", "player init failed", t)
                     }
-
-                    setOnErrorListener { _, what, extra ->
-                        Log.e("VideoWallpaper", "error what=$what extra=$extra")
-                        true
-                    }
-
-                    prepareAsync()
                 }
+                gl.start()
+                glThread = gl
             } catch (t: Throwable) {
-                Log.e("VideoWallpaper", "start failed: ${t.message}", t)
+                Log.e("VideoWallpaper", "start failed", t)
             }
         }
 
-        private fun releasePlayer() {
+        private fun releaseAll() {
             try { player?.stop() } catch (_: Exception) {}
             try { player?.release() } catch (_: Exception) {}
             player = null
+            try { glThread?.stop() } catch (_: Exception) {}
+            glThread = null
         }
     }
 

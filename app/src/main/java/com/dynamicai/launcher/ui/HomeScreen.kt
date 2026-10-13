@@ -299,6 +299,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             state = weather,
             cityName = settings.cityName,
             backgroundAlphaPercent = settings.backgroundAlphaPercent,
+            iconSizeDp = settings.iconSizeDp,
+            fontSizeSp = settings.fontSizeSp,
             onClose = { showWeatherDetail = false }
         )
         return

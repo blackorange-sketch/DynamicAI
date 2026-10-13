@@ -27,12 +27,28 @@ class RecentGestureService : AccessibilityService() {
         @Volatile var onSwipeUp: (() -> Unit)? = null
 
         fun isEnabled(context: Context): Boolean {
-            val expected = "${context.packageName}/${RecentGestureService::class.java.name}"
-            val setting = android.provider.Settings.Secure.getString(
-                context.contentResolver,
-                android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-            ) ?: return false
-            return setting.contains(expected)
+            // Основний спосіб — через AccessibilityManager
+            return try {
+                val am = context.getSystemService(Context.ACCESSIBILITY_SERVICE)
+                        as android.view.accessibility.AccessibilityManager
+                val enabled = am.getEnabledAccessibilityServiceList(
+                    android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK
+                )
+                val target = "${context.packageName}/${RecentGestureService::class.java.name}"
+                enabled.any { info ->
+                    val id = info.id ?: ""
+                    id == target || id.endsWith("RecentGestureService")
+                }
+            } catch (t: Throwable) {
+                // Fallback — через Settings
+                try {
+                    val setting = android.provider.Settings.Secure.getString(
+                        context.contentResolver,
+                        android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+                    ) ?: return false
+                    setting.contains("RecentGestureService")
+                } catch (_: Throwable) { false }
+            }
         }
     }
 

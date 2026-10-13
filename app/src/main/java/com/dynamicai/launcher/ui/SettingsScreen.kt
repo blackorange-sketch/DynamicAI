@@ -246,24 +246,58 @@ fun SettingsScreen(
         GlassSectionHeader("Жест свайпу знизу")
         GlassCard {
             val ctx = LocalContext.current
-            val enabled = com.dynamicai.launcher.accessibility.RecentGestureService.isEnabled(ctx)
+            var gestureEnabled by remember { mutableStateOf(
+                com.dynamicai.launcher.accessibility.RecentGestureService.isEnabled(ctx)
+            ) }
+            var serviceConnected by remember { mutableStateOf(
+                com.dynamicai.launcher.accessibility.RecentGestureService.isConnected
+            ) }
+
+            // Оновлюємо стан періодично — поки екран відкритий
+            LaunchedEffect(Unit) {
+                while (true) {
+                    gestureEnabled = com.dynamicai.launcher.accessibility.RecentGestureService.isEnabled(ctx)
+                    serviceConnected = com.dynamicai.launcher.accessibility.RecentGestureService.isConnected
+                    kotlinx.coroutines.delay(1000)
+                }
+            }
+
             SwitchRow(
-                label = if (enabled) "Жест увімкнено" else "Увімкнути жест",
-                checked = enabled,
+                label = when {
+                    serviceConnected -> "Жест активний ✓"
+                    gestureEnabled -> "Жест увімкнено (очікування…)"
+                    else -> "Увімкнути жест"
+                },
+                checked = gestureEnabled,
                 icon = Icons.Default.SwipeUp,
-                tint = Color(0xFF9C27B0),
+                tint = if (serviceConnected) Color(0xFF4CAF50) else Color(0xFF9C27B0),
                 onChange = {
-                    try {
-                        ctx.startActivity(android.content.Intent(
-                            android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS
-                        ).apply {
-                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                        })
-                    } catch (_: Throwable) {}
+                    if (!gestureEnabled) {
+                        try {
+                            ctx.startActivity(android.content.Intent(
+                                android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS
+                            ).apply {
+                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            })
+                        } catch (_: Throwable) {}
+                    }
                 }
             )
+            ActionRow(
+                label = "Відкрити налаштування Accessibility",
+                icon = Icons.Default.Settings,
+                tint = Color(0xFF64B5F6)
+            ) {
+                try {
+                    ctx.startActivity(android.content.Intent(
+                        android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS
+                    ).apply {
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    })
+                } catch (_: Throwable) {}
+            }
             Text(
-                "Відкриє налаштування Accessibility. Знайди \"DynamicAI Gesture\" і увімкни.",
+                "Знайди \"DynamicAI Gesture\" і увімкни. Потім повернись сюди — статус оновиться через 1-2 сек.",
                 color = Color.Gray, fontSize = 11.sp,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
             )

@@ -89,7 +89,7 @@ fun SettingsScreen(
             onClearHidden
         )
 
-        Section("Плаваючий док (експериментально)")
+        Section("Плаваючий док")
         if (!overlayPermissionGranted) {
             ActionRow("Дозволити показ поверх інших застосунків", onRequestOverlayPermission)
         } else {
@@ -98,6 +98,60 @@ fun SettingsScreen(
                 onToggleOverlay
             )
         }
+
+        Section("Розмір у плаваючому дока")
+        SizeSlider(
+            label = "Іконки",
+            value = settings.overlayIconSizeDp,
+            values = listOf(38, 44, 50, 56, 62, 68),
+            onChange = { onSettingsChange(settings.copy(overlayIconSizeDp = it)) }
+        )
+        SizeSlider(
+            label = "Довжина риски",
+            value = settings.overlayHandleLengthDp,
+            values = listOf(60, 100, 140, 180, 220),
+            onChange = { onSettingsChange(settings.copy(overlayHandleLengthDp = it)) }
+        )
+        SizeSlider(
+            label = "Прозорість риски (%)",
+            value = settings.overlayHandleAlphaPercent,
+            values = listOf(20, 35, 50, 65, 80, 100),
+            onChange = { onSettingsChange(settings.copy(overlayHandleAlphaPercent = it)) }
+        )
+
+        Section("Позиція")
+        SizeSlider(
+            label = "По вертикалі (%)",
+            value = settings.overlayOffsetYPercent,
+            values = listOf(10, 25, 40, 50, 60, 75, 90),
+            onChange = { onSettingsChange(settings.copy(overlayOffsetYPercent = it)) }
+        )
+
+        Row(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Button(
+                onClick = { onSettingsChange(settings.copy(overlayPosition = "left")) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (settings.overlayPosition == "left")
+                        Color(0xFF2196F3) else Color(0xFF2A2A2A)
+                )
+            ) { Text("Зліва", color = Color.White) }
+            Button(
+                onClick = { onSettingsChange(settings.copy(overlayPosition = "right")) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (settings.overlayPosition == "right")
+                        Color(0xFF2196F3) else Color(0xFF2A2A2A)
+                )
+            ) { Text("Справа", color = Color.White) }
+        }
+
+        Text(
+            "Зміни застосовуються одразу",
+            color = Color.Gray, fontSize = 12.sp,
+            modifier = Modifier.padding(start = 24.dp, top = 4.dp)
+        )
 
         Section("Локальна LLM")
         when {

@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
@@ -41,6 +42,8 @@ import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.dynamicai.launcher.MainActivity
 import com.dynamicai.launcher.data.DockStorage
+import com.dynamicai.launcher.data.SettingsStorage
+import com.dynamicai.launcher.data.LauncherSettings
 import com.dynamicai.launcher.model.AppInfo
 import com.dynamicai.launcher.data.AppRepository
 import kotlinx.coroutines.CoroutineScope
@@ -62,6 +65,15 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val repo by lazy { AppRepository(applicationContext) }
     private val dockStorage by lazy { DockStorage(applicationContext) }
+    private val settingsStorage by lazy { SettingsStorage(applicationContext) }
+    private val settingsState = mutableStateOf(LauncherSettings())
+    private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "updatedAt") {
+            val new = settingsStorage.load()
+            settingsState.value = new
+            updateLayoutParams(new)
+        }
+    }
     private val allApps = mutableStateOf<List<AppInfo>>(emptyList())
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -72,6 +84,10 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             savedStateController.performAttach()
             savedStateController.performRestore(android.os.Bundle())
             lifecycleRegistry.currentState = Lifecycle.State.RESUMED
+
+            settingsState.value = settingsStorage.load()
+            applicationContext.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
+                .registerOnSharedPreferenceChangeListener(prefsListener)
 
             startForeground(NOTIF_ID, buildNotification())
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -93,6 +109,10 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
     override fun onDestroy() {
+        try {
+            applicationContext.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
+                .unregisterOnSharedPreferenceChangeListener(prefsListener)
+        } catch (_: Exception) {}
         try { if (::dockView.isInitialized) windowManager.removeView(dockView) } catch (_: Exception) {}
         scope.cancel()
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
@@ -103,10 +123,15 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         dockView = ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@FloatingDockService)
             setViewTreeSavedStateRegistryOwner(this@FloatingDockService)
+            val settings = settingsState.value
             setContent {
+                val s = settingsState.value
                 DockOverlayContent(
                     appsFlow = { allApps.value },
                     getDockPkgs = { dockStorage.getDockApps() },
+                    iconSizeDp = s.overlayIconSizeDp,
+                    handleLengthDp = s.overlayHandleLengthDp,
+                    handleAlphaPercent = s.overlayHandleAlphaPercent,
                     onLaunch = { pkg ->
                         packageManager.getLaunchIntentForPackage(pkg)?.apply {
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -136,12 +161,36 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.CENTER_VERTICAL or Gravity.END
-            x = 0
-            y = 0
+            applyPosition(settingsStorage.load())
         }
 
         windowManager.addView(dockView, params)
+    }
+
+    private fun applyPosition(s: LauncherSettings) {
+        val verticalGravity = when {
+            s.overlayOffsetYPercent < 33 -> Gravity.TOP
+            s.overlayOffsetYPercent > 66 -> Gravity.BOTTOM
+            else -> Gravity.CENTER_VERTICAL
+        }
+        val horizontalGravity = if (s.overlayPosition == "left") Gravity.START else Gravity.END
+        params.gravity = verticalGravity or horizontalGravity
+        params.x = 0
+        params.y = when {
+            s.overlayOffsetYPercent < 33 -> (s.overlayOffsetYPercent * 20)
+            s.overlayOffsetYPercent > 66 -> ((100 - s.overlayOffsetYPercent) * 20)
+            else -> (s.overlayOffsetYPercent - 50) * 20
+        }
+    }
+
+    private fun updateLayoutParams(s: LauncherSettings) {
+        if (!::params.isInitialized) return
+        try {
+            applyPosition(s)
+            if (::dockView.isInitialized) windowManager.updateViewLayout(dockView, params)
+        } catch (t: Throwable) {
+            android.util.Log.e("FloatingDock", "updateLayoutParams", t)
+        }
     }
 
     private fun buildNotification(): Notification {

@@ -34,6 +34,9 @@ import com.dynamicai.launcher.model.AppInfo
 fun DockOverlayContent(
     appsFlow: () -> List<AppInfo>,
     getDockPkgs: () -> List<String>,
+    iconSizeDp: Int,
+    handleLengthDp: Int,
+    handleAlphaPercent: Int,
     onLaunch: (String) -> Unit,
     onOpenSearch: () -> Unit
 ) {
@@ -55,9 +58,9 @@ fun DockOverlayContent(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .padding(end = 3.dp)
-                    .size(width = 4.dp, height = 140.dp)
+                    .size(width = 4.dp, height = handleLengthDp.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White.copy(alpha = 0.55f))
+                    .background(Color.White.copy(alpha = handleAlphaPercent / 100f))
                     .pointerInput(Unit) { detectTapGestures { expanded = true } }
             ) {}
         }
@@ -78,7 +81,7 @@ fun DockOverlayContent(
             ) {
                 // Кнопка закриття (X) — тонке коло
                 CircleIconButton(
-                    size = 52,
+                    size = iconSizeDp,
                     background = Color(0x33202020),
                     border = Color.White.copy(alpha = 0.35f),
                     onTap = { expanded = false }
@@ -93,7 +96,7 @@ fun DockOverlayContent(
 
                 // Кнопка пошуку — акцентна
                 CircleIconButton(
-                    size = 52,
+                    size = iconSizeDp,
                     background = Color(0xFF2196F3).copy(alpha = 0.25f),
                     border = Color(0xFF64B5F6).copy(alpha = 0.6f),
                     onTap = onOpenSearch
@@ -108,7 +111,7 @@ fun DockOverlayContent(
 
                 // Іконки застосунків у світлих кружечках
                 dockApps.take(6).forEach { app ->
-                    AppCircleIcon(app) { onLaunch(app.packageName) }
+                    AppCircleIcon(app, iconSizeDp) { onLaunch(app.packageName) }
                 }
             }
         }
@@ -139,7 +142,7 @@ private fun CircleIconButton(
 }
 
 @Composable
-private fun AppCircleIcon(app: AppInfo, onTap: () -> Unit) {
+private fun AppCircleIcon(app: AppInfo, sizeDp: Int, onTap: () -> Unit) {
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.88f else 1f,
@@ -150,7 +153,7 @@ private fun AppCircleIcon(app: AppInfo, onTap: () -> Unit) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier
-            .size(54.dp)
+            .size(sizeDp.dp)
             .scale(scale)
             .clip(CircleShape)
             .background(Color(0xFFEFEFEF))
@@ -172,7 +175,7 @@ private fun AppCircleIcon(app: AppInfo, onTap: () -> Unit) {
             tint = Color.Unspecified,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(6.dp)
+                .padding((sizeDp * 0.11f).dp)
                 .clip(CircleShape)
         )
     }

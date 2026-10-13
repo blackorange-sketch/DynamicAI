@@ -40,7 +40,7 @@ class ModelDownloader(private val context: Context) {
         try {
             val response = client.newCall(request).execute()
             if (!response.isSuccessful) {
-                emit(Progress.Error("Сервер повернув ${response.code}"))
+                emit(Progress.Error("Сервер ${response.code}"))
                 return@flow
             }
             val body = response.body ?: run {
@@ -79,7 +79,7 @@ class ModelDownloader(private val context: Context) {
             tempFile.renameTo(modelFile)
             emit(Progress.Complete(modelFile))
         } catch (e: IOException) {
-            emit(Progress.Error("Помилка завантаження: ${e.message}"))
+            emit(Progress.Error("Помилка: ${e.message}"))
         }
     }.flowOn(Dispatchers.IO)
 }

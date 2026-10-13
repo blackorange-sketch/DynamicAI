@@ -75,6 +75,12 @@ fun SettingsScreen(
             onChange = { onSettingsChange(settings.copy(dockIconSizeDp = it)) }
         )
         SizeSlider(
+            label = "Іконки в меню (сітка)",
+            value = settings.menuIconSizeDp,
+            values = listOf(40, 48, 56, 64, 72, 80),
+            onChange = { onSettingsChange(settings.copy(menuIconSizeDp = it)) }
+        )
+        SizeSlider(
             label = "Розмір шрифту",
             value = settings.fontSizeSp,
             values = listOf(14, 16, 18, 20, 22, 24),

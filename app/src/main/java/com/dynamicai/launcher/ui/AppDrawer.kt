@@ -9,19 +9,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -30,15 +28,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import com.dynamicai.launcher.command.FuzzyMatcher
 import com.dynamicai.launcher.model.AppInfo
 import kotlinx.coroutines.Job
@@ -59,7 +59,7 @@ fun AppDrawer(
     var filtered by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
 
     val haptic = LocalHapticFeedback.current
-    val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
     val scope = rememberCoroutineScope()
 
     var activeLetter by remember { mutableStateOf<Char?>(null) }
@@ -78,13 +78,20 @@ fun AppDrawer(
 
     val letters = remember(filtered, query) {
         if (query.isNotBlank()) emptyList()
-        else filtered.map { it.label.firstOrNull()?.uppercaseChar() ?: '#' }
+        else filtered
+            .mapNotNull { it.label.firstOrNull()?.uppercaseChar() }
+            .filter { it.isLetter() }
             .distinct()
             .sorted()
     }
 
     LaunchedEffect(activeLetter) {
         if (activeLetter != null) showOverlay = true
+    }
+
+    // Кількість колонок — залежить від розміру іконки
+    val columns = remember(iconSizeDp) {
+        GridCells.Adaptive(minSize = (iconSizeDp + 24).dp)
     }
 
     AnimatedVisibility(
@@ -97,7 +104,6 @@ fun AppDrawer(
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = kotlin.math.max(0.9f, backgroundAlphaPercent / 100f)))
                 .pointerInput(Unit) {
-                    // Свайп вниз закриває drawer
                     detectVerticalDragGestures { _, dragAmount ->
                         if (dragAmount > 40) onDismiss()
                     }
@@ -108,12 +114,13 @@ fun AppDrawer(
                     .fillMaxSize()
                     .statusBarsPadding()
                     .navigationBarsPadding()
-                    .padding(start = 16.dp, end = 64.dp)
+                    .padding(start = 12.dp, end = 48.dp)
             ) {
                 Spacer(Modifier.height(16.dp))
 
+                // Пошук
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(modifier = Modifier.weight(1f)) {
@@ -146,7 +153,7 @@ fun AppDrawer(
 
                 HorizontalDivider(color = Color.DarkGray)
 
-                // Ручка для свайпу вниз
+                // Ручка для свайпу
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -161,13 +168,17 @@ fun AppDrawer(
                     )
                 }
 
-                LazyColumn(
-                    state = listState,
+                // Сітка застосунків
+                LazyVerticalGrid(
+                    state = gridState,
+                    columns = columns,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp)
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     items(filtered, key = { it.packageName }) { app ->
-                        AppDrawerRow(app, iconSizeDp, fontSizeSp) {
+                        AppGridItem(app, iconSizeDp, fontSizeSp) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onLaunch(app)
                             onDismiss()
@@ -176,6 +187,7 @@ fun AppDrawer(
                 }
             }
 
+            // Стрічка букв
             if (letters.isNotEmpty() && query.isBlank()) {
                 AlphabetSidebar(
                     letters = letters,
@@ -190,12 +202,12 @@ fun AppDrawer(
                                 (it.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
                             }
                             if (idx >= 0) {
-                                val current = listState.firstVisibleItemIndex
+                                val current = gridState.firstVisibleItemIndex
                                 val d = kotlin.math.abs(idx - current)
                                 when {
-                                    d > 60 -> { listState.scrollToItem((idx - 5).coerceAtLeast(0)); listState.animateScrollToItem(idx) }
-                                    d > 20 -> { listState.scrollToItem((idx - 3).coerceAtLeast(0)); listState.animateScrollToItem(idx) }
-                                    else -> listState.animateScrollToItem(idx)
+                                    d > 60 -> { gridState.scrollToItem((idx - 5).coerceAtLeast(0)); gridState.animateScrollToItem(idx) }
+                                    d > 20 -> { gridState.scrollToItem((idx - 3).coerceAtLeast(0)); gridState.animateScrollToItem(idx) }
+                                    else -> gridState.animateScrollToItem(idx)
                                 }
                             }
                         }
@@ -230,15 +242,20 @@ fun AppDrawer(
 }
 
 @Composable
-private fun AppDrawerRow(app: AppInfo, iconSizeDp: Int, fontSizeSp: Int, onTap: () -> Unit) {
-    Row(
+private fun AppGridItem(
+    app: AppInfo,
+    iconSizeDp: Int,
+    fontSizeSp: Int,
+    onTap: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
             .pointerInput(app.packageName) {
                 detectTapGestures { onTap() }
             }
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 4.dp)
     ) {
         Icon(
             bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
@@ -246,7 +263,17 @@ private fun AppDrawerRow(app: AppInfo, iconSizeDp: Int, fontSizeSp: Int, onTap: 
             modifier = Modifier.size(iconSizeDp.dp),
             tint = Color.Unspecified
         )
-        Spacer(Modifier.width(16.dp))
-        Text(app.label, color = Color.White, fontSize = fontSizeSp.sp)
+        if (fontSizeSp > 0) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = app.label,
+                color = Color.White,
+                fontSize = fontSizeSp.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }

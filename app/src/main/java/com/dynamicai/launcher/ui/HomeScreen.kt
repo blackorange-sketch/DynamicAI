@@ -299,8 +299,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             state = weather,
             cityName = settings.cityName,
             backgroundAlphaPercent = settings.backgroundAlphaPercent,
-            iconSizeDp = settings.iconSizeDp,
-            fontSizeSp = settings.fontSizeSp,
             onClose = { showWeatherDetail = false }
         )
         return
@@ -714,6 +712,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         AppDrawer(
             apps = drawerApps,
             backgroundAlphaPercent = settings.backgroundAlphaPercent,
+            iconSizeDp = settings.menuIconSizeDp,
+            fontSizeSp = settings.fontSizeSp,
             onLaunch = { app -> launchAppWithAnimation(app) },
             onDismiss = { drawerOpen = false },
             visible = drawerOpen

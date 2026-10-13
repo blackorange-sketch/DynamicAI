@@ -91,6 +91,7 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
             }
         } catch (t: Throwable) {
             Log.e(TAG, "complete failed: ${t.message}", t)
+            lastError = "exception: ${t.javaClass.simpleName}: ${t.message}"
             null
         }
     }

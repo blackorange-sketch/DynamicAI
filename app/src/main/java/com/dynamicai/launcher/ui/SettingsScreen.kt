@@ -42,6 +42,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dynamicai.launcher.data.LauncherSettings
+import com.dynamicai.launcher.system.ShizukuManager
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.rememberCoroutineScope
@@ -499,52 +500,6 @@ private fun GlassChip(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 
-@Composable
-private fun ShizukuTestRow() {
-    val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var status by remember { mutableStateOf("Перевірка…") }
-    var tasks by remember { mutableStateOf("") }
-    var permCode by remember { mutableStateOf(0) }
-
-    val manager = remember { ShizukuManager(ctx) }
-
-    LaunchedEffect(Unit) {
-        status = "Shizuku: " + (if (manager.isShizukuAvailable()) "✅" else "❌") +
-                " · Дозвіл: " + (if (manager.hasPermission()) "✅" else "❌")
-    }
-
-    Column(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Text(status, color = Color.White, fontSize = 13.sp)
-        if (tasks.isNotBlank()) {
-            Text(
-                tasks,
-                color = Color(0xFF64B5F6),
-                fontSize = 11.sp,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(top = 6.dp)
-        ) {
-            GlassChip("Запит дозволу", false) {
-                manager.requestPermission(permCode)
-                permCode++
-            }
-            GlassChip("Завантажити tasks", false) {
-                scope.launch {
-                    val list = manager.getRecentTasks()
-                    tasks = "Завдань: ${list.size}\n" + list.take(5).joinToString("\n") {
-                        "• ${it.label} (${it.packageName})"
-                    }
-                }
-            }
-        }
-    }
-}
 
 
 @Composable

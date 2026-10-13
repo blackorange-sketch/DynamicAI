@@ -79,6 +79,6 @@ class FolderStorage(context: Context) {
             }
             arr.put(o)
         }
-        prefs.edit().putString("items", arr.toString()).apply()
+        prefs.edit().putString("items", arr.toString()).commit()
     }
 }

@@ -40,6 +40,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val settingsStorage = SettingsStorage(app)
     private val hiddenStorage = HiddenAppsStorage(app)
     private val folderStorage = FolderStorage(app)
+    private val appsCache = com.dynamicai.launcher.data.AppsCache(app)
 
     val llm = LiteRtLlmEngine(app)
     val downloader = ModelDownloader(app)
@@ -93,7 +94,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refresh() {
         viewModelScope.launch {
-            _apps.value = repo.loadInstalledApps()
+            val loaded = repo.loadInstalledApps()
+            _apps.value = loaded
+            try { appsCache.save(loaded) } catch (_: Exception) {}
             updateQuery("")
         }
     }
@@ -203,10 +206,17 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun createFolder(name: String, initialPkgs: List<String>): Folder {
-        val f = folderStorage.create(name, initialPkgs)
-        _folders.value = folderStorage.get()
-        updateQuery("")
-        return f
+        return try {
+            val f = folderStorage.create(name, initialPkgs)
+            val all = folderStorage.get()
+            _folders.value = all
+            _response.value = "Папка '${f.name}' створена · всього папок: ${all.size} · застосунків: ${f.packageNames.size}"
+            updateQuery("")
+            f
+        } catch (t: Throwable) {
+            _response.value = "Помилка створення папки: ${t.message}"
+            Folder(id = "err", name = "err", packageNames = emptyList())
+        }
     }
 
     fun deleteFolder(id: String) {

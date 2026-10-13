@@ -16,21 +16,26 @@ class AppRepository(private val context: Context) {
         val intent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
-        val resolveInfos = pm.queryIntentActivities(intent, 0)
+        val resolveInfos = pm.queryIntentActivities(
+            intent,
+            android.content.pm.PackageManager.MATCH_ALL
+        )
 
-        resolveInfos
-            .asSequence()
-            .mapNotNull { ri ->
-                val appInfo = ri.activityInfo?.applicationInfo ?: return@mapNotNull null
-                val label = ri.loadLabel(pm).toString()
-                val pkg = appInfo.packageName
-                val icon = ri.loadIcon(pm)
-                val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                AppInfo(label = label, packageName = pkg, icon = icon, isSystem = isSystem)
-            }
-            .distinctBy { it.packageName }
-            .sortedBy { it.label.lowercase() }
-            .toList()
+        val result = ArrayList<AppInfo>(resolveInfos.size)
+        val seen = HashSet<String>()
+
+        for (ri in resolveInfos) {
+            val appInfo = ri.activityInfo?.applicationInfo ?: continue
+            val pkg = appInfo.packageName
+            if (!seen.add(pkg)) continue
+            val label = ri.loadLabel(pm).toString()
+            val icon = ri.loadIcon(pm)
+            val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+            result.add(AppInfo(label, pkg, icon, isSystem))
+        }
+
+        result.sortBy { it.label.lowercase() }
+        result
     }
 
     fun launchApp(packageName: String): Boolean {

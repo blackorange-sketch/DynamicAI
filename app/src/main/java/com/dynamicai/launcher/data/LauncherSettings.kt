@@ -47,8 +47,7 @@ class SettingsStorage(context: Context) {
             .putInt("overlayHandleAlphaPercent", s.overlayHandleAlphaPercent)
             .putInt("overlayAutoCollapseMs", s.overlayAutoCollapseMs)
             .putInt("overlayEdgePaddingDp", s.overlayEdgePaddingDp)
-            .apply()
-        // Повідомляємо сервіс про зміну
-        prefs.edit().putLong("updatedAt", System.currentTimeMillis()).apply()
+            .putLong("updatedAt", System.currentTimeMillis())
+            .commit()
     }
 }

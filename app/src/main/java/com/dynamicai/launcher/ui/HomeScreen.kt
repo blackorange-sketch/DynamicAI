@@ -432,7 +432,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         }
                     }
                 }
-                if (query.isBlank()) {
+                if (folders.isNotEmpty() && query.isBlank() && !searchMode) {
                     items(folders, key = { "folder:${it.id}" }) { folder ->
                         val folderApps = apps.filter { it.packageName in folder.packageNames }
                         FolderRow(

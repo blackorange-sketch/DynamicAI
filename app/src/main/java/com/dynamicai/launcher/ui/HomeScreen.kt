@@ -431,89 +431,24 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         }
             }
 
-            if (showSearchField) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        BasicTextField(
-                            value = query,
-                            onValueChange = { query = it },
-                            textStyle = TextStyle(color = Color.White, fontSize = 20.sp),
-                            cursorBrush = SolidColor(Color.White),
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = {
-                                if (query.isNotBlank()) {
-                                    when {
-                                        vm.isCommand(query) -> submit(query)
-                                        suggestions.isNotEmpty() -> {
-                                            vm.executeSuggestion(suggestions.first())
-                                            closeSearch()
-                                        }
-                                        else -> submit(query)
-                                    }
-                                }
-                            }),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp)
-                                .focusRequester(focusRequester),
-                            decorationBox = { inner ->
-                                if (query.isEmpty()) {
-                                    Text("Пошук або команда…", color = Color.Gray, fontSize = 20.sp)
-                                }
-                                inner()
-                            }
-                        )
-                    }
-                    IconButton(onClick = { startVoice() }) {
-                        Icon(Icons.Default.Mic, contentDescription = "Голос", tint = Color.White)
-                    }
+            LiquidSearchBar(
+                query = query,
+                onQueryChange = { query = it },
+                onSearch = {
                     if (query.isNotBlank()) {
-                        IconButton(onClick = {
-                            if (suggestions.isNotEmpty()) {
-                                vm.executeSuggestion(suggestions.first())
-                                closeSearch()
-                            } else submit(query)
-                        }) {
-                            Icon(Icons.Default.Send, contentDescription = "Виконати", tint = Color.White)
+                        if (vm.isCommand(query)) submit(query)
+                        else if (suggestions.isNotEmpty()) {
+                            vm.executeSuggestion(suggestions.first())
+                            closeSearch()
                         }
-                    } else {
-                        IconButton(onClick = { closeSearch() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Закрити", tint = Color.White)
-                        }
+                        else submit(query)
                     }
-                }
-
-                if (query.isBlank() && history.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        history.take(5).forEach { cmd ->
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(Color(0xFF1A1A1A))
-                                    .clickable { submit(cmd) }
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Text(
-                                    if (cmd.length > 28) cmd.take(28) + "…" else cmd,
-                                    color = Color.White, fontSize = 12.sp
-                                )
-                            }
-                        }
-                    }
-                }
-
-                HorizontalDivider(color = Color.DarkGray)
-            }
+                },
+                onVoice = { startVoice() },
+                onClose = { closeSearch() },
+                focusRequester = focusRequester,
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
 
             if (response.isNotBlank()) {
                 Text(

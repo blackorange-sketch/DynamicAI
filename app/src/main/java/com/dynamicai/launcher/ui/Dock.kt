@@ -1,14 +1,9 @@
 package com.dynamicai.launcher.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -17,16 +12,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.dynamicai.launcher.model.AppInfo
 
 data class DockItem(
-    val id: String,               // "app:com.xxx" або "folder:UUID"
+    val id: String,
     val label: String,
     val icon: android.graphics.drawable.Drawable?,
     val isFolder: Boolean
@@ -51,36 +47,56 @@ fun Dock(
             }
             .padding(horizontal = 24.dp, vertical = 16.dp)
             .clip(RoundedCornerShape(28.dp))
-            .background(Color(0xCC1A1A1A))
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xE62A2A2A),
+                        Color(0xCC1A1A1A)
+                    )
+                )
+            )
             .padding(horizontal = 20.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Кнопка пошуку — перша, відрізняється кольором
+        // Кнопка пошуку — акцентна
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(iconSizeDp.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF2196F3).copy(alpha = 0.2f))
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF64B5F6).copy(alpha = 0.4f),
+                            Color(0xFF2196F3).copy(alpha = 0.15f)
+                        )
+                    )
+                )
                 .clickable(onClick = onSearch)
         ) {
             Icon(
                 Icons.Default.Search,
                 contentDescription = "Пошук",
-                tint = Color(0xFF64B5F6),
+                tint = Color(0xFFB3E5FC),
                 modifier = Modifier.size((iconSizeDp * 0.5f).dp)
             )
         }
 
         items.forEach { item ->
             if (item.isFolder) {
-                // Папка — рамка з декількома мінііконками
                 Box(
                     modifier = Modifier
                         .size(iconSizeDp.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF2A2A2A))
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.15f),
+                                    Color.White.copy(alpha = 0.05f)
+                                )
+                            )
+                        )
                         .clickable { onLaunch(item) },
                     contentAlignment = Alignment.Center
                 ) {
@@ -89,7 +105,7 @@ fun Dock(
                             bitmap = it.toBitmap(96, 96).asImageBitmap(),
                             contentDescription = item.label,
                             tint = Color.Unspecified,
-                            modifier = Modifier.size((iconSizeDp * 0.55f).dp)
+                            modifier = Modifier.size((iconSizeDp * 0.6f).dp)
                         )
                     }
                 }

@@ -97,6 +97,12 @@ class VideoWallpaperService : WallpaperService() {
                             }
 
                             setOnPreparedListener { it.start() }
+                            setOnCompletionListener { mp ->
+                                try {
+                                    mp.seekTo(0)
+                                    mp.start()
+                                } catch (_: Exception) {}
+                            }
 
                             setOnErrorListener { _, what, extra ->
                                 Log.e("VideoWallpaper", "error what=$what extra=$extra")

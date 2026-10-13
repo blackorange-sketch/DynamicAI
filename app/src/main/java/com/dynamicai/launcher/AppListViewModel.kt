@@ -311,6 +311,10 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    suspend fun testLlm(prompt: String): String? {
+        return llm.complete(prompt)
+    }
+
     fun isCommand(text: String) = parser.parse(text) !is com.dynamicai.launcher.command.Command.Raw
 
     fun executeCommand(text: String) {

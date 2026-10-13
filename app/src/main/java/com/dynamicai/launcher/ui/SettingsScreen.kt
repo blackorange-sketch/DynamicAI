@@ -274,6 +274,7 @@ fun SettingsScreen(
                     color = Color(0xFF4CAF50), fontSize = 13.sp,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                 )
+                LlmTestRow()
             }
         }
 
@@ -561,6 +562,70 @@ private fun ShizukuTestRow() {
                         }
                 }
             }
+        }
+    }
+}
+
+
+@Composable
+private fun LlmTestRow() {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var query by remember { mutableStateOf("Відкрий телеграм") }
+    var answer by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text("Тест LLM", color = Color(0xFF64B5F6), fontSize = 13.sp)
+
+        BasicTextField(
+            value = query,
+            onValueChange = { query = it },
+            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color.White.copy(alpha = 0.08f))
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            decorationBox = { inner ->
+                if (query.isEmpty()) {
+                    Text("Prompt", color = Color.Gray, fontSize = 14.sp)
+                }
+                inner()
+            }
+        )
+
+        GlassChip(if (loading) "Думаю…" else "Виконати", false) {
+            if (loading) return@GlassChip
+            loading = true
+            answer = ""
+            scope.launch {
+                // Отримуємо ViewModel з Activity
+                val activity = ctx as? android.app.Activity
+                val vm = androidx.lifecycle.ViewModelProvider(
+                    activity ?: return@launch
+                )[com.dynamicai.launcher.AppListViewModel::class.java]
+
+                val result = vm.testLlm(query)
+                answer = result ?: "(порожньо)"
+                loading = false
+            }
+        }
+
+        if (answer.isNotBlank()) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                answer,
+                color = Color(0xFF81C784),
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black.copy(alpha = 0.3f))
+                    .padding(8.dp)
+            )
         }
     }
 }

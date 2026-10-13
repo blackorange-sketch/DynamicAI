@@ -46,6 +46,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -78,12 +80,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     val ctx = LocalContext.current
     val keyboard = LocalSoftwareKeyboardController.current
+    val haptic = LocalHapticFeedback.current
 
     var query by remember { mutableStateOf("") }
     var showSettings by remember { mutableStateOf(false) }
     var searchMode by remember { mutableStateOf(false) }
     var menuApp by remember { mutableStateOf<AppInfo?>(null) }
     var overlayActive by remember { mutableStateOf(false) }
+    var launchingApp by remember { mutableStateOf<AppInfo?>(null) }
     var overlayPermissionGranted by remember {
         mutableStateOf(Settings.canDrawOverlays(ctx))
     }
@@ -152,6 +156,17 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         query = ""
         searchMode = false
         keyboard?.hide()
+    }
+
+    fun launchAppWithAnimation(app: AppInfo) {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        launchingApp = app
+        scope.launch {
+            delay(220)
+            vm.launch(app.packageName)
+            delay(300)
+            launchingApp = null
+        }
     }
 
     fun submit(text: String) {
@@ -364,12 +379,15 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 items(suggestions, key = { it.stableKey() }) { s ->
                     when (s) {
                         is Suggestion.Action -> SuggestionActionRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             vm.executeSuggestion(s); closeSearch()
                         }
                         is Suggestion.Setting -> SuggestionSettingRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             vm.executeSuggestion(s); closeSearch()
                         }
                         is Suggestion.Contact -> SuggestionContactRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             vm.executeSuggestion(s); closeSearch()
                         }
                         is Suggestion.App -> AppRow(
@@ -378,7 +396,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                             iconSizeDp = settings.iconSizeDp,
                             fontSizeSp = settings.fontSizeSp,
                             showLabel = settings.showLabels,
-                            onClick = { vm.launch(s.app.packageName) },
+                            onClick = { launchAppWithAnimation(s.app) },
                             onLongClick = { menuApp = s.app }
                         )
                     }
@@ -440,7 +458,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             Dock(
                 apps = dockApps,
                 iconSizeDp = settings.dockIconSizeDp,
-                onLaunch = { vm.launch(it) },
+                onLaunch = { pkg ->
+                    val app = apps.firstOrNull { it.packageName == pkg }
+                    if (app != null) launchAppWithAnimation(app)
+                },
                 onSearch = { searchMode = true },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
@@ -472,6 +493,25 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 confirmButton = {},
                 containerColor = Color(0xFF1A1A1A)
             )
+        }
+
+        launchingApp?.let { app ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.85f))
+                    .pointerInput(Unit) { detectTapGestures { } },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    bitmap = app.icon.toBitmap(192, 192).asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(110.dp)
+                        .clip(RoundedCornerShape(24.dp)),
+                    tint = Color.Unspecified
+                )
+            }
         }
 
         pendingChoice?.let { candidates ->

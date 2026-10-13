@@ -122,10 +122,10 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         val cmd = when (s.actionType) {
             ContactAction.CALL -> com.dynamicai.launcher.command.Command.Call(s.target)
             ContactAction.SMS -> com.dynamicai.launcher.command.Command.DeepLink("sms", s.target)
-            ContactAction.TELEGRAM -> com.dynamicai.launcher.command.Command.DeepLink("telegram", s.target)
+            ContactAction.TELEGRAM -> com.dynamicai.launcher.command.Command.SearchInApp("telegram", s.name)
             ContactAction.WHATSAPP -> com.dynamicai.launcher.command.Command.DeepLink("whatsapp", s.target)
             ContactAction.VIBER -> com.dynamicai.launcher.command.Command.DeepLink("viber", s.target)
-            ContactAction.INSTAGRAM -> com.dynamicai.launcher.command.Command.DeepLink("instagram", s.target)
+            ContactAction.INSTAGRAM -> com.dynamicai.launcher.command.Command.SearchInApp("insta", s.name)
             ContactAction.SIGNAL -> com.dynamicai.launcher.command.Command.DeepLink("signal", s.target)
             ContactAction.EMAIL -> com.dynamicai.launcher.command.Command.DeepLink("email", s.target)
         }

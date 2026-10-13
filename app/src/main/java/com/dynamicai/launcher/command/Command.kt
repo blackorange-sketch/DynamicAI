@@ -8,6 +8,7 @@ sealed class Command {
     data class SetTimer(val duration: String) : Command()
     data class OpenSettings(val which: String?) : Command()
     data class DeepLink(val app: String, val target: String) : Command()
+    data class SearchInApp(val packageKeyword: String, val query: String) : Command()
     data class SetVolume(val level: Int) : Command()
     object ToggleFlashlight : Command()
     object Unknown : Command()

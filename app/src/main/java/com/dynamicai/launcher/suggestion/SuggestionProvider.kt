@@ -102,7 +102,8 @@ class SuggestionProvider(context: Context) {
                 "Telegram" to ContactAction.TELEGRAM,
                 "WhatsApp" to ContactAction.WHATSAPP,
                 "SMS" to ContactAction.SMS,
-                "Viber" to ContactAction.VIBER
+                "Viber" to ContactAction.VIBER,
+                "Instagram" to ContactAction.INSTAGRAM
             )
             for ((i, entry) in others.withIndex()) {
                 if (contactRows >= 8) break

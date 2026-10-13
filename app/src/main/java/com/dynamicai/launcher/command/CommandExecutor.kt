@@ -7,6 +7,9 @@ import android.media.AudioManager
 import android.net.Uri
 import android.provider.AlarmClock
 import android.provider.Settings
+import android.app.SearchManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import com.dynamicai.launcher.model.AppInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +25,7 @@ class CommandExecutor(private val context: Context) {
         is Command.SetTimer -> setTimer(cmd.duration)
         is Command.OpenSettings -> openSettings(cmd.which)
         is Command.DeepLink -> openDeepLink(cmd.app, cmd.target)
+        is Command.SearchInApp -> searchInApp(cmd.packageKeyword, cmd.query)
         is Command.SetVolume -> changeVolume(cmd.level)
         Command.ToggleFlashlight -> toggleFlashlight()
         is Command.Raw -> CommandResult.Error("Не розумію команду: \"${cmd.text}\"")
@@ -302,4 +306,41 @@ class CommandExecutor(private val context: Context) {
 
     private val _flashlightOn = MutableStateFlow(false)
     val flashlightOn: StateFlow<Boolean> = _flashlightOn.asStateFlow()
+
+    private fun searchInApp(packageKeyword: String, query: String): CommandResult {
+        val pm = context.packageManager
+        val pkg = findPackageByKeyword(packageKeyword)
+            ?: return CommandResult.Error("Не знайдено застосунок з ключем \"$packageKeyword\"")
+
+        val intent = Intent(Intent.ACTION_SEARCH).apply {
+            setPackage(pkg)
+            putExtra(SearchManager.QUERY, query)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+
+        return try {
+            context.startActivity(intent)
+            CommandResult.Success("Шукаю \"$query\"")
+        } catch (e: Exception) {
+            // Fallback: копіюємо ім'я в буфер + відкриваємо застосунок
+            copyToClipboard(query)
+            val launch = pm.getLaunchIntentForPackage(pkg)
+            if (launch != null) {
+                launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                try {
+                    context.startActivity(launch)
+                    return CommandResult.Success("\"$query\" скопійовано — встав у пошук")
+                } catch (_: Exception) {}
+            }
+            CommandResult.Error("$pkg: ${e::class.simpleName}")
+        }
+    }
+
+    private fun copyToClipboard(text: String) {
+        try {
+            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newPlainText("DynamicAI", text))
+        } catch (_: Exception) {}
+    }
+
 }

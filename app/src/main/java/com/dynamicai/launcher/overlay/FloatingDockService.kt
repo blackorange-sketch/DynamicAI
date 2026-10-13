@@ -49,6 +49,17 @@ class FloatingDockService : Service() {
     private val settingsStorage by lazy { SettingsStorage(applicationContext) }
 
     @Volatile private var apps: List<AppInfo> = emptyList()
+
+    private val dockPrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "apps") {
+            try {
+                rebuildContent()
+                log("dock updated")
+            } catch (t: Throwable) {
+                log("dock update failed: ${t.message}")
+            }
+        }
+    }
     @Volatile private var expanded = false
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->

@@ -100,6 +100,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var scrollJob by remember { mutableStateOf<Job?>(null) }
     var activeLetter by remember { mutableStateOf<Char?>(null) }
     var showOverlay by remember { mutableStateOf(false) }
+    var listVisible by remember { mutableStateOf(false) }
+    var listTimerJob by remember { mutableStateOf<Job?>(null) }
     var releaseJob by remember { mutableStateOf<Job?>(null) }
 
     BackHandler(enabled = drawerOpen) { drawerOpen = false }
@@ -162,7 +164,24 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         keyboard?.hide()
     }
 
+    fun showListTemporarily() {
+        listVisible = true
+        listTimerJob?.cancel()
+        listTimerJob = scope.launch {
+            delay(3000)
+            listVisible = false
+            activeLetter = null
+        }
+    }
+
+    fun hideListImmediately() {
+        listTimerJob?.cancel()
+        listVisible = false
+        activeLetter = null
+    }
+
     fun launchAppWithAnimation(app: AppInfo) {
+        hideListImmediately()
         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         vm.launch(app.packageName)
     }
@@ -355,12 +374,19 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 )
             }
 
+            Box(modifier = Modifier.weight(1f)) {
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = listVisible || searchMode || query.isNotBlank(),
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.fillMaxSize()
+                ) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     top = 8.dp,
-                    bottom = if (dockApps.isNotEmpty()) 96.dp else 8.dp
+                    bottom = 8.dp
                 )
             ) {
                 if (suggestions.isEmpty() && query.isNotBlank()) {
@@ -404,6 +430,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                     }
                 }
             }
+                }
+            }
         }
 
         if (letters.isNotEmpty() && query.isBlank() && !searchMode) {
@@ -414,6 +442,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                     releaseJob?.cancel()
                     activeLetter = letter
                     showOverlay = true
+                    showListTemporarily()
                     scrollJob?.cancel()
                     scrollJob = scope.launch {
                         val idx = suggestions.indexOfFirst {

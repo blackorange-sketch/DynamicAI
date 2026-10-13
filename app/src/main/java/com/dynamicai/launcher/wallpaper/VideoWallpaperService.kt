@@ -95,8 +95,14 @@ class VideoWallpaperService : WallpaperService() {
                 val muted = prefs.getBoolean("muted", true)
 
                 val frame = surfaceHolder.surfaceFrame
-                val w = frame.width().takeIf { it > 0 } ?: 1080
-                val h = frame.height().takeIf { it > 0 } ?: 2400
+                val w = frame.width()
+                val h = frame.height()
+
+                // Preview дає дуже маленький surface (<500 px) — пропускаємо
+                if (w < 500 || h < 500) {
+                    log("preview mode — skip GL (${w}x$h)")
+                    return
+                }
 
                 val gl = GlRenderThread(surfaceHolder.surface, w, h)
                 gl.onSurfaceTextureReady = { st ->

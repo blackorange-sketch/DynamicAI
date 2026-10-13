@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -47,11 +48,8 @@ fun FolderTabs(
         else apps.filter { it.packageName in selectedFolder.packageNames }
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-    ) {
-        // Список застосунків ЗВЕРХУ
+    Column(modifier = modifier.fillMaxWidth()) {
+        // ==== Список застосунків (зверху) ====
         AnimatedVisibility(
             visible = selectedFolder != null,
             enter = fadeIn(),
@@ -60,9 +58,9 @@ fun FolderTabs(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 400.dp)
-                    .padding(top = 4.dp),
-                contentPadding = PaddingValues(bottom = 4.dp)
+                    .heightIn(max = 340.dp)
+                    .padding(bottom = 4.dp),
+                contentPadding = PaddingValues(vertical = 4.dp)
             ) {
                 items(folderApps, key = { it.packageName }) { app ->
                     Row(
@@ -71,7 +69,7 @@ fun FolderTabs(
                             .padding(horizontal = 4.dp, vertical = 2.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .background(
-                                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                brush = Brush.verticalGradient(
                                     listOf(
                                         Color.White.copy(alpha = 0.06f),
                                         Color.White.copy(alpha = 0.015f)
@@ -84,18 +82,29 @@ fun FolderTabs(
                             .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Glass-рамка навколо іконки
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
                                 .size((iconSizeDp + 8).dp)
                                 .clip(RoundedCornerShape((iconSizeDp / 2 + 4).dp))
                                 .background(
-                                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    brush = Brush.verticalGradient(
                                         listOf(
                                             Color.White.copy(alpha = 0.08f),
                                             Color.White.copy(alpha = 0.02f)
                                         )
                                     )
+                                )
+                                .border(
+                                    width = 0.5.dp,
+                                    brush = Brush.verticalGradient(
+                                        listOf(
+                                            Color.White.copy(alpha = 0.2f),
+                                            Color.White.copy(alpha = 0.04f)
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape((iconSizeDp / 2 + 4).dp)
                                 )
                         ) {
                             androidx.compose.material3.Icon(
@@ -112,12 +121,12 @@ fun FolderTabs(
             }
         }
 
-        // Таби ЗНИЗУ
+        // ==== Таби (знизу) ====
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 4.dp, vertical = 6.dp),
+                .padding(horizontal = 4.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             folders.forEach { folder ->
@@ -127,60 +136,6 @@ fun FolderTabs(
                     onTap = { onSelectFolder(folder) },
                     onLongPress = { onLongPressFolder(folder) }
                 )
-            }
-        }
-    }.fillMaxWidth()
-    ) {
-        // ==== Таби ====
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 4.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            folders.forEach { folder ->
-                FolderTab(
-                    label = folder.name,
-                    selected = folder.id == selectedFolderId,
-                    onTap = { onSelectFolder(folder) },
-                    onLongPress = { onLongPressFolder(folder) }
-                )
-            }
-        }
-
-        // ==== Список застосунків ====
-        AnimatedVisibility(
-            visible = selectedFolder != null,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 2.dp),
-                contentPadding = PaddingValues(bottom = 8.dp)
-            ) {
-                items(folderApps, key = { it.packageName }) { app ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .pointerInput(app.packageName) {
-                                detectTapGestures { onLaunchApp(app) }
-                            }
-                            .padding(vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        androidx.compose.material3.Icon(
-                            bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
-                            contentDescription = app.label,
-                            modifier = Modifier.size(iconSizeDp.dp),
-                            tint = Color.Unspecified
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        Text(app.label, color = Color.White, fontSize = fontSizeSp.sp)
-                    }
-                }
             }
         }
     }
@@ -200,7 +155,7 @@ private fun FolderTab(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
             .background(
-                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                brush = Brush.verticalGradient(
                     if (selected) listOf(
                         Color(0xFF64B5F6).copy(alpha = 0.6f),
                         Color(0xFF2196F3).copy(alpha = 0.3f)
@@ -212,12 +167,12 @@ private fun FolderTab(
             )
             .border(
                 width = 1.dp,
-                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                brush = Brush.verticalGradient(
                     if (selected) listOf(
                         Color(0xFF64B5F6).copy(alpha = 0.7f),
                         Color(0xFF64B5F6).copy(alpha = 0.2f)
                     ) else listOf(
-                        Color.White.copy(alpha = 0.15f),
+                        Color.White.copy(alpha = 0.25f),
                         Color.White.copy(alpha = 0.05f)
                     )
                 ),

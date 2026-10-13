@@ -68,15 +68,25 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
     override fun onCreate() {
         super.onCreate()
-        lifecycleRegistry.currentState = Lifecycle.State.RESUMED
-        savedStateController.performRestore(null)
+        try {
+            savedStateController.performAttach()
+            savedStateController.performRestore(android.os.Bundle())
+            lifecycleRegistry.currentState = Lifecycle.State.RESUMED
 
-        startForeground(NOTIF_ID, buildNotification())
-        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        attachDock()
+            startForeground(NOTIF_ID, buildNotification())
+            windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            attachDock()
 
-        scope.launch {
-            allApps.value = repo.loadInstalledApps()
+            scope.launch {
+                try {
+                    allApps.value = repo.loadInstalledApps()
+                } catch (t: Throwable) {
+                    android.util.Log.e("FloatingDock", "loadApps failed", t)
+                }
+            }
+        } catch (t: Throwable) {
+            android.util.Log.e("FloatingDock", "onCreate failed", t)
+            stopSelf()
         }
     }
 

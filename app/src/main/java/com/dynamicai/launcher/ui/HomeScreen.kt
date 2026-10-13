@@ -399,7 +399,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         }
                         }
             }
-            }
 
             if (showSearchField) {
                 Row(
@@ -1111,6 +1110,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         }
     }
 
+}
 @Composable
 fun AppContextMenu(
     app: AppInfo,

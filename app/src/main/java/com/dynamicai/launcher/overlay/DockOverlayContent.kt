@@ -10,7 +10,6 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -140,11 +139,10 @@ private fun CircleIconButton(
 }
 
 @Composable
-private fun AppCircleIcon(app: AppInfo, onClick: () -> Unit) {
-    // М'яка пульсація при натисканні
+private fun AppCircleIcon(app: AppInfo, onTap: () -> Unit) {
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.9f else 1f,
+        targetValue = if (pressed) 0.88f else 1f,
         animationSpec = spring(stiffness = Spring.StiffnessMedium),
         label = "iconScale"
     )
@@ -153,15 +151,21 @@ private fun AppCircleIcon(app: AppInfo, onClick: () -> Unit) {
         contentAlignment = Alignment.Center,
         modifier = Modifier
             .size(54.dp)
+            .scale(scale)
             .clip(CircleShape)
             .background(Color(0xFFEFEFEF))
             .border(width = 1.5.dp, color = Color.White.copy(alpha = 0.9f), shape = CircleShape)
-            .clickable(
-                onClick = onClick,
-                onPress = { pressed = true }
-            ),
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        pressed = true
+                        tryAwaitRelease()
+                        pressed = false
+                    },
+                    onTap = { onTap() }
+                )
+            }
     ) {
-        // Використовуємо interactionSource через clickable — тут спрощено
         Icon(
             bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
             contentDescription = app.label,

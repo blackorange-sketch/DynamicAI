@@ -29,28 +29,47 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
             return@withContext false
         }
 
-        // Спочатку пробуємо GPU, але якщо OpenCL нема — CPU
-        val backends = listOf(
-            "GPU" to { Backend.GPU() },
-            "CPU" to { Backend.CPU() }
-        )
+        // Reflection — досліджуємо API
+        val info = StringBuilder()
+        try {
+            val backendClass = Class.forName("com.google.ai.edge.litertlm.Backend")
+            info.append("Backend fields: ")
+            info.append(backendClass.declaredFields.map { it.name }.joinToString())
+            info.append("\n")
 
-        for ((name, factory) in backends) {
+            val configClass = Class.forName("com.google.ai.edge.litertlm.EngineConfig")
+            info.append("Config fields: ")
+            info.append(configClass.declaredFields.map { it.name }.joinToString())
+            info.append("\n")
+        } catch (t: Throwable) {
+            info.append("Reflection failed: ${t.message}\n")
+        }
+        Log.d(TAG, info.toString())
+
+        // Спроби різних API
+        val attempts = mutableListOf<Pair<String, () -> Boolean>>()
+
+        attempts.add("Backend.CPU()" to {
+            val config = EngineConfig(
+                modelPath = modelFile.absolutePath,
+                backend = Backend.CPU(),
+                cacheDir = context.cacheDir.path
+            )
+            val e = Engine(config)
+            e.initialize()
+            engine = e
+            _isReady = true
+            true
+        })
+
+        for ((name, block) in attempts) {
             try {
-                val config = EngineConfig(
-                    modelPath = modelFile.absolutePath,
-                    backend = factory(),
-                    cacheDir = context.cacheDir.path
-                )
-                val e = Engine(config)
-                e.initialize()
-                engine = e
-                _isReady = true
+                block()
                 lastError = ""
                 Log.d(TAG, "✅ Init OK with $name")
                 return@withContext true
             } catch (t: Throwable) {
-                Log.e(TAG, "$name init failed: ${t.message}", t)
+                Log.e(TAG, "$name failed: ${t.message}", t)
                 lastError = "$name: ${t.message}"
             }
         }

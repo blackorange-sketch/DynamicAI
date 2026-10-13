@@ -537,8 +537,9 @@ private fun ShizukuTestRow() {
             modifier = Modifier.padding(top = 6.dp)
         ) {
             GlassChip("Запит дозволу", false) {
-                manager.requestPermission(permCode)
+                val msg = manager.requestPermission(permCode)
                 permCode++
+                tasks = msg
             }
             GlassChip("Завантажити tasks", false) {
                 scope.launch {

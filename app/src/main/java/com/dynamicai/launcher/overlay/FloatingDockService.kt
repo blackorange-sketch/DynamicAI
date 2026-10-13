@@ -163,18 +163,54 @@ class FloatingDockService : Service() {
     }
 
     private fun buildHandle(): View {
+        val visualWidth = dp(3)
+        val visualHeight = dp(settings.overlayHandleLengthDp)
+
+        // Сама риска з тінню
         val handle = View(this).apply {
-            layoutParams = FrameLayout.LayoutParams(dp(4), dp(settings.overlayHandleLengthDp))
+            layoutParams = FrameLayout.LayoutParams(visualWidth, visualHeight).apply {
+                gravity = Gravity.CENTER
+            }
             background = GradientDrawable().apply {
-                cornerRadius = dp(2).toFloat()
+                cornerRadius = visualWidth / 2f
                 setColor(Color.WHITE)
             }
             alpha = settings.overlayHandleAlphaPercent / 100f
-            setPadding(0, 0, 0, 0)
+            elevation = dp(4).toFloat()
+            // Тінь через elevation на Android 5+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                outlineProvider = object : android.view.ViewOutlineProvider() {
+                    override fun getOutline(view: View, outline: android.graphics.Outline) {
+                        outline.setRoundRect(0, 0, view.width, view.height, visualWidth / 2f)
+                    }
+                }
+                clipToOutline = false
+            }
         }
+
+        // Тіньовий шар — трохи ширший за риску, напівпрозорий чорний
+        val shadow = View(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                visualWidth + dp(4),
+                visualHeight + dp(4)
+            ).apply {
+                gravity = Gravity.CENTER
+            }
+            background = GradientDrawable().apply {
+                cornerRadius = (visualWidth + dp(4)) / 2f
+                setColor(Color.BLACK)
+            }
+            alpha = 0.25f
+            elevation = dp(6).toFloat()
+        }
+
+        // Обгортка: більша площа натискання
         val wrapper = FrameLayout(this).apply {
-            setPadding(dp(3), 0, dp(3), 0)
+            setPadding(dp(2), dp(8), dp(14), dp(8))
+            addView(shadow)
             addView(handle)
+            isClickable = true
+            isFocusable = true
             setOnClickListener {
                 expanded = true
                 rebuildContent()

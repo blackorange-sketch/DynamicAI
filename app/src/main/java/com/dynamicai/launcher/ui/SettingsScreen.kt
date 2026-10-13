@@ -124,7 +124,7 @@ fun SettingsScreen(
         SizeSlider(
             label = "Іконки",
             value = settings.overlayIconSizeDp,
-            values = listOf(38, 44, 50, 56, 62, 68),
+            values = listOf(28, 34, 40, 46, 52, 58, 64),
             onChange = { onSettingsChange(settings.copy(overlayIconSizeDp = it)) }
         )
         SizeSlider(

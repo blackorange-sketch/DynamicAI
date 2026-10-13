@@ -64,23 +64,6 @@ fun FolderTabs(
                 )
             }
         }
-
-        // ==== Заголовок обраної папки ====
-        AnimatedVisibility(
-            visible = selectedFolder != null,
-            enter = fadeIn(),
-            exit = fadeOut()
-        ) {
-            if (selectedFolder != null) {
-                Text(
-                    text = selectedFolder.name,
-                    color = Color.White,
-                    fontSize = 24.sp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 4.dp, top = 8.dp, bottom = 6.dp)
-                )
-            }
         }
 
         // ==== Список застосунків ====

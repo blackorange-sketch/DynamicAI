@@ -381,8 +381,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                                 iconSizeDp = settings.iconSizeDp,
                                 fontSizeSp = settings.fontSizeSp,
                                 onSelectFolder = { folder ->
-                                    selectedTabFolderId = folder.id
-                                    showListTemporarily()
+                                    selectedTabFolderId =
+                                        if (selectedTabFolderId == folder.id) null
+                                        else folder.id
                                 },
                                 onLongPressFolder = { folder ->
                                     folderHeaderMenu = folder

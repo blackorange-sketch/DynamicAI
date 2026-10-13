@@ -12,6 +12,7 @@ import com.dynamicai.launcher.data.DockStorage
 import com.dynamicai.launcher.data.HiddenAppsStorage
 import com.dynamicai.launcher.data.LauncherSettings
 import com.dynamicai.launcher.data.SettingsStorage
+import com.dynamicai.launcher.voice.TtsManager
 import com.dynamicai.launcher.system.ShizukuManager
 import com.dynamicai.launcher.data.WeatherRepository
 import com.dynamicai.launcher.data.WeatherState
@@ -48,6 +49,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val weatherRepo = WeatherRepository(app)
 
     val llm = LiteRtLlmEngine(app)
+    val tts = TtsManager(app)
     val downloader = ModelDownloader(app)
 
     private val _downloadProgress = MutableStateFlow<ModelDownloader.Progress?>(null)
@@ -379,6 +381,11 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 _response.value = result.message
                 historyStorage.add(originalText)
                 _history.value = historyStorage.get()
+                // Озвучуємо
+                val settings = settingsStorage.load()
+                if (settings.useTts) {
+                    tts.speak(result.message)
+                }
             }
             is CommandResult.Error -> {
                 _response.value = result.message
@@ -411,6 +418,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     override fun onCleared() {
         llm.close()
+        tts.shutdown()
         super.onCleared()
     }
 }

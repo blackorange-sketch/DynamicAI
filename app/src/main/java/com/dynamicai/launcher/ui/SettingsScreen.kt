@@ -282,6 +282,14 @@ fun SettingsScreen(
 
             // Toggle завжди видно
             SwitchRow(
+                label = "Озвучувати відповіді (TTS)",
+                checked = settings.useTts,
+                icon = Icons.Default.VolumeUp,
+                tint = Color(0xFF4CAF50)
+            ) {
+                onSettingsChange(settings.copy(useTts = it))
+            }
+            SwitchRow(
                 label = "Використовувати LLM для команд",
                 checked = settings.useLlm,
                 icon = Icons.Default.Settings,

@@ -92,15 +92,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var showOverlay by remember { mutableStateOf(false) }
     var releaseJob by remember { mutableStateOf<Job?>(null) }
 
-    BackHandler(enabled = showSearchFieldSafe(query, searchMode)) {
+    BackHandler(enabled = searchMode || query.isNotBlank()) {
         query = ""
         searchMode = false
         keyboard?.hide()
     }
 
-    fun showSearchFieldSafe(): Boolean = searchMode || query.isNotBlank()
-
-    BackHandler(enabled = showSearchFieldSafe()) {
+    BackHandler(enabled = searchMode || query.isNotBlank()) {
         query = ""
         searchMode = false
         keyboard?.hide()

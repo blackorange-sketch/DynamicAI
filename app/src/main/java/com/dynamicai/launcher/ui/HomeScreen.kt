@@ -294,7 +294,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     LaunchedEffect(activeLetter) { if (activeLetter != null) showOverlay = true }
 
-    val showSearchField = searchMode || query.isNotBlank()
+    val showSearchField = settings.showSearchBar || searchMode || query.isNotBlank()
 
     if (showWeatherDetail) {
         WeatherDetailScreen(
@@ -554,31 +554,28 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
         // Папки над доком
         if (folders.isNotEmpty() && !listVisible && query.isBlank()) {
-            val selectedTabFolder = folders.firstOrNull { it.id == selectedTabFolderId }
-            if (selectedTabFolder != null) {
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = if (dockPkgs.isNotEmpty()) 100.dp else 20.dp)
-                        .padding(horizontal = 16.dp)
-                ) {
-                    FolderTabs(
-                        folders = folders,
-                        apps = apps,
-                        selectedFolderId = selectedTabFolderId,
-                        iconSizeDp = settings.iconSizeDp,
-                        fontSizeSp = settings.fontSizeSp,
-                        onSelectFolder = { folder ->
-                            selectedTabFolderId =
-                                if (selectedTabFolderId == folder.id) null
-                                else folder.id
-                        },
-                        onLongPressFolder = { folder ->
-                            folderHeaderMenu = folder
-                        },
-                        onLaunchApp = { app -> launchAppWithAnimation(app) }
-                    )
-                }
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = if (dockPkgs.isNotEmpty()) 100.dp else 20.dp)
+                    .padding(horizontal = 16.dp)
+            ) {
+                FolderTabs(
+                    folders = folders,
+                    apps = apps,
+                    selectedFolderId = selectedTabFolderId,
+                    iconSizeDp = settings.iconSizeDp,
+                    fontSizeSp = settings.fontSizeSp,
+                    onSelectFolder = { folder ->
+                        selectedTabFolderId =
+                            if (selectedTabFolderId == folder.id) null
+                            else folder.id
+                    },
+                    onLongPressFolder = { folder ->
+                        folderHeaderMenu = folder
+                    },
+                    onLaunchApp = { app -> launchAppWithAnimation(app) }
+                )
             }
         }
 
@@ -1215,6 +1212,72 @@ fun AppRow(
     app: AppInfo,
     inDock: Boolean,
     iconSizeDp: Int,
+    fontSizeSp: Int,
+    showLabel: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.06f),
+                        Color.White.copy(alpha = 0.015f)
+                    )
+                )
+            )
+            .pointerInput(app.packageName) {
+                detectTapGestures(onTap = { onClick() })
+            }
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Glass-рамка навколо іконки
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size((iconSizeDp + 10).dp)
+                .clip(RoundedCornerShape((iconSizeDp / 2 + 5).dp))
+                .background(
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.08f),
+                            Color.White.copy(alpha = 0.02f)
+                        )
+                    )
+                )
+                .border(
+                    width = 0.5.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.2f),
+                            Color.White.copy(alpha = 0.04f)
+                        )
+                    ),
+                    shape = RoundedCornerShape((iconSizeDp / 2 + 5).dp)
+                )
+        ) {
+            Icon(
+                bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
+                contentDescription = app.label,
+                modifier = Modifier.size(iconSizeDp.dp),
+                tint = Color.Unspecified
+            )
+        }
+        if (showLabel) {
+            Spacer(Modifier.width(14.dp))
+            Text(
+                app.label,
+                color = if (inDock) Color(0xFF64B5F6) else Color.White,
+                fontSize = fontSizeSp.sp
+            )
+        }
+    }
+}   iconSizeDp: Int,
     fontSizeSp: Int,
     showLabel: Boolean,
     onClick: () -> Unit,

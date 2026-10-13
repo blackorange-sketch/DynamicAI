@@ -83,7 +83,7 @@ fun HomeWidget(
                     }
                 )
             }
-            .padding(horizontal = 18.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Ліва колонка: годинник + дата
@@ -91,7 +91,7 @@ fun HomeWidget(
             Text(
                 now.format(timeFmt),
                 color = Color.White,
-                fontSize = 42.sp,
+                fontSize = 34.sp,
                 fontWeight = FontWeight.Light,
                 modifier = Modifier.pointerInput(Unit) {
                     detectTapGestures {
@@ -156,12 +156,12 @@ private fun WeatherCompact(state: WeatherState, onTap: (() -> Unit)?) {
             }
             is WeatherState.Data -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(state.icon, fontSize = 22.sp)
+                    Text(state.icon, fontSize = 18.sp)
                     Spacer(Modifier.width(6.dp))
                     Text(
                         "${state.tempC}°${state.unit}",
                         color = Color.White,
-                        fontSize = 22.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Light
                     )
                 }

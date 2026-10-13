@@ -161,22 +161,9 @@ fun AlphabetSidebar(
                                     )
                                 } else {
                                     Brush.verticalGradient(
-                                        listOf(
-                                            Color.White.copy(alpha = 0.10f),
-                                            Color.White.copy(alpha = 0.02f)
-                                        )
+                                        listOf(Color.Transparent, Color.Transparent)
                                     )
                                 }
-                            )
-                            .border(
-                                width = 0.5.dp,
-                                brush = Brush.verticalGradient(
-                                    listOf(
-                                        Color.White.copy(alpha = if (isActive) 0.7f else 0.2f),
-                                        Color.White.copy(alpha = if (isActive) 0.3f else 0.05f)
-                                    )
-                                ),
-                                shape = CircleShape
                             )
                     ) {
                         Text(

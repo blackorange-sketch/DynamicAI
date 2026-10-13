@@ -100,13 +100,6 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
 
-    fun initLlmIfReady() {
-        if (downloader.isDownloaded && !llm.isReady) {
-            viewModelScope.launch {
-                llm.initialize(downloader.modelFile)
-            }
-        }
-    }
 
     override fun onCleared() {
         llm.close()

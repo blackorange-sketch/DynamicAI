@@ -133,6 +133,14 @@ fun WallpaperScreen(backgroundAlphaPercent: Int = 100, onClose: () -> Unit) {
             }
         }
 
+        SectionHeader("Діагностика")
+        Text(
+            text = "Остання подія: " + com.dynamicai.launcher.wallpaper.VideoWallpaperService.lastLog,
+            color = Color.Yellow,
+            fontSize = 11.sp,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+        )
+
         Spacer(Modifier.height(48.dp))
     }
 }

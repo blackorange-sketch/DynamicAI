@@ -31,14 +31,21 @@ fun FolderTabs(
     apps: List<AppInfo>,
     selectedFolderId: String?,
     iconSizeDp: Int,
-    onSelectFolder: (Folder?) -> Unit,
+    fontSizeSp: Int,
+    onSelectFolder: (Folder) -> Unit,
     onLaunchApp: (AppInfo) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (folders.isEmpty()) return
 
+    val selectedFolder = folders.firstOrNull { it.id == selectedFolderId }
+    val folderApps = remember(selectedFolder, apps) {
+        if (selectedFolder == null) emptyList()
+        else apps.filter { it.packageName in selectedFolder.packageNames }
+    }
+
     Column(modifier = modifier.fillMaxWidth()) {
-        // ==== Таби ====
+        // ==== Таби (без "Усі") ====
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -46,60 +53,64 @@ fun FolderTabs(
                 .padding(horizontal = 4.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Таб "Усі"
-            FolderTab(
-                label = "Усі",
-                icon = null,
-                selected = selectedFolderId == null,
-                onTap = { onSelectFolder(null) }
-            )
-
             folders.forEach { folder ->
-                val firstApp = apps.firstOrNull { it.packageName in folder.packageNames }
                 FolderTab(
                     label = folder.name,
-                    icon = firstApp?.icon,
-                    selected = selectedFolderId == folder.id,
+                    selected = folder.id == selectedFolderId,
                     onTap = { onSelectFolder(folder) }
+                )
+            }
+        }
+
+        // ==== Заголовок обраної папки ====
+        AnimatedVisibility(
+            visible = selectedFolder != null,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            if (selectedFolder != null) {
+                Text(
+                    text = selectedFolder.name,
+                    color = Color.White,
+                    fontSize = 24.sp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 4.dp, top = 8.dp, bottom = 6.dp)
                 )
             }
         }
 
         // ==== Список застосунків ====
         AnimatedVisibility(
-            visible = selectedFolderId != null,
+            visible = selectedFolder != null,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
-            val folder = folders.firstOrNull { it.id == selectedFolderId }
-            if (folder != null) {
-                val folderApps = apps.filter { it.packageName in folder.packageNames }
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 400.dp)
-                        .padding(top = 4.dp),
-                    contentPadding = PaddingValues(vertical = 4.dp)
-                ) {
-                    items(folderApps, key = { it.packageName }) { app ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .pointerInput(app.packageName) {
-                                    detectTapGestures { onLaunchApp(app) }
-                                }
-                                .padding(vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            androidx.compose.material3.Icon(
-                                bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
-                                contentDescription = app.label,
-                                modifier = Modifier.size(iconSizeDp.dp),
-                                tint = Color.Unspecified
-                            )
-                            Spacer(Modifier.width(16.dp))
-                            Text(app.label, color = Color.White, fontSize = 17.sp)
-                        }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .padding(top = 2.dp),
+                contentPadding = PaddingValues(bottom = 8.dp)
+            ) {
+                items(folderApps, key = { it.packageName }) { app ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .pointerInput(app.packageName) {
+                                detectTapGestures { onLaunchApp(app) }
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.material3.Icon(
+                            bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
+                            contentDescription = app.label,
+                            modifier = Modifier.size(iconSizeDp.dp),
+                            tint = Color.Unspecified
+                        )
+                        Spacer(Modifier.width(16.dp))
+                        Text(app.label, color = Color.White, fontSize = fontSizeSp.sp)
                     }
                 }
             }
@@ -110,33 +121,19 @@ fun FolderTabs(
 @Composable
 private fun FolderTab(
     label: String,
-    icon: android.graphics.drawable.Drawable?,
     selected: Boolean,
     onTap: () -> Unit
 ) {
-    Row(
+    Text(
+        text = label,
+        color = if (selected) Color.White else Color.Gray,
+        fontSize = 14.sp,
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
             .background(if (selected) Color(0xFF2196F3) else Color(0xFF1A1A1A))
             .pointerInput(label) {
                 detectTapGestures { onTap() }
             }
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (icon != null) {
-            androidx.compose.material3.Icon(
-                bitmap = icon.toBitmap(64, 64).asImageBitmap(),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = Color.Unspecified
-            )
-            Spacer(Modifier.width(6.dp))
-        }
-        Text(
-            label,
-            color = Color.White,
-            fontSize = 13.sp
-        )
-    }
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    )
 }

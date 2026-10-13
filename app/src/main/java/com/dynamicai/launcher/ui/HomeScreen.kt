@@ -338,8 +338,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                                 apps = apps,
                                 selectedFolderId = selectedTabFolderId,
                                 iconSizeDp = settings.iconSizeDp,
+                                fontSizeSp = settings.fontSizeSp,
                                 onSelectFolder = { folder ->
-                                    selectedTabFolderId = folder?.id
+                                    selectedTabFolderId = folder.id
+                                    showListTemporarily()
                                 },
                                 onLaunchApp = { app -> launchAppWithAnimation(app) }
                             )

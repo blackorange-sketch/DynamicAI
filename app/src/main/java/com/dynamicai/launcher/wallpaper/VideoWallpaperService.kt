@@ -2,11 +2,18 @@ package com.dynamicai.launcher.wallpaper
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.media.MediaPlayer
+import android.graphics.SurfaceTexture
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.service.wallpaper.WallpaperService
 import android.util.Log
+import android.view.Surface
 import android.view.SurfaceHolder
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
+import androidx.media3.exoplayer.ExoPlayer
 
 class VideoWallpaperService : WallpaperService() {
 
@@ -14,9 +21,10 @@ class VideoWallpaperService : WallpaperService() {
 
     inner class VideoEngine : Engine() {
 
-        private var player: MediaPlayer? = null
+        private var player: ExoPlayer? = null
         private var glThread: GlRenderThread? = null
         private var visible = false
+        private val mainHandler = Handler(Looper.getMainLooper())
 
         private val prefs: SharedPreferences by lazy {
             applicationContext.getSharedPreferences("dynamicai_wallpaper", Context.MODE_PRIVATE)
@@ -41,22 +49,18 @@ class VideoWallpaperService : WallpaperService() {
         }
 
         override fun onVisibilityChanged(visible: Boolean) {
+            log("visibility=$visible")
             this.visible = visible
             if (visible) {
-                if (player == null) start() else try { player?.start() } catch (_: Exception) {}
-                            } else {
-                try { player?.pause() } catch (_: Exception) {}
+                if (player == null) start() else player?.play()
+                glThread?.resume()
             }
+            // НЕ паузимо — хай відео грає
         }
 
         override fun onSurfaceCreated(holder: SurfaceHolder) {
             super.onSurfaceCreated(holder)
             if (prefs.getString("videoUri", null) != null) start()
-        }
-
-        override fun onSurfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
-            super.onSurfaceChanged(holder, format, width, height)
-            Log.d("VideoWallpaper", "surfaceChanged ${width}x$height")
         }
 
         override fun onSurfaceDestroyed(holder: SurfaceHolder) {
@@ -72,7 +76,7 @@ class VideoWallpaperService : WallpaperService() {
         private fun start() {
             val uriStr = prefs.getString("videoUri", null)
             if (uriStr.isNullOrBlank()) {
-                Log.d("VideoWallpaper", "no video set")
+                log("no video set")
                 return
             }
             val muted = prefs.getBoolean("muted", true)
@@ -85,54 +89,68 @@ class VideoWallpaperService : WallpaperService() {
                 val gl = GlRenderThread(surfaceHolder.surface, w, h)
                 gl.onSurfaceTextureReady = { st ->
                     try {
-                        val mp = MediaPlayer().apply {
-                            setDataSource(applicationContext, Uri.parse(uriStr))
-                            setSurface(android.view.Surface(st))
-                            isLooping = true
-                            setVolume(if (muted) 0f else 1f, if (muted) 0f else 1f)
+                        val surface = Surface(st)
+                        val exo = ExoPlayer.Builder(applicationContext)
+                            .setLooper(mainHandler.looper)
+                            .build()
 
-                            setOnVideoSizeChangedListener { _, vw, vh ->
+                        exo.setVideoSurface(surface)
+                        exo.setMediaItem(MediaItem.fromUri(Uri.parse(uriStr)))
+                        exo.repeatMode = Player.REPEAT_MODE_ALL
+                        exo.volume = if (muted) 0f else 1f
+                        exo.playWhenReady = true
+
+                        exo.addListener(object : Player.Listener {
+                            override fun onVideoSizeChanged(videoSize: VideoSize) {
+                                val vw = videoSize.width
+                                val vh = videoSize.height
                                 gl.updateVideoSize(vw, vh)
-                                Log.d("VideoWallpaper", "videoSize=${vw}x$vh surface=${w}x$h")
+                                log("videoSize=${vw}x$vh surface=${w}x$h")
                             }
 
-                            setOnPreparedListener { it.start() }
-                            setOnCompletionListener { mp ->
-                                try {
-                                    mp.seekTo(0)
-                                    mp.start()
-                                } catch (_: Exception) {}
+                            override fun onPlaybackStateChanged(state: Int) {
+                                log("state=$state")
                             }
 
-                            setOnErrorListener { _, what, extra ->
-                                Log.e("VideoWallpaper", "error what=$what extra=$extra")
-                                true
+                            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                                log("error: ${error.message}")
                             }
+                        })
 
-                            prepareAsync()
-                        }
-                        player = mp
+                        exo.prepare()
+                        player = exo
                     } catch (t: Throwable) {
-                        Log.e("VideoWallpaper", "player init failed", t)
+                        log("exo init failed: ${t.message}")
                     }
                 }
                 gl.start()
                 glThread = gl
             } catch (t: Throwable) {
-                Log.e("VideoWallpaper", "start failed", t)
+                log("start failed: ${t.message}")
             }
         }
 
         private fun releaseAll() {
-            try { player?.stop() } catch (_: Exception) {}
             try { player?.release() } catch (_: Exception) {}
             player = null
             try { glThread?.stop() } catch (_: Exception) {}
             glThread = null
         }
+
+        private fun log(msg: String) {
+            VideoWallpaperService.log(msg)
+        }
     }
 
     companion object {
+        @Volatile var lastLog: String = "—"
+            private set
+
+        internal fun log(msg: String) {
+            lastLog = msg
+            Log.d("VideoWallpaper", msg)
+        }
+
         fun setVideo(ctx: Context, uri: Uri) {
             ctx.getSharedPreferences("dynamicai_wallpaper", Context.MODE_PRIVATE)
                 .edit().putString("videoUri", uri.toString()).commit()

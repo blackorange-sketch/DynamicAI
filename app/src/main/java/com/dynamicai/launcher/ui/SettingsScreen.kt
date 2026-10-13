@@ -242,6 +242,9 @@ fun SettingsScreen(
         }
 
         // ==== Дії ====
+        GlassSectionHeader("Shizuku")
+        ShizukuTestRow()
+
         GlassSectionHeader("Дії")
         GlassCard {
             ActionRow("Оновити контакти", Icons.Default.People, Color(0xFF4CAF50), onRefreshContacts)

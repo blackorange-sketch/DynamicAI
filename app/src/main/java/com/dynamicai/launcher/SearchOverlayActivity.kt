@@ -201,7 +201,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 androidx.compose.material3.Icon(
-                                    bitmap = androidx.core.graphics.drawable.toBitmap(app.icon, 96, 96).asImageBitmap(),
+                                    bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
                                     contentDescription = null,
                                     modifier = Modifier.size(32.dp),
                                     tint = Color.Unspecified

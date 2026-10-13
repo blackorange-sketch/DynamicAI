@@ -46,8 +46,8 @@ fun Dock(
                     if (dragAmount < -20) onSwipeUp()
                 }
             }
-            .padding(horizontal = 24.dp, vertical = 16.dp)
-            .clip(RoundedCornerShape(28.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(26.dp))
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
@@ -64,10 +64,10 @@ fun Dock(
                         Color.White.copy(alpha = 0.08f)
                     )
                 ),
-                shape = RoundedCornerShape(28.dp)
+                shape = RoundedCornerShape(26.dp)
             )
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Кнопка пошуку — акцентна

@@ -224,15 +224,13 @@ class FloatingDockService : Service() {
                 cornerRadius = (visualWidth + dp(4)) / 2f
                 setColor(Color.BLACK)
             }
-            alpha = 0.25f
-            elevation = dp(6).toFloat()
+            alpha = 0.15f
+            elevation = dp(2).toFloat()
         }
 
-        // Обгортка: більша площа натискання
+        // Обгортка з підкладкою glass
         val wrapper = FrameLayout(this).apply {
-            setPadding(dp(2), dp(8), dp(settings.overlayEdgePaddingDp), dp(8))
-            addView(shadow)
-            addView(handle)
+            setPadding(dp(4), dp(8), dp(settings.overlayEdgePaddingDp), dp(8))
             isClickable = true
             isFocusable = true
             setOnClickListener {
@@ -240,6 +238,23 @@ class FloatingDockService : Service() {
                 rebuildContent()
             }
         }
+
+        // Glass-підкладка навколо риски
+        val handleCard = FrameLayout(this).apply {
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(0xE61F1F1F.toInt(), 0xCC0D0D0D.toInt())
+            ).apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(14).toFloat()
+                setStroke(dp(1), 0x66FFFFFF.toInt())
+            }
+            setPadding(dp(8), dp(6), dp(8), dp(6))
+            addView(shadow)
+            addView(handle)
+        }
+
+        wrapper.addView(handleCard)
         return wrapper
     }
 
@@ -312,11 +327,13 @@ class FloatingDockService : Service() {
 
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                intArrayOf(0xE61F1F1F.toInt(), 0xCC0D0D0D.toInt())
+            ).apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(28).toFloat()
-                setColor(0xCC1A1A1A.toInt())
-                setStroke(dp(1), 0x33FFFFFF)
+                cornerRadius = dp(26).toFloat()
+                setStroke(dp(1), 0x66FFFFFF.toInt())
             }
             addView(column)
         }

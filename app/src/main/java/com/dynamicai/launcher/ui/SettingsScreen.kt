@@ -239,15 +239,16 @@ private fun SwitchRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
 
 @Composable
 private fun ActionRow(label: String, onClick: () -> Unit) {
-    Text(
-        label,
-        color = Color.White,
-        fontSize = 15.sp,
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF2A2A2A),
+            contentColor = Color.White
+        ),
         modifier = Modifier
             .fillMaxWidth()
-            .pointerInput(label) {
-                detectTapGestures(onTap = { onClick() })
-            }
-            .padding(horizontal = 24.dp, vertical = 14.dp)
-    )
+            .padding(horizontal = 24.dp, vertical = 6.dp)
+    ) {
+        Text(label, fontSize = 15.sp)
+    }
 }

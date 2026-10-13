@@ -25,11 +25,18 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.dynamicai.launcher.model.AppInfo
 
+data class DockItem(
+    val id: String,               // "app:com.xxx" або "folder:UUID"
+    val label: String,
+    val icon: android.graphics.drawable.Drawable?,
+    val isFolder: Boolean
+)
+
 @Composable
 fun Dock(
-    apps: List<AppInfo>,
+    items: List<DockItem>,
     iconSizeDp: Int,
-    onLaunch: (String) -> Unit,
+    onLaunch: (DockItem) -> Unit,
     onSearch: () -> Unit,
     onSwipeUp: () -> Unit,
     modifier: Modifier = Modifier
@@ -66,16 +73,39 @@ fun Dock(
             )
         }
 
-        apps.take(4).forEach { app ->
-            Icon(
-                bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
-                contentDescription = app.label,
-                tint = Color.Unspecified,
-                modifier = Modifier
-                    .size(iconSizeDp.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { onLaunch(app.packageName) }
-            )
+        items.take(4).forEach { item ->
+            if (item.isFolder) {
+                // Папка — рамка з декількома мінііконками
+                Box(
+                    modifier = Modifier
+                        .size(iconSizeDp.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF2A2A2A))
+                        .clickable { onLaunch(item) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    item.icon?.let {
+                        Icon(
+                            bitmap = it.toBitmap(96, 96).asImageBitmap(),
+                            contentDescription = item.label,
+                            tint = Color.Unspecified,
+                            modifier = Modifier.size((iconSizeDp * 0.55f).dp)
+                        )
+                    }
+                }
+            } else {
+                item.icon?.let {
+                    Icon(
+                        bitmap = it.toBitmap(96, 96).asImageBitmap(),
+                        contentDescription = item.label,
+                        tint = Color.Unspecified,
+                        modifier = Modifier
+                            .size(iconSizeDp.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onLaunch(item) }
+                    )
+                }
+            }
         }
     }
 }

@@ -94,6 +94,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var folderMenuApp by remember { mutableStateOf<AppInfo?>(null) }
     var folderMenuFolder by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
     var folderHeaderMenu by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
+    var openFolder by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
     var showMainMenu by remember { mutableStateOf(false) }
     var showNewFolderDialog by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
@@ -432,23 +433,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         }
                     }
                 }
-                if (folders.isNotEmpty() && query.isBlank() && !searchMode) {
-                    items(folders, key = { "folder:${it.id}" }) { folder ->
-                        val folderApps = apps.filter { it.packageName in folder.packageNames }
-                        FolderRow(
-                            folder = folder,
-                            apps = folderApps,
-                            iconSizeDp = settings.iconSizeDp,
-                            onLaunch = { app -> launchAppWithAnimation(app) },
-                            onLongPressApp = { app, f ->
-                                folderMenuApp = app
-                                folderMenuFolder = f
-                            },
-                            onLongPressHeader = { f -> folderHeaderMenu = f }
-                        )
-                    }
-                }
-
                 items(suggestions, key = { it.stableKey() }) { s ->
                     when (s) {
                         is Suggestion.Action -> SuggestionActionRow(s) {
@@ -530,13 +514,41 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             }
         }
 
-        if (dockApps.isNotEmpty()) {
+        if (dockPkgs.isNotEmpty()) {
+            val dockItems = remember(dockPkgs, apps, folders) {
+                dockPkgs.mapNotNull { id ->
+                    if (id.startsWith("folder:")) {
+                        val fid = id.removePrefix("folder:")
+                        val f = folders.firstOrNull { it.id == fid } ?: return@mapNotNull null
+                        val firstApp = apps.firstOrNull { it.packageName in f.packageNames }
+                        DockItem(
+                            id = id,
+                            label = f.name,
+                            icon = firstApp?.icon,
+                            isFolder = true
+                        )
+                    } else {
+                        val a = apps.firstOrNull { it.packageName == id } ?: return@mapNotNull null
+                        DockItem(
+                            id = id,
+                            label = a.label,
+                            icon = a.icon,
+                            isFolder = false
+                        )
+                    }
+                }
+            }
             Dock(
-                apps = dockApps,
+                items = dockItems,
                 iconSizeDp = settings.dockIconSizeDp,
-                onLaunch = { pkg ->
-                    val app = apps.firstOrNull { it.packageName == pkg }
-                    if (app != null) launchAppWithAnimation(app)
+                onLaunch = { item ->
+                    if (item.isFolder) {
+                        val fid = item.id.removePrefix("folder:")
+                        openFolder = folders.firstOrNull { it.id == fid }
+                    } else {
+                        val app = apps.firstOrNull { it.packageName == item.id }
+                        if (app != null) launchAppWithAnimation(app)
+                    }
                 },
                 onSearch = { searchMode = true },
                 onSwipeUp = { drawerOpen = true },
@@ -859,6 +871,67 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 dismissButton = {
                     TextButton(onClick = { showNewFolderDialog = false }) {
                         Text("Скасувати", color = Color.White)
+                    }
+                },
+                containerColor = Color(0xFF1A1A1A)
+            )
+        }
+
+        // ==== Діалог відкритої папки ====
+        openFolder?.let { folder ->
+            val folderApps = apps.filter { it.packageName in folder.packageNames }
+            AlertDialog(
+                onDismissRequest = { openFolder = null },
+                title = { Text(folder.name, color = Color.White, fontSize = 18.sp) },
+                text = {
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)
+                    ) {
+                        items(folderApps, key = { it.packageName }) { app ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .pointerInput(app.packageName) {
+                                        detectTapGestures {
+                                            launchAppWithAnimation(app)
+                                            openFolder = null
+                                        }
+                                    }
+                                    .padding(vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
+                                    contentDescription = app.label,
+                                    modifier = Modifier.size(40.dp),
+                                    tint = Color.Unspecified
+                                )
+                                Spacer(Modifier.width(16.dp))
+                                Text(app.label, color = Color.White, fontSize = 16.sp)
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        // Додати папку в док
+                        if (folder.id !in dockPkgs) {
+                            vm.toggleDock("folder:${folder.id}")
+                        } else {
+                            vm.toggleDock("folder:${folder.id}")
+                        }
+                        openFolder = null
+                    }) {
+                        Text(
+                            if ("folder:${folder.id}" in dockPkgs) "Прибрати з дока"
+                            else "Додати в док",
+                            color = Color(0xFF64B5F6)
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { openFolder = null }) {
+                        Text("Закрити", color = Color.White)
                     }
                 },
                 containerColor = Color(0xFF1A1A1A)

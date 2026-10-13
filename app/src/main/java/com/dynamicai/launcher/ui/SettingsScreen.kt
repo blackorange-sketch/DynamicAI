@@ -259,6 +259,9 @@ fun SettingsScreen(
         }
 
         // ==== LLM ====
+        GlassSectionHeader("Bluetooth")
+        BluetoothTestRow()
+
         GlassSectionHeader("Локальна LLM")
         GlassCard {
             if (!llmDownloaded) {
@@ -645,6 +648,62 @@ private fun LlmTestRow(onTest: suspend (String) -> String?) {
                     .background(Color.Black.copy(alpha = 0.3f))
                     .padding(8.dp)
             )
+        }
+    }
+}
+
+
+@Composable
+private fun BluetoothTestRow() {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val manager = remember { com.dynamicai.launcher.system.BluetoothManager(ctx) }
+    var diagnostic by remember { mutableStateOf("") }
+    var nameInput by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        diagnostic = manager.getDiagnostic()
+    }
+
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(
+            diagnostic.ifBlank { "Перевірка…" },
+            color = Color(0xFF81C784), fontSize = 11.sp
+        )
+
+        BasicTextField(
+            value = nameInput,
+            onValueChange = { nameInput = it },
+            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color.White.copy(alpha = 0.08f))
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            decorationBox = { inner ->
+                if (nameInput.isEmpty()) {
+                    Text("Назва пристрою (напр. Toyota)", color = Color.Gray, fontSize = 14.sp)
+                }
+                inner()
+            }
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            GlassChip("Оновити", false) {
+                diagnostic = manager.getDiagnostic()
+            }
+            GlassChip("Підключити", false) {
+                scope.launch {
+                    val ok = manager.connect(nameInput)
+                    diagnostic = (if (ok) "✅ Спроба підключення
+
+" else "❌ Помилка
+
+") + manager.getDiagnostic()
+                }
+            }
         }
     }
 }

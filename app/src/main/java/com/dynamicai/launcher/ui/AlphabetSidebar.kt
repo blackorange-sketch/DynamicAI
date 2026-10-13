@@ -40,16 +40,19 @@ fun AlphabetSidebar(
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
     var sidebarHeight by remember { mutableStateOf(0f) }
     var lastLetter by remember { mutableStateOf<Char?>(null) }
 
     val activeIndex = letters.indexOf(activeLetter).takeIf { it >= 0 }
 
+    // Обчислюємо padding у @Composable scope
+    val paddingPx = with(density) { 24.dp.toPx() }
+
     fun letterAtOffset(y: Float): Char? {
         if (sidebarHeight <= 0f || letters.isEmpty()) return null
-        val innerH = sidebarHeight - dp(48).value * 3
+        val innerH = sidebarHeight - paddingPx * 2f
         if (innerH <= 0f) return null
-        val paddingPx = with(LocalDensity.current) { 24.dp.toPx() }
         val localY = (y - paddingPx).coerceIn(0f, innerH - 0.001f)
         val rel = localY / innerH
         val idx = (rel * letters.size).toInt().coerceIn(0, letters.size - 1)

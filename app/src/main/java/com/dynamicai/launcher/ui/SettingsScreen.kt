@@ -26,6 +26,10 @@ fun SettingsScreen(
     onRefreshContacts: () -> Unit,
     onClearHidden: () -> Unit,
     onDownloadLlm: () -> Unit,
+    overlayActive: Boolean,
+    overlayPermissionGranted: Boolean,
+    onToggleOverlay: () -> Unit,
+    onRequestOverlayPermission: () -> Unit,
     llmDownloaded: Boolean,
     llmReady: Boolean,
     versionName: String,
@@ -84,6 +88,16 @@ fun SettingsScreen(
             "Показати всі приховані (${hiddenCount})",
             onClearHidden
         )
+
+        Section("Плаваючий док (експериментально)")
+        if (!overlayPermissionGranted) {
+            ActionRow("Дозволити показ поверх інших застосунків", onRequestOverlayPermission)
+        } else {
+            ActionRow(
+                if (overlayActive) "Вимкнути плаваючий док" else "Увімкнути плаваючий док",
+                onToggleOverlay
+            )
+        }
 
         Section("Локальна LLM")
         when {

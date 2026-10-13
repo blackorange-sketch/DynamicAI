@@ -83,6 +83,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var showSettings by remember { mutableStateOf(false) }
     var searchMode by remember { mutableStateOf(false) }
     var menuApp by remember { mutableStateOf<AppInfo?>(null) }
+    var overlayActive by remember { mutableStateOf(false) }
+    var overlayPermissionGranted by remember {
+        mutableStateOf(Settings.canDrawOverlays(ctx))
+    }
 
     val focusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
@@ -115,6 +119,26 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted -> if (granted) vm.loadContacts() }
+
+    val overlayPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        overlayPermissionGranted = Settings.canDrawOverlays(ctx)
+    }
+
+    fun requestOverlayPermission() {
+        try {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:${ctx.packageName}")
+            )
+            overlayPermissionLauncher.launch(intent)
+        } catch (_: Exception) {}
+    }
+
+    LaunchedEffect(Unit) {
+        overlayPermissionGranted = Settings.canDrawOverlays(ctx)
+    }
 
     LaunchedEffect(Unit) {
         vm.initLlmIfReady()
@@ -180,6 +204,18 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             onRefreshContacts = { vm.loadContacts() },
             onClearHidden = { vm.clearHidden() },
             onDownloadLlm = { vm.downloadModel() },
+            overlayActive = overlayActive,
+            overlayPermissionGranted = overlayPermissionGranted,
+            onToggleOverlay = {
+                if (overlayActive) {
+                    com.dynamicai.launcher.overlay.FloatingDockService.stop(ctx)
+                    overlayActive = false
+                } else {
+                    com.dynamicai.launcher.overlay.FloatingDockService.start(ctx)
+                    overlayActive = true
+                }
+            },
+            onRequestOverlayPermission = { requestOverlayPermission() },
             llmDownloaded = vm.downloader.isDownloaded,
             llmReady = vm.llm.isReady,
             versionName = BuildConfig.VERSION_NAME,

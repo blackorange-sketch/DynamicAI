@@ -284,7 +284,7 @@ fun SettingsScreen(
             SwitchRow(
                 label = "Озвучувати відповіді (TTS)",
                 checked = settings.useTts,
-                icon = Icons.Default.VolumeUp,
+                icon = Icons.Default.Star,
                 tint = Color(0xFF4CAF50)
             ) {
                 onSettingsChange(settings.copy(useTts = it))

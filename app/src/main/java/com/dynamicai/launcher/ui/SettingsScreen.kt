@@ -10,10 +10,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
+import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dynamicai.launcher.data.LauncherSettings
@@ -92,13 +94,30 @@ fun SettingsScreen(
         )
 
         Section("Плаваючий док")
+        val ctxLocal = LocalContext.current
+        Text(
+            "permission=$overlayPermissionGranted active=$overlayActive",
+            color = Color.Yellow, fontSize = 12.sp,
+            modifier = Modifier.padding(horizontal = 24.dp)
+        )
         if (!overlayPermissionGranted) {
-            ActionRow("Дозволити показ поверх інших застосунків", onRequestOverlayPermission)
+            Button(
+                onClick = {
+                    Toast.makeText(ctxLocal, "Запит дозволу…", Toast.LENGTH_SHORT).show()
+                    onRequestOverlayPermission()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2A2A2A)),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 6.dp)
+            ) { Text("Дозволити показ поверх інших застосунків", color = Color.White) }
         } else {
-            ActionRow(
-                if (overlayActive) "Вимкнути плаваючий док" else "Увімкнути плаваючий док",
-                onToggleOverlay
-            )
+            Button(
+                onClick = {
+                    Toast.makeText(ctxLocal, "Toggle: active=$overlayActive", Toast.LENGTH_SHORT).show()
+                    onToggleOverlay()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 6.dp)
+            ) { Text(if (overlayActive) "Вимкнути плаваючий док" else "Увімкнути плаваючий док", color = Color.White) }
         }
 
         Section("Розмір у плаваючому дока")

@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
 import android.speech.RecognizerIntent
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -90,6 +91,20 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var activeLetter by remember { mutableStateOf<Char?>(null) }
     var showOverlay by remember { mutableStateOf(false) }
     var releaseJob by remember { mutableStateOf<Job?>(null) }
+
+    BackHandler(enabled = showSearchFieldSafe(query, searchMode)) {
+        query = ""
+        searchMode = false
+        keyboard?.hide()
+    }
+
+    fun showSearchFieldSafe(): Boolean = searchMode || query.isNotBlank()
+
+    BackHandler(enabled = showSearchFieldSafe()) {
+        query = ""
+        searchMode = false
+        keyboard?.hide()
+    }
 
     LaunchedEffect(searchMode) {
         if (searchMode) {
@@ -183,6 +198,18 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 .padding(start = 16.dp, end = 64.dp)
         ) {
             Spacer(Modifier.height(24.dp))
+
+            if (!showSearchField) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    IconButton(onClick = { showSettings = true }) {
+                        Icon(Icons.Default.Settings, contentDescription = "Налаштування", tint = Color.White)
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+            }
 
             if (showSearchField) {
                 Row(

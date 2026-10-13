@@ -651,7 +651,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                     vm.loadRecentTasks()
                 },
                 showRecentButton = settings.showRecentButton,
-                onSwipeUp = { showRecent = true },
+                onSwipeUp = {
+                    if (settings.showRecentButton) {
+                        showRecent = true
+                        vm.loadRecentTasks()
+                    }
+                },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
         }

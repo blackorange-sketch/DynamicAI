@@ -3,6 +3,7 @@ package com.dynamicai.launcher
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.dynamicai.launcher.command.Command
 import com.dynamicai.launcher.command.CommandExecutor
 import com.dynamicai.launcher.command.CommandParser
 import com.dynamicai.launcher.command.CommandResult
@@ -59,6 +60,11 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleDock(pkg: String) {
         dockStorage.toggle(pkg)
         _dockPkgs.value = dockStorage.getDockApps()
+    }
+
+    fun isCommand(text: String): Boolean {
+        val cmd = parser.parse(text)
+        return cmd !is Command.Unknown
     }
 
     fun executeCommand(text: String) {

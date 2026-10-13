@@ -30,9 +30,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -58,7 +60,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MaterialTheme {
+            val ctx = LocalContext.current
+            val colorScheme = if (android.os.Build.VERSION.SDK_INT >= 31) {
+                androidx.compose.material3.dynamicDarkColorScheme(ctx)
+            } else {
+                androidx.compose.material3.darkColorScheme()
+            }
+            MaterialTheme(colorScheme = colorScheme) {
                 HomeScreen()
             }
         }
@@ -82,6 +90,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var activeLetter by remember { mutableStateOf<Char?>(null) }
     var showOverlay by remember { mutableStateOf(false) }
     var releaseJob by remember { mutableStateOf<Job?>(null) }
+    var showSettings by remember { mutableStateOf(false) }
 
     fun submit(text: String) {
         if (text.isBlank()) return
@@ -162,7 +171,18 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         cursorBrush = SolidColor(Color.White),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { submit(query) }),
+                        keyboardActions = KeyboardActions(onDone = {
+                            if (query.isNotBlank()) {
+                                when {
+                                    vm.isCommand(query) -> submit(query)
+                                    filtered.isNotEmpty() -> {
+                                        vm.launch(filtered.first().packageName)
+                                        query = ""
+                                    }
+                                    else -> submit(query)
+                                }
+                            }
+                        }),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp),
@@ -176,6 +196,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 }
                 IconButton(onClick = { startVoice() }) {
                     Icon(Icons.Default.Mic, contentDescription = "Голос", tint = Color.White)
+                }
+                IconButton(onClick = { showSettings = true }) {
+                    Icon(Icons.Default.Settings, contentDescription = "Налаштування", tint = Color.White)
                 }
                 if (query.isNotBlank()) {
                     IconButton(onClick = { submit(query) }) {
@@ -335,6 +358,35 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                 apps = dockApps,
                 onLaunch = { vm.launch(it) },
                 modifier = Modifier.align(Alignment.BottomCenter)
+            )
+        }
+
+        if (showSettings) {
+            AlertDialog(
+                onDismissRequest = { showSettings = false },
+                title = { Text("Налаштування", color = Color.White) },
+                text = {
+                    Column {
+                        TextButton(onClick = {
+                            vm.clearHistory()
+                            showSettings = false
+                        }) {
+                            Text("Очистити історію команд", color = Color.White)
+                        }
+                        Text(
+                            "DynamicAI · ${com.dynamicai.launcher.BuildConfig.VERSION_NAME}",
+                            color = Color.Gray,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(top = 12.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showSettings = false }) {
+                        Text("OK", color = Color.White)
+                    }
+                },
+                containerColor = Color(0xFF1A1A1A)
             )
         }
 

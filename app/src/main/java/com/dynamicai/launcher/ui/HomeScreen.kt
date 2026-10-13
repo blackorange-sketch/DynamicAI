@@ -1120,16 +1120,26 @@ private fun MenuItem(label: String, onClick: () -> Unit) {
 @Composable
 fun SuggestionActionRow(s: Suggestion.Action, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.08f),
+                        Color.White.copy(alpha = 0.02f)
+                    )
+                )
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF2A2A2A)),
-            contentAlignment = Alignment.Center
-        ) { Icon(Icons.Default.Bolt, null, tint = Color(0xFF64B5F6)) }
-        Spacer(Modifier.width(16.dp))
+        GlassCircleIcon(Icons.Default.Bolt, Color(0xFF64B5F6))
+        Spacer(Modifier.width(14.dp))
         Column {
-            Text(s.label, color = Color.White, fontSize = 17.sp)
+            Text(s.label, color = Color.White, fontSize = 16.sp)
             s.subtitle?.let { Text(it, color = Color.Gray, fontSize = 12.sp) }
         }
     }
@@ -1138,31 +1148,51 @@ fun SuggestionActionRow(s: Suggestion.Action, onClick: () -> Unit) {
 @Composable
 fun SuggestionSettingRow(s: Suggestion.Setting, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.08f),
+                        Color.White.copy(alpha = 0.02f)
+                    )
+                )
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF2A2A2A)),
-            contentAlignment = Alignment.Center
-        ) { Icon(Icons.Default.Settings, null, tint = Color(0xFFB0BEC5)) }
-        Spacer(Modifier.width(16.dp))
-        Text(s.label, color = Color.White, fontSize = 17.sp)
+        GlassCircleIcon(Icons.Default.Settings, Color(0xFFB0BEC5))
+        Spacer(Modifier.width(14.dp))
+        Text(s.label, color = Color.White, fontSize = 16.sp)
     }
 }
 
 @Composable
 fun SuggestionContactRow(s: Suggestion.Contact, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.08f),
+                        Color.White.copy(alpha = 0.02f)
+                    )
+                )
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF2A2A2A)),
-            contentAlignment = Alignment.Center
-        ) { Icon(Icons.Default.Person, null, tint = Color(0xFF81C784)) }
-        Spacer(Modifier.width(16.dp))
+        GlassCircleIcon(Icons.Default.Person, Color(0xFF81C784))
+        Spacer(Modifier.width(14.dp))
         Column {
-            Text(s.name, color = Color.White, fontSize = 17.sp)
+            Text(s.name, color = Color.White, fontSize = 16.sp)
             Text(s.subtitle, color = Color.Gray, fontSize = 12.sp)
         }
     }

@@ -79,7 +79,7 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
-        android.util.Log.d("FloatingDock", "onCreate start")
+        log("onCreate start")
         super.onCreate()
         try {
             savedStateController.performAttach()
@@ -87,7 +87,7 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             lifecycleRegistry.currentState = Lifecycle.State.RESUMED
 
             val loaded = settingsStorage.load()
-            android.util.Log.d("FloatingDock", "Loaded settings: $loaded")
+            log("Loaded settings: $loaded")
             settingsState.value = loaded
             applicationContext.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
                 .registerOnSharedPreferenceChangeListener(prefsListener)
@@ -104,7 +104,7 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
                 }
             }
         } catch (t: Throwable) {
-            android.util.Log.e("FloatingDock", "onCreate failed", t)
+            log("onCreate failed: ${t.message}")
             stopSelf()
         }
     }
@@ -112,7 +112,7 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
     override fun onDestroy() {
-        android.util.Log.d("FloatingDock", "onDestroy")
+        log("onDestroy")
         try {
             applicationContext.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
                 .unregisterOnSharedPreferenceChangeListener(prefsListener)
@@ -168,7 +168,7 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             applyPosition(settingsStorage.load())
         }
 
-        android.util.Log.d("FloatingDock", "addView: type=${params.type} flags=${params.flags} gravity=${params.gravity} x=${params.x} y=${params.y}")
+        log("addView: type=${params.type} flags=${params.flags} gravity=${params.gravity} x=${params.x} y=${params.y}")
         windowManager.addView(dockView, params)
     }
 
@@ -179,7 +179,7 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
         // Зміщення від центру: -400..+400 px (безпечний діапазон)
         val pct = s.overlayOffsetYPercent.coerceIn(0, 100)
         params.y = ((pct - 50) * 8).coerceIn(-400, 400)
-        android.util.Log.d("FloatingDock", "applyPosition: pct=$pct y=${params.y} gravity=${params.gravity}")
+        log("applyPosition: pct=$pct y=${params.y} gravity=${params.gravity}")
     }
 
     private fun updateLayoutParams(s: LauncherSettings) {
@@ -188,7 +188,7 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
             applyPosition(s)
             if (::dockView.isInitialized) windowManager.updateViewLayout(dockView, params)
         } catch (t: Throwable) {
-            android.util.Log.e("FloatingDock", "updateLayoutParams", t)
+            log("updateLayoutParams: ${t.message}")
         }
     }
 
@@ -218,19 +218,24 @@ class FloatingDockService : Service(), LifecycleOwner, SavedStateRegistryOwner {
 
     companion object {
         const val NOTIF_ID = 1001
+        @Volatile var lastLog: String = "—"
+        fun log(msg: String) {
+            lastLog = msg
+            log(msg)
+        }
         fun start(ctx: Context) {
-            android.util.Log.d("FloatingDock", "start() called")
+            log("start() called")
             try {
                 val i = Intent(ctx, FloatingDockService::class.java)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    android.util.Log.d("FloatingDock", "calling startForegroundService")
+                    log("calling startForegroundService")
                     ctx.startForegroundService(i)
                 } else {
-                    android.util.Log.d("FloatingDock", "calling startService")
+                    log("calling startService")
                     ctx.startService(i)
                 }
             } catch (t: Throwable) {
-                android.util.Log.e("FloatingDock", "start() failed", t)
+                log("start() failed: ${t.message}")
             }
         }
         fun stop(ctx: Context) {

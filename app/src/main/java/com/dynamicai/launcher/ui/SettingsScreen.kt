@@ -96,8 +96,8 @@ fun SettingsScreen(
         Section("Плаваючий док")
         val ctxLocal = LocalContext.current
         Text(
-            "permission=$overlayPermissionGranted active=$overlayActive",
-            color = Color.Yellow, fontSize = 12.sp,
+            "perm=$overlayPermissionGranted active=$overlayActive\nLog: ${com.dynamicai.launcher.overlay.FloatingDockService.lastLog}",
+            color = Color.Yellow, fontSize = 11.sp,
             modifier = Modifier.padding(horizontal = 24.dp)
         )
         if (!overlayPermissionGranted) {

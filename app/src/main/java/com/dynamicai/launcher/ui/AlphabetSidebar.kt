@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,10 +41,15 @@ fun AlphabetSidebar(
     // Індекс активної літери для розрахунку хвилі
     val activeIndex = letters.indexOf(activeLetter).takeIf { it >= 0 }
 
+    val density = LocalDensity.current
+    val paddingPx = with(density) { 24.dp.toPx() }
+
     fun letterAtOffset(y: Float): Char? {
         if (sidebarHeight <= 0f || letters.isEmpty()) return null
-        val localY = y
-        val rel = (localY / sidebarHeight).coerceIn(0f, 0.9999f)
+        val innerH = sidebarHeight - paddingPx * 2f
+        if (innerH <= 0f) return null
+        val localY = (y - paddingPx).coerceIn(0f, innerH - 0.001f)
+        val rel = localY / innerH
         val idx = (rel * letters.size).toInt().coerceIn(0, letters.size - 1)
         return letters[idx]
     }
@@ -90,7 +96,6 @@ fun AlphabetSidebar(
             modifier = Modifier
                 .fillMaxHeight()
                 .padding(vertical = 24.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             letters.forEachIndexed { index, letter ->
@@ -134,17 +139,24 @@ fun AlphabetSidebar(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .offset(x = xOffset)
-                        .size(18.dp)
-                        .scale(scale)
-                        .clip(CircleShape)
-                        .background(if (isActive) Color.White else Color.Transparent)
+                        .fillMaxWidth()
+                        .weight(1f)
                 ) {
-                    Text(
-                        text = letter.toString(),
-                        color = if (isActive) Color.Black else Color.White.copy(alpha = (1f - distance * 0.15f).coerceIn(0.5f, 1f)),
-                        fontSize = 11.sp
-                    )
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .offset(x = xOffset)
+                            .size(18.dp)
+                            .scale(scale)
+                            .clip(CircleShape)
+                            .background(if (isActive) Color.White else Color.Transparent)
+                    ) {
+                        Text(
+                            text = letter.toString(),
+                            color = if (isActive) Color.Black else Color.White.copy(alpha = (1f - distance * 0.15f).coerceIn(0.5f, 1f)),
+                            fontSize = 11.sp
+                        )
+                    }
                 }
             }
         }

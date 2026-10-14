@@ -129,7 +129,7 @@ class CommandParser {
             if (app.isNotBlank()) {
                 return Command.Compound(
                     listOf(Command.OpenApp(app), Command.MediaControl("play")),
-                    delayMs = 1200L
+                    delayMs = 2500L
                 )
             }
         }

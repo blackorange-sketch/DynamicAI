@@ -664,7 +664,7 @@ class CommandExecutor(private val context: Context) {
                     launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     try { context.startActivity(launch) } catch (_: Throwable) {}
                     bgScope.launch {
-                        delay(1200)
+                        delay(2500)
                         try { mediaController.play() } catch (_: Throwable) {}
                     }
                     return CommandResult.Success("Запускаю музику")

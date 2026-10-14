@@ -65,7 +65,7 @@ class LlmAgent(private val engine: LlmEngine) {
             when {
                 cmds.isEmpty() -> null
                 cmds.size == 1 -> cmds.first()
-                else -> Command.Compound(cmds, delayMs = 1000L)
+                else -> Command.Compound(cmds, delayMs = 1800L)
             }
         } catch (_: Throwable) { null }
     }

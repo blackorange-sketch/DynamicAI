@@ -1,5 +1,7 @@
 package com.dynamicai.launcher
 
+import com.dynamicai.launcher.voice.WakeWordService
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -26,6 +28,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            // WakeWord: старт/стоп за налаштуванням
+            val wakeSettings = remember { com.dynamicai.launcher.data.SettingsStorage(applicationContext).load() }
+            androidx.compose.runtime.LaunchedEffect(wakeSettings.wakeWordEnabled) {
+                if (wakeSettings.wakeWordEnabled) {
+                    com.dynamicai.launcher.voice.WakeWordService.start(applicationContext)
+                } else {
+                    com.dynamicai.launcher.voice.WakeWordService.stop(applicationContext)
+                }
+            }
+
             val ctx = LocalContext.current
             val baseScheme = if (android.os.Build.VERSION.SDK_INT >= 31) {
                 dynamicDarkColorScheme(ctx)

@@ -50,25 +50,45 @@ class BluetoothController(private val context: Context) {
                 }
 
             // Створюємо AttributionSource (Android 12+)
+            val asClass = try {
+                Class.forName("android.content.AttributionSource")
+            } catch (_: Throwable) { null }
+
             val attributionSourceObj: Any? = try {
                 val asBuilderClass = Class.forName("android.content.AttributionSource\$Builder")
-                val asClass = Class.forName("android.content.AttributionSource")
-                val builder = asBuilderClass.getConstructor(
-                    Context::class.java,
-                    String::class.java,
-                    asClass,
-                    String::class.java
-                ).newInstance(context, "com.android.shell", null, null)
-                val buildMethod = asBuilderClass.getMethod("build")
-                buildMethod.invoke(builder)
+                
+                // Пробуємо кілька конструкторів
+                val builder: Any? = try {
+                    // Конструктор 1: (Context, String)
+                    val c1 = asBuilderClass.getConstructor(Context::class.java, String::class.java)
+                    c1.newInstance(context, "com.android.shell")
+                } catch (_: Throwable) {
+                    try {
+                        // Конструктор 2: (Context, String, String)
+                        val c2 = asBuilderClass.getConstructor(
+                            Context::class.java,
+                            String::class.java,
+                            String::class.java
+                        )
+                        c2.newInstance(context, "com.android.shell", null)
+                    } catch (_: Throwable) {
+                        null
+                    }
+                }
+                
+                if (builder == null) {
+                    Log.d(TAG, "AttributionSource Builder not created")
+                    null
+                } else {
+                    val buildMethod = asBuilderClass.getMethod("build")
+                    val result = buildMethod.invoke(builder)
+                    Log.d(TAG, "AttributionSource created: ${result?.javaClass?.name}")
+                    result
+                }
             } catch (t: Throwable) {
                 Log.d(TAG, "AttributionSource failed: ${t.message}")
                 null
             }
-            
-            val asClass = try {
-                Class.forName("android.content.AttributionSource")
-            } catch (_: Throwable) { null }
 
             val errors = StringBuilder()
             val method = if (enabled) "enable" else "disable"

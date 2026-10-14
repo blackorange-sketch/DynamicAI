@@ -32,7 +32,7 @@ class VoiceCommandOverlay(private val context: Context) {
         return if (android.os.Build.VERSION.SDK_INT >= 23) Settings.canDrawOverlays(context) else true
     }
 
-    fun show(text: String, onExecute: () -> Unit, onCancel: () -> Unit = {}) {
+    fun show(heard: String, onExecute: () -> Unit, onCancel: () -> Unit = {}) {
         hide()
 
         val lp = LinearLayout.LayoutParams(
@@ -52,7 +52,7 @@ class VoiceCommandOverlay(private val context: Context) {
         }
 
         val label = TextView(context).apply {
-            this.text = "\U0001F3A4 Почув: \"$text\""
+            this.text = "\uD83C\uDFA4 \u041f\u043e\u0447\u0443\u0432: \"$heard\""
             setTextColor(Color.WHITE)
             textSize = 15f
             setPadding(0, 0, 0, dp(10))
@@ -65,7 +65,7 @@ class VoiceCommandOverlay(private val context: Context) {
         }
 
         val cancel = TextView(context).apply {
-            text = "Скасувати"
+            this.text = "\u0421\u043a\u0430\u0441\u0443\u0432\u0430\u0442\u0438"
             setTextColor(Color.parseColor("#FF8A80"))
             textSize = 14f
             setPadding(dp(14), dp(8), dp(14), dp(8))
@@ -78,7 +78,7 @@ class VoiceCommandOverlay(private val context: Context) {
         }
 
         val execute = TextView(context).apply {
-            text = "Виконати"
+            this.text = "\u0412\u0438\u043a\u043e\u043d\u0430\u0442\u0438"
             setTextColor(Color.parseColor("#64B5F6"))
             textSize = 14f
             setPadding(dp(14), dp(8), dp(14), dp(8))

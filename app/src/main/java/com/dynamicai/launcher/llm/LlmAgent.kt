@@ -1,6 +1,7 @@
 package com.dynamicai.launcher.llm
 
 import com.dynamicai.launcher.command.Command
+import org.json.JSONObject
 
 class LlmAgent(private val engine: LlmEngine) {
 
@@ -23,18 +24,21 @@ class LlmAgent(private val engine: LlmEngine) {
   target: 'wifi' | 'bluetooth' | 'mobile_data' | 'airplane' | 'location' | 'nfc' | 'dnd' | 'auto_rotate' | 'battery_saver'
   enabled: true | false
 - create_note(text): нотатка
+- media_play(): відтворити музику
+- media_pause(): пауза
+- media_next(): наступний трек
+- media_prev(): попередній трек
+
+СКЛАДНІ ЗАПИТИ (кілька дій) — повертай масив "steps":
+{"steps": [{"tool": "...", "args": {...}}, {"tool": "...", "args": {...}}]}
 
 Приклади:
-
 "відкрий телеграм" → {"tool": "open_app", "args": {"name": "telegram"}}
 "увімкни ліхтарик" → {"tool": "toggle_flashlight", "args": {}}
 "вимкни wifi" → {"tool": "set_toggle", "args": {"target": "wifi", "enabled": false}}
-"увімкни блютуз" → {"tool": "set_toggle", "args": {"target": "bluetooth", "enabled": true}}
-"авторежим польоту" → {"tool": "set_toggle", "args": {"target": "airplane", "enabled": true}}
-"увімкни геолокацію" → {"tool": "set_toggle", "args": {"target": "location", "enabled": true}}
-"не турбувати" → {"tool": "set_toggle", "args": {"target": "dnd", "enabled": true}}
 "яскравіше" → {"tool": "set_brightness", "args": {"level": "up"}}
-"вимкни автоповорот" → {"tool": "set_toggle", "args": {"target": "auto_rotate", "enabled": false}}
+"відкрий spotify і включи музику" → {"steps": [{"tool": "open_app", "args": {"name": "spotify"}}, {"tool": "media_play", "args": {}}]}
+"увімкни wifi і блютуз" → {"steps": [{"tool": "set_toggle", "args": {"target": "wifi", "enabled": true}}, {"tool": "set_toggle", "args": {"target": "bluetooth", "enabled": true}}]}
 
 Якщо не розумієш — {"tool": "unknown", "args": {}}.
 """.trimIndent()
@@ -44,15 +48,58 @@ class LlmAgent(private val engine: LlmEngine) {
 
         val prompt = "$systemPrompt\n\nЗапит: \"$userText\"\nВідповідь:"
         val raw = engine.complete(prompt) ?: return null
-        return parseToolCall(raw, userText)
+        val cleaned = raw.replace("```json", "").replace("```", "").trim()
+        return parseCompound(cleaned, userText) ?: parseSingleTool(cleaned, userText)
     }
 
-    private fun parseToolCall(raw: String, original: String): Command? {
+    private fun parseCompound(raw: String, original: String): Command? {
+        val json = extractJsonObject(raw) ?: return null
+        return try {
+            val obj = JSONObject(json)
+            val steps = obj.optJSONArray("steps") ?: return null
+            val cmds = mutableListOf<Command>()
+            for (i in 0 until steps.length()) {
+                val stepJson = steps.optJSONObject(i)?.toString() ?: continue
+                parseSingleTool(stepJson, original)?.let { cmds.add(it) }
+            }
+            when {
+                cmds.isEmpty() -> null
+                cmds.size == 1 -> cmds.first()
+                else -> Command.Compound(cmds, delayMs = 1000L)
+            }
+        } catch (_: Throwable) { null }
+    }
+
+    private fun extractJsonObject(raw: String): String? {
+        val start = raw.indexOf('{')
+        if (start < 0) return null
+        var depth = 0
+        var inStr = false
+        var esc = false
+        for (i in start until raw.length) {
+            val c = raw[i]
+            if (inStr) {
+                if (esc) esc = false
+                else if (c == '\\') esc = true
+                else if (c == '"') inStr = false
+            } else when (c) {
+                '"' -> inStr = true
+                '{' -> depth++
+                '}' -> {
+                    depth--
+                    if (depth == 0) return raw.substring(start, i + 1)
+                }
+            }
+        }
+        return null
+    }
+
+    private fun parseSingleTool(json: String, original: String): Command? {
         val toolRe = Regex("\"tool\"\\s*:\\s*\"([^\"]+)\"")
-        val tool = toolRe.find(raw)?.groupValues?.get(1) ?: return null
+        val tool = toolRe.find(json)?.groupValues?.get(1) ?: return null
 
         fun arg(name: String): String? =
-            Regex("\"$name\"\\s*:\\s*\"([^\"]*)\"").find(raw)?.groupValues?.get(1)
+            Regex("\"$name\"\\s*:\\s*\"([^\"]*)\"").find(json)?.groupValues?.get(1)
 
         return when (tool) {
             "open_app" -> arg("name")?.let { Command.OpenApp(it) }
@@ -90,10 +137,14 @@ class LlmAgent(private val engine: LlmEngine) {
             }
             "set_toggle" -> {
                 val target = arg("target") ?: return null
-                val enabledStr = Regex("\"enabled\"\\s*:\\s*(true|false)").find(raw)?.groupValues?.get(1) ?: "false"
+                val enabledStr = Regex("\"enabled\"\\s*:\\s*(true|false)").find(json)?.groupValues?.get(1) ?: "false"
                 Command.SetToggle(target, enabledStr == "true")
             }
             "create_note" -> arg("text")?.let { Command.Note(it) }
+            "media_play" -> Command.MediaControl("play")
+            "media_pause" -> Command.MediaControl("pause")
+            "media_next" -> Command.MediaControl("next")
+            "media_prev" -> Command.MediaControl("prev")
             "unknown" -> Command.Raw(original)
             else -> null
         }

@@ -42,7 +42,7 @@ class CommandParser {
     private val smsRegex = Regex("^(напиши|скинь|відправ|sms|sms to)\\s+(.+?)\\s+(.+)$")
     private val emailRegex = Regex("^(email|mail|пошта)\\s+(\\S+@\\S+)")
 
-    private val mediaPlay = Regex("^(грай|увімкни музику|play|resume|продовж)")
+    private val mediaPlay = Regex("^(грай|увімкни музику|включи музику|play|resume|продовж)")
     private val mediaPause = Regex("^(пауза|зупини музику|pause|stop music)")
     private val mediaNext = Regex("^(наступний|далі|next track|skip)")
     private val mediaPrev = Regex("^(попередній|назад трек|prev|previous)")
@@ -69,7 +69,7 @@ class CommandParser {
     )
 
     private val compoundSplit = Regex(
-        "\\s+(?:і|та|потім|then|and)\\s+|\\s*;\\s*",
+        "\\s+(?:і|та|потім|then|and|плюс)\\s+|\\s*[;&+]\\s*|\\s*,\\s+",
         RegexOption.IGNORE_CASE
     )
 
@@ -84,43 +84,56 @@ class CommandParser {
         val s = input.trim().lowercase()
         if (s.isEmpty()) return Command.Unknown
 
-        // 1. "включи музику в X" -> OpenApp + play
-        musicInApp.matchEntire(s)?.let { m ->
-            val app = m.groupValues[2].trim()
-            if (app.isNotBlank()) {
-                return Command.Compound(
-                    steps = listOf(Command.OpenApp(app), Command.MediaControl("play")),
-                    delayMs = 1200L
-                )
-            }
-        }
-
-        // 2. Загальний Compound по сполучниках
         val parts = s.split(compoundSplit).map { it.trim() }.filter { it.isNotBlank() }
         if (parts.size > 1) {
-            val direct = parts.map { parseSingle(it) }
-            if (direct.all { it !is Command.Raw }) {
-                return Command.Compound(direct)
+            val orig = input.trim()
+            val direct = parts.map { parseSingle(it, orig) }
+            if (direct.none { it is Command.Raw }) {
+                return compoundOf(direct)
             }
             val verb = inheritVerbs.firstOrNull { parts[0].startsWith(it) }
             if (verb != null) {
                 val inherited = mutableListOf<Command>()
                 var allOk = true
                 for ((idx, p) in parts.withIndex()) {
-                    if (idx == 0) { inherited.add(direct[0]); continue }
-                    val c = if (direct[idx] is Command.Raw) parseSingle("$verb $p") else direct[idx]
+                    val c = if (idx == 0) direct[0]
+                            else if (direct[idx] is Command.Raw) parseSingle("$verb $p", orig)
+                            else direct[idx]
                     if (c is Command.Raw) { allOk = false; break }
                     inherited.add(c)
                 }
-                if (allOk) return Command.Compound(inherited)
+                if (allOk) return compoundOf(inherited)
             }
         }
 
-        // 3. Звичайний парсинг
-        return parseSingle(s, original = input.trim())
+        return parseSingle(s, input.trim())
+    }
+
+    private fun compoundOf(cmds: List<Command>): Command {
+        val flat = cmds.flatMap { flatten(it) }
+        return when {
+            flat.isEmpty() -> Command.Unknown
+            flat.size == 1 -> flat.first()
+            else -> Command.Compound(flat)
+        }
+    }
+
+    private fun flatten(c: Command): List<Command> = when (c) {
+        is Command.Compound -> c.steps.flatMap { flatten(it) }
+        else -> listOf(c)
     }
 
     private fun parseSingle(s: String, original: String = s): Command {
+        musicInApp.matchEntire(s)?.let { m ->
+            val app = m.groupValues[2].trim()
+            if (app.isNotBlank()) {
+                return Command.Compound(
+                    listOf(Command.OpenApp(app), Command.MediaControl("play")),
+                    delayMs = 1200L
+                )
+            }
+        }
+
         if (s in flashlightWords) return Command.ToggleFlashlight
         if (s in screenshotWords) return Command.Screenshot
         if (settings.matches(s)) return Command.OpenSettings(null)

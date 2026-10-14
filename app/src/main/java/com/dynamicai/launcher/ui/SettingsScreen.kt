@@ -32,6 +32,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import kotlin.math.roundToInt
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import com.dynamicai.launcher.data.AppRepository
+import com.dynamicai.launcher.model.AppInfo
 
 @Composable
 fun SettingsScreen(
@@ -75,6 +82,35 @@ fun SettingsScreen(
                 Icon(Icons.Default.ArrowBack, "Назад", tint = Color.White)
             }
             Text("Налаштування", color = Color.White, fontSize = 22.sp)
+        }
+
+        val ctx = LocalContext.current
+        var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
+        LaunchedEffect(Unit) { installedApps = AppRepository(ctx).loadCached() }
+
+        GlassSectionHeader("Застосунки за замовчуванням")
+        GlassCard {
+            AppPickerRow("Музика", settings.defaultMusicApp, installedApps, Icons.Default.PlayArrow, Color(0xFF1DB954)) {
+                onSettingsChange(settings.copy(defaultMusicApp = it))
+            }
+            AppPickerRow("Браузер", settings.defaultBrowser, installedApps, Icons.Default.Search, Color(0xFF2196F3)) {
+                onSettingsChange(settings.copy(defaultBrowser = it))
+            }
+            AppPickerRow("Телефон", settings.defaultDialer, installedApps, Icons.Default.Call, Color(0xFF4CAF50)) {
+                onSettingsChange(settings.copy(defaultDialer = it))
+            }
+            AppPickerRow("SMS", settings.defaultSms, installedApps, Icons.Default.Email, Color(0xFF9C27B0)) {
+                onSettingsChange(settings.copy(defaultSms = it))
+            }
+            AppPickerRow("Email", settings.defaultEmail, installedApps, Icons.Default.Email, Color(0xFFF44336)) {
+                onSettingsChange(settings.copy(defaultEmail = it))
+            }
+            AppPickerRow("Карти", settings.defaultMaps, installedApps, Icons.Default.Place, Color(0xFF00BCD4)) {
+                onSettingsChange(settings.copy(defaultMaps = it))
+            }
+            AppPickerRow("Камера", settings.defaultCamera, installedApps, Icons.Default.Star, Color(0xFFFF9800)) {
+                onSettingsChange(settings.copy(defaultCamera = it))
+            }
         }
 
         // ==== Погода ====

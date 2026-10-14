@@ -33,7 +33,14 @@ data class LauncherSettings(
     val weatherUseGps: Boolean = true,
     val weatherLat: Float = 50.4501f,
     val weatherLon: Float = 30.5234f,
-    val cityName: String = ""
+    val cityName: String = "",
+    val defaultMusicApp: String = "",
+    val defaultBrowser: String = "",
+    val defaultSms: String = "",
+    val defaultDialer: String = "",
+    val defaultEmail: String = "",
+    val defaultMaps: String = "",
+    val defaultCamera: String = ""
 )
 
 class SettingsStorage(context: Context) {
@@ -69,7 +76,14 @@ class SettingsStorage(context: Context) {
         weatherUseGps = prefs.getBoolean("weatherUseGps", true),
         weatherLat = prefs.getFloat("weatherLat", 50.4501f),
         weatherLon = prefs.getFloat("weatherLon", 30.5234f),
-        cityName = prefs.getString("cityName", "") ?: ""
+        cityName = prefs.getString("cityName", "") ?: "",
+        defaultMusicApp = prefs.getString("defaultMusicApp", "") ?: "",
+        defaultBrowser = prefs.getString("defaultBrowser", "") ?: "",
+        defaultSms = prefs.getString("defaultSms", "") ?: "",
+        defaultDialer = prefs.getString("defaultDialer", "") ?: "",
+        defaultEmail = prefs.getString("defaultEmail", "") ?: "",
+        defaultMaps = prefs.getString("defaultMaps", "") ?: "",
+        defaultCamera = prefs.getString("defaultCamera", "") ?: ""
     )
 
     fun save(s: LauncherSettings) {
@@ -104,6 +118,13 @@ class SettingsStorage(context: Context) {
             .putFloat("weatherLat", s.weatherLat)
             .putFloat("weatherLon", s.weatherLon)
             .putString("cityName", s.cityName)
+            .putString("defaultMusicApp", s.defaultMusicApp)
+            .putString("defaultBrowser", s.defaultBrowser)
+            .putString("defaultSms", s.defaultSms)
+            .putString("defaultDialer", s.defaultDialer)
+            .putString("defaultEmail", s.defaultEmail)
+            .putString("defaultMaps", s.defaultMaps)
+            .putString("defaultCamera", s.defaultCamera)
             .putLong("updatedAt", System.currentTimeMillis())
             .commit()
     }

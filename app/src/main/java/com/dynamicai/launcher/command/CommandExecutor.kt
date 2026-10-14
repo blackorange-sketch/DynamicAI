@@ -37,6 +37,21 @@ class CommandExecutor(private val context: Context) {
         com.dynamicai.launcher.system.ShizukuManager(context)
     }
 
+    private fun defaultPkg(key: String): String? {
+        val st = com.dynamicai.launcher.data.SettingsStorage(context).load()
+        val pkg = when (key) {
+            "music" -> st.defaultMusicApp
+            "browser" -> st.defaultBrowser
+            "sms" -> st.defaultSms
+            "dialer" -> st.defaultDialer
+            "email" -> st.defaultEmail
+            "maps" -> st.defaultMaps
+            "camera" -> st.defaultCamera
+            else -> ""
+        }
+        return pkg.takeIf { it.isNotBlank() }
+    }
+
     private val bgScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     fun execute(cmd: Command, apps: List<AppInfo>): CommandResult = when (cmd) {
@@ -133,9 +148,17 @@ class CommandExecutor(private val context: Context) {
     }
 
     private fun webSearch(query: String): CommandResult {
-        val intent = Intent(Intent.ACTION_WEB_SEARCH).apply {
-            putExtra("query", query)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val browser = defaultPkg("browser")
+        val intent = if (browser != null) {
+            Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(query))).apply {
+                setPackage(browser)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        } else {
+            Intent(Intent.ACTION_WEB_SEARCH).apply {
+                putExtra("query", query)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
         }
         return try {
             context.startActivity(intent)
@@ -633,6 +656,21 @@ class CommandExecutor(private val context: Context) {
     }
 
     private fun mediaControl(action: String): CommandResult {
+        if (action == "play") {
+            val musicPkg = defaultPkg("music")
+            if (musicPkg != null) {
+                val launch = context.packageManager.getLaunchIntentForPackage(musicPkg)
+                if (launch != null) {
+                    launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    try { context.startActivity(launch) } catch (_: Throwable) {}
+                    bgScope.launch {
+                        delay(1200)
+                        try { mediaController.play() } catch (_: Throwable) {}
+                    }
+                    return CommandResult.Success("Запускаю музику")
+                }
+            }
+        }
         return try {
             val ok = when (action) {
                 "play" -> mediaController.play()

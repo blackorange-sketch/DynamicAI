@@ -24,7 +24,7 @@ class CommandParser {
     private val spotifySearch = Regex("^(spotify|спотифай|спотіфай)\\s+(.+)")
 
     // Питання — "хто", "що", "де", "коли", "як", "чому", "скільки" + "?"
-    private val questionStart = Regex("^(хто|що|де|коли|як|чому|скільки|яка|який|яке|чи\s|розкажи|поясни|who|what|where|when|how|why)\\b.*")
+    private val questionStart = Regex("^(хто|що|де|коли|як|чому|скільки|яка|який|яке|чи |розкажи|поясни|who|what|where|when|how|why)\\b.*")
     private val questionEnd = Regex(".*\\?$")
 
     // Нотатки

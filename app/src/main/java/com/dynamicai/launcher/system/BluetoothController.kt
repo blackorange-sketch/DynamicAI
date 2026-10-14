@@ -49,36 +49,63 @@ class BluetoothController(private val context: Context) {
                     return@withContext false
                 }
 
-            // Пробуємо різні сигнатури
-            val signatures = listOf(
-                Triple("enable", arrayOf(SHELL_PACKAGE), "enable(String)"),
-                Triple("enable", arrayOf(), "enable()"),
-                Triple("enableNoAutoConnect", arrayOf(SHELL_PACKAGE), "enableNoAutoConnect(String)"),
-                Triple("enableNoAutoConnect", arrayOf(), "enableNoAutoConnect()")
-            )
+            // Створюємо AttributionSource для Android 13+
+            val attributionSource = try {
+                val asBuilder = Class.forName("android.content.AttributionSource\$Builder")
+                val asClass = Class.forName("android.content.AttributionSource")
+                val builder = asBuilder.getConstructor(
+                    Context::class.java,
+                    String::class.java,
+                    asClass,
+                    String::class.java
+                ).newInstance(context, context.packageName, null, null)
+                val buildMethod = asBuilder.getMethod("build")
+                val asObj = buildMethod.invoke(builder)
+                // Обгортаємо через asBinder() для передачі через binder
+                val asBinderMethod = asClass.getMethod("asBinder")
+                val asBinder = asBinderMethod.invoke(asObj) as? IBinder
+                Log.d(TAG, "AttributionSource created: $asBinder")
+                asBinder
+            } catch (t: Throwable) {
+                Log.d(TAG, "AttributionSource failed: ${t.message}")
+                null
+            }
 
+            // Список спроб: (method, args)
+            val attempts = mutableListOf<Pair<String, Array<Any?>>>()
+            
             if (enabled) {
-                for ((method, args, name) in signatures) {
-                    try {
-                        val m = btManager.javaClass.getMethod(method, *Array(args.size) { String::class.java })
-                        val result = m.invoke(btManager, *args)
-                        Log.d(TAG, "$name → $result")
-                        if (result == true) return@withContext true
-                    } catch (_: Throwable) {}
+                if (attributionSource != null) {
+                    attempts.add("enable" to arrayOf(SHELL_PACKAGE, attributionSource))
                 }
+                attempts.add("enable" to arrayOf(SHELL_PACKAGE))
+                attempts.add("enableNoAutoConnect" to arrayOf(SHELL_PACKAGE))
+                attempts.add("enable" to arrayOf())
             } else {
-                try {
-                    val m = btManager.javaClass.getMethod("disable", String::class.java)
-                    val result = m.invoke(btManager, SHELL_PACKAGE)
-                    Log.d(TAG, "disable(String) → $result")
-                    if (result == true) return@withContext true
-                } catch (_: Throwable) {}
+                if (attributionSource != null) {
+                    attempts.add("disable" to arrayOf(SHELL_PACKAGE, attributionSource))
+                }
+                attempts.add("disable" to arrayOf(SHELL_PACKAGE))
+                attempts.add("disable" to arrayOf())
+            }
 
+            for ((methodName, args) in attempts) {
                 try {
-                    val m = btManager.javaClass.getMethod("disable")
-                    val result = m.invoke(btManager)
+                    val paramTypes = args.map { arg ->
+                        when (arg) {
+                            is String -> String::class.java
+                            is IBinder -> IBinder::class.java
+                            else -> Any::class.java
+                        }
+                    }.toTypedArray()
+                    
+                    val m = btManager.javaClass.getMethod(methodName, *paramTypes)
+                    val result = m.invoke(btManager, *args)
+                    Log.d(TAG, "$methodName(${args.size} args) → $result")
                     if (result == true) return@withContext true
-                } catch (_: Throwable) {}
+                } catch (t: Throwable) {
+                    Log.d(TAG, "$methodName failed: ${t.cause?.message ?: t.message}")
+                }
             }
 
             lastError = "всі сигнатури провалились"

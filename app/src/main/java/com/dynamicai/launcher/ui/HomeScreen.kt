@@ -674,7 +674,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                             id = id,
                             label = f.name,
                             icon = firstApp?.icon,
-                            isFolder = true
+                            isFolder = true,
+                            bitmap = firstApp?.bitmap
                         )
                     } else {
                         val a = apps.firstOrNull { it.packageName == id } ?: return@mapNotNull null
@@ -682,7 +683,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                             id = id,
                             label = a.label,
                             icon = a.icon,
-                            isFolder = false
+                            isFolder = false,
+                            bitmap = a.bitmap
                         )
                     }
                 }

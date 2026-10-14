@@ -81,7 +81,7 @@ private fun FolderCard(
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             apps.take(4).forEach { app ->
                 androidx.compose.material3.Icon(
-                    bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
+                    bitmap = app.bitmap!!.asImageBitmap(),
                     contentDescription = app.label,
                     tint = Color.Unspecified,
                     modifier = Modifier.size(iconSizeDp.dp)

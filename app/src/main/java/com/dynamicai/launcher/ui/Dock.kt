@@ -26,7 +26,8 @@ data class DockItem(
     val id: String,
     val label: String,
     val icon: android.graphics.drawable.Drawable?,
-    val isFolder: Boolean
+    val isFolder: Boolean,
+    val bitmap: android.graphics.Bitmap? = null
 )
 
 @Composable
@@ -139,9 +140,9 @@ fun Dock(
                         .clickable { onLaunch(item) },
                     contentAlignment = Alignment.Center
                 ) {
-                    item.icon?.let {
+                    item.bitmap?.let {
                         Icon(
-                            bitmap = it.toBitmap(96, 96).asImageBitmap(),
+                            bitmap = it.asImageBitmap(),
                             contentDescription = item.label,
                             tint = Color.Unspecified,
                             modifier = Modifier.size((iconSizeDp * 0.6f).dp)
@@ -149,7 +150,7 @@ fun Dock(
                     }
                 }
             } else {
-                item.icon?.let {
+                item.bitmap?.let {
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -176,7 +177,7 @@ fun Dock(
                             .clickable { onLaunch(item) }
                     ) {
                         Icon(
-                            bitmap = it.toBitmap(96, 96).asImageBitmap(),
+                            bitmap = it.asImageBitmap(),
                             contentDescription = item.label,
                             tint = Color.Unspecified,
                             modifier = Modifier.size(iconSizeDp.dp)

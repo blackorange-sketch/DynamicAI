@@ -172,7 +172,7 @@ fun FolderManagerScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    bitmap = app.icon.toBitmap(72, 72).asImageBitmap(),
+                                    bitmap = app.bitmap!!.asImageBitmap(),
                                     contentDescription = app.label,
                                     modifier = Modifier.size(36.dp),
                                     tint = Color.Unspecified
@@ -280,7 +280,7 @@ private fun FolderCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
-                                bitmap = app.icon.toBitmap(72, 72).asImageBitmap(),
+                                bitmap = app.bitmap!!.asImageBitmap(),
                                 contentDescription = app.label,
                                 modifier = Modifier.size(32.dp),
                                 tint = Color.Unspecified

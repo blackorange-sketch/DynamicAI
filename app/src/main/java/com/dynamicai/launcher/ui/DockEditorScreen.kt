@@ -97,7 +97,7 @@ fun DockEditorScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
+                        bitmap = app.bitmap!!.asImageBitmap(),
                         contentDescription = null,
                         modifier = Modifier.size(40.dp),
                         tint = Color.Unspecified

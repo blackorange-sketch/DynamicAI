@@ -109,7 +109,7 @@ private fun FolderAppIcon(
         contentAlignment = Alignment.Center
     ) {
         Icon(
-            bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
+            bitmap = app.bitmap!!.asImageBitmap(),
             contentDescription = app.label,
             tint = Color.Unspecified,
             modifier = Modifier.size(sizeDp.dp)

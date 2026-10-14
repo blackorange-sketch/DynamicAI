@@ -24,11 +24,11 @@ class CommandParser {
     private val spotifySearch = Regex("^(spotify|спотифай|спотіфай)\\s+(.+)")
 
     // Питання — "хто", "що", "де", "коли", "як", "чому", "скільки" + "?"
-    private val questionStart = Regex("^(хто|що|де|коли|як|чому|скільки|яка|який|яке|чи\s|розкажи|поясни|who|what|where|when|how|why)\b.*")
-    private val questionEnd = Regex(".*\?$")
+    private val questionStart = Regex("^(хто|що|де|коли|як|чому|скільки|яка|який|яке|чи\s|розкажи|поясни|who|what|where|when|how|why)\\b.*")
+    private val questionEnd = Regex(".*\\?$")
 
     // Нотатки
-    private val noteRegex = Regex("^(нотатка|запиши|занотуй|note|запам'ятай)\s+(.+)")
+    private val noteRegex = Regex("^(нотатка|запиши|занотуй|note|запам'ятай)\\s+(.+)")
 
     // Скріншот
     private val screenshotWords = setOf(

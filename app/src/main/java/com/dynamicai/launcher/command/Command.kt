@@ -15,6 +15,6 @@ sealed class Command {
     data class Raw(val text: String) : Command()
     data class AskQuestion(val query: String) : Command()
     data class Note(val text: String) : Command()
-    data class Screenshot : Command()
+    object Screenshot : Command()
     data class SetBrightness(val level: Int) : Command()
 }

@@ -347,4 +347,51 @@ class CommandExecutor(private val context: Context) {
         } catch (_: Exception) {}
     }
 
+
+    private fun createNote(text: String): CommandResult {
+        return try {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, text)
+                putExtra(Intent.EXTRA_SUBJECT, "DynamicAI Note")
+            }
+            val chooser = Intent.createChooser(intent, "Зберегти нотатку").apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(chooser)
+            CommandResult.Success("Нотатка: $text")
+        } catch (e: Exception) {
+            CommandResult.Error("Помилка нотатки: ${e.message}")
+        }
+    }
+
+    private fun takeScreenshot(): CommandResult {
+        return CommandResult.Error("Скріншот потребує MediaProjection — у розробці")
+    }
+
+    private fun setBrightness(level: Int): CommandResult {
+        return try {
+            val resolver = context.contentResolver
+            val current = android.provider.Settings.System.getInt(
+                resolver,
+                android.provider.Settings.System.SCREEN_BRIGHTNESS,
+                128
+            )
+            val target = when {
+                level < 0 -> (current - 30).coerceAtLeast(0)
+                level >= 100 -> 255
+                level == 1 -> (current + 30).coerceAtMost(255)
+                else -> level
+            }
+            android.provider.Settings.System.putInt(
+                resolver,
+                android.provider.Settings.System.SCREEN_BRIGHTNESS,
+                target
+            )
+            CommandResult.Success("Яскравість: $target/255")
+        } catch (e: Exception) {
+            CommandResult.Error("Яскравість: потрібен дозвіл WRITE_SETTINGS")
+        }
+    }
+
 }

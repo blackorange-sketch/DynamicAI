@@ -109,7 +109,7 @@ class WakeWordService : Service() {
                         val text = partialResults
                             ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                             ?.firstOrNull() ?: return
-                        // нічого не робимо — чекаємо фінального результату
+                        Log.d(TAG, "partial: \"$text\"")
                     }
 
                     override fun onResults(results: Bundle?) {
@@ -121,7 +121,19 @@ class WakeWordService : Service() {
                     }
 
                     override fun onError(error: Int) {
-                        Log.d(TAG, "onError: $error")
+                        val name = when (error) {
+                            SpeechRecognizer.ERROR_AUDIO -> "AUDIO"
+                            SpeechRecognizer.ERROR_CLIENT -> "CLIENT"
+                            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "PERMISSIONS"
+                            SpeechRecognizer.ERROR_NETWORK -> "NETWORK"
+                            SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "NETWORK_TIMEOUT"
+                            SpeechRecognizer.ERROR_NO_MATCH -> "NO_MATCH"
+                            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "BUSY"
+                            SpeechRecognizer.ERROR_SERVER -> "SERVER"
+                            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "SPEECH_TIMEOUT"
+                            else -> error.toString()
+                        }
+                        Log.d(TAG, "onError: $error ($name)")
                         scheduleRestart(500)
                     }
                 })
@@ -130,12 +142,20 @@ class WakeWordService : Service() {
 
         listening = true
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            // WEB_SEARCH краще для коротких команд, ніж FREE_FORM
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
+            // спробуй ru-RU якщо uk-UA не розпізнає
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "uk-UA")
+            putExtra(RecognizerIntent.EXTRA_ONLY_RETURN_LANGUAGE_PREFERENCE, false)
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false)
+            // Довші паузи — користувач має встигнути договорити
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 2000L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 2500L)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS, 500L)
         }
         try { recognizer?.startListening(intent) } catch (t: Throwable) {
             Log.w(TAG, "startListening: ${t.message}")

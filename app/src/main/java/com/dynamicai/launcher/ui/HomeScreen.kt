@@ -1015,7 +1015,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Icon(
-                                        bitmap = app.icon.toBitmap(72, 72).asImageBitmap(),
+                                        bitmap = (app.bitmap ?: app.icon.toBitmap(72, 72)).asImageBitmap(),
                                         contentDescription = null,
                                         modifier = Modifier.size(32.dp),
                                         tint = Color.Unspecified
@@ -1071,7 +1071,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
+                                    bitmap = (app.bitmap ?: app.icon.toBitmap(96, 96)).asImageBitmap(),
                                     contentDescription = app.label,
                                     modifier = Modifier.size(40.dp),
                                     tint = Color.Unspecified
@@ -1123,7 +1123,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
+                                    bitmap = (app.bitmap ?: app.icon.toBitmap(96, 96)).asImageBitmap(),
                                     contentDescription = app.label,
                                     modifier = Modifier.size(36.dp),
                                     tint = Color.Unspecified
@@ -1360,7 +1360,7 @@ fun AppRow(
                 )
         ) {
             Icon(
-                bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
+                bitmap = (app.bitmap ?: app.icon.toBitmap(96, 96)).asImageBitmap(),
                 contentDescription = app.label,
                 modifier = Modifier.size(iconSizeDp.dp),
                 tint = Color.Unspecified

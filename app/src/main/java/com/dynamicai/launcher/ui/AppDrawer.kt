@@ -15,9 +15,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -35,8 +32,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,9 +53,6 @@ fun AppDrawer(
     onDismiss: () -> Unit,
     visible: Boolean
 ) {
-    var query by remember { mutableStateOf("") }
-    var filtered by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
-
     val haptic = LocalHapticFeedback.current
     val gridState = rememberLazyGridState()
     val scope = rememberCoroutineScope()
@@ -70,18 +62,10 @@ fun AppDrawer(
     var releaseJob by remember { mutableStateOf<Job?>(null) }
     var scrollJob by remember { mutableStateOf<Job?>(null) }
 
-    LaunchedEffect(apps, query) {
-        filtered = if (query.isBlank()) apps
-        else apps
-            .map { it to FuzzyMatcher.score(it.label, query) }
-            .filter { it.second >= 35 }
-            .sortedByDescending { it.second }
-            .map { it.first }
-    }
+    val filtered: List<AppInfo> = apps
 
-    val letters = remember(filtered, query) {
-        if (query.isNotBlank()) emptyList()
-        else filtered
+    val letters = remember(filtered) {
+        filtered
             .mapNotNull { it.label.firstOrNull()?.uppercaseChar() }
             .filter { it.isLetter() }
             .distinct()
@@ -119,26 +103,7 @@ fun AppDrawer(
                     .navigationBarsPadding()
                     .padding(start = 12.dp, end = 48.dp)
             ) {
-                Spacer(Modifier.height(8.dp))
-
-                // Пошук — LiquidSearchBar
-                LiquidSearchBar(
-                    query = query,
-                    onQueryChange = { query = it },
-                    onSearch = {
-                        if (filtered.isNotEmpty()) {
-                            onLaunch(filtered.first())
-                            onDismiss()
-                        }
-                    },
-                    onVoice = {
-                        // Голос у меню — не реалізовано
-                    },
-                    onClose = onDismiss,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-
-                HorizontalDivider(color = Color.DarkGray)
+                Spacer(Modifier.height(12.dp))
 
                 // Ручка для свайпу
                 Box(
@@ -175,7 +140,7 @@ fun AppDrawer(
             }
 
             // Стрічка букв
-            if (letters.isNotEmpty() && query.isBlank()) {
+            if (letters.isNotEmpty()) {
                 AlphabetSidebar(
                     letters = letters,
                     activeLetter = activeLetter,
@@ -270,7 +235,7 @@ private fun AppGridItem(
                 )
         ) {
             Icon(
-                bitmap = app.icon.toBitmap(96, 96).asImageBitmap(),
+                bitmap = (app.bitmap ?: app.icon.toBitmap(96, 96)).asImageBitmap(),
                 contentDescription = app.label,
                 modifier = Modifier.size(iconSizeDp.dp),
                 tint = Color.Unspecified

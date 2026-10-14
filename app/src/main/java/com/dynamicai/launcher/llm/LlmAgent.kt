@@ -5,37 +5,38 @@ import com.dynamicai.launcher.command.Command
 class LlmAgent(private val engine: LlmEngine) {
 
     private val systemPrompt = """
-Ти — локальний AI-агент у лаунчері Android. Твоє завдання — перетворювати
-запити користувача у виклики функцій (tool calls).
+Ти — локальний AI-агент у лаунчері Android. Перетворюй запити у виклики функцій.
 
-ВАЖЛИВО: відповідай ЛИШЕ у форматі JSON, без жодного тексту навколо:
+ВАЖЛИВО: відповідай ЛИШЕ у форматі JSON:
 {"tool": "назва", "args": {"параметр": "значення"}}
 
-Доступні функції:
-- open_app(name): відкрити застосунок. name — назва (telegram, youtube, camera)
-- web_search(query): пошук в інтернеті
-- call(name): подзвонити контакту
+Функції:
+- open_app(name): відкрити застосунок
+- web_search(query): пошук Google
+- call(name): подзвонити
 - set_alarm(time, label): будильник
 - set_timer(duration): таймер
 - toggle_flashlight(): ліхтарик
-- open_settings(section): налаштування
 - set_volume(level): гучність ('up', 'down', 'max', 'mute')
+- set_brightness(level): яскравість ('up', 'down', 'max', 'auto_on', 'auto_off')
+- set_toggle(target, enabled): увімкнути/вимкнути
+  target: 'wifi' | 'bluetooth' | 'mobile_data' | 'airplane' | 'location' | 'nfc' | 'dnd' | 'auto_rotate' | 'battery_saver'
+  enabled: true | false
+- create_note(text): нотатка
 
 Приклади:
 
-Запит: "відкрий телеграм"
-Відповідь: {"tool": "open_app", "args": {"name": "telegram"}}
+"відкрий телеграм" → {"tool": "open_app", "args": {"name": "telegram"}}
+"увімкни ліхтарик" → {"tool": "toggle_flashlight", "args": {}}
+"вимкни wifi" → {"tool": "set_toggle", "args": {"target": "wifi", "enabled": false}}
+"увімкни блютуз" → {"tool": "set_toggle", "args": {"target": "bluetooth", "enabled": true}}
+"авторежим польоту" → {"tool": "set_toggle", "args": {"target": "airplane", "enabled": true}}
+"увімкни геолокацію" → {"tool": "set_toggle", "args": {"target": "location", "enabled": true}}
+"не турбувати" → {"tool": "set_toggle", "args": {"target": "dnd", "enabled": true}}
+"яскравіше" → {"tool": "set_brightness", "args": {"level": "up"}}
+"вимкни автоповорот" → {"tool": "set_toggle", "args": {"target": "auto_rotate", "enabled": false}}
 
-Запит: "увімкни ліхтарик"
-Відповідь: {"tool": "toggle_flashlight", "args": {}}
-
-Запит: "постав будильник на 7:30"
-Відповідь: {"tool": "set_alarm", "args": {"time": "7:30", "label": ""}}
-
-Запит: "гучніше"
-Відповідь: {"tool": "set_volume", "args": {"level": "up"}}
-
-Якщо запит не підходить до жодної функції — відповідай {"tool": "unknown", "args": {}}.
+Якщо не розумієш — {"tool": "unknown", "args": {}}.
 """.trimIndent()
 
     suspend fun resolve(userText: String): Command? {
@@ -76,6 +77,24 @@ class LlmAgent(private val engine: LlmEngine) {
                     }
                 )
             }
+            "set_brightness" -> {
+                val lvl = arg("level") ?: return null
+                when (lvl.lowercase()) {
+                    "up" -> Command.SetBrightness(-1)
+                    "down" -> Command.SetBrightness(-2)
+                    "max" -> Command.SetBrightness(255)
+                    "auto_on" -> Command.SetToggle("auto_brightness", true)
+                    "auto_off" -> Command.SetToggle("auto_brightness", false)
+                    else -> Command.SetBrightness(lvl.toIntOrNull() ?: 128)
+                }
+            }
+            "set_toggle" -> {
+                val target = arg("target") ?: return null
+                val enabledStr = Regex("\"enabled\"\s*:\s*(true|false)").find(raw)
+                    ?.groupValues?.get(1) ?: "false"
+                Command.SetToggle(target, enabledStr == "true")
+            }
+            "create_note" -> arg("text")?.let { Command.Note(it) }
             "unknown" -> Command.Raw(original)
             else -> null
         }

@@ -20,6 +20,9 @@ class CommandExecutor(private val context: Context) {
     private val systemManager by lazy {
         com.dynamicai.launcher.system.SystemSettingsManager(context)
     }
+    private val quickManager by lazy {
+        com.dynamicai.launcher.system.QuickSettingsManager(context)
+    }
     private val shizukuManager by lazy {
         com.dynamicai.launcher.system.ShizukuManager(context)
     }
@@ -34,6 +37,7 @@ class CommandExecutor(private val context: Context) {
         is Command.DeepLink -> openDeepLink(cmd.app, cmd.target)
         is Command.SearchInApp -> searchInApp(cmd.packageKeyword, cmd.query)
         is Command.SetVolume -> changeVolume(cmd.level)
+        is Command.SetToggle -> handleToggle(cmd.target, cmd.enabled)
         Command.ToggleFlashlight -> toggleFlashlight()
         Command.WifiOn -> toggleWifi(true)
         Command.WifiOff -> toggleWifi(false)
@@ -489,6 +493,49 @@ class CommandExecutor(private val context: Context) {
             }
         } catch (e: Exception) {
             CommandResult.Error("DND: ${e.message}")
+        }
+    }
+
+
+    private fun handleToggle(target: String, enabled: Boolean): CommandResult {
+        return try {
+            kotlinx.coroutines.runBlocking {
+                val result = when (target) {
+                    "wifi" -> quickManager.setWifi(enabled)
+                    "bluetooth" -> quickManager.setBluetooth(enabled)
+                    "mobile_data" -> quickManager.setMobileData(enabled)
+                    "airplane" -> quickManager.setAirplaneMode(enabled)
+                    "location" -> quickManager.setLocation(enabled)
+                    "nfc" -> quickManager.setNfc(enabled)
+                    "dnd" -> quickManager.setDnd(enabled)
+                    "auto_rotate" -> quickManager.setAutoRotate(enabled)
+                    "battery_saver" -> quickManager.setBatterySaver(enabled)
+                    "auto_brightness" -> quickManager.setBrightnessAuto(enabled)
+                    else -> com.dynamicai.launcher.system.QuickSettingsManager.Result.failure("Невідомо: $target")
+                }
+                when (result) {
+                    is com.dynamicai.launcher.system.QuickSettingsManager.Result.success -> {
+                        val label = mapOf(
+                            "wifi" to "WiFi",
+                            "bluetooth" to "Bluetooth",
+                            "mobile_data" to "Мобільний інтернет",
+                            "airplane" to "Авіарежим",
+                            "location" to "Геолокація",
+                            "nfc" to "NFC",
+                            "dnd" to "Не турбувати",
+                            "auto_rotate" to "Автоповорот",
+                            "battery_saver" to "Економія батареї",
+                            "auto_brightness" to "Автояскравість"
+                        )[target] ?: target
+                        CommandResult.Success("$label ${if (enabled) "увімкнено" else "вимкнено"}")
+                    }
+                    is com.dynamicai.launcher.system.QuickSettingsManager.Result.failure -> {
+                        CommandResult.Error("${target}: ${result.msg}")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            CommandResult.Error("$target: ${e.message}")
         }
     }
 

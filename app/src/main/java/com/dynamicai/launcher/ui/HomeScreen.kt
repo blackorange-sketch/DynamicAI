@@ -37,6 +37,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
@@ -641,14 +642,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         activeLetter = null
                     }
                 },
-                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight()
+                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().zIndex(10f)
             )
         }
 
         AnimatedVisibility(
             visible = showOverlay && activeLetter != null,
             enter = fadeIn(), exit = fadeOut(),
-            modifier = Modifier.align(Alignment.Center)
+            modifier = Modifier.align(Alignment.Center).zIndex(20f)
         ) {
             Box(
                 contentAlignment = Alignment.Center,

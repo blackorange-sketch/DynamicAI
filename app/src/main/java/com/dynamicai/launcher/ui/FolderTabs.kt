@@ -3,8 +3,6 @@ package com.dynamicai.launcher.ui
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -56,16 +54,14 @@ fun FolderTabs(
     Column(modifier = modifier.fillMaxWidth()) {
         AnimatedVisibility(
             visible = selectedFolder != null,
-            enter = fadeIn(animationSpec = tween(180)) +
-                    expandVertically(
-                        animationSpec = tween(220),
-                        expandFrom = Alignment.Bottom
-                    ),
-            exit = fadeOut(animationSpec = tween(120)) +
-                    shrinkVertically(
-                        animationSpec = tween(180),
-                        shrinkTowards = Alignment.Bottom
-                    )
+            enter = expandVertically(
+                animationSpec = tween(200),
+                expandFrom = Alignment.Bottom
+            ),
+            exit = shrinkVertically(
+                animationSpec = tween(180),
+                shrinkTowards = Alignment.Bottom
+            )
         ) {
             val cols = remember(iconSizeDp) {
                 GridCells.Adaptive(minSize = (iconSizeDp + 28).dp)

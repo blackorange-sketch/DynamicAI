@@ -81,8 +81,8 @@ fun LiquidSearchBar(
                 )
             }
             GlassIconButton(
-                icon = Icons.Default.Search,
-                tint = Color.White,
+                icon = Icons.Default.Mic,
+                tint = Color(0xFFFF8A80),
                 onClick = onVoice
             )
             GlassIconButton(

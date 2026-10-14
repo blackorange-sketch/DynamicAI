@@ -49,7 +49,6 @@ fun FolderTabs(
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // ==== Список застосунків (зверху) ====
         AnimatedVisibility(
             visible = selectedFolder != null,
             enter = fadeIn(),
@@ -59,22 +58,34 @@ fun FolderTabs(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 340.dp)
-                    .padding(bottom = 4.dp),
-                contentPadding = PaddingValues(vertical = 4.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color(0xE60A0A0A))
+                    .border(
+                        width = 0.5.dp,
+                        color = Color.White.copy(alpha = 0.08f),
+                        shape = RoundedCornerShape(18.dp)
+                    )
+                    .padding(vertical = 6.dp),
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
             ) {
                 items(folderApps, key = { it.packageName }) { app ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                            .padding(horizontal = 2.dp, vertical = 2.dp)
                             .clip(RoundedCornerShape(14.dp))
                             .background(
                                 brush = Brush.verticalGradient(
                                     listOf(
-                                        Color.White.copy(alpha = 0.06f),
-                                        Color.White.copy(alpha = 0.015f)
+                                        Color(0xFF232323),
+                                        Color(0xFF141414)
                                     )
                                 )
+                            )
+                            .border(
+                                width = 0.5.dp,
+                                color = Color.White.copy(alpha = 0.06f),
+                                shape = RoundedCornerShape(14.dp)
                             )
                             .pointerInput(app.packageName) {
                                 detectTapGestures { onLaunchApp(app) }
@@ -82,7 +93,6 @@ fun FolderTabs(
                             .padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Glass-рамка навколо іконки
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
@@ -91,8 +101,8 @@ fun FolderTabs(
                                 .background(
                                     brush = Brush.verticalGradient(
                                         listOf(
-                                            Color.White.copy(alpha = 0.08f),
-                                            Color.White.copy(alpha = 0.02f)
+                                            Color.White.copy(alpha = 0.10f),
+                                            Color.White.copy(alpha = 0.03f)
                                         )
                                     )
                                 )
@@ -100,8 +110,8 @@ fun FolderTabs(
                                     width = 0.5.dp,
                                     brush = Brush.verticalGradient(
                                         listOf(
-                                            Color.White.copy(alpha = 0.2f),
-                                            Color.White.copy(alpha = 0.04f)
+                                            Color.White.copy(alpha = 0.22f),
+                                            Color.White.copy(alpha = 0.05f)
                                         )
                                     ),
                                     shape = RoundedCornerShape((iconSizeDp / 2 + 4).dp)
@@ -121,7 +131,8 @@ fun FolderTabs(
             }
         }
 
-        // ==== Таби (знизу) ====
+        Spacer(Modifier.height(6.dp))
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()

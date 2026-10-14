@@ -340,6 +340,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             onRun = { m -> vm.executeCommand("макрос ${m.name}") },
             onClose = { showMacroManager = false }
         )
+        return
     }
 
     if (showFolderManager) {

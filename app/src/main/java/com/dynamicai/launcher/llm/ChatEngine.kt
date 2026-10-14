@@ -139,14 +139,13 @@ class ChatEngine(
     
     private suspend fun getWeatherContext(question: String): String {
         return try {
-            // Покращений regex — 3 варіанти
             val cityPatterns = listOf(
-                Regex("[\"\u201c]([^\"\u201d]+)[\"\u201d]"),
-                Regex("(?:в|у|для|in)\\s+([А-ЯІЇЄҐA-Z][а-яіїєґa-zA-Z\\-\\s]+)"),
-                Regex("погода\\s+(?:в|у)?\\s*(.+)", RegexOption.IGNORE_CASE)
+                Regex("[\u201c\"]([^\"\u201d]+)[\"\u201d]"),
+                Regex("(?:\u0432|\u0443|\u0434\u043b\u044f|in)\\s+([\u0410-\u042f\u0406\u0407\u0404\u0490A-Z][\u0430-\u044f\u0456\u0457\u0454\u0491a-zA-Z\\-]+(?:\\s+[\u0410-\u042f\u0406\u0407\u0404\u0490A-Z][\u0430-\u044f\u0456\u0457\u0454\u0491a-zA-Z\\-]+)?)"),
+                Regex("\u043f\u043e\u0433\u043e\u0434\u0430\\s+(?:\u0432|\u0443)?\\s*([\u0410-\u042f\u0406\u0407\u0404\u0490A-Z][\u0430-\u044f\u0456\u0457\u0454\u0491a-zA-Z\\-]+(?:\\s+[\u0410-\u042f\u0406\u0407\u0404\u0490A-Z][\u0430-\u044f\u0456\u0457\u0454\u0491a-zA-Z\\-]+)?)", RegexOption.IGNORE_CASE)
             )
 
-            var city = "Київ"
+            var city: String? = null
             for (pattern in cityPatterns) {
                 val match = pattern.find(question)
                 if (match != null) {
@@ -162,29 +161,21 @@ class ChatEngine(
 
             Log.d(TAG, "Weather: city=$city")
 
-            // Тимчасово підмінюємо місто у налаштуваннях
-            val settingsStorage = com.dynamicai.launcher.data.SettingsStorage(context)
-            val settings = settingsStorage.load()
-            val originalCity = settings.cityName
-
-            settingsStorage.save(settings.copy(cityName = city))
-
             val repo = com.dynamicai.launcher.data.WeatherRepository(context)
-            val state = try {
-                repo.fetch()
-            } finally {
-                settingsStorage.save(settings.copy(cityName = originalCity))
-            }
+            val state = repo.fetch(cityOverride = city)
 
             when (state) {
                 is com.dynamicai.launcher.data.WeatherState.Data -> {
-                    "Поточна погода в $city: ${state.tempC}°${state.unit}, ${state.description}. " +
-                    "Відчувається як ${state.feelsLike}°. Вологість ${state.humidity}%, вітер ${state.windSpeed} км/год. " +
-                    "Мінімум ${state.tempMin}°, максимум ${state.tempMax}°."
+                    val cityLabel = city?.takeIf { it.isNotBlank() }
+                        ?: com.dynamicai.launcher.data.SettingsStorage(context).load().cityName
+                            .takeIf { it.isNotBlank() } ?: "\u0432\u0430\u0448\u043e\u043c\u0443 \u043c\u0456\u0441\u0442\u0456"
+                    "\u041f\u043e\u0442\u043e\u0447\u043d\u0430 \u043f\u043e\u0433\u043e\u0434\u0430 \u0432 $cityLabel: ${state.tempC}\u00b0${state.unit}, ${state.description}. " +
+                    "\u0412\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0442\u044c\u0441\u044f \u044f\u043a ${state.feelsLike}\u00b0. \u0412\u043e\u043b\u043e\u0433\u0456\u0441\u0442\u044c ${state.humidity}%, \u0432\u0456\u0442\u0435\u0440 ${state.windSpeed} \u043a\u043c/\u0433\u043e\u0434. " +
+                    "\u041c\u0456\u043d\u0456\u043c\u0443\u043c ${state.tempMin}\u00b0, \u043c\u0430\u043a\u0441\u0438\u043c\u0443\u043c ${state.tempMax}\u00b0."
                 }
                 is com.dynamicai.launcher.data.WeatherState.Error -> {
                     Log.d(TAG, "Weather error: ${state.message}")
-                    ""
+                    state.message
                 }
                 else -> ""
             }

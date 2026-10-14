@@ -15,10 +15,13 @@ class WeatherRepository(private val context: Context) {
 
     private val settingsStorage = SettingsStorage(context)
 
-    suspend fun fetch(): WeatherState = withContext(Dispatchers.IO) {
+    suspend fun fetch(cityOverride: String? = null): WeatherState = withContext(Dispatchers.IO) {
         try {
             val settings = settingsStorage.load()
+            val requested = cityOverride?.trim()?.takeIf { it.isNotBlank() }
             val (lat, lon) = when {
+                requested != null -> geocodeWithFallbacks(requested)
+                    ?: return@withContext WeatherState.Error("Не вдалось знайти місто: $requested")
                 settings.cityName.isNotBlank() -> geocode(settings.cityName)
                     ?: (settings.weatherLat.toDouble() to settings.weatherLon.toDouble())
                 else -> getCoordinates(settings)
@@ -151,6 +154,36 @@ class WeatherRepository(private val context: Context) {
             }
             null
         } catch (_: Throwable) { null }
+    }
+
+
+    private fun geocodeWithFallbacks(raw: String): Pair<Double, Double>? {
+        val name = raw.trim()
+        geocode(name)?.let { return it }
+        val variants = LinkedHashSet<String>()
+        if (name.endsWith("єві")) variants.add(name.dropLast(2) + "їв")
+        if (name.endsWith("ові")) variants.add(name.dropLast(2) + "ів")
+        if (name.endsWith("еві")) variants.add(name.dropLast(2) + "ів")
+        if (name.endsWith("ві")) variants.add(name.dropLast(2) + "в")
+        if (name.endsWith("сі")) variants.add(name.dropLast(1) + "а")
+        if (name.endsWith("ці")) variants.add(name.dropLast(1) + "я")
+        if (name.endsWith("зі")) variants.add(name.dropLast(1) + "а")
+        if (name.endsWith("ні")) variants.add(name.dropLast(1) + "ь")
+        if (name.endsWith("рі")) variants.add(name.dropLast(1) + "о")
+        if (name.endsWith("і")) variants.add(name.dropLast(1) + "а")
+        if (name.endsWith("і")) variants.add(name.dropLast(1) + "ь")
+        if (name.endsWith("і")) variants.add(name.dropLast(1))
+        if (name.endsWith("у")) variants.add(name.dropLast(1) + "а")
+        if (name.endsWith("ю")) variants.add(name.dropLast(1) + "я")
+        if (name.endsWith("ою")) variants.add(name.dropLast(3) + "а")
+        if (name.endsWith("ею")) variants.add(name.dropLast(3) + "я")
+        val first = name.substringBefore(" ").trim()
+        if (first.isNotBlank() && first != name) variants.add(first)
+        for (v in variants) {
+            if (v.isBlank() || v == name) continue
+            geocode(v)?.let { return it }
+        }
+        return null
     }
 
     private fun weatherDescription(code: Int): String = when (code) {

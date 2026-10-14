@@ -6,7 +6,6 @@ import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
 import android.view.View
@@ -29,7 +28,8 @@ class VoiceCommandOverlay(private val context: Context) {
     private var pendingHide: Runnable? = null
 
     fun canShow(): Boolean {
-        return if (android.os.Build.VERSION.SDK_INT >= 23) Settings.canDrawOverlays(context) else true
+        // Nubia: Settings.canDrawOverlays() бреше. FloatingDockService працює -> довіряємо try/catch.
+        return true
     }
 
     fun show(heard: String, onExecute: () -> Unit, onCancel: () -> Unit = {}) {

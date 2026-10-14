@@ -44,7 +44,10 @@ class ChatEngine(
             val response = llm.complete(prompt)
             Log.d(TAG, "Answer: ${response?.take(100)}")
 
-            return response?.trim() ?: "Не вдалось отримати відповідь"
+            if (response == null) {
+                return "LLM не відповіла. WebSearch: ${webSearch.lastError}"
+            }
+            return response.trim()
         } catch (t: Throwable) {
             Log.e(TAG, "answer failed", t)
             return "Помилка: ${t.message}"

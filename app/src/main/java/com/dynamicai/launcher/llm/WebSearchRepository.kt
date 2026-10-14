@@ -12,6 +12,8 @@ import java.net.URLEncoder
  * Пошук в інтернеті через DuckDuckGo Instant Answer API (безкоштовно, без ключа).
  */
 class WebSearchRepository {
+    @Volatile var lastError: String = ""
+
 
     companion object {
         private const val TAG = "WebSearch"
@@ -55,11 +57,14 @@ class WebSearchRepository {
                 }
             }
 
-            Log.d(TAG, "Search '$query': answer=${answer.length}, abstract=${abstract.length}, related=${related.size}")
+            lastError = "OK: answer=${answer.length}, abstract=${abstract.length}, related=${related.size}"
+            Log.d(TAG, "Search '$query': $lastError")
 
             SearchResult(answer, abstract, related)
         } catch (t: Throwable) {
-            Log.e(TAG, "search failed", t)
+            val cause = t.cause ?: t
+            lastError = "${cause.javaClass.simpleName}: ${cause.message}"
+            Log.e(TAG, "search failed: $lastError", cause)
             SearchResult("", "", emptyList())
         }
     }

@@ -11,8 +11,6 @@ import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import com.dynamicai.launcher.model.AppInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -36,7 +34,7 @@ class AppRepository(private val context: Context) {
         val list = cache.load()
         coroutineScope {
             list.map { cached ->
-                async(Dispatchers.IO) {
+                async(ioLimited) {
                     val icon = loadIconOnly(cached.packageName)
                     val bmp = try { icon.toBitmap(96, 96) } catch (_: Throwable) { null }
                     AppInfo(
@@ -76,7 +74,7 @@ class AppRepository(private val context: Context) {
 
         val result = coroutineScope {
             unique.map { (label, packed) ->
-                async(Dispatchers.IO) {
+                async(ioLimited) {
                     val parts = packed.split("\u0000")
                     val pkg = parts[0]
                     val isSystem = parts.getOrNull(1) == "1"

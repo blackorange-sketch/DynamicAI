@@ -75,6 +75,10 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name=".alarm.AlarmReceiver"
+            android:exported="false" />
+
         <service
             android:name=".overlay.FloatingDockService"
             android:exported="false"

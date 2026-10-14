@@ -7,6 +7,7 @@ import android.media.AudioManager
 import android.net.Uri
 import android.provider.AlarmClock
 import android.provider.Settings
+import kotlinx.coroutines.launch
 import android.app.SearchManager
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -16,6 +17,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class CommandExecutor(private val context: Context) {
+    private val shizukuManager by lazy {
+        com.dynamicai.launcher.system.ShizukuManager(context)
+    }
 
     fun execute(cmd: Command, apps: List<AppInfo>): CommandResult = when (cmd) {
         is Command.OpenApp -> resolveOpenApp(cmd.query, apps)
@@ -103,6 +107,16 @@ class CommandExecutor(private val context: Context) {
         val (hour, minute) = parseTime(time)
             ?: return CommandResult.Error("Не розпізнав час: \"$time\"")
 
+        // Спробувати через Shizuku (прямий виклик)
+        if (shizukuManager.isShizukuAvailable() && shizukuManager.hasPermission()) {
+            // Запускаємо в корутині (треба suspend)
+            kotlinx.coroutines.GlobalScope.launch {
+                val ok = shizukuManager.setAlarmViaShizuku(hour, minute, label)
+                android.util.Log.d("CommandExecutor", "Shizuku alarm: $ok")
+            }
+        }
+
+        // Fallback через Intent (відкриває додаток)
         val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
             putExtra(AlarmClock.EXTRA_HOUR, hour)
             putExtra(AlarmClock.EXTRA_MINUTES, minute)

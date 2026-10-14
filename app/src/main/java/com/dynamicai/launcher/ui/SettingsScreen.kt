@@ -239,6 +239,51 @@ fun SettingsScreen(
         }
 
         // ==== LLM ====
+        GlassSectionHeader("Дозволи")
+        GlassCard {
+            val ctx = LocalContext.current
+            var hasWriteSettings by remember {
+                mutableStateOf(
+                    if (android.os.Build.VERSION.SDK_INT >= 23)
+                        android.provider.Settings.System.canWrite(ctx)
+                    else true
+                )
+            }
+            LaunchedEffect(Unit) {
+                while (true) {
+                    if (android.os.Build.VERSION.SDK_INT >= 23) {
+                        hasWriteSettings = android.provider.Settings.System.canWrite(ctx)
+                    }
+                    kotlinx.coroutines.delay(1000)
+                }
+            }
+            SwitchRow(
+                label = if (hasWriteSettings) "Зміна налаштувань ✓" else "Дозволити зміну (яскравість)",
+                checked = hasWriteSettings,
+                icon = Icons.Default.Settings,
+                tint = if (hasWriteSettings) Color(0xFF4CAF50) else Color(0xFFFFA726),
+                onChange = {
+                    if (!hasWriteSettings) {
+                        try {
+                            ctx.startActivity(
+                                android.content.Intent(
+                                    android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS,
+                                    android.net.Uri.parse("package:${ctx.packageName}")
+                                ).apply {
+                                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                            )
+                        } catch (_: Throwable) {}
+                    }
+                }
+            )
+            Text(
+                "Потрібно для команд 'яскравіше' / 'темніше'",
+                color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+        }
+
         GlassSectionHeader("Bluetooth")
         BluetoothTestRow()
 

@@ -297,6 +297,58 @@ class ShizukuManager(private val context: Context) {
         return pkg in systemPkgs
     }
 
+    /**
+     * Встановити будильник напряму через AlarmManager (прихований API).
+     * Не потребує відкриття додатку годинника.
+     */
+    suspend fun setAlarmViaShizuku(hour: Int, minute: Int, label: String?): Boolean = withContext(Dispatchers.IO) {
+        if (!isShizukuAvailable() || !hasPermission()) {
+            Log.d(TAG, "Shizuku недоступний")
+            return@withContext false
+        }
+        try {
+            // Використовуємо прямий AlarmManager через контекст
+            // (Shizuku тут допомагає обійти обмеження на API 31+)
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+            val cal = java.util.Calendar.getInstance().apply {
+                set(java.util.Calendar.HOUR_OF_DAY, hour)
+                set(java.util.Calendar.MINUTE, minute)
+                set(java.util.Calendar.SECOND, 0)
+                if (timeInMillis < System.currentTimeMillis()) {
+                    add(java.util.Calendar.DAY_OF_YEAR, 1)
+                }
+            }
+
+            val intent = android.content.Intent(context, com.dynamicai.launcher.alarm.AlarmReceiver::class.java).apply {
+                putExtra("label", label ?: "DynamicAI Alarm")
+                putExtra("hour", hour)
+                putExtra("minute", minute)
+            }
+            val pending = android.app.PendingIntent.getBroadcast(
+                context,
+                System.currentTimeMillis().toInt(),
+                intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                if (!alarmManager.canScheduleExactAlarms()) {
+                    Log.d(TAG, "Немає дозволу SCHEDULE_EXACT_ALARM")
+                    return@withContext false
+                }
+            }
+            alarmManager.setAlarmClock(
+                android.app.AlarmManager.AlarmClockInfo(cal.timeInMillis, pending),
+                pending
+            )
+            Log.d(TAG, "Будильник встановлено: %02d:%02d".format(hour, minute))
+            true
+        } catch (t: Throwable) {
+            Log.e(TAG, "setAlarmViaShizuku failed", t)
+            false
+        }
+    }
+
     suspend fun forceStop(packageName: String): Boolean = withContext(Dispatchers.IO) {
         if (!isShizukuAvailable() || !hasPermission()) return@withContext false
         try {

@@ -11,6 +11,18 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.Image
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -123,6 +135,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var overlayActive by remember { mutableStateOf(false) }
     var drawerOpen by remember { mutableStateOf(false) }
     var launchingApp by remember { mutableStateOf<AppInfo?>(null) }
+    var launchingBounds by remember { mutableStateOf<Rect?>(null) }
     var overlayPermissionGranted by remember {
         mutableStateOf(Settings.canDrawOverlays(ctx))
     }
@@ -270,9 +283,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         activeLetter = null
     }
 
-    fun launchAppWithAnimation(app: AppInfo) {
+    fun launchAppWithAnimation(app: AppInfo, bounds: Rect? = null) {
         hideListImmediately()
         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        launchingBounds = bounds
         launchingApp = app
     }
 
@@ -467,6 +481,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         val bmp = app.bitmap
         val bounds = launchingBounds
         if (bmp != null && bounds != null) {
+            val density = androidx.compose.ui.platform.LocalDensity.current
             val progress = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
             androidx.compose.runtime.LaunchedEffect(app.packageName) {
                 progress.snapTo(0f)
@@ -478,7 +493,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                     )
                 )
             }
-            val targetSize = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
             androidx.compose.foundation.layout.Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -489,18 +503,18 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                     contentDescription = null,
                     contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                     modifier = Modifier
-                        .size(bounds.width.dp)
                         .offset {
                             androidx.compose.ui.unit.IntOffset(
-                                x = (bounds.left + (targetSize.toPx() - bounds.width) * progress.value / 2f).toInt(),
-                                y = (bounds.top + (bounds.height * (1f - progress.value)) / 2f).toInt()
+                                x = bounds.left.toInt(),
+                                y = bounds.top.toInt()
                             )
                         }
+                        .size(with(density) { bounds.width.toDp() })
                         .graphicsLayer {
                             val s = 1f + progress.value * 3.5f
                             scaleX = s
                             scaleY = s
-                            alpha = 1f - progress.value * 0.7f
+                            alpha = 1f - progress.value * 0.5f
                         }
                 )
             }

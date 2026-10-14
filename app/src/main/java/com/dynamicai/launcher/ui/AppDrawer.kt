@@ -115,8 +115,8 @@ fun AppDrawer(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     items(filtered, key = { it.packageName }) { app ->
-                        AppGridItem(app, iconSizeDp, fontSizeSp) {
-                            onLaunch(app, bounds)
+                        AppGridItem(app, iconSizeDp, fontSizeSp) { rect ->
+                            onLaunch(app, rect)
                             onDismiss()
                         }
                     }

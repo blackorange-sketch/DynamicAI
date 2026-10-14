@@ -8,6 +8,10 @@ import android.net.Uri
 import android.provider.AlarmClock
 import android.provider.Settings
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import android.app.SearchManager
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -32,6 +36,8 @@ class CommandExecutor(private val context: Context) {
     private val shizukuManager by lazy {
         com.dynamicai.launcher.system.ShizukuManager(context)
     }
+
+    private val bgScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     fun execute(cmd: Command, apps: List<AppInfo>): CommandResult = when (cmd) {
         is Command.OpenApp -> resolveOpenApp(cmd.query, apps)
@@ -61,8 +67,22 @@ class CommandExecutor(private val context: Context) {
         Command.Screenshot -> takeScreenshot()
         is Command.SetBrightness -> setBrightness(cmd.level)
         is Command.AskQuestion -> CommandResult.Error("__ASK_QUESTION__")  // обробляється у ViewModel
+        is Command.Compound -> executeCompound(cmd, apps)
         is Command.Raw -> CommandResult.Error("Не розумію команду: \"${cmd.text}\"")
         Command.Unknown -> CommandResult.Error("Не розумію команду")
+    }
+
+    private fun executeCompound(cmd: Command.Compound, apps: List<AppInfo>): CommandResult {
+        val steps = cmd.steps
+        bgScope.launch {
+            steps.forEachIndexed { i, step ->
+                if (i > 0) delay(cmd.delayMs)
+                try {
+                    execute(step, apps)
+                } catch (_: Throwable) { }
+            }
+        }
+        return CommandResult.Success("Виконую ${steps.size} команд(и)")
     }
 
     fun resolveOpenApp(query: String, apps: List<AppInfo>): CommandResult {

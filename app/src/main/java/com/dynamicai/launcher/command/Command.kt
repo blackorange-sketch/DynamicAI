@@ -44,4 +44,5 @@ sealed class Command {
     object Screenshot : Command()
     object Unknown : Command()
     data class Raw(val text: String) : Command()
+    data class Compound(val steps: List<Command>, val delayMs: Long = 900L) : Command()
 }

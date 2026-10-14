@@ -29,9 +29,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             // WakeWord: старт/стоп за налаштуванням
-            val wakeSettings = remember { com.dynamicai.launcher.data.SettingsStorage(applicationContext).load() }
-            androidx.compose.runtime.LaunchedEffect(wakeSettings.wakeWordEnabled) {
-                if (wakeSettings.wakeWordEnabled) {
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                val wakeEnabled = com.dynamicai.launcher.data.SettingsStorage(applicationContext).load().wakeWordEnabled
+                if (wakeEnabled) {
                     com.dynamicai.launcher.voice.WakeWordService.start(applicationContext)
                 } else {
                     com.dynamicai.launcher.voice.WakeWordService.stop(applicationContext)

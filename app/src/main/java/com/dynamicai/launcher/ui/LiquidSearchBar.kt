@@ -20,6 +20,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
@@ -81,7 +83,7 @@ fun LiquidSearchBar(
                 )
             }
             GlassIconButton(
-                icon = Icons.Default.Mic,
+                icon = micIcon(),
                 tint = Color(0xFFFF8A80),
                 onClick = onVoice
             )
@@ -93,6 +95,37 @@ fun LiquidSearchBar(
         }
     }
 }
+
+
+private fun micIcon(): ImageVector = ImageVector.Builder(
+    name = "Mic",
+    defaultWidth = 24.dp,
+    defaultHeight = 24.dp,
+    viewportWidth = 24f,
+    viewportHeight = 24f
+).apply {
+    path(fill = SolidColor(Color.White)) {
+        moveTo(12f, 14f)
+        curveTo(14.21f, 14f, 16f, 12.21f, 16f, 10f)
+        verticalLineTo(4f)
+        curveTo(16f, 1.79f, 14.21f, 0f, 12f, 0f)
+        curveTo(9.79f, 0f, 8f, 1.79f, 8f, 4f)
+        verticalLineTo(10f)
+        curveTo(8f, 12.21f, 9.79f, 14f, 12f, 14f)
+        close()
+        moveTo(19f, 10f)
+        curveTo(19f, 13.53f, 16.39f, 16.44f, 13f, 16.93f)
+        verticalLineTo(20f)
+        horizontalLineTo(10f)
+        verticalLineTo(16.93f)
+        curveTo(7.61f, 16.44f, 5f, 13.53f, 5f, 10f)
+        horizontalLineTo(7f)
+        curveTo(7f, 12.76f, 9.24f, 15f, 12f, 15f)
+        curveTo(14.76f, 15f, 17f, 12.76f, 17f, 10f)
+        horizontalLineTo(19f)
+        close()
+    }
+}.build()
 
 @Composable
 private fun GlassIconButton(

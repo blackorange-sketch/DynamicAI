@@ -43,15 +43,16 @@ class MainActivity : ComponentActivity() {
                     if (on) com.dynamicai.launcher.voice.WakeWordService.start(applicationContext)
                 }
             }
+            val appCtx = applicationContext
             androidx.compose.runtime.LaunchedEffect(Unit) {
                 val granted = ContextCompat.checkSelfPermission(
-                    applicationContext, Manifest.permission.RECORD_AUDIO
+                    appCtx, Manifest.permission.RECORD_AUDIO
                 ) == PackageManager.PERMISSION_GRANTED
                 if (!granted) {
                     permLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 } else {
-                    val on = com.dynamicai.launcher.data.SettingsStorage(applicationContext).load().wakeWordEnabled
-                    if (on) com.dynamicai.launcher.voice.WakeWordService.start(applicationContext)
+                    val on = com.dynamicai.launcher.data.SettingsStorage(appCtx).load().wakeWordEnabled
+                    if (on) com.dynamicai.launcher.voice.WakeWordService.start(appCtx)
                 }
             }
 

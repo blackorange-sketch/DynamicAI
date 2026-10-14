@@ -48,16 +48,16 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val folderStorage = FolderStorage(app)
     private val appsCache = com.dynamicai.launcher.data.AppsCache(app)
     val shizukuManager = ShizukuManager(app)
-    private val weatherRepo = WeatherRepository(app)
+    private val weatherRepo by lazy { WeatherRepository(app) }
 
-    val llm = LiteRtLlmEngine(app)
-    val tts = TtsManager(app)
-    val downloader = ModelDownloader(app)
+    val llm by lazy { LiteRtLlmEngine(app) }
+    val tts by lazy { TtsManager(app) }
+    val downloader by lazy { ModelDownloader(app) }
 
     private val _downloadProgress = MutableStateFlow<ModelDownloader.Progress?>(null)
     val downloadProgress: StateFlow<ModelDownloader.Progress?> = _downloadProgress.asStateFlow()
-    private val llmAgent = LlmAgent(llm)
-    private val chatEngine = ChatEngine(app, llm, WebSearchRepository())
+    private val llmAgent by lazy { LlmAgent(llm) }
+    private val chatEngine by lazy { ChatEngine(app, llm, WebSearchRepository()) }
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
     val apps: StateFlow<List<AppInfo>> = _apps.asStateFlow()

@@ -86,6 +86,7 @@ class FloatingDockService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
+        isRunning = true
         log("onCreate start")
         super.onCreate()
         try {
@@ -126,6 +127,7 @@ class FloatingDockService : Service() {
     }
 
     override fun onDestroy() {
+        isRunning = false
         log("onDestroy")
         try {
             applicationContext
@@ -689,6 +691,8 @@ showSearchOverlay()
     }
 
     companion object {
+        @Volatile var isRunning: Boolean = false
+
         const val NOTIF_ID = 1001
 
         @Volatile var lastLog: String = "—"

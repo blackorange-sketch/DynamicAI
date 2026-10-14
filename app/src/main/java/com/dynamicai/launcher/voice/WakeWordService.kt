@@ -110,6 +110,12 @@ class WakeWordService : Service() {
                             ?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                             ?.firstOrNull() ?: return
                         Log.d(TAG, "partial: \"$text\"")
+                        // Якщо вже видно wake word — зупиняємо розпізнавання,
+                        // onResults прийде з фіналом
+                        if (text.isNotBlank() && containsWakeWord(text)) {
+                            Log.d(TAG, "wake in partial!")
+                            try { recognizer?.stopListening() } catch (_: Throwable) {}
+                        }
                     }
 
                     override fun onResults(results: Bundle?) {
@@ -171,6 +177,22 @@ class WakeWordService : Service() {
             delay(delayMs)
             if (enabled) startListening()
         }
+    }
+
+
+    private fun containsWakeWord(text: String): Boolean {
+        if (wakeWord.isBlank()) return false
+        val lc = text.lowercase()
+        val variants = listOf(
+            wakeWord,
+            wakeWord.replace("hey", "гей"),
+            wakeWord.replace("hey", "хей"),
+            wakeWord.replace("hey", "ей"),
+            wakeWord.replace("hey", "эй"),
+            wakeWord.replace("hey", "хе"),
+            wakeWord.replace("hey", "хей"),
+        )
+        return variants.any { it.isNotBlank() && lc.contains(it) }
     }
 
     private fun handleText(raw: String) {

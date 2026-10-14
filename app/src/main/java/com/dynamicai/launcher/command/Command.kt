@@ -13,7 +13,7 @@ sealed class Command {
     data class SendEmail(val to: String, val subject: String?) : Command()
     data class MediaControl(val action: String) : Command()   // play, pause, next, prev, stop
     data class SetVolumeExact(val percent: Int) : Command()
-    data class BatteryStatus : Command()
+    object BatteryStatus : Command()
     data class Calculate(val expr: String) : Command()
 
     // ==== Час ====

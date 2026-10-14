@@ -43,6 +43,23 @@ class CommandParser {
     private val onWords = listOf("увімкни", "включи", "вмикай", "активуй", "on", "enable", "включить", "увімкнути")
     private val offWords = listOf("вимкни", "виключи", "виключай", "деактивуй", "off", "disable", "виключить", "вимкнути")
 
+    // SMS / Email
+    private val smsRegex = Regex("^(напиши|скинь|відправ|sms|sms to)\\s+(.+?)\\s+(.+)$")
+    private val emailRegex = Regex("^(email|mail|пошта)\\s+(\\S+@\\S+)")
+
+    // Media
+    private val mediaPlay = Regex("^(грай|увімкни музику|play|resume|продовж)")
+    private val mediaPause = Regex("^(пауза|зупини музику|pause|stop music)")
+    private val mediaNext = Regex("^(наступний|далі|next track|skip)")
+    private val mediaPrev = Regex("^(попередній|назад трек|prev|previous)")
+    private val volumePercent = Regex("^(гучність|volume)\\s+(\\d+)\\s*%?$")
+
+    // Battery
+    private val batteryRe = Regex("^(який заряд|батарея|скільки заряду|battery|battery status)$")
+
+    // Calculator
+    private val calcRe = Regex("^(порахуй|скільки буде|calculate|calc)\\s+(.+)$")
+
     private val flashlightWords = setOf(
         "ліхтарик", "ліхтарик вкл", "ліхтарик викл",
         "увімкни ліхтарик", "вимкни ліхтарик", "ввімкни ліхтарик",

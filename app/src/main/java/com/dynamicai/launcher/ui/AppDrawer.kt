@@ -49,7 +49,7 @@ fun AppDrawer(
     backgroundAlphaPercent: Int,
     iconSizeDp: Int,
     fontSizeSp: Int,
-    onLaunch: (AppInfo, androidx.compose.ui.geometry.Rect?) -> Unit,
+    onLaunch: (AppInfo) -> Unit,
     onDismiss: () -> Unit,
     visible: Boolean,
     gridState: androidx.compose.foundation.lazy.grid.LazyGridState =
@@ -115,8 +115,8 @@ fun AppDrawer(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     items(filtered, key = { it.packageName }) { app ->
-                        AppGridItem(app, iconSizeDp, fontSizeSp) { rect ->
-                            onLaunch(app, rect)
+                        AppGridItem(app, iconSizeDp, fontSizeSp) {
+                            onLaunch(app)
                             onDismiss()
                         }
                     }
@@ -131,37 +131,41 @@ private fun AppGridItem(
     app: AppInfo,
     iconSizeDp: Int,
     fontSizeSp: Int,
-    onTap: (androidx.compose.ui.geometry.Rect?) -> Unit
+    onTap: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            .pressableWithBounds { onTap(it) }
+            .pressable(onTap = onTap)
             .padding(vertical = 6.dp)
     ) {
         // Glass-обгортка навколо іконки
+        val glassBrush = remember {
+            Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.08f),
+                    Color.White.copy(alpha = 0.02f)
+                )
+            )
+        }
+        val glassBorderBrush = remember {
+            Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.2f),
+                    Color.White.copy(alpha = 0.04f)
+                )
+            )
+        }
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size((iconSizeDp + 16).dp)
                 .clip(RoundedCornerShape((iconSizeDp / 2 + 8).dp))
-                .background(
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.08f),
-                            Color.White.copy(alpha = 0.02f)
-                        )
-                    )
-                )
+                .background(brush = glassBrush)
                 .border(
                     width = 0.5.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.2f),
-                            Color.White.copy(alpha = 0.04f)
-                        )
-                    ),
+                    brush = glassBorderBrush,
                     shape = RoundedCornerShape((iconSizeDp / 2 + 8).dp)
                 )
         ) {

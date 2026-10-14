@@ -42,7 +42,7 @@ data class DockItem(
 fun Dock(
     items: List<DockItem>,
     iconSizeDp: Int,
-    onLaunch: (DockItem, androidx.compose.ui.geometry.Rect?) -> Unit,
+    onLaunch: (DockItem) -> Unit,
     onSearch: () -> Unit,
     onRecent: () -> Unit,
     showRecentButton: Boolean = true,
@@ -156,7 +156,7 @@ fun Dock(
                                 )
                             )
                         )
-                        .pressableWithBounds { onLaunch(item, it) },
+                        .pressable { onLaunch(item) },
                     contentAlignment = Alignment.Center
                 ) {
                     item.bitmap?.let {
@@ -194,7 +194,7 @@ fun Dock(
                                 ),
                                 shape = RoundedCornerShape((iconSizeDp / 2 + 4).dp)
                             )
-                            .pressableWithBounds { onLaunch(item, it) }
+                            .pressable { onLaunch(item) }
                     ) {
                         Icon(
                             bitmap = it.asImageBitmap(),

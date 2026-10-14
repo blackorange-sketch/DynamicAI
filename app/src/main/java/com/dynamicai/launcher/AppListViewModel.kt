@@ -293,9 +293,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun startWeatherAutoRefresh(screenOnCheck: () -> Boolean) {
         weatherJob?.cancel()
+        weatherRepo.loadCachedWeather()?.let { _weather.value = it }
         weatherJob = viewModelScope.launch {
             // Перше завантаження
-            _weather.value = WeatherState.Loading
             _weather.value = weatherRepo.fetch()
 
             while (true) {
@@ -308,9 +308,21 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refreshWeather() {
-        viewModelScope.launch {
+        // 1. Спершу показуємо кеш — миттєво
+        weatherRepo.loadCachedWeather()?.let { cached ->
+            _weather.value = cached
+        } ?: run {
             _weather.value = WeatherState.Loading
-            _weather.value = weatherRepo.fetch()
+        }
+        // 2. Потім у фоні підтягуємо свіжу
+        viewModelScope.launch {
+            val fresh = weatherRepo.fetch()
+            if (fresh is WeatherState.Data) {
+                _weather.value = fresh
+            } else if (_weather.value !is WeatherState.Data) {
+                // якщо кешу не було — показуємо помилку
+                _weather.value = fresh
+            }
         }
     }
 

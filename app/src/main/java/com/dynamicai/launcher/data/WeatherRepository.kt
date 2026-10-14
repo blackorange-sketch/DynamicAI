@@ -14,6 +14,82 @@ import java.util.Locale
 class WeatherRepository(private val context: Context) {
 
     private val settingsStorage = SettingsStorage(context)
+    private val cachePrefs = context.getSharedPreferences("dynamicai_weather_cache", Context.MODE_PRIVATE)
+
+    /** Читає останню збережену погоду (миттєво). */
+    fun loadCachedWeather(): WeatherState.Data? {
+        val raw = cachePrefs.getString("last", null) ?: return null
+        return try {
+            val o = JSONObject(raw)
+            val fcArr = o.optJSONArray("forecast")
+            val forecast = mutableListOf<WeatherState.DailyForecast>()
+            if (fcArr != null) {
+                for (i in 0 until fcArr.length()) {
+                    val f = fcArr.getJSONObject(i)
+                    forecast.add(
+                        WeatherState.DailyForecast(
+                            date = f.optString("date", ""),
+                            dayName = f.optString("dayName", ""),
+                            tempMin = f.optInt("tempMin", 0),
+                            tempMax = f.optInt("tempMax", 0),
+                            icon = f.optString("icon", ""),
+                            description = f.optString("description", "")
+                        )
+                    )
+                }
+            }
+            WeatherState.Data(
+                tempC = o.optInt("tempC", 0),
+                tempMin = o.optInt("tempMin", 0),
+                tempMax = o.optInt("tempMax", 0),
+                description = o.optString("description", ""),
+                icon = o.optString("icon", ""),
+                unit = o.optString("unit", "C"),
+                feelsLike = o.optInt("feelsLike", 0),
+                humidity = o.optInt("humidity", 0),
+                windSpeed = o.optInt("windSpeed", 0),
+                pressure = o.optInt("pressure", 0),
+                uvIndex = o.optInt("uvIndex", 0),
+                sunrise = o.optString("sunrise", ""),
+                sunset = o.optString("sunset", ""),
+                forecast = forecast
+            )
+        } catch (_: Throwable) { null }
+    }
+
+    /** Зберігає погоду у SharedPreferences. */
+    private fun saveCache(state: WeatherState.Data) {
+        try {
+            val o = JSONObject()
+            o.put("tempC", state.tempC)
+            o.put("tempMin", state.tempMin)
+            o.put("tempMax", state.tempMax)
+            o.put("description", state.description)
+            o.put("icon", state.icon)
+            o.put("unit", state.unit)
+            o.put("feelsLike", state.feelsLike)
+            o.put("humidity", state.humidity)
+            o.put("windSpeed", state.windSpeed)
+            o.put("pressure", state.pressure)
+            o.put("uvIndex", state.uvIndex)
+            o.put("sunrise", state.sunrise)
+            o.put("sunset", state.sunset)
+            val arr = org.json.JSONArray()
+            state.forecast.forEach { f ->
+                arr.put(JSONObject().apply {
+                    put("date", f.date)
+                    put("dayName", f.dayName)
+                    put("tempMin", f.tempMin)
+                    put("tempMax", f.tempMax)
+                    put("icon", f.icon)
+                    put("description", f.description)
+                })
+            }
+            o.put("forecast", arr)
+            o.put("cachedAt", System.currentTimeMillis())
+            cachePrefs.edit().putString("last", o.toString()).apply()
+        } catch (_: Throwable) {}
+    }
 
     suspend fun fetch(cityOverride: String? = null): WeatherState = withContext(Dispatchers.IO) {
         try {
@@ -96,7 +172,7 @@ class WeatherRepository(private val context: Context) {
                 )
             }
 
-            WeatherState.Data(
+            val result = WeatherState.Data(
                 tempC = convert(tempC),
                 tempMin = convert(tMinC),
                 tempMax = convert(tMaxC),
@@ -112,6 +188,8 @@ class WeatherRepository(private val context: Context) {
                 sunset = sunset,
                 forecast = forecast
             )
+            saveCache(result)
+            result
         } catch (t: Throwable) {
             WeatherState.Error(t.message ?: "помилка")
         }

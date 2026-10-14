@@ -135,7 +135,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var overlayActive by remember { mutableStateOf(false) }
     var drawerOpen by remember { mutableStateOf(false) }
     var launchingApp by remember { mutableStateOf<AppInfo?>(null) }
-    var launchingBounds by remember { mutableStateOf<Rect?>(null) }
     var overlayPermissionGranted by remember {
         mutableStateOf(Settings.canDrawOverlays(ctx))
     }
@@ -286,7 +285,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     fun launchAppWithAnimation(app: AppInfo, bounds: Rect? = null) {
         hideListImmediately()
         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-        launchingBounds = bounds
         launchingApp = app
     }
 
@@ -469,61 +467,27 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     LaunchedEffect(launchingApp) {
         val app = launchingApp ?: return@LaunchedEffect
-        kotlinx.coroutines.delay(if (launchingBounds != null) 380 else 200)
+        kotlinx.coroutines.delay(160)
         vm.launch(app.packageName)
-        kotlinx.coroutines.delay(180)
+        kotlinx.coroutines.delay(200)
         launchingApp = null
-        launchingBounds = null
     }
 
-    // ==== Zoom-launch overlay ====
-    launchingApp?.let { app ->
-        val bmp = app.bitmap
-        val bounds = launchingBounds
-        if (bmp != null && bounds != null) {
-            val density = androidx.compose.ui.platform.LocalDensity.current
-            val progress = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
-            androidx.compose.runtime.LaunchedEffect(app.packageName) {
-                progress.snapTo(0f)
-                progress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = androidx.compose.animation.core.tween(
-                        durationMillis = 360,
-                        easing = androidx.compose.animation.core.FastOutSlowInEasing
-                    )
-                )
-            }
-            androidx.compose.foundation.layout.Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .zIndex(100f)
-            ) {
-                androidx.compose.foundation.Image(
-                    bitmap = bmp.asImageBitmap(),
-                    contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                    modifier = Modifier
-                        .offset {
-                            androidx.compose.ui.unit.IntOffset(
-                                x = bounds.left.toInt(),
-                                y = bounds.top.toInt()
-                            )
-                        }
-                        .size(with(density) { bounds.width.toDp() })
-                        .graphicsLayer {
-                            val s = 1f + progress.value * 3.5f
-                            scaleX = s
-                            scaleY = s
-                            alpha = 1f - progress.value * 0.5f
-                        }
-                )
-            }
-        }
-    }
+    val launchFade by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (launchingApp != null) 0f else 1f,
+        animationSpec = androidx.compose.animation.core.tween(180),
+        label = "launchFade"
+    )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .graphicsLayer {
+                alpha = launchFade
+                val s = 0.94f + 0.06f * launchFade
+                scaleX = s
+                scaleY = s
+            }
             .background(Color.Black.copy(alpha = settings.backgroundAlphaPercent / 100f))
             .pointerInput(Unit) {
                 detectTapGestures(
@@ -806,13 +770,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             Dock(
                 items = dockItems,
                 iconSizeDp = settings.dockIconSizeDp,
-                onLaunch = { item, bounds ->
+                onLaunch = { item ->
                     if (item.isFolder) {
                         val fid = item.id.removePrefix("folder:")
                         openFolder = folders.firstOrNull { it.id == fid }
                     } else {
                         val app = apps.firstOrNull { it.packageName == item.id }
-                        if (app != null) launchAppWithAnimation(app, bounds)
+                        if (app != null) launchAppWithAnimation(app)
                     }
                 },
                 onSearch = { searchMode = true },
@@ -872,7 +836,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             backgroundAlphaPercent = settings.backgroundAlphaPercent,
             iconSizeDp = settings.menuIconSizeDp,
             fontSizeSp = settings.fontSizeSp,
-            onLaunch = { app, bounds -> launchAppWithAnimation(app, bounds) },
+            onLaunch = { app -> launchAppWithAnimation(app) },
             onDismiss = { drawerOpen = false },
             visible = drawerOpen
         )

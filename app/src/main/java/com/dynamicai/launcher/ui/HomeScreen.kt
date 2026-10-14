@@ -122,6 +122,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var addToFolderPicker by remember { mutableStateOf<AppInfo?>(null) }
     var overlayActive by remember { mutableStateOf(false) }
     var drawerOpen by remember { mutableStateOf(false) }
+    var launchingApp by remember { mutableStateOf<AppInfo?>(null) }
     var overlayPermissionGranted by remember {
         mutableStateOf(Settings.canDrawOverlays(ctx))
     }
@@ -272,7 +273,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     fun launchAppWithAnimation(app: AppInfo) {
         hideListImmediately()
         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-        vm.launch(app.packageName)
+        launchingApp = app
     }
 
     fun submit(text: String) {
@@ -452,6 +453,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         return
     }
 
+    LaunchedEffect(launchingApp) {
+        val app = launchingApp ?: return@LaunchedEffect
+        kotlinx.coroutines.delay(200)
+        vm.launch(app.packageName)
+        kotlinx.coroutines.delay(180)
+        launchingApp = null
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -503,25 +512,38 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         
             }
 
-            if (showSearchField) {
-            LiquidSearchBar(
-                query = query,
-                onQueryChange = { query = it },
-                onSearch = {
-                    if (query.isNotBlank()) {
-                        if (vm.isCommand(query)) submit(query)
-                        else if (suggestions.isNotEmpty()) {
-                            vm.executeSuggestion(suggestions.first())
-                            closeSearch()
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showSearchField,
+                enter = androidx.compose.animation.expandHorizontally(
+                    animationSpec = androidx.compose.animation.core.tween(260),
+                    expandFrom = Alignment.Start
+                ) + androidx.compose.animation.fadeIn(
+                    animationSpec = androidx.compose.animation.core.tween(220, delayMillis = 60)
+                ),
+                exit = androidx.compose.animation.shrinkHorizontally(
+                    animationSpec = androidx.compose.animation.core.tween(200)
+                ) + androidx.compose.animation.fadeOut(
+                    animationSpec = androidx.compose.animation.core.tween(120)
+                )
+            ) {
+                LiquidSearchBar(
+                    query = query,
+                    onQueryChange = { query = it },
+                    onSearch = {
+                        if (query.isNotBlank()) {
+                            if (vm.isCommand(query)) submit(query)
+                            else if (suggestions.isNotEmpty()) {
+                                vm.executeSuggestion(suggestions.first())
+                                closeSearch()
+                            }
+                            else submit(query)
                         }
-                        else submit(query)
-                    }
-                },
-                onVoice = { startVoice() },
-                onClose = { closeSearch() },
-                focusRequester = focusRequester,
-                modifier = Modifier.padding(vertical = 2.dp)
-            )
+                    },
+                    onVoice = { startVoice() },
+                    onClose = { closeSearch() },
+                    focusRequester = focusRequester,
+                    modifier = Modifier.padding(vertical = 2.dp)
+                )
             }
 
             if (response.isNotBlank()) {

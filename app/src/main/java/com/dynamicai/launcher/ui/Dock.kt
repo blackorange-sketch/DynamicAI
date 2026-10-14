@@ -11,6 +11,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,6 +49,11 @@ fun Dock(
     onSwipeUp: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var appeared by remember { mutableStateOf(false) }
+    LaunchedEffect(items.size) {
+        if (items.isNotEmpty()) appeared = true
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -123,10 +136,16 @@ fun Dock(
             }
         }
 
-        items.forEach { item ->
+        items.forEachIndexed { index, item ->
+            val itemAlpha by animateFloatAsState(
+                targetValue = if (appeared) 1f else 0f,
+                animationSpec = tween(durationMillis = 280, delayMillis = 40 + index * 55),
+                label = "dockItem$index"
+            )
             if (item.isFolder) {
                 Box(
                     modifier = Modifier
+                        .alpha(itemAlpha)
                         .size(iconSizeDp.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(
@@ -154,6 +173,7 @@ fun Dock(
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
+                            .alpha(itemAlpha)
                             .size((iconSizeDp + 8).dp)
                             .clip(RoundedCornerShape((iconSizeDp / 2 + 4).dp))
                             .background(

@@ -13,6 +13,8 @@ data class LauncherSettings(
     val useTts: Boolean = true,
     val ttsSpeed: Float = 1.0f,
     val ttsPitch: Float = 1.0f,
+    val wakeWordEnabled: Boolean = false,
+    val wakeWord: String = "hey",
     val showLabels: Boolean = true,
     // Оверлей
     val overlayIconSizeDp: Int = 54,
@@ -48,6 +50,8 @@ class SettingsStorage(context: Context) {
         useTts = prefs.getBoolean("useTts", true),
         ttsSpeed = prefs.getFloat("ttsSpeed", 1.0f),
         ttsPitch = prefs.getFloat("ttsPitch", 1.0f),
+        wakeWordEnabled = prefs.getBoolean("wakeWordEnabled", false),
+        wakeWord = prefs.getString("wakeWord", "hey") ?: "hey",
         showLabels = prefs.getBoolean("showLabels", true),
         overlayIconSizeDp = prefs.getInt("overlayIconSizeDp", 54),
         overlayPosition = prefs.getString("overlayPosition", "right") ?: "right",
@@ -80,6 +84,8 @@ class SettingsStorage(context: Context) {
             .putBoolean("useTts", s.useTts)
             .putFloat("ttsSpeed", s.ttsSpeed)
             .putFloat("ttsPitch", s.ttsPitch)
+            .putBoolean("wakeWordEnabled", s.wakeWordEnabled)
+            .putString("wakeWord", s.wakeWord)
             .putBoolean("showLabels", s.showLabels)
             .putInt("overlayIconSizeDp", s.overlayIconSizeDp)
             .putString("overlayPosition", s.overlayPosition)

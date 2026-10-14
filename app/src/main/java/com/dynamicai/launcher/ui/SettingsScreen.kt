@@ -899,65 +899,6 @@ private fun TtsSlider(
             )
         )
     }
-
-@Composable
-private fun AppPickerRow(
-    label: String,
-    currentPkg: String,
-    apps: List<AppInfo>,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    tint: Color,
-    onPick: (String) -> Unit
-) {
-    var showDialog by remember { mutableStateOf(false) }
-    val currentLabel = if (currentPkg.isBlank()) "Системний"
-        else apps.find { it.packageName == currentPkg }?.label ?: currentPkg
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(label) { detectTapGestures { showDialog = true } }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(28.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(tint.copy(alpha = 0.18f)),
-        ) {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = Color.White, fontSize = 14.sp)
-            Text(currentLabel, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
-        }
-        Icon(
-            Icons.Default.KeyboardArrowRight,
-            contentDescription = null,
-            tint = Color.White.copy(alpha = 0.3f),
-            modifier = Modifier.size(18.dp)
-        )
-    }
-    HorizontalDivider(
-        color = Color.White.copy(alpha = 0.06f),
-        thickness = 0.5.dp,
-        modifier = Modifier.padding(start = 16.dp)
-    )
-
-    if (showDialog) {
-        AppPickerDialog(
-            title = label,
-            apps = apps,
-            currentPkg = currentPkg,
-            onPick = { onPick(it); showDialog = false },
-            onDismiss = { showDialog = false }
-        )
-    }
-}
-
 @Composable
 private fun AppPickerDialog(
     title: String,
@@ -1040,4 +981,62 @@ private fun AppPickerDialog(
     )
 }
 
+}
+
+@Composable
+private fun AppPickerRow(
+    label: String,
+    currentPkg: String,
+    apps: List<AppInfo>,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color,
+    onPick: (String) -> Unit
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    val currentLabel = if (currentPkg.isBlank()) "Системний"
+        else apps.find { it.packageName == currentPkg }?.label ?: currentPkg
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(label) { detectTapGestures { showDialog = true } }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(28.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(tint.copy(alpha = 0.18f)),
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, color = Color.White, fontSize = 14.sp)
+            Text(currentLabel, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+        }
+        Icon(
+            Icons.Default.KeyboardArrowRight,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.3f),
+            modifier = Modifier.size(18.dp)
+        )
+    }
+    HorizontalDivider(
+        color = Color.White.copy(alpha = 0.06f),
+        thickness = 0.5.dp,
+        modifier = Modifier.padding(start = 16.dp)
+    )
+
+    if (showDialog) {
+        AppPickerDialog(
+            title = label,
+            apps = apps,
+            currentPkg = currentPkg,
+            onPick = { onPick(it); showDialog = false },
+            onDismiss = { showDialog = false }
+        )
+    }
 }

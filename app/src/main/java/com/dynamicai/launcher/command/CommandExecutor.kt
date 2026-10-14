@@ -107,6 +107,64 @@ class CommandExecutor(private val context: Context) {
         val (hour, minute) = parseTime(time)
             ?: return CommandResult.Error("Не розпізнав час: \"$time\"")
 
+        // Перевіряємо дозвіл exact alarm
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            try {
+                val am = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+                if (!am.canScheduleExactAlarms()) {
+                    // Відкриваємо системні налаштування для дозволу
+                    try {
+                        context.startActivity(
+                            android.content.Intent(
+                                android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                android.net.Uri.parse("package:${context.packageName}")
+                            ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    } catch (_: Throwable) {}
+                    return CommandResult.Error("Дай дозвіл на точні будильники у налаштуваннях")
+                }
+            } catch (_: Throwable) {}
+        }
+
+        // Ставимо будильник напряму
+        return try {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+
+            val cal = java.util.Calendar.getInstance().apply {
+                set(java.util.Calendar.HOUR_OF_DAY, hour)
+                set(java.util.Calendar.MINUTE, minute)
+                set(java.util.Calendar.SECOND, 0)
+                set(java.util.Calendar.MILLISECOND, 0)
+                if (timeInMillis <= System.currentTimeMillis()) {
+                    add(java.util.Calendar.DAY_OF_YEAR, 1)
+                }
+            }
+
+            val intent = Intent(context, com.dynamicai.launcher.alarm.AlarmReceiver::class.java).apply {
+                putExtra("label", label ?: "DynamicAI")
+                putExtra("hour", hour)
+                putExtra("minute", minute)
+            }
+            val pending = android.app.PendingIntent.getBroadcast(
+                context,
+                (hour * 100 + minute),
+                intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+
+            alarmManager.setAlarmClock(
+                android.app.AlarmManager.AlarmClockInfo(cal.timeInMillis, pending),
+                pending
+            )
+
+            CommandResult.Success("Будильник на %02d:%02d".format(hour, minute))
+        } catch (e: Exception) {
+            CommandResult.Error("Будильник: ${e.message}")
+        }
+    }?): CommandResult {
+        val (hour, minute) = parseTime(time)
+            ?: return CommandResult.Error("Не розпізнав час: \"$time\"")
+
         // Пріоритет 1: Shizuku (прямий виклик, без відкриття додатка)
         if (shizukuManager.isShizukuAvailable() && shizukuManager.hasPermission()) {
             // Запускаємо у фоні, але НЕ викликаємо Intent

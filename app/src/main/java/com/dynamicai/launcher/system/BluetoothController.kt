@@ -49,45 +49,42 @@ class BluetoothController(private val context: Context) {
                     return@withContext false
                 }
 
-            // Створюємо AttributionSource (Android 12+)
+            // Створюємо AttributionSource напряму через конструктор
             val asClass = try {
                 Class.forName("android.content.AttributionSource")
             } catch (_: Throwable) { null }
 
             val attributionSourceObj: Any? = try {
-                val asBuilderClass = Class.forName("android.content.AttributionSource\$Builder")
-                
-                // Пробуємо кілька конструкторів
-                val builder: Any? = try {
-                    // Конструктор 1: (Context, String)
-                    val c1 = asBuilderClass.getConstructor(Context::class.java, String::class.java)
-                    c1.newInstance(context, "com.android.shell")
-                } catch (_: Throwable) {
-                    try {
-                        // Конструктор 2: (Context, String, String)
-                        val c2 = asBuilderClass.getConstructor(
-                            Context::class.java,
-                            String::class.java,
-                            String::class.java
-                        )
-                        c2.newInstance(context, "com.android.shell", null)
-                    } catch (_: Throwable) {
-                        null
-                    }
-                }
-                
-                if (builder == null) {
-                    Log.d(TAG, "AttributionSource Builder not created")
-                    null
-                } else {
-                    val buildMethod = asBuilderClass.getMethod("build")
-                    val result = buildMethod.invoke(builder)
-                    Log.d(TAG, "AttributionSource created: ${result?.javaClass?.name}")
+                if (asClass == null) null
+                else {
+                    // AttributionSource(int uid, String packageName, String attributionTag, AttributionSource next)
+                    val ctor = asClass.getConstructor(
+                        Int::class.javaPrimitiveType,
+                        String::class.java,
+                        String::class.java,
+                        asClass
+                    )
+                    // uid=2000 (shell), packageName="com.android.shell"
+                    val result = ctor.newInstance(2000, "com.android.shell", null, null)
+                    Log.d(TAG, "AS created via ctor(2000)")
                     result
                 }
             } catch (t: Throwable) {
-                Log.d(TAG, "AttributionSource failed: ${t.message}")
-                null
+                Log.d(TAG, "AS ctor1 failed: ${t.message}")
+                try {
+                    // Спроба без next
+                    val ctor2 = asClass?.getConstructor(
+                        Int::class.javaPrimitiveType,
+                        String::class.java,
+                        String::class.java
+                    )
+                    val result = ctor2?.newInstance(2000, "com.android.shell", null)
+                    Log.d(TAG, "AS created via ctor(2000,shell)")
+                    result
+                } catch (t2: Throwable) {
+                    Log.d(TAG, "AS ctor2 failed: ${t2.message}")
+                    null
+                }
             }
 
             val errors = StringBuilder()

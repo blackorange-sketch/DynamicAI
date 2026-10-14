@@ -18,6 +18,7 @@ android {
         targetSdk = 35
         versionCode = (System.getenv("VERSION_CODE")?.toIntOrNull()) ?: 1
         versionName = System.getenv("VERSION_NAME") ?: "0.1.0"
+        resourceConfigurations += listOf("uk", "en")
     }
 
     signingConfigs {
@@ -34,7 +35,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -56,6 +58,10 @@ android {
         jvmTarget = "21"
         freeCompilerArgs += listOf("-Xskip-metadata-version-check")
     }
+    vectorDrawables {
+        useSupportLibrary = true
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true

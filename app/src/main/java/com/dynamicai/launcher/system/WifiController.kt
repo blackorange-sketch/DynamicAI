@@ -60,8 +60,10 @@ class WifiController(private val context: Context) {
             }
             result ?: false
         } catch (t: Throwable) {
-            lastError = "${t.javaClass.simpleName}: ${t.message}"
-            Log.e(TAG, "setWifi failed: $lastError", t)
+            // Розгортаємо InvocationTargetException
+            val cause = t.cause ?: t
+            lastError = "${cause.javaClass.simpleName}: ${cause.message}"
+            Log.e(TAG, "setWifi failed: $lastError", cause)
             false
         }
     }

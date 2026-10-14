@@ -455,10 +455,56 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     LaunchedEffect(launchingApp) {
         val app = launchingApp ?: return@LaunchedEffect
-        kotlinx.coroutines.delay(200)
+        kotlinx.coroutines.delay(if (launchingBounds != null) 380 else 200)
         vm.launch(app.packageName)
         kotlinx.coroutines.delay(180)
         launchingApp = null
+        launchingBounds = null
+    }
+
+    // ==== Zoom-launch overlay ====
+    launchingApp?.let { app ->
+        val bmp = app.bitmap
+        val bounds = launchingBounds
+        if (bmp != null && bounds != null) {
+            val progress = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
+            androidx.compose.runtime.LaunchedEffect(app.packageName) {
+                progress.snapTo(0f)
+                progress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = androidx.compose.animation.core.tween(
+                        durationMillis = 360,
+                        easing = androidx.compose.animation.core.FastOutSlowInEasing
+                    )
+                )
+            }
+            val targetSize = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(100f)
+            ) {
+                androidx.compose.foundation.Image(
+                    bitmap = bmp.asImageBitmap(),
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    modifier = Modifier
+                        .size(bounds.width.dp)
+                        .offset {
+                            androidx.compose.ui.unit.IntOffset(
+                                x = (bounds.left + (targetSize.toPx() - bounds.width) * progress.value / 2f).toInt(),
+                                y = (bounds.top + (bounds.height * (1f - progress.value)) / 2f).toInt()
+                            )
+                        }
+                        .graphicsLayer {
+                            val s = 1f + progress.value * 3.5f
+                            scaleX = s
+                            scaleY = s
+                            alpha = 1f - progress.value * 0.7f
+                        }
+                )
+            }
+        }
     }
 
     Box(
@@ -746,13 +792,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             Dock(
                 items = dockItems,
                 iconSizeDp = settings.dockIconSizeDp,
-                onLaunch = { item ->
+                onLaunch = { item, bounds ->
                     if (item.isFolder) {
                         val fid = item.id.removePrefix("folder:")
                         openFolder = folders.firstOrNull { it.id == fid }
                     } else {
                         val app = apps.firstOrNull { it.packageName == item.id }
-                        if (app != null) launchAppWithAnimation(app)
+                        if (app != null) launchAppWithAnimation(app, bounds)
                     }
                 },
                 onSearch = { searchMode = true },
@@ -812,7 +858,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             backgroundAlphaPercent = settings.backgroundAlphaPercent,
             iconSizeDp = settings.menuIconSizeDp,
             fontSizeSp = settings.fontSizeSp,
-            onLaunch = { app -> launchAppWithAnimation(app) },
+            onLaunch = { app, bounds -> launchAppWithAnimation(app, bounds) },
             onDismiss = { drawerOpen = false },
             visible = drawerOpen
         )

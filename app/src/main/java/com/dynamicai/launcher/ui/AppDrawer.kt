@@ -49,7 +49,7 @@ fun AppDrawer(
     backgroundAlphaPercent: Int,
     iconSizeDp: Int,
     fontSizeSp: Int,
-    onLaunch: (AppInfo) -> Unit,
+    onLaunch: (AppInfo, androidx.compose.ui.geometry.Rect?) -> Unit,
     onDismiss: () -> Unit,
     visible: Boolean,
     gridState: androidx.compose.foundation.lazy.grid.LazyGridState =
@@ -116,8 +116,7 @@ fun AppDrawer(
                 ) {
                     items(filtered, key = { it.packageName }) { app ->
                         AppGridItem(app, iconSizeDp, fontSizeSp) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onLaunch(app)
+                            onLaunch(app, bounds)
                             onDismiss()
                         }
                     }
@@ -132,13 +131,13 @@ private fun AppGridItem(
     app: AppInfo,
     iconSizeDp: Int,
     fontSizeSp: Int,
-    onTap: () -> Unit
+    onTap: (androidx.compose.ui.geometry.Rect?) -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            .pressable(onTap = onTap)
+            .pressableWithBounds { onTap(it) }
             .padding(vertical = 6.dp)
     ) {
         // Glass-обгортка навколо іконки

@@ -8,22 +8,30 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
 
-/**
- * Press scale + haptic для іконок.
- * При утриманні — іконка стискається, легка вібрація.
- * При відпусканні — пружно повертається + onTap.
- */
+/** Press scale + haptic. Без bounds. */
 fun Modifier.pressable(
     scaleDown: Float = 0.88f,
     haptic: Boolean = true,
     onLongPress: (() -> Unit)? = null,
     onTap: () -> Unit
+): Modifier = pressableWithBounds(scaleDown, haptic, onLongPress) { onTap() }
+
+/** Press scale + haptic + повертає bounds іконки (для zoom-launch). */
+fun Modifier.pressableWithBounds(
+    scaleDown: Float = 0.88f,
+    haptic: Boolean = true,
+    onLongPress: (() -> Unit)? = null,
+    onTapWithBounds: (Rect) -> Unit
 ): Modifier = composed {
     var pressed by remember { mutableStateOf(false) }
+    var bounds by remember { mutableStateOf(Rect.Zero) }
     val hapticFb = LocalHapticFeedback.current
     val scale by animateFloatAsState(
         targetValue = if (pressed) scaleDown else 1f,
@@ -35,6 +43,9 @@ fun Modifier.pressable(
     )
 
     this
+        .onGloballyPositioned { coords ->
+            bounds = coords.boundsInRoot()
+        }
         .scale(scale)
         .pointerInput(Unit) {
             detectTapGestures(
@@ -44,7 +55,7 @@ fun Modifier.pressable(
                     tryAwaitRelease()
                     pressed = false
                 },
-                onTap = { onTap() },
+                onTap = { onTapWithBounds(bounds) },
                 onLongPress = onLongPress?.let { fn -> { fn() } }
             )
         }

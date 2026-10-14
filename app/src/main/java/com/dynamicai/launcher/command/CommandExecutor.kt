@@ -28,6 +28,10 @@ class CommandExecutor(private val context: Context) {
         is Command.SearchInApp -> searchInApp(cmd.packageKeyword, cmd.query)
         is Command.SetVolume -> changeVolume(cmd.level)
         Command.ToggleFlashlight -> toggleFlashlight()
+        is Command.Note -> createNote(cmd.text)
+        Command.Screenshot -> takeScreenshot()
+        is Command.SetBrightness -> setBrightness(cmd.level)
+        is Command.AskQuestion -> CommandResult.Error("__ASK_QUESTION__")  // обробляється у ViewModel
         is Command.Raw -> CommandResult.Error("Не розумію команду: \"${cmd.text}\"")
         Command.Unknown -> CommandResult.Error("Не розумію команду")
     }

@@ -23,6 +23,24 @@ class CommandParser {
     private val mapsSearch = Regex("^(карти|maps|навігація|навигация)\\s+(.+)")
     private val spotifySearch = Regex("^(spotify|спотифай|спотіфай)\\s+(.+)")
 
+    // Питання — "хто", "що", "де", "коли", "як", "чому", "скільки" + "?"
+    private val questionStart = Regex("^(хто|що|де|коли|як|чому|скільки|яка|який|яке|чи\s|розкажи|поясни|who|what|where|when|how|why)\b.*")
+    private val questionEnd = Regex(".*\?$")
+
+    // Нотатки
+    private val noteRegex = Regex("^(нотатка|запиши|занотуй|note|запам'ятай)\s+(.+)")
+
+    // Скріншот
+    private val screenshotWords = setOf(
+        "скріншот", "скрін", "зроби скріншот", "знімок екрану",
+        "screenshot", "capture screen"
+    )
+
+    // Яскравість
+    private val brightnessUp = Regex("^(яскравіше|збільш яскравість|brightness up)$")
+    private val brightnessDown = Regex("^(темніше|зменш яскравість|brightness down)$")
+    private val brightnessMax = Regex("^(максимальна яскравість|brightness max)$")
+
     private val flashlight = setOf(
         "ліхтарик", "ліхтарик вкл", "ліхтарик викл",
         "увімкни ліхтарик", "вимкни ліхтарик", "ввімкни ліхтарик",
@@ -49,6 +67,22 @@ class CommandParser {
         youtubeSearch.matchEntire(s)?.let { return Command.DeepLink("youtube", it.groupValues[2]) }
         mapsSearch.matchEntire(s)?.let { return Command.DeepLink("maps", it.groupValues[2]) }
         spotifySearch.matchEntire(s)?.let { return Command.DeepLink("spotify", it.groupValues[2]) }
+
+        // Скріншот
+        if (s in screenshotWords) return Command.Screenshot
+
+        // Яскравість
+        if (brightnessUp.matches(s)) return Command.SetBrightness(1)
+        if (brightnessDown.matches(s)) return Command.SetBrightness(-1)
+        if (brightnessMax.matches(s)) return Command.SetBrightness(100)
+
+        // Нотатки
+        noteRegex.matchEntire(s)?.let { return Command.Note(it.groupValues[2].trim()) }
+
+        // Питання → LLM з Web Search
+        if (questionStart.matches(s) || questionEnd.matches(s)) {
+            return Command.AskQuestion(input.trim())
+        }
 
         openApp.matchEntire(s)?.let { return Command.OpenApp(it.groupValues[2].trim()) }
         call.matchEntire(s)?.let { return Command.Call(it.groupValues[2].trim()) }

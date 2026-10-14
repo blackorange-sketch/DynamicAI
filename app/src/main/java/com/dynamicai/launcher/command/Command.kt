@@ -13,4 +13,8 @@ sealed class Command {
     object ToggleFlashlight : Command()
     object Unknown : Command()
     data class Raw(val text: String) : Command()
+    data class AskQuestion(val query: String) : Command()
+    data class Note(val text: String) : Command()
+    data class Screenshot : Command()
+    data class SetBrightness(val level: Int) : Command()
 }

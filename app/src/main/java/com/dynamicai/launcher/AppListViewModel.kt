@@ -18,7 +18,9 @@ import com.dynamicai.launcher.data.WeatherRepository
 import com.dynamicai.launcher.data.WeatherState
 import com.dynamicai.launcher.folder.Folder
 import com.dynamicai.launcher.folder.FolderStorage
+import com.dynamicai.launcher.llm.ChatEngine
 import com.dynamicai.launcher.llm.LlmAgent
+import com.dynamicai.launcher.llm.WebSearchRepository
 import com.dynamicai.launcher.llm.LiteRtLlmEngine
 import com.dynamicai.launcher.llm.ModelDownloader
 import com.dynamicai.launcher.model.AppInfo
@@ -55,6 +57,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val _downloadProgress = MutableStateFlow<ModelDownloader.Progress?>(null)
     val downloadProgress: StateFlow<ModelDownloader.Progress?> = _downloadProgress.asStateFlow()
     private val llmAgent = LlmAgent(llm)
+    private val chatEngine = ChatEngine(llm, WebSearchRepository())
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
     val apps: StateFlow<List<AppInfo>> = _apps.asStateFlow()
@@ -339,6 +342,20 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     fun executeCommand(text: String) {
         if (text.isBlank()) return
         val cmd = parser.parse(text)
+
+        // Питання → ChatEngine (LLM + Web Search)
+        if (cmd is com.dynamicai.launcher.command.Command.AskQuestion) {
+            viewModelScope.launch {
+                _response.value = "🔍 Шукаю…"
+                val answer = chatEngine.answer(cmd.query)
+                _response.value = answer
+                val settings = settingsStorage.load()
+                if (settings.useTts) {
+                    tts.speak(answer)
+                }
+            }
+            return
+        }
 
         if (cmd is com.dynamicai.launcher.command.Command.Raw) {
             val asApp = executor.resolveOpenApp(text, _apps.value)

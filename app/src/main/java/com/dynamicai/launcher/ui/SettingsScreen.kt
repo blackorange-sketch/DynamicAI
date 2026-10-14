@@ -901,7 +901,6 @@ private fun TtsSlider(
     }
 
 }
-}
 
 @Composable
 private fun AppPickerDialog(

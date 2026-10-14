@@ -1,5 +1,11 @@
 package com.dynamicai.launcher
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+
 import com.dynamicai.launcher.voice.WakeWordService
 
 import android.os.Bundle
@@ -28,13 +34,24 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            // WakeWord: старт/стоп за налаштуванням
+            // WakeWord: запит дозволу мікрофона + старт сервісу, якщо увімкнено
+            val permLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { granted ->
+                if (granted) {
+                    val on = com.dynamicai.launcher.data.SettingsStorage(applicationContext).load().wakeWordEnabled
+                    if (on) com.dynamicai.launcher.voice.WakeWordService.start(applicationContext)
+                }
+            }
             androidx.compose.runtime.LaunchedEffect(Unit) {
-                val wakeEnabled = com.dynamicai.launcher.data.SettingsStorage(applicationContext).load().wakeWordEnabled
-                if (wakeEnabled) {
-                    com.dynamicai.launcher.voice.WakeWordService.start(applicationContext)
+                val granted = ContextCompat.checkSelfPermission(
+                    applicationContext, Manifest.permission.RECORD_AUDIO
+                ) == PackageManager.PERMISSION_GRANTED
+                if (!granted) {
+                    permLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 } else {
-                    com.dynamicai.launcher.voice.WakeWordService.stop(applicationContext)
+                    val on = com.dynamicai.launcher.data.SettingsStorage(applicationContext).load().wakeWordEnabled
+                    if (on) com.dynamicai.launcher.voice.WakeWordService.start(applicationContext)
                 }
             }
 

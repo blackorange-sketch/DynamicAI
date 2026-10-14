@@ -368,8 +368,17 @@ fun SettingsScreen(
                 checked = settings.wakeWordEnabled,
                 icon = Icons.Default.Search,
                 tint = Color(0xFFFFA726)
-            ) {
-                onSettingsChange(settings.copy(wakeWordEnabled = it))
+            ) { on ->
+                onSettingsChange(settings.copy(wakeWordEnabled = on))
+                val appCtx = ctx.applicationContext
+                if (on) {
+                    val ok = ContextCompat.checkSelfPermission(appCtx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+                    if (ok) {
+                        com.dynamicai.launcher.voice.WakeWordService.start(appCtx)
+                    }
+                } else {
+                    com.dynamicai.launcher.voice.WakeWordService.stop(appCtx)
+                }
             }
             if (settings.wakeWordEnabled) {
                 Row(

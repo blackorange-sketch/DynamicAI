@@ -381,10 +381,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 handleResult(asApp, text)
                 return
             }
-            // Перевіряємо toggle + готовність LLM
+            // Перевіряємо toggle + готовність LLM (через файл, БЕЗ engine)
             val settings = settingsStorage.load()
-            val llmOk = settings.useLlm && ensureLlmLoaded()
-            if (!llmOk) {
+            if (!settings.useLlm || !downloader.isDownloaded) {
                 _response.value = "Не розумію команду: \"$text\""
                 return
             }
@@ -392,6 +391,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             viewModelScope.launch {
                 _response.value = "🧠 Думаю… (5-15 сек)"
                 try {
+                    ensureLlmLoaded()
                     val llmCmd = llmAgent.resolve(text)
                     if (llmCmd != null) {
                         val result = executor.execute(llmCmd, _apps.value)

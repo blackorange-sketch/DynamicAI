@@ -455,15 +455,15 @@ class CommandExecutor(private val context: Context) {
 
     private fun toggleWifi(enabled: Boolean): CommandResult {
         return try {
-            val current = systemManager.isWifiEnabled()
-            if (current == enabled) {
-                return CommandResult.Success("WiFi вже ${if (enabled) "увімкнено" else "вимкнено"}")
+            val result = kotlinx.coroutines.runBlocking {
+                quickManager.setWifi(enabled)
             }
-            // Запускаємо у фоні
-            kotlinx.coroutines.GlobalScope.launch {
-                systemManager.setWifiEnabled(enabled)
+            when (result) {
+                is com.dynamicai.launcher.system.QuickSettingsManager.Result.success ->
+                    CommandResult.Success("WiFi ${if (enabled) "увімкнено" else "вимкнено"}")
+                is com.dynamicai.launcher.system.QuickSettingsManager.Result.failure ->
+                    CommandResult.Error("WiFi: ${result.msg}")
             }
-            CommandResult.Success("WiFi ${if (enabled) "увімкнено" else "вимкнено"}")
         } catch (e: Exception) {
             CommandResult.Error("WiFi: ${e.message}")
         }
@@ -471,14 +471,15 @@ class CommandExecutor(private val context: Context) {
 
     private fun toggleBluetooth(enabled: Boolean): CommandResult {
         return try {
-            val current = systemManager.isBluetoothEnabled()
-            if (current == enabled) {
-                return CommandResult.Success("Bluetooth вже ${if (enabled) "увімкнено" else "вимкнено"}")
+            val result = kotlinx.coroutines.runBlocking {
+                quickManager.setBluetooth(enabled)
             }
-            kotlinx.coroutines.GlobalScope.launch {
-                systemManager.setBluetoothEnabled(enabled)
+            when (result) {
+                is com.dynamicai.launcher.system.QuickSettingsManager.Result.success ->
+                    CommandResult.Success("Bluetooth ${if (enabled) "увімкнено" else "вимкнено"}")
+                is com.dynamicai.launcher.system.QuickSettingsManager.Result.failure ->
+                    CommandResult.Error("Bluetooth: ${result.msg}")
             }
-            CommandResult.Success("Bluetooth ${if (enabled) "увімкнено" else "вимкнено"}")
         } catch (e: Exception) {
             CommandResult.Error("Bluetooth: ${e.message}")
         }
@@ -486,11 +487,14 @@ class CommandExecutor(private val context: Context) {
 
     private fun toggleDnd(enabled: Boolean): CommandResult {
         return try {
-            val ok = systemManager.setDnd(enabled)
-            if (ok) {
-                CommandResult.Success("Не турбувати ${if (enabled) "увімкнено" else "вимкнено"}")
-            } else {
-                CommandResult.Error("Потрібен дозвіл Не турбувати")
+            val result = kotlinx.coroutines.runBlocking {
+                quickManager.setDnd(enabled)
+            }
+            when (result) {
+                is com.dynamicai.launcher.system.QuickSettingsManager.Result.success ->
+                    CommandResult.Success("Не турбувати ${if (enabled) "увімкнено" else "вимкнено"}")
+                is com.dynamicai.launcher.system.QuickSettingsManager.Result.failure ->
+                    CommandResult.Error("DND: ${result.msg}")
             }
         } catch (e: Exception) {
             CommandResult.Error("DND: ${e.message}")

@@ -18,6 +18,7 @@ object FuzzyMatcher {
         "вотсап" to "whatsapp", "ватсап" to "whatsapp", "втс" to "whatsapp",
         "вк" to "vk", "вконтакте" to "vk",
         "ютуб" to "youtube", "ютьюб" to "youtube",
+        "ютуб мьюзик" to "youtube music",
         "інст" to "instagram", "инста" to "instagram", "инстаграм" to "instagram",
         "фб" to "facebook", "фейсбук" to "facebook",
         "твіттер" to "twitter",
@@ -38,18 +39,49 @@ object FuzzyMatcher {
 
     fun normalize(input: String): String {
         val s = input.lowercase().trim()
+            .replace(Regex("\\s+"), " ")   // колапс множинних пробілів
         return synonyms[s] ?: s
     }
 
+    /**
+     * Головний метод — порівнює label застосунку з запитом.
+     */
     fun score(label: String, query: String): Int {
         val q0 = query.lowercase().trim()
         if (q0.isEmpty()) return 0
 
-        val l = label.lowercase().trim()
+        val l = label.lowercase().trim().replace(Regex("\\s+"), " ")
         val q = normalize(q0)
-        val lt = transliterate(l)
-        val qt = transliterate(q0)
+        val lt = transliterate(l).replace(Regex("\\s+"), " ")
+        val qt = transliterate(q0).replace(Regex("\\s+"), " ")
 
+        // 1. EXACT MATCH — максимальний пріоритет
+        if (l == q) return 200
+        if (lt == qt) return 200
+
+        // 2. Всі слова запиту присутні в назві (як слова)
+        val queryWords = q.split(" ").filter { it.isNotBlank() }
+        val labelWords = l.split(" ").filter { it.isNotBlank() }
+
+        if (queryWords.isNotEmpty() && queryWords.all { qw -> 
+                labelWords.any { lw -> lw == qw || lw.startsWith(qw) || qw.startsWith(lw) } 
+            }) {
+            // Бонус за точний порядок слів
+            if (l.startsWith(q)) return 190
+            return 150
+        }
+
+        // 3. Те саме з транслітерацією
+        val queryWordsT = qt.split(" ").filter { it.isNotBlank() }
+        val labelWordsT = lt.split(" ").filter { it.isNotBlank() }
+        if (queryWordsT.isNotEmpty() && queryWordsT.all { qw -> 
+                labelWordsT.any { lw -> lw == qw || lw.startsWith(qw) || qw.startsWith(lw) } 
+            }) {
+            if (lt.startsWith(qt)) return 190
+            return 150
+        }
+
+        // 4. Стандартні матчі
         return maxOf(
             raw(l, q),
             raw(l, q0),

@@ -74,13 +74,30 @@ class CommandExecutor(private val context: Context) {
         if (scored.isEmpty()) return CommandResult.Error("Не знайдено застосунок: \"$query\"")
 
         val topScore = scored.first().second
-        val candidates = scored
-            .filter { it.second >= topScore - 15 }
-            .map { it.first }
-            .take(6)
 
-        return if (candidates.size == 1) launchApp(candidates.first())
-        else CommandResult.ChooseApp(query, candidates)
+        // Якщо точно знайшли (200) — одразу
+        if (topScore >= 190) {
+            return launchApp(scored.first().first)
+        }
+
+        // Якщо top score дуже високий (150+) і інші значно нижче — беремо перший
+        val secondScore = scored.getOrNull(1)?.second ?: 0
+        if (topScore >= 150 && topScore - secondScore >= 30) {
+            return launchApp(scored.first().first)
+        }
+
+        // Інакше — показуємо вибір (навіть якщо 1 кандидат, показати для впевненості)
+        val candidates = scored
+            .filter { it.second >= topScore - 20 }
+            .map { it.first }
+            .take(8)
+
+        // Якщо кандидат рівно 1 і score дуже високий — одразу
+        if (candidates.size == 1 && topScore >= 120) {
+            return launchApp(candidates.first())
+        }
+
+        return CommandResult.ChooseApp(query, candidates)
     }
 
     fun launchApp(app: AppInfo): CommandResult {

@@ -328,6 +328,48 @@ fun SettingsScreen(
                 onChange = { onSettingsChange(settings.copy(ttsPitch = it)) }
             )
             SwitchRow(
+                label = "Активація фразою (експериментально)",
+                checked = settings.wakeWordEnabled,
+                icon = Icons.Default.Search,
+                tint = Color(0xFFFFA726)
+            ) {
+                onSettingsChange(settings.copy(wakeWordEnabled = it))
+            }
+            if (settings.wakeWordEnabled) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Фраза:",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        modifier = Modifier.width(60.dp)
+                    )
+                    androidx.compose.foundation.text.BasicTextField(
+                        value = settings.wakeWord,
+                        onValueChange = { onSettingsChange(settings.copy(wakeWord = it)) },
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF64B5F6)),
+                        singleLine = true,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(alpha = 0.08f))
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                    )
+                }
+                Text(
+                    "⚠️ Потребує постійного слухання — буде додано у наступній версії",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 10.sp,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+            
+            SwitchRow(
                 label = "Використовувати LLM для команд",
                 checked = settings.useLlm,
                 icon = Icons.Default.Settings,

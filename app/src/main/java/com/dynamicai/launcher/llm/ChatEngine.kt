@@ -139,19 +139,52 @@ class ChatEngine(
     
     private suspend fun getWeatherContext(question: String): String {
         return try {
-            // Витягуємо місто з питання (груба евристика)
-            val cityMatch = Regex("(?:в|у|для)\\s+([А-ЯІЇЄҐA-Z][а-яіїєґa-z]+)").find(question)
-            val city = cityMatch?.groupValues?.get(1) ?: "Київ"
-            
+            // Покращений regex — 3 варіанти
+            val cityPatterns = listOf(
+                Regex("[\"\u201c]([^\"\u201d]+)[\"\u201d]"),
+                Regex("(?:в|у|для|in)\\s+([А-ЯІЇЄҐA-Z][а-яіїєґa-zA-Z\\-\\s]+)"),
+                Regex("погода\\s+(?:в|у)?\\s*(.+)", RegexOption.IGNORE_CASE)
+            )
+
+            var city = "Київ"
+            for (pattern in cityPatterns) {
+                val match = pattern.find(question)
+                if (match != null) {
+                    val extracted = match.groupValues[1].trim()
+                        .replace(Regex("[?.!,]"), "")
+                        .trim()
+                    if (extracted.isNotBlank()) {
+                        city = extracted
+                        break
+                    }
+                }
+            }
+
+            Log.d(TAG, "Weather: city=$city")
+
+            // Тимчасово підмінюємо місто у налаштуваннях
+            val settingsStorage = com.dynamicai.launcher.data.SettingsStorage(context)
+            val settings = settingsStorage.load()
+            val originalCity = settings.cityName
+
+            settingsStorage.save(settings.copy(cityName = city))
+
             val repo = com.dynamicai.launcher.data.WeatherRepository(context)
-            // Використовуємо cityName через налаштування — але краще прямо
-            val state = repo.fetch()
-            
+            val state = try {
+                repo.fetch()
+            } finally {
+                settingsStorage.save(settings.copy(cityName = originalCity))
+            }
+
             when (state) {
                 is com.dynamicai.launcher.data.WeatherState.Data -> {
                     "Поточна погода в $city: ${state.tempC}°${state.unit}, ${state.description}. " +
                     "Відчувається як ${state.feelsLike}°. Вологість ${state.humidity}%, вітер ${state.windSpeed} км/год. " +
                     "Мінімум ${state.tempMin}°, максимум ${state.tempMax}°."
+                }
+                is com.dynamicai.launcher.data.WeatherState.Error -> {
+                    Log.d(TAG, "Weather error: ${state.message}")
+                    ""
                 }
                 else -> ""
             }

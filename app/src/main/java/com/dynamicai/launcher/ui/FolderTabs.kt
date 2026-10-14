@@ -1,15 +1,19 @@
 package com.dynamicai.launcher.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -22,9 +26,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.graphics.drawable.toBitmap
 import com.dynamicai.launcher.folder.Folder
 import com.dynamicai.launcher.model.AppInfo
 
@@ -51,53 +56,52 @@ fun FolderTabs(
     Column(modifier = modifier.fillMaxWidth()) {
         AnimatedVisibility(
             visible = selectedFolder != null,
-            enter = fadeIn(),
-            exit = fadeOut()
+            enter = fadeIn(animationSpec = tween(180)) +
+                    expandVertically(
+                        animationSpec = tween(220),
+                        expandFrom = Alignment.Bottom
+                    ),
+            exit = fadeOut(animationSpec = tween(120)) +
+                    shrinkVertically(
+                        animationSpec = tween(180),
+                        shrinkTowards = Alignment.Bottom
+                    )
         ) {
-            LazyColumn(
+            val cols = remember(iconSizeDp) {
+                GridCells.Adaptive(minSize = (iconSizeDp + 28).dp)
+            }
+            LazyVerticalGrid(
+                columns = cols,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 340.dp)
+                    .heightIn(max = 360.dp)
                     .clip(RoundedCornerShape(18.dp))
-                    .background(Color(0xE60A0A0A))
+                    .background(Color(0xCC0F0F0F))
                     .border(
                         width = 0.5.dp,
                         color = Color.White.copy(alpha = 0.08f),
                         shape = RoundedCornerShape(18.dp)
                     )
                     .padding(vertical = 6.dp),
-                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(folderApps, key = { it.packageName }) { app ->
-                    Row(
+                gridItems(folderApps, key = { it.packageName }) { app ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 2.dp, vertical = 2.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    listOf(
-                                        Color(0xFF232323),
-                                        Color(0xFF141414)
-                                    )
-                                )
-                            )
-                            .border(
-                                width = 0.5.dp,
-                                color = Color.White.copy(alpha = 0.06f),
-                                shape = RoundedCornerShape(14.dp)
-                            )
                             .pointerInput(app.packageName) {
                                 detectTapGestures { onLaunchApp(app) }
                             }
-                            .padding(horizontal = 10.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(vertical = 4.dp)
                     ) {
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
-                                .size((iconSizeDp + 8).dp)
-                                .clip(RoundedCornerShape((iconSizeDp / 2 + 4).dp))
+                                .size((iconSizeDp + 12).dp)
+                                .clip(RoundedCornerShape((iconSizeDp / 2 + 6).dp))
                                 .background(
                                     brush = Brush.verticalGradient(
                                         listOf(
@@ -114,18 +118,28 @@ fun FolderTabs(
                                             Color.White.copy(alpha = 0.05f)
                                         )
                                     ),
-                                    shape = RoundedCornerShape((iconSizeDp / 2 + 4).dp)
+                                    shape = RoundedCornerShape((iconSizeDp / 2 + 6).dp)
                                 )
                         ) {
                             androidx.compose.material3.Icon(
-                                bitmap = (app.bitmap ?: app.icon.toBitmap(96, 96)).asImageBitmap(),
+                                bitmap = app.bitmap!!.asImageBitmap(),
                                 contentDescription = app.label,
                                 modifier = Modifier.size(iconSizeDp.dp),
                                 tint = Color.Unspecified
                             )
                         }
-                        Spacer(Modifier.width(12.dp))
-                        Text(app.label, color = Color.White, fontSize = fontSizeSp.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = app.label,
+                            color = Color.White,
+                            fontSize = (fontSizeSp - 3).coerceAtLeast(10).sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 2.dp)
+                        )
                     }
                 }
             }

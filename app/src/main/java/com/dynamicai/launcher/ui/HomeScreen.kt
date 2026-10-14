@@ -37,6 +37,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -83,6 +84,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val downloadProgress by vm.downloadProgress.collectAsStateWithLifecycle()
     val llmReady by vm.llmReady.collectAsStateWithLifecycle()
 
+    // Плавна поява іконок — щоб не було різкого "стрибка" після завантаження
+    val contentAlpha by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (apps.isNotEmpty()) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(450),
+        label = "contentAlpha"
+    )
+
     val ctx = LocalContext.current
     val keyboard = LocalSoftwareKeyboardController.current
     val haptic = LocalHapticFeedback.current
@@ -119,6 +127,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     val focusRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
+    val drawerGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val scope = rememberCoroutineScope()
     var scrollJob by remember { mutableStateOf<Job?>(null) }
     var activeLetter by remember { mutableStateOf<Char?>(null) }
@@ -301,12 +310,19 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     LaunchedEffect(query) { vm.updateQuery(query) }
 
-    val letters = remember(suggestions, query) {
+    // Алфавітна стрічка: активний екран визначає джерело
+    val drawerLetters = remember(apps) {
+        apps.mapNotNull { it.label.firstOrNull()?.uppercaseChar() }
+            .filter { it.isLetter() }
+            .distinct().sorted()
+    }
+    val homeLetters = remember(suggestions, query) {
         if (query.isNotBlank()) emptyList()
         else suggestions.mapNotNull {
             (it as? Suggestion.App)?.app?.label?.firstOrNull()?.uppercaseChar()
         }.distinct().sorted()
     }
+    val letters = if (drawerOpen) drawerLetters else homeLetters
 
     val dockApps = remember(dockPkgs, apps, hidden) {
         apps.filter { it.packageName in dockPkgs && it.packageName !in hidden }
@@ -576,7 +592,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             }
         }
 
-        if (letters.isNotEmpty() && query.isBlank() && !searchMode) {
+        if (letters.isNotEmpty() && (drawerOpen || (query.isBlank() && !searchMode))) {
             AlphabetSidebar(
                 letters = letters,
                 activeLetter = activeLetter,
@@ -584,19 +600,34 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                     releaseJob?.cancel()
                     activeLetter = letter
                     showOverlay = true
-                    showListTemporarily()
+                    if (!drawerOpen) showListTemporarily()
                     scrollJob?.cancel()
                     scrollJob = scope.launch {
-                        val idx = suggestions.indexOfFirst {
-                            it is Suggestion.App && (it.app.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
-                        }
-                        if (idx >= 0) {
-                            val current = listState.firstVisibleItemIndex
-                            val d = kotlin.math.abs(idx - current)
-                            when {
-                                d > 60 -> { listState.scrollToItem((idx - 5).coerceAtLeast(0)); listState.animateScrollToItem(idx) }
-                                d > 20 -> { listState.scrollToItem((idx - 3).coerceAtLeast(0)); listState.animateScrollToItem(idx) }
-                                else -> listState.animateScrollToItem(idx)
+                        if (drawerOpen) {
+                            val idx = apps.indexOfFirst {
+                                (it.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
+                            }
+                            if (idx >= 0) {
+                                val current = drawerGridState.firstVisibleItemIndex
+                                val d = kotlin.math.abs(idx - current)
+                                when {
+                                    d > 60 -> { drawerGridState.scrollToItem((idx - 5).coerceAtLeast(0)); drawerGridState.animateScrollToItem(idx) }
+                                    d > 20 -> { drawerGridState.scrollToItem((idx - 3).coerceAtLeast(0)); drawerGridState.animateScrollToItem(idx) }
+                                    else -> drawerGridState.animateScrollToItem(idx)
+                                }
+                            }
+                        } else {
+                            val idx = suggestions.indexOfFirst {
+                                it is Suggestion.App && (it.app.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
+                            }
+                            if (idx >= 0) {
+                                val current = listState.firstVisibleItemIndex
+                                val d = kotlin.math.abs(idx - current)
+                                when {
+                                    d > 60 -> { listState.scrollToItem((idx - 5).coerceAtLeast(0)); listState.animateScrollToItem(idx) }
+                                    d > 20 -> { listState.scrollToItem((idx - 3).coerceAtLeast(0)); listState.animateScrollToItem(idx) }
+                                    else -> listState.animateScrollToItem(idx)
+                                }
                             }
                         }
                     }
@@ -717,7 +748,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         drawerOpen = true
                     }
                 },
-                modifier = Modifier.align(Alignment.BottomCenter)
+                modifier = Modifier.align(Alignment.BottomCenter).alpha(contentAlpha)
             )
         }
 

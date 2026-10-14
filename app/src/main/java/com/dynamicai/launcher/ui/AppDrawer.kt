@@ -51,30 +51,15 @@ fun AppDrawer(
     fontSizeSp: Int,
     onLaunch: (AppInfo) -> Unit,
     onDismiss: () -> Unit,
-    visible: Boolean
+    visible: Boolean,
+    gridState: androidx.compose.foundation.lazy.grid.LazyGridState =
+        androidx.compose.foundation.lazy.grid.rememberLazyGridState()
 ) {
     val haptic = LocalHapticFeedback.current
-    val gridState = rememberLazyGridState()
     val scope = rememberCoroutineScope()
 
-    var activeLetter by remember { mutableStateOf<Char?>(null) }
-    var showOverlay by remember { mutableStateOf(false) }
-    var releaseJob by remember { mutableStateOf<Job?>(null) }
-    var scrollJob by remember { mutableStateOf<Job?>(null) }
 
     val filtered: List<AppInfo> = apps
-
-    val letters = remember(filtered) {
-        filtered
-            .mapNotNull { it.label.firstOrNull()?.uppercaseChar() }
-            .filter { it.isLetter() }
-            .distinct()
-            .sorted()
-    }
-
-    LaunchedEffect(activeLetter) {
-        if (activeLetter != null) showOverlay = true
-    }
 
     // Кількість колонок — залежить від розміру іконки
     val columns = remember(iconSizeDp) {
@@ -140,54 +125,6 @@ fun AppDrawer(
             }
 
             // Стрічка букв
-            if (letters.isNotEmpty()) {
-                AlphabetSidebar(
-                    letters = letters,
-                    activeLetter = activeLetter,
-                    onLetterSelected = { letter ->
-                        releaseJob?.cancel()
-                        activeLetter = letter
-                        showOverlay = true
-                        scrollJob?.cancel()
-                        scrollJob = scope.launch {
-                            val idx = filtered.indexOfFirst {
-                                (it.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
-                            }
-                            if (idx >= 0) {
-                                val current = gridState.firstVisibleItemIndex
-                                val d = kotlin.math.abs(idx - current)
-                                when {
-                                    d > 60 -> { gridState.scrollToItem((idx - 5).coerceAtLeast(0)); gridState.animateScrollToItem(idx) }
-                                    d > 20 -> { gridState.scrollToItem((idx - 3).coerceAtLeast(0)); gridState.animateScrollToItem(idx) }
-                                    else -> gridState.animateScrollToItem(idx)
-                                }
-                            }
-                        }
-                    },
-                    onLetterReleased = { isTap ->
-                        releaseJob?.cancel()
-                        releaseJob = scope.launch {
-                            delay(if (isTap) 350 else 100)
-                            showOverlay = false
-                            delay(180)
-                            activeLetter = null
-                        }
-                    },
-                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight()
-                )
-            }
-
-            if (showOverlay && activeLetter != null) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(120.dp)
-                        .clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(Color.White.copy(alpha = 0.15f))
-                ) {
-                    Text(activeLetter?.toString() ?: "", color = Color.White, fontSize = 64.sp)
-                }
             }
         }
     }

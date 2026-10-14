@@ -314,6 +314,19 @@ fun SettingsScreen(
             ) {
                 onSettingsChange(settings.copy(useTts = it))
             }
+            // TTS слайдери
+            TtsSlider(
+                label = "Швидкість озвучення",
+                value = settings.ttsSpeed,
+                values = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f),
+                onChange = { onSettingsChange(settings.copy(ttsSpeed = it)) }
+            )
+            TtsSlider(
+                label = "Тон голосу",
+                value = settings.ttsPitch,
+                values = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f),
+                onChange = { onSettingsChange(settings.copy(ttsPitch = it)) }
+            )
             SwitchRow(
                 label = "Використовувати LLM для команд",
                 checked = settings.useLlm,
@@ -775,5 +788,37 @@ private fun BluetoothTestRow() {
                 }
             }
         }
+    }
+}
+
+
+@Composable
+private fun TtsSlider(
+    label: String,
+    value: Float,
+    values: List<Float>,
+    onChange: (Float) -> Unit
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(label, color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Text("%.2fx".format(value), color = Color(0xFF64B5F6), fontSize = 12.sp)
+        }
+        Slider(
+            value = values.indexOf(value).coerceAtLeast(0).toFloat(),
+            onValueChange = { v ->
+                val idx = v.roundToInt().coerceIn(0, values.size - 1)
+                onChange(values[idx])
+            },
+            valueRange = 0f..(values.size - 1).toFloat(),
+            steps = (values.size - 2).coerceAtLeast(0),
+            colors = SliderDefaults.colors(
+                thumbColor = Color(0xFF64B5F6),
+                activeTrackColor = Color(0xFF64B5F6)
+            )
+        )
     }
 }

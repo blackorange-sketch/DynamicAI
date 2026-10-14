@@ -213,6 +213,8 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     fun updateSettings(newSettings: LauncherSettings) {
         settingsStorage.save(newSettings)
         _settings.value = newSettings
+        // Оновлюємо TTS якщо змінились speed/pitch
+        tts.reloadSettings()
     }
 
     fun hideApp(pkg: String) {

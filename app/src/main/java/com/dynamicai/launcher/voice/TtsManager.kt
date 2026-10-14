@@ -9,11 +9,13 @@ import java.util.Locale
 /**
  * Менеджер Text-to-Speech. Ініціалізується один раз, озвучує фрази.
  */
-class TtsManager(context: Context) {
+class TtsManager(private val context: Context) {
 
     companion object {
         private const val TAG = "TtsManager"
     }
+
+    private val settingsStorage = com.dynamicai.launcher.data.SettingsStorage(context)
 
     private var tts: TextToSpeech? = null
     private var ready = false
@@ -22,24 +24,42 @@ class TtsManager(context: Context) {
     init {
         tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
+                val settings = settingsStorage.load()
+
                 val result = tts?.setLanguage(Locale("uk", "UA"))
                 if (result == TextToSpeech.LANG_MISSING_DATA ||
                     result == TextToSpeech.LANG_NOT_SUPPORTED) {
                     Log.w(TAG, "uk-UA not supported, fallback to default")
                     tts?.setLanguage(Locale.getDefault())
                 }
-                tts?.setSpeechRate(1.0f)
-                tts?.setPitch(1.0f)
+
+                tts?.setSpeechRate(settings.ttsSpeed)
+                tts?.setPitch(settings.ttsPitch)
 
                 ready = true
                 pendingText?.let {
                     speak(it)
                     pendingText = null
                 }
-                Log.d(TAG, "TTS initialized")
+                Log.d(TAG, "TTS initialized (speed=${settings.ttsSpeed}, pitch=${settings.ttsPitch})")
             } else {
                 Log.e(TAG, "TTS init failed")
             }
+        }
+    }
+
+    /**
+     * Оновити швидкість/тон з налаштувань.
+     */
+    fun reloadSettings() {
+        if (!ready) return
+        try {
+            val settings = settingsStorage.load()
+            tts?.setSpeechRate(settings.ttsSpeed)
+            tts?.setPitch(settings.ttsPitch)
+            Log.d(TAG, "TTS settings reloaded: speed=${settings.ttsSpeed}, pitch=${settings.ttsPitch}")
+        } catch (t: Throwable) {
+            Log.e(TAG, "reloadSettings failed", t)
         }
     }
 

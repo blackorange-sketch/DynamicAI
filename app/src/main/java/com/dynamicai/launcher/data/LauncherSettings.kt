@@ -11,6 +11,8 @@ data class LauncherSettings(
     val showRecentButton: Boolean = true,
     val useLlm: Boolean = true,
     val useTts: Boolean = true,
+    val ttsSpeed: Float = 1.0f,
+    val ttsPitch: Float = 1.0f,
     val showLabels: Boolean = true,
     // Оверлей
     val overlayIconSizeDp: Int = 54,
@@ -44,6 +46,8 @@ class SettingsStorage(context: Context) {
         showRecentButton = prefs.getBoolean("showRecentButton", true),
         useLlm = prefs.getBoolean("useLlm", true),
         useTts = prefs.getBoolean("useTts", true),
+        ttsSpeed = prefs.getFloat("ttsSpeed", 1.0f),
+        ttsPitch = prefs.getFloat("ttsPitch", 1.0f),
         showLabels = prefs.getBoolean("showLabels", true),
         overlayIconSizeDp = prefs.getInt("overlayIconSizeDp", 54),
         overlayPosition = prefs.getString("overlayPosition", "right") ?: "right",
@@ -74,6 +78,8 @@ class SettingsStorage(context: Context) {
             .putBoolean("showRecentButton", s.showRecentButton)
             .putBoolean("useLlm", s.useLlm)
             .putBoolean("useTts", s.useTts)
+            .putFloat("ttsSpeed", s.ttsSpeed)
+            .putFloat("ttsPitch", s.ttsPitch)
             .putBoolean("showLabels", s.showLabels)
             .putInt("overlayIconSizeDp", s.overlayIconSizeDp)
             .putString("overlayPosition", s.overlayPosition)

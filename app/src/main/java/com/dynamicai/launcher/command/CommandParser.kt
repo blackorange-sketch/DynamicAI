@@ -96,6 +96,31 @@ class CommandParser {
         }
 
         // ==== Команди ====
+        // Media
+        if (mediaPlay.matches(s)) return Command.MediaControl("play")
+        if (mediaPause.matches(s)) return Command.MediaControl("pause")
+        if (mediaNext.matches(s)) return Command.MediaControl("next")
+        if (mediaPrev.matches(s)) return Command.MediaControl("prev")
+
+        // Volume exact
+        volumePercent.matchEntire(s)?.let {
+            return Command.SetVolumeExact(it.groupValues[2].toIntOrNull() ?: 50)
+        }
+
+        // Battery
+        if (batteryRe.matches(s)) return Command.BatteryStatus
+
+        // Calculator
+        calcRe.matchEntire(s)?.let { return Command.Calculate(it.groupValues[2].trim()) }
+
+        // Email
+        emailRegex.matchEntire(s)?.let { return Command.SendEmail(it.groupValues[2], null) }
+
+        // SMS: "напиши мамі що я запізнююсь"
+        smsRegex.matchEntire(s)?.let {
+            return Command.SendSms(it.groupValues[2].trim(), it.groupValues[3].trim())
+        }
+
         openApp.matchEntire(s)?.let { return Command.OpenApp(it.groupValues[2].trim()) }
         call.matchEntire(s)?.let { return Command.Call(it.groupValues[2].trim()) }
         search.matchEntire(s)?.let { return Command.WebSearch(it.groupValues[2].trim()) }

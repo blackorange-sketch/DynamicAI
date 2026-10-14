@@ -9,6 +9,12 @@ sealed class Command {
     data class SearchInApp(val packageKeyword: String, val query: String) : Command()
     data class AskQuestion(val query: String) : Command()
     data class Note(val text: String) : Command()
+    data class SendSms(val contact: String, val text: String?) : Command()
+    data class SendEmail(val to: String, val subject: String?) : Command()
+    data class MediaControl(val action: String) : Command()   // play, pause, next, prev, stop
+    data class SetVolumeExact(val percent: Int) : Command()
+    data class BatteryStatus : Command()
+    data class Calculate(val expr: String) : Command()
 
     // ==== Час ====
     data class SetAlarm(val time: String, val label: String?) : Command()

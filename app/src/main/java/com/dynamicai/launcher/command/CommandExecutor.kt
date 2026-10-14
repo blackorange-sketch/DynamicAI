@@ -20,6 +20,12 @@ class CommandExecutor(private val context: Context) {
     private val systemManager by lazy {
         com.dynamicai.launcher.system.QuickSettingsManager(context)
     }
+    private val mediaController by lazy {
+        com.dynamicai.launcher.system.MediaController(context)
+    }
+    private val screenshotController by lazy {
+        com.dynamicai.launcher.system.ScreenshotController(context)
+    }
     private val quickManager by lazy {
         com.dynamicai.launcher.system.QuickSettingsManager(context)
     }
@@ -46,6 +52,12 @@ class CommandExecutor(private val context: Context) {
         Command.DndOff -> handleToggle("dnd", false)
         Command.ToggleFlashlight -> toggleFlashlight()
         is Command.Note -> createNote(cmd.text)
+        is Command.SendSms -> sendSms(cmd.contact, cmd.text)
+        is Command.SendEmail -> sendEmail(cmd.to, cmd.subject)
+        is Command.MediaControl -> mediaControl(cmd.action)
+        is Command.SetVolumeExact -> mediaSetVolume(cmd.percent)
+        Command.BatteryStatus -> batteryStatus()
+        is Command.Calculate -> calculate(cmd.expr)
         Command.Screenshot -> takeScreenshot()
         is Command.SetBrightness -> setBrightness(cmd.level)
         is Command.AskQuestion -> CommandResult.Error("__ASK_QUESTION__")  // обробляється у ViewModel
@@ -424,7 +436,18 @@ class CommandExecutor(private val context: Context) {
     }
 
     private fun takeScreenshot(): CommandResult {
-        return CommandResult.Error("Скріншот потребує MediaProjection — у розробці")
+        return try {
+            val file = kotlinx.coroutines.runBlocking {
+                screenshotController.takeScreenshot()
+            }
+            if (file != null) {
+                CommandResult.Success("Скріншот: ${file.name}")
+            } else {
+                CommandResult.Error("Скріншот: ${screenshotController.lastError}")
+            }
+        } catch (e: Exception) {
+            CommandResult.Error("Скріншот: ${e.message}")
+        }
     }
 
     private fun setBrightness(level: Int): CommandResult {
@@ -541,6 +564,92 @@ class CommandExecutor(private val context: Context) {
             }
         } catch (e: Exception) {
             CommandResult.Error("$target: ${e.message}")
+        }
+    }
+
+
+    private fun sendSms(contact: String, text: String?): CommandResult {
+        return try {
+            val uri = Uri.parse("smsto:${Uri.encode(contact)}")
+            val intent = Intent(Intent.ACTION_SENDTO, uri).apply {
+                if (!text.isNullOrBlank()) putExtra("sms_body", text)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            CommandResult.Success("SMS ${if (!text.isNullOrBlank()) "готово" else "відкрито"}")
+        } catch (e: Exception) {
+            CommandResult.Error("SMS: ${e.message}")
+        }
+    }
+
+    private fun sendEmail(to: String, subject: String?): CommandResult {
+        return try {
+            val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$to")).apply {
+                subject?.let { putExtra(Intent.EXTRA_SUBJECT, it) }
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            CommandResult.Success("Email відкрито")
+        } catch (e: Exception) {
+            CommandResult.Error("Email: ${e.message}")
+        }
+    }
+
+    private fun mediaControl(action: String): CommandResult {
+        return try {
+            val ok = when (action) {
+                "play" -> mediaController.play()
+                "pause" -> mediaController.pause()
+                "next" -> mediaController.next()
+                "prev" -> mediaController.prev()
+                "stop" -> mediaController.stop()
+                else -> false
+            }
+            val label = when (action) {
+                "play" -> "Граю"
+                "pause" -> "Пауза"
+                "next" -> "Наступний трек"
+                "prev" -> "Попередній трек"
+                else -> action
+            }
+            if (ok) CommandResult.Success(label) else CommandResult.Error("Медіа недоступне")
+        } catch (e: Exception) {
+            CommandResult.Error("Медіа: ${e.message}")
+        }
+    }
+
+    private fun mediaSetVolume(percent: Int): CommandResult {
+        return try {
+            val ok = mediaController.setVolumePercent(percent)
+            if (ok) CommandResult.Success("Гучність: $percent%")
+            else CommandResult.Error("Не вдалось")
+        } catch (e: Exception) {
+            CommandResult.Error("Гучність: ${e.message}")
+        }
+    }
+
+    private fun batteryStatus(): CommandResult {
+        return try {
+            val bm = context.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
+            val level = bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+            val charging = bm.isCharging
+            val text = "Батарея: $level%" + if (charging) " (заряджається)" else ""
+            CommandResult.Success(text)
+        } catch (e: Exception) {
+            CommandResult.Error("Батарея: ${e.message}")
+        }
+    }
+
+    private fun calculate(expr: String): CommandResult {
+        return when (val result = com.dynamicai.launcher.util.Calculator.calculate(expr)) {
+            is com.dynamicai.launcher.util.Calculator.Result.success -> {
+                val v = result.value
+                val display = if (v == v.toLong().toDouble()) v.toLong().toString()
+                              else "%.4f".format(v).trimEnd('0').trimEnd('.')
+                CommandResult.Success("$expr = $display")
+            }
+            is com.dynamicai.launcher.util.Calculator.Result.failure ->
+                CommandResult.Error("Помилка: ${result.msg}")
         }
     }
 

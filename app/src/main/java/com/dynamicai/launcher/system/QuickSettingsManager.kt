@@ -27,25 +27,24 @@ class QuickSettingsManager(private val context: Context) {
     // ===== WiFi =====
     suspend fun setWifi(enabled: Boolean): Result = withContext(Dispatchers.IO) {
         // 1. Shizuku
-        try {
-            val ok = wifiController.setWifi(enabled)
-            if (ok) return@withContext Result.success("OK")
-        } catch (t: Throwable) {
-            Log.d(TAG, "Shizuku wifi failed: ${t.message}")
-        }
+        val ok = wifiController.setWifi(enabled)
+        if (ok) return@withContext Result.success("OK")
+
+        val err = wifiController.lastError
+        Log.d(TAG, "wifi lastError: $err")
 
         // 2. Публічний API
         try {
             val wm = context.applicationContext.getSystemService(Context.WIFI_SERVICE)
                     as android.net.wifi.WifiManager
             @Suppress("DEPRECATION")
-            val ok = wm.setWifiEnabled(enabled)
-            if (ok) return@withContext Result.success("OK")
+            val ok2 = wm.setWifiEnabled(enabled)
+            if (ok2) return@withContext Result.success("OK (fallback)")
         } catch (_: Throwable) {}
 
         // 3. Fallback
         openSettings(Settings.ACTION_WIFI_SETTINGS)
-        Result.failure("Shizuku не активний — відкрив налаштування")
+        Result.failure("WiFi через Shizuku: $err")
     }
 
     fun isWifiOn(): Boolean = try {

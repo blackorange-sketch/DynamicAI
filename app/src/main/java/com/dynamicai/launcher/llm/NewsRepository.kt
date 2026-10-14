@@ -87,8 +87,8 @@ class NewsRepository {
 
         while (matcher.find() && items.size < maxItems) {
             val content = matcher.group(1) ?: matcher.group(2) ?: continue
-            val title = extractTag(content, "title")
-            val desc = extractTag(content, "description")
+            val title: String = extractTag(content, "title") ?: continue
+            val desc: String = extractTag(content, "description")
                 ?: extractTag(content, "summary")
                 ?: ""
 

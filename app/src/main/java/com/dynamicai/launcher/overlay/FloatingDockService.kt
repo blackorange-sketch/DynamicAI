@@ -639,7 +639,9 @@ class FloatingDockService : Service() {
             }
         }
         val icon = ImageView(this).apply {
-            setImageBitmap(firstApp.icon.toBitmap(dp(size * 7 / 10), dp(size * 7 / 10)))
+            val bmp = firstApp.bitmap
+                ?: firstApp.icon.toBitmap(dp(size * 7 / 10), dp(size * 7 / 10))
+            setImageBitmap(bmp)
             layoutParams = FrameLayout.LayoutParams(dp(size * 7 / 10), dp(size * 7 / 10)).apply {
                 gravity = Gravity.CENTER
             }
@@ -668,7 +670,9 @@ class FloatingDockService : Service() {
             }
         }
         val icon = ImageView(this).apply {
-            setImageBitmap(app.icon.toBitmap(dp(size), dp(size)))
+            val bmp = app.bitmap
+                ?: app.icon.toBitmap(dp(size), dp(size))
+            setImageBitmap(bmp)
             layoutParams = FrameLayout.LayoutParams(dp(size), dp(size)).apply {
                 gravity = Gravity.CENTER
             }

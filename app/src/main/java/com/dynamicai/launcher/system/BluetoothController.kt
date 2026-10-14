@@ -49,72 +49,70 @@ class BluetoothController(private val context: Context) {
                     return@withContext false
                 }
 
-            // Створюємо AttributionSource для Android 13+
-            val attributionSource = try {
-                val asBuilder = Class.forName("android.content.AttributionSource\$Builder")
+            // Створюємо AttributionSource (Android 12+)
+            val attributionSourceObj: Any? = try {
+                val asBuilderClass = Class.forName("android.content.AttributionSource\$Builder")
                 val asClass = Class.forName("android.content.AttributionSource")
-                val builder = asBuilder.getConstructor(
+                val builder = asBuilderClass.getConstructor(
                     Context::class.java,
                     String::class.java,
                     asClass,
                     String::class.java
-                ).newInstance(context, context.packageName, null, null)
-                val buildMethod = asBuilder.getMethod("build")
-                val asObj = buildMethod.invoke(builder)
-                // Обгортаємо через asBinder() для передачі через binder
-                val asBinderMethod = asClass.getMethod("asBinder")
-                val asBinder = asBinderMethod.invoke(asObj) as? IBinder
-                Log.d(TAG, "AttributionSource created: $asBinder")
-                asBinder
+                ).newInstance(context, "com.android.shell", null, null)
+                val buildMethod = asBuilderClass.getMethod("build")
+                buildMethod.invoke(builder)
             } catch (t: Throwable) {
                 Log.d(TAG, "AttributionSource failed: ${t.message}")
                 null
             }
-
-            // Список спроб: (method, args)
-            val attempts = mutableListOf<Pair<String, Array<Any?>>>()
             
-            if (enabled) {
-                if (attributionSource != null) {
-                    attempts.add("enable" to arrayOf(SHELL_PACKAGE, attributionSource))
-                }
-                attempts.add("enable" to arrayOf(SHELL_PACKAGE))
-                attempts.add("enableNoAutoConnect" to arrayOf(SHELL_PACKAGE))
-                attempts.add("enable" to arrayOf())
-            } else {
-                if (attributionSource != null) {
-                    attempts.add("disable" to arrayOf(SHELL_PACKAGE, attributionSource))
-                }
-                attempts.add("disable" to arrayOf(SHELL_PACKAGE))
-                attempts.add("disable" to arrayOf())
-            }
+            val asClass = try {
+                Class.forName("android.content.AttributionSource")
+            } catch (_: Throwable) { null }
 
             val errors = StringBuilder()
-            
-            for ((methodName, args) in attempts) {
+            val method = if (enabled) "enable" else "disable"
+
+            // Спроба 1: enable/disable(AttributionSource)
+            if (attributionSourceObj != null && asClass != null) {
                 try {
-                    val paramTypes = args.map { arg ->
-                        when (arg) {
-                            is String -> String::class.java
-                            is IBinder -> IBinder::class.java
-                            else -> Any::class.java
-                        }
-                    }.toTypedArray()
-                    
-                    val m = btManager.javaClass.getMethod(methodName, *paramTypes)
-                    val result = m.invoke(btManager, *args)
-                    Log.d(TAG, "$methodName(${args.size} args) → $result")
+                    val m = btManager.javaClass.getMethod(method, asClass)
+                    val result = m.invoke(btManager, attributionSourceObj)
+                    Log.d(TAG, "$method(AttributionSource) → $result")
                     if (result == true) return@withContext true
-                    errors.append("$methodName(${args.size})=$result; ")
+                    errors.append("$method(AS)=$result; ")
                 } catch (t: Throwable) {
                     val cause = t.cause ?: t
-                    val err = "${cause.javaClass.simpleName}: ${cause.message?.take(60)}"
-                    Log.d(TAG, "$methodName(${args.size}) failed: $err")
-                    errors.append("$methodName(${args.size}):$err | ")
+                    errors.append("$method(AS):${cause.javaClass.simpleName}:${cause.message?.take(40)} | ")
                 }
             }
 
-            lastError = errors.toString().take(200)
+            // Спроба 2: enable/disable(AttributionSource, boolean)
+            if (attributionSourceObj != null && asClass != null) {
+                try {
+                    val m = btManager.javaClass.getMethod(method, asClass, Boolean::class.javaPrimitiveType)
+                    val result = m.invoke(btManager, attributionSourceObj, false)
+                    Log.d(TAG, "$method(AS,boolean) → $result")
+                    if (result == true) return@withContext true
+                    errors.append("$method(AS,b)=$result; ")
+                } catch (t: Throwable) {
+                    val cause = t.cause ?: t
+                    errors.append("$method(AS,b):${cause.javaClass.simpleName}:${cause.message?.take(40)} | ")
+                }
+            }
+
+            // Спроба 3: enable/disable()
+            try {
+                val m = btManager.javaClass.getMethod(method)
+                val result = m.invoke(btManager)
+                if (result == true) return@withContext true
+                errors.append("$method()=$result; ")
+            } catch (t: Throwable) {
+                val cause = t.cause ?: t
+                errors.append("$method():${cause.javaClass.simpleName}:${cause.message?.take(40)} | ")
+            }
+
+            lastError = errors.toString().take(220)
             false
         } catch (t: Throwable) {
             val cause = t.cause ?: t

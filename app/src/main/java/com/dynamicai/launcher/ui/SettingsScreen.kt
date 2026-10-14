@@ -1,5 +1,9 @@
 package com.dynamicai.launcher.ui
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
@@ -89,6 +93,7 @@ fun SettingsScreen(
         }
 
         val ctx = LocalContext.current
+        var showOverlayPermDialog by remember { mutableStateOf(false) }
         var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
         LaunchedEffect(Unit) { installedApps = AppRepository(ctx).loadCached() }
 
@@ -115,6 +120,35 @@ fun SettingsScreen(
             AppPickerRow("Камера", settings.defaultCamera, installedApps, Icons.Default.Star, Color(0xFFFF9800)) {
                 onSettingsChange(settings.copy(defaultCamera = it))
             }
+        }
+
+        if (showOverlayPermDialog) {
+            AlertDialog(
+                onDismissRequest = { showOverlayPermDialog = false },
+                title = { Text("Дозвіл для голосової активації", color = Color.White) },
+                text = {
+                    Text(
+                        "Щоб показувати вікно підтвердження команд, дозвольте DynamicAI показ поверх інших застосунків.",
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showOverlayPermDialog = false
+                        try {
+                            val i = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + ctx.packageName))
+                            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            ctx.startActivity(i)
+                        } catch (_: Throwable) {}
+                    }) { Text("Дозволити", color = Color(0xFF64B5F6)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showOverlayPermDialog = false }) {
+                        Text("Пізніше", color = Color.White.copy(alpha = 0.6f))
+                    }
+                },
+                containerColor = Color(0xFF1A1A1A)
+            )
         }
 
         // ==== Погода ====
@@ -379,6 +413,9 @@ fun SettingsScreen(
                     val ok = ContextCompat.checkSelfPermission(appCtx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
                     if (ok) {
                         com.dynamicai.launcher.voice.WakeWordService.start(appCtx)
+                    }
+                    if (android.os.Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(appCtx)) {
+                        showOverlayPermDialog = true
                     }
                 } else {
                     com.dynamicai.launcher.voice.WakeWordService.stop(appCtx)

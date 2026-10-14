@@ -175,6 +175,7 @@ class CommandExecutor(private val context: Context) {
             CommandResult.Error("Будильник: ${e.message}")
         }
 
+    }
     private fun setTimer(duration: String): CommandResult {
         val (seconds, display) = parseDuration(duration)
             ?: return CommandResult.Error("Не розпізнав тривалість: \"$duration\"")

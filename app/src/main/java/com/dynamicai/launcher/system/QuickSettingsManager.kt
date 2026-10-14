@@ -123,6 +123,10 @@ class QuickSettingsManager(private val context: Context) {
 
     // ===== Universal svc command =====
     private fun runSvc(vararg args: String): Result {
+        // svc недоступний через публічний API — відкриваємо системні налаштування
+        Log.d(TAG, "svc ${args.joinToString(" ")} — fallback на налаштування")
+        return Result.failure("Потрібно відкрити налаштування")
+    }{
         return try {
             if (!Shizuku.pingBinder()) {
                 return Result.failure("Shizuku не запущено")

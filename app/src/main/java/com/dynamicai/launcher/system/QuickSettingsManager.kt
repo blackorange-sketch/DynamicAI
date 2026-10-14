@@ -126,29 +126,6 @@ class QuickSettingsManager(private val context: Context) {
         // svc недоступний через публічний API — відкриваємо системні налаштування
         Log.d(TAG, "svc ${args.joinToString(" ")} — fallback на налаштування")
         return Result.failure("Потрібно відкрити налаштування")
-    }{
-        return try {
-            if (!Shizuku.pingBinder()) {
-                return Result.failure("Shizuku не запущено")
-            }
-            val process = Shizuku.newProcess(
-                arrayOf("svc") + args,
-                null,
-                null
-            )
-            val exit = process.waitFor()
-            val output = process.inputStream.bufferedReader().readText().trim()
-            if (exit == 0) {
-                Log.d(TAG, "svc ${args.joinToString(" ")} OK")
-                Result.success("Готово")
-            } else {
-                Log.e(TAG, "svc ${args.joinToString(" ")} failed: $output")
-                Result.failure(output.ifBlank { "exit $exit" })
-            }
-        } catch (t: Throwable) {
-            Log.e(TAG, "svc ${args.joinToString(" ")} exception", t)
-            Result.failure(t.message ?: "помилка")
-        }
     }
 
     // Fallback — відкрити системну панель

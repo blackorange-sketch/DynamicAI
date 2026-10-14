@@ -91,7 +91,6 @@ class LlmAgent(private val engine: LlmEngine) {
             "set_toggle" -> {
                 val target = arg("target") ?: return null
                 val enabledStr = Regex("\"enabled\"\\s*:\\s*(true|false)").find(raw)?.groupValues?.get(1) ?: "false"
-                    ?.groupValues?.get(1) ?: "false"
                 Command.SetToggle(target, enabledStr == "true")
             }
             "create_note" -> arg("text")?.let { Command.Note(it) }

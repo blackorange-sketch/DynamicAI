@@ -25,6 +25,14 @@ sealed class Command {
     data class SetToggle(val target: String, val enabled: Boolean) : Command()
     // target: "wifi", "bluetooth", "mobile_data", "airplane", "location", "nfc", "dnd", "auto_rotate", "battery_saver"
 
+    // ==== Окремі toggle (для сумісності) ====
+    object WifiOn : Command()
+    object WifiOff : Command()
+    object BluetoothOn : Command()
+    object BluetoothOff : Command()
+    object DndOn : Command()
+    object DndOff : Command()
+
     // ==== Просте ====
     object ToggleFlashlight : Command()
     object Screenshot : Command()

@@ -57,7 +57,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val _downloadProgress = MutableStateFlow<ModelDownloader.Progress?>(null)
     val downloadProgress: StateFlow<ModelDownloader.Progress?> = _downloadProgress.asStateFlow()
     private val llmAgent = LlmAgent(llm)
-    private val chatEngine = ChatEngine(llm, WebSearchRepository())
+    private val chatEngine = ChatEngine(app, llm, WebSearchRepository())
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
     val apps: StateFlow<List<AppInfo>> = _apps.asStateFlow()

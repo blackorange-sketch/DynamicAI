@@ -6,9 +6,12 @@ import android.util.Log
  * Chat-режим: LLM + Web Search (RAG).
  */
 class ChatEngine(
+    private val context: android.content.Context,
     private val llm: LlmEngine,
     private val webSearch: WebSearchRepository
 ) {
+    private val newsRepo = NewsRepository()
+    private val translationRepo = TranslationRepository()
 
     companion object {
         private const val TAG = "ChatEngine"
@@ -81,13 +84,57 @@ class ChatEngine(
             return "Поточний час: ${now.format(fmt)}"
         }
         
-        // Курс валют → поки без API
-        if (q.contains("курс") || q.contains("долар") || q.contains("євро") || q.contains("exchange rate")) {
-            // Можна додати exchangerate API
-            return ""
+        // Новини → RSS
+        if (q.contains("новини") || q.contains("news") ||
+            q.contains("що нового") || q.contains("останні новини")) {
+            return getNewsContext(question)
+        }
+        
+        // Переклад → MyMemory API
+        if (q.contains("переклад") || q.contains("переклади") ||
+            q.contains("translate") || q.contains("як буде")) {
+            return getTranslationContext(question)
         }
         
         return ""
+    }
+    
+    private suspend fun getNewsContext(question: String): String {
+        return try {
+            val category = if (question.contains("технолог", ignoreCase = true) ||
+                              question.contains("tech", ignoreCase = true)) "tech" else ""
+            val items = newsRepo.getNews(category, limit = 5)
+            if (items.isEmpty()) {
+                return ""
+            }
+            "Останні новини:\n" + newsRepo.toContext(items)
+        } catch (t: Throwable) {
+            Log.e(TAG, "getNewsContext failed", t)
+            ""
+        }
+    }
+    
+    private suspend fun getTranslationContext(question: String): String {
+        return try {
+            // Витягуємо текст для перекладу (після двокрапки або лапок)
+            val textMatch = Regex("[\"\u201c]([^\"\u201d]+)[\"\u201d]").find(question)
+                ?: Regex("(?:переклад[а-я]*|translate)\\s*[:\\s]+(.+)", RegexOption.IGNORE_CASE).find(question)
+            
+            val textToTranslate = textMatch?.groupValues?.get(1)?.trim() ?: return ""
+            if (textToTranslate.isBlank()) return ""
+            
+            val targetLang = translationRepo.detectTargetFromQuestion(question)
+            val result = translationRepo.translate(textToTranslate, "auto", targetLang)
+            
+            if (result.success) {
+                "Переклад: ${result.text}"
+            } else {
+                ""
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "getTranslationContext failed", t)
+            ""
+        }
     }
     
     private suspend fun getWeatherContext(question: String): String {
@@ -96,9 +143,7 @@ class ChatEngine(
             val cityMatch = Regex("(?:в|у|для)\\s+([А-ЯІЇЄҐA-Z][а-яіїєґa-z]+)").find(question)
             val city = cityMatch?.groupValues?.get(1) ?: "Київ"
             
-            val repo = com.dynamicai.launcher.data.WeatherRepository(
-                getApplicationContext()
-            )
+            val repo = com.dynamicai.launcher.data.WeatherRepository(context)
             // Використовуємо cityName через налаштування — але краще прямо
             val state = repo.fetch()
             

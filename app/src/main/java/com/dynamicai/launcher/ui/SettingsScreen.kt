@@ -899,6 +899,10 @@ private fun TtsSlider(
             )
         )
     }
+
+}
+}
+
 @Composable
 private fun AppPickerDialog(
     title: String,
@@ -979,8 +983,6 @@ private fun AppPickerDialog(
         },
         containerColor = Color(0xFF1A1A1A),
     )
-}
-
 }
 
 @Composable

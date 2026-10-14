@@ -181,6 +181,17 @@ class FloatingDockService : Service() {
     }
 
 
+    private fun launchSearchActivity() {
+        try {
+            val i = Intent(this, com.dynamicai.launcher.SearchOverlayActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
+            startActivity(i)
+        } catch (t: Throwable) {
+            log("launchSearchActivity failed: ${t.message}")
+        }
+    }
+
     private fun showSearchOverlay() {
         if (searchOverlayView != null) return
         try {
@@ -522,7 +533,7 @@ class FloatingDockService : Service() {
             iconRes = android.R.drawable.ic_menu_search,
             iconTint = Color.parseColor("#64B5F6")
         ) {
-showSearchOverlay()
+            launchSearchActivity()
         })
 
         column.addView(spacer(dp(8)))

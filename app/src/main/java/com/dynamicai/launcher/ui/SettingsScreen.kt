@@ -899,4 +899,145 @@ private fun TtsSlider(
             )
         )
     }
+
+@Composable
+private fun AppPickerRow(
+    label: String,
+    currentPkg: String,
+    apps: List<AppInfo>,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: Color,
+    onPick: (String) -> Unit
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    val currentLabel = if (currentPkg.isBlank()) "Системний"
+        else apps.find { it.packageName == currentPkg }?.label ?: currentPkg
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(label) { detectTapGestures { showDialog = true } }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(28.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(tint.copy(alpha = 0.18f)),
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(label, color = Color.White, fontSize = 14.sp)
+            Text(currentLabel, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+        }
+        Icon(
+            Icons.Default.KeyboardArrowRight,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.3f),
+            modifier = Modifier.size(18.dp)
+        )
+    }
+    HorizontalDivider(
+        color = Color.White.copy(alpha = 0.06f),
+        thickness = 0.5.dp,
+        modifier = Modifier.padding(start = 16.dp)
+    )
+
+    if (showDialog) {
+        AppPickerDialog(
+            title = label,
+            apps = apps,
+            currentPkg = currentPkg,
+            onPick = { onPick(it); showDialog = false },
+            onDismiss = { showDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun AppPickerDialog(
+    title: String,
+    apps: List<AppInfo>,
+    currentPkg: String,
+    onPick: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var query by remember { mutableStateOf("") }
+    val filtered = remember(query, apps) {
+        if (query.isBlank()) apps
+        else apps.filter { it.label.contains(query, ignoreCase = true) }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Обрати: $title", color = Color.White) },
+        text = {
+            Column {
+                BasicTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                    cursorBrush = SolidColor(Color(0xFF64B5F6)),
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    decorationBox = { inner ->
+                        if (query.isEmpty()) {
+                            Text("Пошук…", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                        }
+                        inner()
+                    }
+                )
+                Spacer(Modifier.height(8.dp))
+                LazyColumn(modifier = Modifier.heightIn(max = 400.dp)) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onPick("") }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Системний (за замовчуванням)",
+                                color = if (currentPkg.isBlank()) Color(0xFF64B5F6) else Color.White,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                    items(filtered) { app ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onPick(app.packageName) }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                app.label,
+                                color = if (currentPkg == app.packageName) Color(0xFF64B5F6) else Color.White,
+                                fontSize = 14.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (app.isSystem) {
+                                Text("сист.", color = Color.White.copy(alpha = 0.3f), fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Закрити", color = Color(0xFF64B5F6)) }
+        },
+        containerColor = Color(0xFF1A1A1A),
+    )
+}
+
 }

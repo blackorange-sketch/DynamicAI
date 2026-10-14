@@ -138,9 +138,7 @@ private fun AppGridItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            .pointerInput(app.packageName) {
-                detectTapGestures { onTap() }
-            }
+            .pressable(onTap = onTap)
             .padding(vertical = 6.dp)
     ) {
         // Glass-обгортка навколо іконки

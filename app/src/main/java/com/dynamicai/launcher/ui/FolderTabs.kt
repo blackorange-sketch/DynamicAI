@@ -88,9 +88,7 @@ fun FolderTabs(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .pointerInput(app.packageName) {
-                                detectTapGestures { onLaunchApp(app) }
-                            }
+                            .pressable(onTap = { onLaunchApp(app) })
                             .padding(vertical = 4.dp)
                     ) {
                         Box(

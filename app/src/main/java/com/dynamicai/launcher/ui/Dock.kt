@@ -112,7 +112,7 @@ fun Dock(
                             )
                         )
                     )
-                    .clickable(onClick = onRecent)
+                    .pressable { onRecent() }
             ) {
                 Icon(
                     Icons.Default.Menu,
@@ -137,7 +137,7 @@ fun Dock(
                                 )
                             )
                         )
-                        .clickable { onLaunch(item) },
+                        .pressable { onLaunch(item) },
                     contentAlignment = Alignment.Center
                 ) {
                     item.bitmap?.let {
@@ -174,7 +174,7 @@ fun Dock(
                                 ),
                                 shape = RoundedCornerShape((iconSizeDp / 2 + 4).dp)
                             )
-                            .clickable { onLaunch(item) }
+                            .pressable { onLaunch(item) }
                     ) {
                         Icon(
                             bitmap = it.asImageBitmap(),

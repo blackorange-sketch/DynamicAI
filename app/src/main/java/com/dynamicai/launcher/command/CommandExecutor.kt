@@ -107,16 +107,21 @@ class CommandExecutor(private val context: Context) {
         val (hour, minute) = parseTime(time)
             ?: return CommandResult.Error("Не розпізнав час: \"$time\"")
 
-        // Спробувати через Shizuku (прямий виклик)
+        // Пріоритет 1: Shizuku (прямий виклик, без відкриття додатка)
         if (shizukuManager.isShizukuAvailable() && shizukuManager.hasPermission()) {
-            // Запускаємо в корутині (треба suspend)
+            // Запускаємо у фоні, але НЕ викликаємо Intent
             kotlinx.coroutines.GlobalScope.launch {
-                val ok = shizukuManager.setAlarmViaShizuku(hour, minute, label)
-                android.util.Log.d("CommandExecutor", "Shizuku alarm: $ok")
+                try {
+                    val ok = shizukuManager.setAlarmViaShizuku(hour, minute, label)
+                    android.util.Log.d("CommandExecutor", "Shizuku alarm: $ok")
+                } catch (t: Throwable) {
+                    android.util.Log.e("CommandExecutor", "Shizuku alarm failed", t)
+                }
             }
+            return CommandResult.Success("Будильник на %02d:%02d".format(hour, minute))
         }
 
-        // Fallback через Intent (відкриває додаток)
+        // Пріоритет 2: Intent (відкриває системний додаток)
         val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
             putExtra(AlarmClock.EXTRA_HOUR, hour)
             putExtra(AlarmClock.EXTRA_MINUTES, minute)

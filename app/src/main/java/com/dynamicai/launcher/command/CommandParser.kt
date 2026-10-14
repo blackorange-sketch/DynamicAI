@@ -2,16 +2,16 @@ package com.dynamicai.launcher.command
 
 class CommandParser {
 
-    private val openApp = Regex("^(відкрий|відкрити|запусти|увімкни|включи|open|launch|start)\\s+(.+)")
+    private val openApp = Regex(".*(?:відкрий|відкрити|запусти|увімкни|включи|open|launch|start)\\s+(.+)")
     private val call = Regex("^(подзвони|зателефонуй|набери|дзвони|call|dial)\\s+(.+)")
     private val search = Regex("^(пошук|знайди|загугли|search|google)\\s+(.+)")
     private val alarm = Regex("^(будильник|постав будильник|встанови будильник|alarm)\\s+(на\\s+)?(.+)")
     private val timer = Regex("^(таймер|постав таймер|timer)\\s+(на\\s+)?(.+)")
     private val settings = Regex("^(налаштування|настройки|settings|відкрий налаштування|відкрий настройки)$")
-    private val volumeUp = Regex("^(гучніше|збільш гучність|volume up|громче)$")
-    private val volumeDown = Regex("^(тихіше|зменш гучність|volume down|тише)$")
-    private val volumeMax = Regex("^(максимальна гучність|на всю гучність|max volume)$")
-    private val volumeMute = Regex("^(без звуку|вимкни звук|mute|тишина)$")
+    private val volumeUp = Regex(".*(гучніше|збільш гучність|volume up|громче|додай гучності|гучність вгору).*")
+    private val volumeDown = Regex(".*(тихіше|зменш гучність|volume down|тише|прибери гучність|гучність вниз).*")
+    private val volumeMax = Regex(".*(максимальна гучність|на всю гучність|max volume|повна гучність).*")
+    private val volumeMute = Regex(".*(без звуку|вимкни звук|mute|тишина|заглуши звук).*")
 
     private val settingsDeep = Regex("^(налаштування|настройки|settings|відкрий налаштування|відкрий настройки|open settings)\\s+(.+)")
     private val telegramDeep = Regex("^(телеграм|telegram|tg)\\s+(@?[a-zA-Z0-9_+\\d]+)$")
@@ -37,9 +37,9 @@ class CommandParser {
     )
 
     // Яскравість
-    private val brightnessUp = Regex("^(яскравіше|збільш яскравість|brightness up)$")
-    private val brightnessDown = Regex("^(темніше|зменш яскравість|brightness down)$")
-    private val brightnessMax = Regex("^(максимальна яскравість|brightness max)$")
+    private val brightnessUp = Regex(".*(яскравіше|збільш яскравість|підвищ яскравість|brightness up|яскравість вгору).*")
+    private val brightnessDown = Regex(".*(темніше|зменш яскравість|знизь яскравість|brightness down|яскравість вниз).*")
+    private val brightnessMax = Regex(".*(максимальна яскравість|макс яскравість|brightness max|на повну яскравість).*")
 
     private val flashlight = setOf(
         "ліхтарик", "ліхтарик вкл", "ліхтарик викл",

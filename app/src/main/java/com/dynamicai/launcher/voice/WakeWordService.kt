@@ -56,6 +56,7 @@ class WakeWordService : Service() {
     private var restartJob: Job? = null
     private var wakeWord: String = ""
     private var enabled = true
+    private val overlay by lazy { com.dynamicai.launcher.overlay.VoiceCommandOverlay(this) }
 
     override fun onCreate() {
         super.onCreate()
@@ -162,11 +163,22 @@ class WakeWordService : Service() {
         command = command.trimStart(',', '.', '!', '?', ':', ';', '-', ' ').trim()
         if (command.isBlank()) return
         Log.d(TAG, "wake=$wakeWord command=$command")
-        try {
-            val cmd = parser.parse(command)
-            executor.execute(cmd, apps)
-        } catch (t: Throwable) {
-            Log.e(TAG, "execute failed", t)
+
+        val exec: () -> Unit = {
+            try {
+                val cmd = parser.parse(command)
+                executor.execute(cmd, apps)
+            } catch (t: Throwable) {
+                Log.e(TAG, "execute failed", t)
+            }
+        }
+
+        if (overlay.canShow()) {
+            overlay.show(command, onExecute = exec, onCancel = {
+                Log.d(TAG, "cancelled by user")
+            })
+        } else {
+            exec()
         }
     }
 
@@ -215,6 +227,7 @@ class WakeWordService : Service() {
         try { recognizer?.destroy() } catch (_: Throwable) {}
         recognizer = null
         restartJob?.cancel()
+        overlay.hide()
         scope.cancel()
         super.onDestroy()
     }

@@ -94,9 +94,17 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     // Публічний, але НЕ торкається llm поки не спитають
     fun checkLlmReady() {
-        viewModelScope.launch {
-            try { _llmReady.value = llm.isReady } catch (_: Throwable) { _llmReady.value = false }
-        }
+        // Тільки перевірка наявності файлу моделі. Engine НЕ створюється.
+        _llmReady.value = downloader.isDownloaded
+    }
+
+    /** Викликається лениво при першому реальному запиті LLM. */
+    private suspend fun ensureLlmLoaded(): Boolean {
+        if (llm.isReady) return true
+        if (!downloader.isDownloaded) return false
+        return try {
+            llm.initialize(downloader.modelFile)
+        } catch (_: Throwable) { false }
     }
 
     private val _pendingChoice = MutableStateFlow<List<AppInfo>?>(null)
@@ -215,11 +223,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun initLlmIfReady() {
-        if (downloader.isDownloaded && !llm.isReady) {
-            viewModelScope.launch {
-                llm.initialize(downloader.modelFile)
-            }
-        }
+        checkLlmReady()
     }
 
     fun updateSettings(newSettings: LauncherSettings) {
@@ -379,7 +383,8 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             }
             // Перевіряємо toggle + готовність LLM
             val settings = settingsStorage.load()
-            if (!settings.useLlm || !llm.isReady) {
+            val llmOk = settings.useLlm && ensureLlmLoaded()
+            if (!llmOk) {
                 _response.value = "Не розумію команду: \"$text\""
                 return
             }

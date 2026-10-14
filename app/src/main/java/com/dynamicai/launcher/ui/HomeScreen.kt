@@ -231,7 +231,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             } catch (_: Throwable) {}
         }
 
-        vm.initLlmIfReady()
         val granted = ContextCompat.checkSelfPermission(
             ctx, Manifest.permission.READ_CONTACTS
         ) == PackageManager.PERMISSION_GRANTED

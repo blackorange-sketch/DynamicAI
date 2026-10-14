@@ -161,39 +161,6 @@ class CommandExecutor(private val context: Context) {
         } catch (e: Exception) {
             CommandResult.Error("Будильник: ${e.message}")
         }
-    }?): CommandResult {
-        val (hour, minute) = parseTime(time)
-            ?: return CommandResult.Error("Не розпізнав час: \"$time\"")
-
-        // Пріоритет 1: Shizuku (прямий виклик, без відкриття додатка)
-        if (shizukuManager.isShizukuAvailable() && shizukuManager.hasPermission()) {
-            // Запускаємо у фоні, але НЕ викликаємо Intent
-            kotlinx.coroutines.GlobalScope.launch {
-                try {
-                    val ok = shizukuManager.setAlarmViaShizuku(hour, minute, label)
-                    android.util.Log.d("CommandExecutor", "Shizuku alarm: $ok")
-                } catch (t: Throwable) {
-                    android.util.Log.e("CommandExecutor", "Shizuku alarm failed", t)
-                }
-            }
-            return CommandResult.Success("Будильник на %02d:%02d".format(hour, minute))
-        }
-
-        // Пріоритет 2: Intent (відкриває системний додаток)
-        val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
-            putExtra(AlarmClock.EXTRA_HOUR, hour)
-            putExtra(AlarmClock.EXTRA_MINUTES, minute)
-            putExtra(AlarmClock.EXTRA_SKIP_UI, false)
-            label?.let { putExtra(AlarmClock.EXTRA_MESSAGE, it) }
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        return try {
-            context.startActivity(intent)
-            CommandResult.Success("Будильник на %02d:%02d".format(hour, minute))
-        } catch (e: Exception) {
-            CommandResult.Error("Не вдалось поставити будильник")
-        }
-    }
 
     private fun setTimer(duration: String): CommandResult {
         val (seconds, display) = parseDuration(duration)

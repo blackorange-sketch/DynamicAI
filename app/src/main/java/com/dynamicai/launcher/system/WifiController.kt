@@ -54,7 +54,7 @@ class WifiController(private val context: Context) {
                 String::class.java,
                 Boolean::class.javaPrimitiveType
             )
-            val result = method.invoke(wifiManager, context.packageName, enabled) as? Boolean
+            val result = method.invoke(wifiManager, "com.android.shell", enabled) as? Boolean
             if (result != true) {
                 lastError = "setWifiEnabled returned $result"
             }

@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 class CommandExecutor(private val context: Context) {
     private val systemManager by lazy {
-        com.dynamicai.launcher.system.SystemSettingsManager(context)
+        com.dynamicai.launcher.system.QuickSettingsManager(context)
     }
     private val quickManager by lazy {
         com.dynamicai.launcher.system.QuickSettingsManager(context)

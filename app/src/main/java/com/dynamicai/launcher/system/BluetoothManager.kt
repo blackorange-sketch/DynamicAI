@@ -5,6 +5,8 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.os.IBinder
+import rikka.shizuku.ShizukuBinderWrapper
+import rikka.shizuku.SystemServiceHelper
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -86,13 +88,12 @@ class BluetoothManager(private val context: Context) {
 
     private fun connectViaA2dp(device: BluetoothDevice): Boolean {
         return try {
-            val serviceManager = Class.forName("android.os.ServiceManager")
-            val getService = serviceManager.getMethod("getService", String::class.java)
-            val binder = getService.invoke(null, "bluetooth_a2dp") as? IBinder ?: return false
+            val binder = SystemServiceHelper.getSystemService("bluetooth_a2dp")
+            val wrapped = ShizukuBinderWrapper(binder)
 
             val stubClass = Class.forName("android.bluetooth.IBluetoothA2dp\$Stub")
             val asInterface = stubClass.getMethod("asInterface", IBinder::class.java)
-            val a2dp = asInterface.invoke(null, binder) ?: return false
+            val a2dp = asInterface.invoke(null, wrapped) ?: return false
 
             val connect = a2dp.javaClass.getMethod("connect", BluetoothDevice::class.java)
             connect.invoke(a2dp, device)
@@ -106,13 +107,12 @@ class BluetoothManager(private val context: Context) {
 
     private fun connectViaHfp(device: BluetoothDevice): Boolean {
         return try {
-            val serviceManager = Class.forName("android.os.ServiceManager")
-            val getService = serviceManager.getMethod("getService", String::class.java)
-            val binder = getService.invoke(null, "bluetooth_headset") as? IBinder ?: return false
+            val binder = SystemServiceHelper.getSystemService("bluetooth_headset")
+            val wrapped = ShizukuBinderWrapper(binder)
 
             val stubClass = Class.forName("android.bluetooth.IBluetoothHeadset\$Stub")
             val asInterface = stubClass.getMethod("asInterface", IBinder::class.java)
-            val headset = asInterface.invoke(null, binder) ?: return false
+            val headset = asInterface.invoke(null, wrapped) ?: return false
 
             val connect = headset.javaClass.getMethod("connect", BluetoothDevice::class.java)
             connect.invoke(headset, device)

@@ -65,6 +65,7 @@ fun SettingsScreen(
     onOpenWallpaper: () -> Unit,
     onOpenDockEditor: () -> Unit,
     onOpenFolderManager: () -> Unit,
+    onOpenMacroManager: () -> Unit = {},
     llmDownloaded: Boolean,
     llmReady: Boolean,
     versionName: String,
@@ -149,6 +150,22 @@ fun SettingsScreen(
                 },
                 containerColor = Color(0xFF1A1A1A)
             )
+        }
+
+        GlassSectionHeader("Макроси")
+        GlassCard {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerInput("macros") { detectTapGestures { onOpenMacroManager() } }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.PlayArrow, null, tint = Color(0xFFFFB300), modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(12.dp))
+                Text("Керування макросами", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.KeyboardArrowRight, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
+            }
         }
 
         // ==== Погода ====

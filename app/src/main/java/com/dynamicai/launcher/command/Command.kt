@@ -45,4 +45,5 @@ sealed class Command {
     object Unknown : Command()
     data class Raw(val text: String) : Command()
     data class Compound(val steps: List<Command>, val delayMs: Long = 900L) : Command()
+    data class Macro(val name: String) : Command()
 }

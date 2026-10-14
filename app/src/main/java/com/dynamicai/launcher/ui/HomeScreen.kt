@@ -91,6 +91,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var showWallpaper by remember { mutableStateOf(false) }
     var showDockEditor by remember { mutableStateOf(false) }
     var showFolderManager by remember { mutableStateOf(false) }
+    var showMacroManager by remember { mutableStateOf(false) }
     var responseOverlayVisible by remember { mutableStateOf(false) }
     var responseOverlayText by remember { mutableStateOf("") }
     var showRecent by remember { mutableStateOf(false) }
@@ -153,6 +154,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
 
     BackHandler(enabled = showFolderManager) {
         showFolderManager = false
+    }
+    BackHandler(enabled = showMacroManager) {
+        showMacroManager = false
     }
     BackHandler(enabled = !showFolderManager && showRecent) {
         showRecent = false
@@ -325,6 +329,19 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         return
     }
 
+    if (showMacroManager) {
+        val macroStorage = remember { com.dynamicai.launcher.macro.MacroStorage(ctx) }
+        var macroList by remember { mutableStateOf<List<com.dynamicai.launcher.macro.Macro>>(emptyList()) }
+        LaunchedEffect(showMacroManager) { macroList = macroStorage.get() }
+        MacroScreen(
+            macros = macroList,
+            onSave = { m -> macroStorage.add(m); macroList = macroStorage.get() },
+            onDelete = { id -> macroStorage.remove(id); macroList = macroStorage.get() },
+            onRun = { m -> vm.executeCommand("макрос ${m.name}") },
+            onClose = { showMacroManager = false }
+        )
+    }
+
     if (showFolderManager) {
         FolderManagerScreen(
             folders = folders,
@@ -410,6 +427,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             onOpenWallpaper = { showWallpaper = true },
             onOpenDockEditor = { showDockEditor = true },
             onOpenFolderManager = { showFolderManager = true },
+            onOpenMacroManager = { showMacroManager = true },
             onClose = { showSettings = false },
             onTestLlm = { prompt -> vm.testLlm(prompt) }
         )

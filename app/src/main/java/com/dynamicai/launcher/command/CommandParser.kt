@@ -48,6 +48,8 @@ class CommandParser {
     private val mediaPrev = Regex("^(попередній|назад трек|prev|previous)")
     private val volumePercent = Regex("^(гучність|volume)\\s+(\\d+)\\s*%?$")
 
+    private val macroRegex = Regex("^(?:(?:запусти|виконай|виконати|run|start)\\s+)?макрос\\s+(.+)", RegexOption.IGNORE_CASE)
+
     private val batteryRe = Regex("^(який заряд|батарея|скільки заряду|battery|battery status)$")
 
     private val calcRe = Regex("^(порахуй|скільки буде|calculate|calc)\\s+(.+)$")
@@ -179,6 +181,11 @@ class CommandParser {
         emailRegex.matchEntire(s)?.let { return Command.SendEmail(it.groupValues[2], null) }
         smsRegex.matchEntire(s)?.let {
             return Command.SendSms(it.groupValues[2].trim(), it.groupValues[3].trim())
+        }
+
+        macroRegex.matchEntire(s)?.let {
+            val n = it.groupValues[1].trim()
+            if (n.isNotBlank()) return Command.Macro(n)
         }
 
         openApp.matchEntire(s)?.let { return Command.OpenApp(it.groupValues[2].trim()) }

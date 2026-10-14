@@ -83,6 +83,7 @@ class CommandExecutor(private val context: Context) {
         is Command.SetBrightness -> setBrightness(cmd.level)
         is Command.AskQuestion -> CommandResult.Error("__ASK_QUESTION__")  // обробляється у ViewModel
         is Command.Compound -> executeCompound(cmd, apps)
+        is Command.Macro -> runMacro(cmd.name, apps)
         is Command.Raw -> CommandResult.Error("Не розумію команду: \"${cmd.text}\"")
         Command.Unknown -> CommandResult.Error("Не розумію команду")
     }
@@ -98,6 +99,21 @@ class CommandExecutor(private val context: Context) {
             }
         }
         return CommandResult.Success("Виконую ${steps.size} команд(и)")
+    }
+
+    private fun runMacro(name: String, apps: List<AppInfo>): CommandResult {
+        val storage = com.dynamicai.launcher.macro.MacroStorage(context)
+        val macro = storage.findByName(name)
+            ?: return CommandResult.Error("Макрос не знайдено: $name")
+        if (macro.steps.isEmpty()) return CommandResult.Error("Макрос порожній")
+        val p = CommandParser()
+        val parsed = mutableListOf<Command>()
+        for (step in macro.steps) {
+            val c = p.parse(step)
+            if (c !is Command.Raw && c !is Command.Unknown) parsed.add(c)
+        }
+        if (parsed.isEmpty()) return CommandResult.Error("Жоден крок макросу не розпізнано")
+        return executeCompound(Command.Compound(parsed, delayMs = macro.delayMs), apps)
     }
 
     fun resolveOpenApp(query: String, apps: List<AppInfo>): CommandResult {

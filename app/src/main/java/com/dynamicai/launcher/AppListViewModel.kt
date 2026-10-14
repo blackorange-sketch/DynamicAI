@@ -89,6 +89,16 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val _response = MutableStateFlow("")
     val response: StateFlow<String> = _response.asStateFlow()
 
+    private val _llmReady = MutableStateFlow(false)
+    val llmReady: StateFlow<Boolean> = _llmReady.asStateFlow()
+
+    // Публічний, але НЕ торкається llm поки не спитають
+    fun checkLlmReady() {
+        viewModelScope.launch {
+            try { _llmReady.value = llm.isReady } catch (_: Throwable) { _llmReady.value = false }
+        }
+    }
+
     private val _pendingChoice = MutableStateFlow<List<AppInfo>?>(null)
     val pendingChoice: StateFlow<List<AppInfo>?> = _pendingChoice.asStateFlow()
 
@@ -98,6 +108,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private var pendingText: String = ""
 
     init {
+        android.util.Log.d("APPINIT", "init start, RSS before everything")
         viewModelScope.launch {
             executor.flashlightOn.collect {
                 updateQuery("")
@@ -107,6 +118,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         refreshWeather()
         _history.value = historyStorage.get()
         refresh()
+        android.util.Log.d("APPINIT", "init done")
     }
 
     fun refresh() {

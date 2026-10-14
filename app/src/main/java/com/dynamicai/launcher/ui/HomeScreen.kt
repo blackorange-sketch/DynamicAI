@@ -81,6 +81,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val weather by vm.weather.collectAsStateWithLifecycle()
     val recentTasks by vm.recentTasks.collectAsStateWithLifecycle()
     val downloadProgress by vm.downloadProgress.collectAsStateWithLifecycle()
+    val llmReady by vm.llmReady.collectAsStateWithLifecycle()
 
     val ctx = LocalContext.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -423,7 +424,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             },
             onRequestOverlayPermission = { requestOverlayPermission() },
             llmDownloaded = vm.downloader.isDownloaded,
-            llmReady = vm.llm.isReady,
+            llmReady = llmReady,
             versionName = BuildConfig.VERSION_NAME,
             onOpenWallpaper = { showWallpaper = true },
             onOpenDockEditor = { showDockEditor = true },

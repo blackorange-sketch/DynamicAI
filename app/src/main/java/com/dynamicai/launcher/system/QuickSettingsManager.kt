@@ -18,6 +18,7 @@ class QuickSettingsManager(private val context: Context) {
     }
 
     private val wifiController by lazy { WifiController(context) }
+    private val bluetoothController by lazy { BluetoothController(context) }
 
     sealed class Result {
         data class success(val msg: String) : Result()
@@ -55,16 +56,25 @@ class QuickSettingsManager(private val context: Context) {
 
     // ===== Bluetooth =====
     suspend fun setBluetooth(enabled: Boolean): Result = withContext(Dispatchers.IO) {
+        // 1. Shizuku
+        val ok = bluetoothController.setBluetooth(enabled)
+        if (ok) return@withContext Result.success("OK")
+
+        val err = bluetoothController.lastError
+        Log.d(TAG, "bt lastError: $err")
+
+        // 2. Публічний API
         try {
             val adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
-                ?: return@withContext Result.failure("BT недоступний")
-            @Suppress("MissingPermission")
-            val ok = if (enabled) adapter.enable() else adapter.disable()
-            if (ok) Result.success("OK") else Result.failure("Не вдалось")
-        } catch (t: Throwable) {
-            openSettings(Settings.ACTION_BLUETOOTH_SETTINGS)
-            Result.failure("Відкрив налаштування Bluetooth")
-        }
+            if (adapter != null) {
+                @Suppress("MissingPermission")
+                val ok2 = if (enabled) adapter.enable() else adapter.disable()
+                if (ok2) return@withContext Result.success("OK (fallback)")
+            }
+        } catch (_: Throwable) {}
+
+        openSettings(Settings.ACTION_BLUETOOTH_SETTINGS)
+        Result.failure("BT через Shizuku: $err")
     }
 
     fun isBluetoothOn(): Boolean = try {

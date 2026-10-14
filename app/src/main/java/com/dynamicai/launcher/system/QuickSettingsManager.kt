@@ -74,7 +74,7 @@ class QuickSettingsManager(private val context: Context) {
         } catch (_: Throwable) {}
 
         openSettings(Settings.ACTION_BLUETOOTH_SETTINGS)
-        Result.failure("BT через Shizuku: $err")
+        Result.failure("BT: $err")
     }
 
     fun isBluetoothOn(): Boolean = try {

@@ -89,6 +89,8 @@ class BluetoothController(private val context: Context) {
                 attempts.add("disable" to arrayOf())
             }
 
+            val errors = StringBuilder()
+            
             for ((methodName, args) in attempts) {
                 try {
                     val paramTypes = args.map { arg ->
@@ -103,12 +105,16 @@ class BluetoothController(private val context: Context) {
                     val result = m.invoke(btManager, *args)
                     Log.d(TAG, "$methodName(${args.size} args) → $result")
                     if (result == true) return@withContext true
+                    errors.append("$methodName(${args.size})=$result; ")
                 } catch (t: Throwable) {
-                    Log.d(TAG, "$methodName failed: ${t.cause?.message ?: t.message}")
+                    val cause = t.cause ?: t
+                    val err = "${cause.javaClass.simpleName}: ${cause.message?.take(60)}"
+                    Log.d(TAG, "$methodName(${args.size}) failed: $err")
+                    errors.append("$methodName(${args.size}):$err | ")
                 }
             }
 
-            lastError = "всі сигнатури провалились"
+            lastError = errors.toString().take(200)
             false
         } catch (t: Throwable) {
             val cause = t.cause ?: t

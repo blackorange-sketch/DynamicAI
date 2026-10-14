@@ -58,9 +58,6 @@ android {
         jvmTarget = "21"
         freeCompilerArgs += listOf("-Xskip-metadata-version-check")
     }
-    vectorDrawables {
-        useSupportLibrary = true
-    }
 
     buildFeatures {
         compose = true

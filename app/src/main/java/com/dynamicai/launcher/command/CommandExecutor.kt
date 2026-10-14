@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class CommandExecutor(private val context: Context) {
+    private val systemManager by lazy {
+        com.dynamicai.launcher.system.SystemSettingsManager(context)
+    }
     private val shizukuManager by lazy {
         com.dynamicai.launcher.system.ShizukuManager(context)
     }
@@ -32,6 +35,12 @@ class CommandExecutor(private val context: Context) {
         is Command.SearchInApp -> searchInApp(cmd.packageKeyword, cmd.query)
         is Command.SetVolume -> changeVolume(cmd.level)
         Command.ToggleFlashlight -> toggleFlashlight()
+        Command.WifiOn -> toggleWifi(true)
+        Command.WifiOff -> toggleWifi(false)
+        Command.BluetoothOn -> toggleBluetooth(true)
+        Command.BluetoothOff -> toggleBluetooth(false)
+        Command.DndOn -> toggleDnd(true)
+        Command.DndOff -> toggleDnd(false)
         is Command.Note -> createNote(cmd.text)
         Command.Screenshot -> takeScreenshot()
         is Command.SetBrightness -> setBrightness(cmd.level)
@@ -435,6 +444,51 @@ class CommandExecutor(private val context: Context) {
             CommandResult.Success("Яскравість: $target/255")
         } catch (e: Exception) {
             CommandResult.Error("Яскравість: потрібен дозвіл WRITE_SETTINGS")
+        }
+    }
+
+
+    private fun toggleWifi(enabled: Boolean): CommandResult {
+        return try {
+            val current = systemManager.isWifiEnabled()
+            if (current == enabled) {
+                return CommandResult.Success("WiFi вже ${if (enabled) "увімкнено" else "вимкнено"}")
+            }
+            // Запускаємо у фоні
+            kotlinx.coroutines.GlobalScope.launch {
+                systemManager.setWifiEnabled(enabled)
+            }
+            CommandResult.Success("WiFi ${if (enabled) "увімкнено" else "вимкнено"}")
+        } catch (e: Exception) {
+            CommandResult.Error("WiFi: ${e.message}")
+        }
+    }
+
+    private fun toggleBluetooth(enabled: Boolean): CommandResult {
+        return try {
+            val current = systemManager.isBluetoothEnabled()
+            if (current == enabled) {
+                return CommandResult.Success("Bluetooth вже ${if (enabled) "увімкнено" else "вимкнено"}")
+            }
+            kotlinx.coroutines.GlobalScope.launch {
+                systemManager.setBluetoothEnabled(enabled)
+            }
+            CommandResult.Success("Bluetooth ${if (enabled) "увімкнено" else "вимкнено"}")
+        } catch (e: Exception) {
+            CommandResult.Error("Bluetooth: ${e.message}")
+        }
+    }
+
+    private fun toggleDnd(enabled: Boolean): CommandResult {
+        return try {
+            val ok = systemManager.setDnd(enabled)
+            if (ok) {
+                CommandResult.Success("Не турбувати ${if (enabled) "увімкнено" else "вимкнено"}")
+            } else {
+                CommandResult.Error("Потрібен дозвіл Не турбувати")
+            }
+        } catch (e: Exception) {
+            CommandResult.Error("DND: ${e.message}")
         }
     }
 

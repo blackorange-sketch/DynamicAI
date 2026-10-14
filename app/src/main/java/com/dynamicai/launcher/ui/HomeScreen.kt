@@ -91,6 +91,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var showWallpaper by remember { mutableStateOf(false) }
     var showDockEditor by remember { mutableStateOf(false) }
     var showFolderManager by remember { mutableStateOf(false) }
+    var responseOverlayVisible by remember { mutableStateOf(false) }
+    var responseOverlayText by remember { mutableStateOf("") }
     var showRecent by remember { mutableStateOf(false) }
     var showWeatherDetail by remember { mutableStateOf(false) }
     var searchMode by remember { mutableStateOf(false) }
@@ -281,6 +283,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             putExtra(RecognizerIntent.EXTRA_PROMPT, "Скажи команду…")
         }
         try { voiceLauncher.launch(intent) } catch (_: Exception) {}
+    }
+
+    // Оверлей з відповіддю
+    LaunchedEffect(response) {
+        if (response.isNotBlank()) {
+            responseOverlayText = response
+            responseOverlayVisible = true
+            kotlinx.coroutines.delay(8000)
+            responseOverlayVisible = false
+        }
     }
 
     LaunchedEffect(query) { vm.updateQuery(query) }
@@ -621,6 +633,15 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                     onLaunchApp = { app -> launchAppWithAnimation(app) }
                 )
             }
+        }
+
+        // Оверлей з відповіддю
+        Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp)) {
+            ResponseOverlay(
+                text = responseOverlayText,
+                visible = responseOverlayVisible,
+                onDismiss = { responseOverlayVisible = false }
+            )
         }
 
         if (dockPkgs.isNotEmpty()) {

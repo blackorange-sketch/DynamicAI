@@ -41,6 +41,17 @@ class CommandParser {
     private val brightnessDown = Regex(".*(темніше|зменш яскравість|знизь яскравість|brightness down|яскравість вниз).*")
     private val brightnessMax = Regex(".*(максимальна яскравість|макс яскравість|brightness max|на повну яскравість).*")
 
+    // WiFi / BT / DND
+    private val wifiOnRegex = Regex(".*(увімкни|включи|вмикай|on).*?(wifi|wi-fi|вайфай|вай-фай).*", RegexOption.IGNORE_CASE)
+    private val wifiOffRegex = Regex(".*(вимкни|виключи|off).*?(wifi|wi-fi|вайфай|вай-фай).*", RegexOption.IGNORE_CASE)
+    private val wifiToggle = Regex(".*(wifi|wi-fi|вайфай).*", RegexOption.IGNORE_CASE)
+
+    private val btOnRegex = Regex(".*(увімкни|включи|вмикай|on).*?(bluetooth|блютуз|блутуз).*", RegexOption.IGNORE_CASE)
+    private val btOffRegex = Regex(".*(вимкни|виключи|off).*?(bluetooth|блютуз|блутуз).*", RegexOption.IGNORE_CASE)
+
+    private val dndOnRegex = Regex(".*(увімкни|включи|on).*?(не турбувати|днд|dnd|тихий режим).*", RegexOption.IGNORE_CASE)
+    private val dndOffRegex = Regex(".*(вимкни|виключи|off).*?(не турбувати|днд|dnd|тихий режим).*", RegexOption.IGNORE_CASE)
+
     private val flashlight = setOf(
         "ліхтарик", "ліхтарик вкл", "ліхтарик викл",
         "увімкни ліхтарик", "вимкни ліхтарик", "ввімкни ліхтарик",
@@ -83,6 +94,14 @@ class CommandParser {
         if (questionStart.matches(s) || questionEnd.matches(s)) {
             return Command.AskQuestion(input.trim())
         }
+
+        // WiFi / BT / DND
+        if (wifiOnRegex.matches(s)) return Command.WifiOn
+        if (wifiOffRegex.matches(s)) return Command.WifiOff
+        if (btOnRegex.matches(s)) return Command.BluetoothOn
+        if (btOffRegex.matches(s)) return Command.BluetoothOff
+        if (dndOnRegex.matches(s)) return Command.DndOn
+        if (dndOffRegex.matches(s)) return Command.DndOff
 
         openApp.matchEntire(s)?.let { return Command.OpenApp(it.groupValues[2].trim()) }
         call.matchEntire(s)?.let { return Command.Call(it.groupValues[2].trim()) }

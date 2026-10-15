@@ -246,14 +246,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     }
 
     androidx.compose.runtime.DisposableEffect(Unit) {
-        android.util.Log.d("HS_LIFE", "HomeScreen composed")
+        android.util.Log.e("HS_LIFE", "HomeScreen composed")
         onDispose {
-            android.util.Log.d("HS_LIFE", "HomeScreen DISPOSED — composition destroyed!")
+            android.util.Log.e("HS_LIFE", "HomeScreen DISPOSED — composition destroyed!")
         }
     }
 
     LaunchedEffect(Unit) {
-        android.util.Log.d("HS_LIFE", "LaunchedEffect(Unit) fired — composition restarted or first launch")
+        android.util.Log.e("HS_LIFE", "LaunchedEffect(Unit) fired — composition restarted or first launch")
         vm.startWeatherAutoRefresh { isScreenOn(ctx) }
 
         // Автозапуск плаваючого дока, якщо був увімкнений

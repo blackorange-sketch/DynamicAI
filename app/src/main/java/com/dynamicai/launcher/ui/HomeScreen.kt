@@ -98,14 +98,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val downloadProgress by vm.downloadProgress.collectAsStateWithLifecycle()
     val llmReady by vm.llmReady.collectAsStateWithLifecycle()
     val dockAppeared by vm.dockAppeared.collectAsStateWithLifecycle()
-
-    // Анімація зникнення HomeScreen при відкритті drawer
-    val homeAlpha by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (drawerOpen) 0f else 1f,
-        animationSpec = androidx.compose.animation.core.tween(if (drawerOpen) 200 else 260),
-        label = "homeAlpha"
-    )
-    val homeScale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (drawerOpen) 0.90f else 1f,
         animationSpec = androidx.compose.animation.core.tween(if (drawerOpen) 240 else 280),
         label = "homeScale"
@@ -150,6 +142,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var addToFolderPicker by remember { mutableStateOf<AppInfo?>(null) }
     var overlayActive by remember { mutableStateOf(false) }
     var drawerOpen by remember { mutableStateOf(false) }
+    // Анімація зникнення HomeScreen при відкритті drawer
+    val homeAlpha by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (drawerOpen) 0f else 1f,
+        animationSpec = androidx.compose.animation.core.tween(if (drawerOpen) 200 else 260),
+        label = "homeAlpha"
+    )
+    val homeScale by androidx.compose.animation.core.animateFloatAsState(
     var launchingApp by remember { mutableStateOf<AppInfo?>(null) }
     var overlayPermissionGranted by remember {
         mutableStateOf(Settings.canDrawOverlays(ctx))

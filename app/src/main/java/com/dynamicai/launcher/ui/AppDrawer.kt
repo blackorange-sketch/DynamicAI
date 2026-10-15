@@ -108,35 +108,25 @@ fun AppDrawer(
             animationSpec = androidx.compose.animation.core.tween(180)
         )
     ) {
+        // Прозорий фон як у дока/папок — шпалера просвічує через HomeScreen
+        val bgAlpha = kotlin.math.max(0.65f, backgroundAlphaPercent / 100f)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF0A0A0A))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0x1F1F1F).copy(alpha = bgAlpha),
+                            Color(0x0D0D0D).copy(alpha = bgAlpha)
+                        )
+                    )
+                )
                 .pointerInput(Unit) {
                     detectVerticalDragGestures { _, dragAmount ->
                         if (dragAmount > 40) onDismiss()
                     }
                 }
         ) {
-            // ==== Шпалера з RenderEffect blur ====
-            wallpaper?.let { bmp ->
-                Image(
-                    bitmap = bmp,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .alpha(0.85f)
-                        .graphicsLayer {
-                            if (Build.VERSION.SDK_INT >= 31) {
-                                renderEffect = android.graphics.RenderEffect
-                                    .createBlurEffect(80f, 80f, Shader.TileMode.CLAMP)
-                                    .asComposeRenderEffect()
-                            }
-                        }
-                )
-            }
-
             // ==== Dim overlay ====
             Box(
                 modifier = Modifier
@@ -152,55 +142,28 @@ fun AppDrawer(
                     )
             )
 
-            // ==== Glass-панель з іконками ====
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 8.dp, vertical = 8.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.04f),
-                                Color.White.copy(alpha = 0.01f)
-                            )
-                        )
-                    )
-                    .border(
-                        width = 1.dp,
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.25f),
-                                Color.White.copy(alpha = 0.05f)
-                            )
-                        ),
-                        shape = RoundedCornerShape(28.dp)
-                    )
-                    .padding(top = 4.dp)
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    .padding(start = 12.dp, end = 48.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding()
-                        .navigationBarsPadding()
-                        .padding(start = 12.dp, end = 48.dp)
-                ) {
-                    Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(12.dp))
 
-                    LazyVerticalGrid(
-                        state = gridState,
-                        columns = columns,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        items(apps, key = { it.packageName }) { app ->
-                            AppGridItem(app, iconSizeDp, fontSizeSp) {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onLaunch(app)
-                                onDismiss()
-                            }
+                LazyVerticalGrid(
+                    state = gridState,
+                    columns = columns,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    items(apps, key = { it.packageName }) { app ->
+                        AppGridItem(app, iconSizeDp, fontSizeSp) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onLaunch(app)
+                            onDismiss()
                         }
                     }
                 }

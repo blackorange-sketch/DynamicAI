@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -107,9 +108,9 @@ fun AppDrawer(
                         .alpha(0.55f)
                         .graphicsLayer {
                             if (Build.VERSION.SDK_INT >= 31) {
-                                renderEffect = RenderEffect.createBlurEffect(
-                                    80f, 80f, Shader.TileMode.CLAMP
-                                )
+                                renderEffect = android.graphics.RenderEffect
+                                    .createBlurEffect(80f, 80f, Shader.TileMode.CLAMP)
+                                    .asComposeRenderEffect()
                             }
                         }
                 )

@@ -1,6 +1,5 @@
 package com.dynamicai.launcher.system
 
-import android.app.StatusBarManager
 import android.content.Context
 import android.util.Log
 
@@ -11,40 +10,53 @@ class StatusBarController(private val context: Context) {
     }
 
     fun expandNotifications(): Boolean {
-        // 1. Пряме API (працює на HOME-застосунках)
-        try {
-            val sbm = context.getSystemService(Context.STATUS_BAR_SERVICE) as StatusBarManager
-            sbm.expandNotificationsPanel()
-            Log.d(TAG, "expandNotificationsPanel() OK (direct)")
-            return true
-        } catch (t: Throwable) {
-            Log.w(TAG, "direct failed: ${t.message}")
-        }
+        // 1. Стандартний API через reflection
+        if (tryReflect("expandNotificationsPanel")) return true
 
-        // 2. Fallback через reflection
-        try {
-            val sbm = context.getSystemService(Context.STATUS_BAR_SERVICE)
-            val m = sbm.javaClass.getMethod("expandNotificationsPanel")
-            m.invoke(sbm)
-            Log.d(TAG, "expandNotificationsPanel() OK (reflection)")
-            return true
-        } catch (t: Throwable) {
-            Log.w(TAG, "reflection failed: ${t.message}")
-        }
+        // 2. Альтернативна назва (старі Android)
+        if (tryReflect("expandNotificationPanel")) return true
 
-        // 3. Спробувати через AccessibilityService (якщо увімкнено)
-        try {
-            @Suppress("DEPRECATION")
-            val m = Class.forName("android.app.StatusBarManager")
-                .getMethod("expandNotificationsPanel")
-            val sbm = context.getSystemService(Context.STATUS_BAR_SERVICE)
-            m.invoke(sbm)
-            Log.d(TAG, "expandNotificationsPanel() OK (alt)")
-            return true
-        } catch (t: Throwable) {
-            Log.w(TAG, "alt failed: ${t.message}")
-        }
+        // 3. Через Shizuku — StatusBarManagerService (system user)
+        if (tryShizuku()) return true
 
+        Log.w(TAG, "all attempts failed")
         return false
+    }
+
+    private fun tryReflect(method: String): Boolean {
+        return try {
+            val sbm = context.getSystemService(Context.STATUS_BAR_SERVICE)
+                ?: return false
+            val m = sbm.javaClass.getMethod(method)
+            m.invoke(sbm)
+            Log.d(TAG, "$method() OK")
+            true
+        } catch (t: Throwable) {
+            Log.d(TAG, "$method() failed: ${t.message}")
+            false
+        }
+    }
+
+    private fun tryShizuku(): Boolean {
+        return try {
+            val clazz = Class.forName("android.app.StatusBarManager")
+            // reflection через сервіс
+            val sm = Class.forName("android.os.ServiceManager")
+            val getService = sm.getMethod("getService", String::class.java)
+            val binder = getService.invoke(null, "statusbar") ?: return false
+
+            val stub = Class.forName("com.android.internal.statusbar.IStatusBarService\$Stub")
+            val asInterface = stub.getMethod("asInterface", android.os.IBinder::class.java)
+            val service = asInterface.invoke(null, binder) ?: return false
+
+            // виклик expandNotificationsPanel
+            val method = service.javaClass.getMethod("expandNotificationsPanel")
+            method.invoke(service)
+            Log.d(TAG, "shizuku expandNotificationsPanel OK")
+            true
+        } catch (t: Throwable) {
+            Log.d(TAG, "shizuku failed: ${t.message}")
+            false
+        }
     }
 }

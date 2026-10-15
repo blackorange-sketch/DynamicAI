@@ -114,6 +114,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var showDockEditor by remember { mutableStateOf(false) }
     var showFolderManager by remember { mutableStateOf(false) }
     var showMacroManager by remember { mutableStateOf(false) }
+    var showNotesScreen by remember { mutableStateOf(false) }
     var responseOverlayVisible by remember { mutableStateOf(false) }
     var responseOverlayText by remember { mutableStateOf("") }
     var showRecent by remember { mutableStateOf(false) }
@@ -181,6 +182,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     }
     BackHandler(enabled = showMacroManager) {
         showMacroManager = false
+    }
+    BackHandler(enabled = showNotesScreen) {
+        showNotesScreen = false
     }
     BackHandler(enabled = !showFolderManager && showRecent) {
         showRecent = false
@@ -359,6 +363,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         return
     }
 
+    if (showNotesScreen) {
+        NotesScreen(onClose = { showNotesScreen = false })
+        return
+    }
+
     if (showMacroManager) {
         val macroStorage = remember { com.dynamicai.launcher.macro.MacroStorage(ctx) }
         var macroList by remember { mutableStateOf<List<com.dynamicai.launcher.macro.Macro>>(emptyList()) }
@@ -459,10 +468,19 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             onOpenDockEditor = { showDockEditor = true },
             onOpenFolderManager = { showFolderManager = true },
             onOpenMacroManager = { showMacroManager = true },
+            onOpenNotes = { showNotesScreen = true },
             onClose = { showSettings = false },
             onTestLlm = { prompt -> vm.testLlm(prompt) }
         )
         return
+    }
+
+    val openNotesReq by vm.openNotesRequest.collectAsStateWithLifecycle()
+    LaunchedEffect(openNotesReq) {
+        if (openNotesReq) {
+            showNotesScreen = true
+            vm.clearOpenNotes()
+        }
     }
 
     LaunchedEffect(launchingApp) {

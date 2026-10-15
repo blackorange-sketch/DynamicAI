@@ -9,6 +9,7 @@ class CommandParser {
     private val timer = Regex("^(таймер|постав таймер|timer)\\s+(на\\s+)?(.+)")
     private val settings = Regex("^(налаштування|настройки|settings)$")
     private val noteRegex = Regex("^(нотатка|запиши|занотуй|note|запам'ятай)\\s+(.+)")
+    private val notesOpenRegex = Regex("^(мої нотатки|покажи нотатки|відкрий нотатки|нотатки|notes|open notes|my notes)$", RegexOption.IGNORE_CASE)
 
     private val questionStart = Regex("^(хто|що|де|коли|як|чому|скільки|яка|який|яке|чи |розкажи|поясни|who|what|where|when|how|why)\\b.*")
     private val questionEnd = Regex(".*\\?$")
@@ -161,6 +162,7 @@ class CommandParser {
             }
         }
 
+        notesOpenRegex.matchEntire(s)?.let { return Command.OpenNotes }
         noteRegex.matchEntire(s)?.let { return Command.Note(it.groupValues[2].trim()) }
 
         if (questionStart.matches(s) || questionEnd.matches(s)) {

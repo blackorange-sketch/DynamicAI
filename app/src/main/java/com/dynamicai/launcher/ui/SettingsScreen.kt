@@ -66,6 +66,7 @@ fun SettingsScreen(
     onOpenDockEditor: () -> Unit,
     onOpenFolderManager: () -> Unit,
     onOpenMacroManager: () -> Unit = {},
+    onOpenNotes: () -> Unit = {},
     llmDownloaded: Boolean,
     llmReady: Boolean,
     versionName: String,
@@ -150,6 +151,22 @@ fun SettingsScreen(
                 },
                 containerColor = Color(0xFF1A1A1A)
             )
+        }
+
+        GlassSectionHeader("Нотатки")
+        GlassCard {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .pointerInput("notes") { detectTapGestures { onOpenNotes() } }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Edit, null, tint = Color(0xFF64B5F6), modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(12.dp))
+                Text("Керування нотатками", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.KeyboardArrowRight, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
+            }
         }
 
         GlassSectionHeader("Макроси")

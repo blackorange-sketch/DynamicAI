@@ -89,6 +89,11 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val _response = MutableStateFlow("")
     val response: StateFlow<String> = _response.asStateFlow()
 
+    private val _openNotesRequest = MutableStateFlow(false)
+    val openNotesRequest: StateFlow<Boolean> = _openNotesRequest.asStateFlow()
+
+    fun clearOpenNotes() { _openNotesRequest.value = false }
+
     private val _llmReady = MutableStateFlow(false)
     val llmReady: StateFlow<Boolean> = _llmReady.asStateFlow()
 
@@ -424,6 +429,11 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun handleResult(result: CommandResult, originalText: String) {
+        if (result is CommandResult.Error && result.message == "__OPEN_NOTES__") {
+            _openNotesRequest.value = true
+            _response.value = ""
+            return
+        }
         when (result) {
             is CommandResult.Success -> {
                 _response.value = result.message

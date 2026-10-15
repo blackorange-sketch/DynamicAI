@@ -73,6 +73,7 @@ class CommandExecutor(private val context: Context) {
         Command.DndOff -> handleToggle("dnd", false)
         Command.ToggleFlashlight -> toggleFlashlight()
         is Command.Note -> createNote(cmd.text)
+        Command.OpenNotes -> CommandResult.Error("__OPEN_NOTES__")
         is Command.SendSms -> sendSms(cmd.contact, cmd.text)
         is Command.SendEmail -> sendEmail(cmd.to, cmd.subject)
         is Command.MediaControl -> mediaControl(cmd.action)
@@ -496,16 +497,8 @@ class CommandExecutor(private val context: Context) {
 
     private fun createNote(text: String): CommandResult {
         return try {
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, text)
-                putExtra(Intent.EXTRA_SUBJECT, "DynamicAI Note")
-            }
-            val chooser = Intent.createChooser(intent, "Зберегти нотатку").apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            context.startActivity(chooser)
-            CommandResult.Success("Нотатка: $text")
+            com.dynamicai.launcher.note.NotesStorage(context).add(text)
+            CommandResult.Success("Нотатку збережено: $text")
         } catch (e: Exception) {
             CommandResult.Error("Помилка нотатки: ${e.message}")
         }

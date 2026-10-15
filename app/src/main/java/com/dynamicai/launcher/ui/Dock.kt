@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,9 +50,10 @@ fun Dock(
     onSwipeUp: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var appeared by remember { mutableStateOf(false) }
+    // rememberSaveable — переживає перезапуск composition, анімація не повторюється
+    var appeared by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(items.size) {
-        if (items.isNotEmpty()) appeared = true
+        if (items.isNotEmpty() && !appeared) appeared = true
     }
 
     Row(

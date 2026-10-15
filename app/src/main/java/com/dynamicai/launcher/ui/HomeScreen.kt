@@ -97,9 +97,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val downloadProgress by vm.downloadProgress.collectAsStateWithLifecycle()
     val llmReady by vm.llmReady.collectAsStateWithLifecycle()
 
-    // Плавна поява іконок — щоб не було різкого "стрибка" після завантаження
+    // Плавна поява іконок — тільки один раз, потім завжди 1
     val contentAlpha by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (apps.isNotEmpty()) 1f else 0f,
+        targetValue = 1f,
         animationSpec = androidx.compose.animation.core.tween(450),
         label = "contentAlpha"
     )
@@ -245,7 +245,15 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         overlayPermissionGranted = Settings.canDrawOverlays(ctx)
     }
 
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        android.util.Log.d("HS_LIFE", "HomeScreen composed")
+        onDispose {
+            android.util.Log.d("HS_LIFE", "HomeScreen DISPOSED — composition destroyed!")
+        }
+    }
+
     LaunchedEffect(Unit) {
+        android.util.Log.d("HS_LIFE", "LaunchedEffect(Unit) fired — composition restarted or first launch")
         vm.startWeatherAutoRefresh { isScreenOn(ctx) }
 
         // Автозапуск плаваючого дока, якщо був увімкнений

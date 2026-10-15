@@ -68,6 +68,11 @@ fun AppDrawer(
         try {
             val wm = WallpaperManager.getInstance(ctxLocal.applicationContext)
             val d = wm.drawable
+            android.widget.Toast.makeText(
+                ctxLocal,
+                "Wallpaper: " + (d?.let { "OK ${it.intrinsicWidth}x${it.intrinsicHeight}" } ?: "NULL"),
+                android.widget.Toast.LENGTH_LONG
+            ).show()
             if (d != null) {
                 val srcW = d.intrinsicWidth.coerceAtLeast(1)
                 val srcH = d.intrinsicHeight.coerceAtLeast(1)

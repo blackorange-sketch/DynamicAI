@@ -99,6 +99,18 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val llmReady by vm.llmReady.collectAsStateWithLifecycle()
     val dockAppeared by vm.dockAppeared.collectAsStateWithLifecycle()
 
+    // Анімація зникнення HomeScreen при відкритті drawer
+    val homeAlpha by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (drawerOpen) 0f else 1f,
+        animationSpec = androidx.compose.animation.core.tween(if (drawerOpen) 200 else 260),
+        label = "homeAlpha"
+    )
+    val homeScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (drawerOpen) 0.90f else 1f,
+        animationSpec = androidx.compose.animation.core.tween(if (drawerOpen) 240 else 280),
+        label = "homeScale"
+    )
+
     // Плавна поява іконок — тільки один раз, потім завжди 1
     val contentAlpha by androidx.compose.animation.core.animateFloatAsState(
         targetValue = 1f,
@@ -560,6 +572,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer {
+                    alpha = homeAlpha
+                    scaleX = homeScale
+                    scaleY = homeScale
+                }
                 .statusBarsPadding()
                 .padding(start = 16.dp, end = 64.dp)
         ) {
@@ -731,7 +748,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         activeLetter = null
                     }
                 },
-                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().zIndex(10f)
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .zIndex(10f)
+                    .graphicsLayer { alpha = homeAlpha }
             )
         }
 
@@ -753,6 +774,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
+                    .graphicsLayer {
+                        alpha = homeAlpha
+                        scaleX = homeScale
+                        scaleY = homeScale
+                    }
                     .padding(bottom = if (dockPkgs.isNotEmpty()) 100.dp else 20.dp)
                     .padding(horizontal = 16.dp)
             ) {
@@ -776,7 +802,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         }
 
         // Оверлей з відповіддю
-        Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp)) {
+        Box(modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .graphicsLayer { alpha = homeAlpha }
+            .padding(bottom = 120.dp)) {
             ResponseOverlay(
                 text = responseOverlayText,
                 visible = responseOverlayVisible,
@@ -839,7 +868,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         drawerOpen = true
                     }
                 },
-                modifier = Modifier.align(Alignment.BottomCenter).alpha(contentAlpha)
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .alpha(contentAlpha)
+                    .graphicsLayer {
+                        alpha = homeAlpha
+                        scaleX = homeScale
+                        scaleY = homeScale
+                    }
             )
         }
 

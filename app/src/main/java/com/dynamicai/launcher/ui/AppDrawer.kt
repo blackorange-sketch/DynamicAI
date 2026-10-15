@@ -83,10 +83,11 @@ fun AppDrawer(
                 } catch (_: Throwable) { null }
             } else null
         }
+        // Непрозорий фон (98% чорного) — щоб HomeScreen не просвічував
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.55f))
+                .background(Color(0xF01A1A1A))
                 .pointerInput(Unit) {
                     detectVerticalDragGestures { _, dragAmount ->
                         if (dragAmount > 40) onDismiss()
@@ -100,7 +101,12 @@ fun AppDrawer(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxSize()
-                        .alpha(0.6f)
+                        .alpha(0.55f)
+                        .then(
+                            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                                Modifier.blur(60.dp, edgeTreatment = androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)
+                            } else Modifier
+                        )
                 )
             }
 

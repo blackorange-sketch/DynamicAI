@@ -96,6 +96,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val recentTasks by vm.recentTasks.collectAsStateWithLifecycle()
     val downloadProgress by vm.downloadProgress.collectAsStateWithLifecycle()
     val llmReady by vm.llmReady.collectAsStateWithLifecycle()
+    val dockAppeared by vm.dockAppeared.collectAsStateWithLifecycle()
 
     // Плавна поява іконок — тільки один раз, потім завжди 1
     val contentAlpha by androidx.compose.animation.core.animateFloatAsState(
@@ -250,6 +251,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         onDispose {
             android.util.Log.e("HS_LIFE", "HomeScreen DISPOSED — composition destroyed!")
         }
+    }
+
+    LaunchedEffect(apps.isNotEmpty()) {
+        if (apps.isNotEmpty()) vm.markDockAppeared()
     }
 
     LaunchedEffect(Unit) {
@@ -811,6 +816,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                     vm.loadRecentTasks()
                 },
                 showRecentButton = settings.showRecentButton,
+                appeared = dockAppeared,
                 onSwipeUp = {
                     if (settings.showRecentButton) {
                         // Recent увімкнено — показуємо його

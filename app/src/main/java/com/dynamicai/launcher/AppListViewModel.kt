@@ -89,6 +89,10 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val _response = MutableStateFlow("")
     val response: StateFlow<String> = _response.asStateFlow()
 
+    private val _dockAppeared = MutableStateFlow(false)
+    val dockAppeared: StateFlow<Boolean> = _dockAppeared.asStateFlow()
+    fun markDockAppeared() { _dockAppeared.value = true }
+
     private val _openNotesRequest = MutableStateFlow(false)
     val openNotesRequest: StateFlow<Boolean> = _openNotesRequest.asStateFlow()
 

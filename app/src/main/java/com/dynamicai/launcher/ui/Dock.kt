@@ -48,13 +48,9 @@ fun Dock(
     onRecent: () -> Unit,
     showRecentButton: Boolean = true,
     onSwipeUp: () -> Unit,
+    appeared: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    // rememberSaveable — переживає перезапуск composition, анімація не повторюється
-    var appeared by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(items.size) {
-        if (items.isNotEmpty() && !appeared) appeared = true
-    }
 
     Row(
         modifier = modifier

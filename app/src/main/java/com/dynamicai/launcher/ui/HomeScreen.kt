@@ -49,6 +49,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -106,6 +107,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     )
 
     val ctx = LocalContext.current
+    val statusBarCtrl = remember { com.dynamicai.launcher.system.StatusBarController(ctx.applicationContext) }
     val keyboard = LocalSoftwareKeyboardController.current
     val haptic = LocalHapticFeedback.current
 
@@ -530,6 +532,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                         }
                     }
                 )
+            }
+            .pointerInput(Unit) {
+                detectVerticalDragGestures { _, dragAmount ->
+                    if (dragAmount > 10f
+                        && !drawerOpen && !searchActive && !showSettings
+                        && openFolder == null && !showNotesScreen && !showMacroManager
+                    ) {
+                        statusBarCtrl.expandNotifications()
+                    }
+                }
             }
     ) {
         // Затемнення фону коли список/пошук/drawer активний

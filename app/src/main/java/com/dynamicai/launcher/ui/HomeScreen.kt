@@ -98,10 +98,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     val downloadProgress by vm.downloadProgress.collectAsStateWithLifecycle()
     val llmReady by vm.llmReady.collectAsStateWithLifecycle()
     val dockAppeared by vm.dockAppeared.collectAsStateWithLifecycle()
-        targetValue = if (drawerOpen) 0.90f else 1f,
-        animationSpec = androidx.compose.animation.core.tween(if (drawerOpen) 240 else 280),
-        label = "homeScale"
-    )
 
     // Плавна поява іконок — тільки один раз, потім завжди 1
     val contentAlpha by androidx.compose.animation.core.animateFloatAsState(
@@ -149,6 +145,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         label = "homeAlpha"
     )
     val homeScale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (drawerOpen) 0.90f else 1f,
+        animationSpec = androidx.compose.animation.core.tween(if (drawerOpen) 240 else 280),
+        label = "homeScale"
+    )
     var launchingApp by remember { mutableStateOf<AppInfo?>(null) }
     var overlayPermissionGranted by remember {
         mutableStateOf(Settings.canDrawOverlays(ctx))

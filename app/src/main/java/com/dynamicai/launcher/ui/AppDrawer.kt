@@ -28,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -104,7 +105,7 @@ fun AppDrawer(
                         .alpha(0.55f)
                         .then(
                             if (android.os.Build.VERSION.SDK_INT >= 31) {
-                                Modifier.blur(60.dp, edgeTreatment = androidx.compose.ui.draw.BlurredEdgeTreatment.Unbounded)
+                                Modifier.blur(60.dp)
                             } else Modifier
                         )
                 )

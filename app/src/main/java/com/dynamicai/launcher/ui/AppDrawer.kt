@@ -84,8 +84,24 @@ fun AppDrawer(
 
     AnimatedVisibility(
         visible = visible,
-        enter = slideInVertically { it } + fadeIn(),
-        exit = slideOutVertically { it } + fadeOut()
+        enter = slideInVertically(
+            initialOffsetY = { it / 2 },
+            animationSpec = androidx.compose.animation.core.tween(
+                durationMillis = 280,
+                easing = androidx.compose.animation.core.FastOutSlowInEasing
+            )
+        ) + fadeIn(
+            animationSpec = androidx.compose.animation.core.tween(220)
+        ),
+        exit = slideOutVertically(
+            targetOffsetY = { it / 2 },
+            animationSpec = androidx.compose.animation.core.tween(
+                durationMillis = 220,
+                easing = androidx.compose.animation.core.FastOutSlowInEasing
+            )
+        ) + fadeOut(
+            animationSpec = androidx.compose.animation.core.tween(180)
+        )
     ) {
         Box(
             modifier = Modifier
@@ -105,7 +121,7 @@ fun AppDrawer(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .fillMaxSize()
-                        .alpha(0.55f)
+                        .alpha(0.85f)
                         .graphicsLayer {
                             if (Build.VERSION.SDK_INT >= 31) {
                                 renderEffect = android.graphics.RenderEffect
@@ -123,9 +139,9 @@ fun AppDrawer(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color(0x88000000),
-                                Color(0xCC000000),
-                                Color(0xE6000000)
+                                Color(0x55000000),
+                                Color(0x77000000),
+                                Color(0xAA000000)
                             )
                         )
                     )
@@ -140,8 +156,8 @@ fun AppDrawer(
                     .background(
                         Brush.verticalGradient(
                             listOf(
-                                Color.White.copy(alpha = 0.10f),
-                                Color.White.copy(alpha = 0.03f)
+                                Color.White.copy(alpha = 0.04f),
+                                Color.White.copy(alpha = 0.01f)
                             )
                         )
                     )

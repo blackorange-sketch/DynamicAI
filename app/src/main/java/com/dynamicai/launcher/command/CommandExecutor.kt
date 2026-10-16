@@ -75,6 +75,7 @@ class CommandExecutor(private val context: Context) {
         is Command.Note -> createNote(cmd.text)
         is Command.SetReminder -> setReminder(cmd.text, cmd.duration)
         is Command.Pomodoro -> setPomodoro(cmd.minutes)
+        is Command.TranslateScreen -> CommandResult.Error("__TRANSLATE_SCREEN__${cmd.targetLang}")
         Command.OpenNotes -> CommandResult.Error("__OPEN_NOTES__")
         is Command.SendSms -> sendSms(cmd.contact, cmd.text)
         is Command.SendEmail -> sendEmail(cmd.to, cmd.subject)

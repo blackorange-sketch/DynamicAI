@@ -13,6 +13,7 @@ class CommandParser {
     private val reminderRegex1 = Regex("^нагадай\\s+через\\s+(.+?)\\s+(.+)$", RegexOption.IGNORE_CASE)
     private val reminderRegex2 = Regex("^нагадай\\s+(.+?)\\s+через\\s+(.+)$", RegexOption.IGNORE_CASE)
     private val pomodoroRegex = Regex("^(помодоро|фокус|focus|pomodoro)(?:\\s+(\\d{1,3}))?$", RegexOption.IGNORE_CASE)
+    private val translateScreenRegex = Regex("^(переклади? екран|переклад екрану|translate screen|переведи экран)(?:\\s+(?:на\\s+)?(англ|англійськ\\w*|en|польськ\\w*|pl|pol|укр\\w*|uk))?$", RegexOption.IGNORE_CASE)
 
     private val questionStart = Regex("^(хто|що|де|коли|як|чому|скільки|яка|який|яке|чи |розкажи|поясни|who|what|where|when|how|why)\\b.*")
     private val questionEnd = Regex(".*\\?$")
@@ -165,6 +166,15 @@ class CommandParser {
             }
         }
 
+        translateScreenRegex.matchEntire(s)?.let {
+            val langRaw = it.groupValues[2].lowercase()
+            val target = when {
+                langRaw.startsWith("поль") || langRaw == "pl" || langRaw == "pol" -> "pl"
+                langRaw.startsWith("укр") || langRaw == "uk" -> "uk"
+                else -> "en"
+            }
+            return Command.TranslateScreen(target)
+        }
         pomodoroRegex.matchEntire(s)?.let {
             val mins = it.groupValues[2].toIntOrNull() ?: 25
             return Command.Pomodoro(mins.coerceIn(1, 180))

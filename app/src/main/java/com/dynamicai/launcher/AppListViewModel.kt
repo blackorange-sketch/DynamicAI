@@ -432,7 +432,42 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         handleResult(result, text)
     }
 
+
+    fun translateScreen(targetLang: String) {
+        viewModelScope.launch {
+            _response.value = "🌐 Роблю скріншот…"
+            try {
+                val translator = com.dynamicai.launcher.ocr.ScreenTranslator(getApplication())
+                val blocks = translator.captureAndTranslate(
+                    ocrLangs = "ukr+eng",
+                    targetLang = targetLang
+                ) { stage ->
+                    _response.value = "🌐 $stage"
+                }
+                if (blocks.isEmpty()) {
+                    _response.value = "Не вдалось розпізнати текст (перевір чи завантажено OCR-мови в налаштуваннях)"
+                    return@launch
+                }
+                com.dynamicai.launcher.ocr.ScreenTranslateOverlay.show(
+                    context = getApplication(),
+                    blocks = blocks,
+                    targetLang = targetLang
+                )
+                _response.value = "Перекладено ${blocks.size} блоків"
+                val st = settingsStorage.load()
+                if (st.useTts) tts.speak("Готово. Перекладено ${blocks.size} блоків")
+            } catch (t: Throwable) {
+                _response.value = "Помилка перекладу: ${t.message}"
+            }
+        }
+    }
+
     private fun handleResult(result: CommandResult, originalText: String) {
+        if (result is CommandResult.Error && result.message.startsWith("__TRANSLATE_SCREEN__")) {
+            val lang = result.message.removePrefix("__TRANSLATE_SCREEN__").ifBlank { "en" }
+            translateScreen(lang)
+            return
+        }
         if (result is CommandResult.Error && result.message == "__OPEN_NOTES__") {
             _openNotesRequest.value = true
             _response.value = ""

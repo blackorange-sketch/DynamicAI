@@ -115,17 +115,33 @@ fun AppDrawer(
                     .fillMaxSize()
                     .statusBarsPadding()
                     .navigationBarsPadding()
-                    .padding(start = 12.dp, end = 48.dp)
+                    .padding(start = 4.dp, end = 32.dp)
             ) {
-                Spacer(Modifier.height(8.dp))
+                LazyVerticalGrid(
+                    state = gridState,
+                    columns = columns,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    items(filtered, key = { it.packageName }) { app ->
+                        AppGridItem(app, iconSizeDp, fontSizeSp) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onLaunch(app)
+                            onDismiss()
+                        }
+                    }
+                }
 
-                // ==== Категорії (таби) ====
+                // ==== Категорії внизу ====
                 if (categories.size > 1) {
+                    Spacer(Modifier.height(4.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .horizontalScroll(rememberScrollState())
-                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                            .padding(horizontal = 4.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         categories.forEach { cat ->
@@ -139,24 +155,7 @@ fun AppDrawer(
                             )
                         }
                     }
-                    Spacer(Modifier.height(4.dp))
-                }
-
-                LazyVerticalGrid(
-                    state = gridState,
-                    columns = columns,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    items(filtered, key = { it.packageName }) { app ->
-                        AppGridItem(app, iconSizeDp, fontSizeSp) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onLaunch(app)
-                            onDismiss()
-                        }
-                    }
+                    Spacer(Modifier.height(8.dp))
                 }
             }
         }

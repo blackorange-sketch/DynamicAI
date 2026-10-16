@@ -115,8 +115,7 @@ class ScreenTranslator(
                     continue
                 }
 
-                // Парсимо: "1. Hello
-2. How are you"
+                // Парсимо відповідь LLM у список рядків
                 val parsed = parseNumbered(response)
                 translations.addAll(parsed)
             }

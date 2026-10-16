@@ -114,5 +114,17 @@
             android:name=".voice.WakeWordService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+        <receiver
+            android:name=".alarm.ReminderReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".alarm.PomodoroReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".alarm.PomodoroActionReceiver"
+            android:exported="false" />
+
     </application>
 </manifest>

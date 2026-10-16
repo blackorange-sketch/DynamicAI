@@ -910,9 +910,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             )
         }
 
-        val drawerApps = remember(apps, hidden, folders) {
-            val folderPkgs = folders.flatMap { it.packageNames }.toSet()
-            apps.filter { it.packageName !in hidden && it.packageName !in folderPkgs }
+        val drawerApps = remember(apps, hidden) {
+            // Показуємо всі apps крім прихованих (ті що в папках теж видно)
+            apps.filter { it.packageName !in hidden }
         }
         AppDrawer(
             apps = drawerApps,

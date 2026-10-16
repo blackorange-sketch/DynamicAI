@@ -59,20 +59,13 @@ class ScreenTranslator(
             }
 
             onProgress("Роблю скріншот…")
-            val file = screenshot.takeScreenshot()
-            if (file == null) {
+            val bmp = screenshot.takeScreenshot()
+            if (bmp == null) {
                 Log.e(TAG, "Screenshot failed: ${screenshot.lastError}")
                 return@withContext emptyList()
             }
 
             onProgress("Розпізнаю текст…")
-            val bmp = BitmapFactory.decodeFile(file.absolutePath)
-            file.delete()
-            if (bmp == null) {
-                Log.e(TAG, "Failed to decode screenshot")
-                return@withContext emptyList()
-            }
-
             val blocks = ocr.recognize(bmp, ocrLangs)
             Log.d(TAG, "OCR: ${blocks.size} blocks")
             bmp.recycle()

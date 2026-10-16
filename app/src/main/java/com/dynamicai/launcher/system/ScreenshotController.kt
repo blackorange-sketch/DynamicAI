@@ -1,20 +1,16 @@
 package com.dynamicai.launcher.system
 
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Environment
-import android.os.IBinder
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
-import rikka.shizuku.ShizukuBinderWrapper
-import rikka.shizuku.SystemServiceHelper
-import java.io.File
 
 /**
- * Скріншот через Shizuku (пряме копіювання фреймбуфера).
- * Fallback — Android MediaProjection (потребує дозволу).
+ * Скріншот через Shizuku + shell команду screencap.
+ * Читає PNG з stdout процесу (без проміжного файлу — SELinux не дає писати у app cache).
  */
 class ScreenshotController(private val context: Context) {
 
@@ -24,11 +20,7 @@ class ScreenshotController(private val context: Context) {
 
     @Volatile var lastError: String = ""
 
-    /**
-     * Спроба зробити скріншот через Shizuku + shell команду screencap.
-     * Використовує reflection до Shizuku.newProcess (прихований API).
-     */
-    suspend fun takeScreenshot(): File? = withContext(Dispatchers.IO) {
+    suspend fun takeScreenshot(): Bitmap? = withContext(Dispatchers.IO) {
         lastError = ""
         try {
             if (!Shizuku.pingBinder()) {
@@ -36,12 +28,7 @@ class ScreenshotController(private val context: Context) {
                 return@withContext null
             }
 
-            val outputFile = File(
-                context.cacheDir,
-                "screenshot_${System.currentTimeMillis()}.png"
-            )
-
-            // Викликаємо Shizuku.newProcess через reflection
+            // screencap без -p → raw RGBA. З -p → PNG у stdout.
             val shizukuClass = Class.forName("rikka.shizuku.Shizuku")
             val newProcessMethod = shizukuClass.getDeclaredMethod(
                 "newProcess",
@@ -53,7 +40,7 @@ class ScreenshotController(private val context: Context) {
 
             val process = newProcessMethod.invoke(
                 null,
-                arrayOf("screencap", "-p", outputFile.absolutePath),
+                arrayOf("screencap", "-p"),
                 null,
                 null
             ) as? rikka.shizuku.ShizukuRemoteProcess
@@ -62,14 +49,36 @@ class ScreenshotController(private val context: Context) {
                     return@withContext null
                 }
 
-            val exit = process.waitFor()
-            if (exit == 0 && outputFile.exists()) {
-                Log.d(TAG, "Screenshot saved: ${outputFile.absolutePath}")
-                outputFile
-            } else {
-                lastError = "screencap exit=$exit"
+            val bytes = try {
+                process.inputStream.readBytes()
+            } catch (t: Throwable) {
+                lastError = "read stdout: ${t.message}"
+                return@withContext null
+            } finally {
+                try { process.waitFor() } catch (_: Throwable) {}
+            }
+
+            if (bytes.isEmpty()) {
+                lastError = "empty stdout"
+                return@withContext null
+            }
+
+            Log.d(TAG, "PNG bytes: ${bytes.size}")
+
+            val bmp = try {
+                BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+            } catch (t: Throwable) {
+                lastError = "decode: ${t.message}"
                 null
             }
+
+            if (bmp == null) {
+                lastError = "decode returned null (size=${bytes.size})"
+                Log.e(TAG, lastError)
+            } else {
+                Log.d(TAG, "Screenshot OK: ${bmp.width}x${bmp.height}")
+            }
+            bmp
         } catch (t: Throwable) {
             val cause = t.cause ?: t
             lastError = "${cause.javaClass.simpleName}: ${cause.message}"

@@ -1,49 +1,45 @@
 package com.dynamicai.launcher.ui
 
-import android.app.WallpaperManager
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.RenderEffect
-import android.graphics.Shader
-import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dynamicai.launcher.model.AppInfo
+
+private data class Category(val id: String, val label: String)
 
 @Composable
 fun AppDrawer(
@@ -57,58 +53,45 @@ fun AppDrawer(
     gridState: LazyGridState = rememberLazyGridState()
 ) {
     val haptic = LocalHapticFeedback.current
-    val ctxLocal = LocalContext.current
+    var selectedCategory by remember { mutableStateOf<String>("all") }
 
     val columns = remember(iconSizeDp) {
         GridCells.Adaptive(minSize = (iconSizeDp + 24).dp)
     }
 
-    // Шпалера — кешується
-    val wallpaper = remember {
-        try {
-            val wm = WallpaperManager.getInstance(ctxLocal.applicationContext)
-            val d = wm.drawable
-            android.widget.Toast.makeText(
-                ctxLocal,
-                "Wallpaper: " + (d?.let { "OK ${it.intrinsicWidth}x${it.intrinsicHeight}" } ?: "NULL"),
-                android.widget.Toast.LENGTH_LONG
-            ).show()
-            if (d != null) {
-                val srcW = d.intrinsicWidth.coerceAtLeast(1)
-                val srcH = d.intrinsicHeight.coerceAtLeast(1)
-                val w = (srcW / 3).coerceAtLeast(300)
-                val h = (srcH / 3).coerceAtLeast(300)
-                val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-                val c = Canvas(bmp)
-                d.setBounds(0, 0, w, h)
-                d.draw(c)
-                bmp.asImageBitmap()
-            } else null
-        } catch (_: Throwable) { null }
+    // Категорії — тільки ті, де є ≥ 3 застосунки
+    val categories: List<Category> = remember(apps) {
+        val counts = apps.groupingBy { it.category }.eachCount()
+        val list = mutableListOf(Category("all", "Всі"))
+        val labels = mapOf(
+            "games" to "Ігри",
+            "social" to "Соц",
+            "media" to "Медіа",
+            "tools" to "Інструменти",
+            "maps" to "Навігація"
+        )
+        for ((id, label) in labels) {
+            if ((counts[id] ?: 0) >= 3) list.add(Category(id, label))
+        }
+        list
+    }
+
+    val filtered = remember(apps, selectedCategory) {
+        if (selectedCategory == "all") apps
+        else apps.filter { it.category == selectedCategory }
     }
 
     AnimatedVisibility(
         visible = visible,
         enter = slideInVertically(
             initialOffsetY = { it / 2 },
-            animationSpec = androidx.compose.animation.core.tween(
-                durationMillis = 280,
-                easing = androidx.compose.animation.core.FastOutSlowInEasing
-            )
-        ) + fadeIn(
-            animationSpec = androidx.compose.animation.core.tween(220)
-        ),
+            animationSpec = tween(280, easing = FastOutSlowInEasing)
+        ) + fadeIn(tween(220)),
         exit = slideOutVertically(
             targetOffsetY = { it / 2 },
-            animationSpec = androidx.compose.animation.core.tween(
-                durationMillis = 220,
-                easing = androidx.compose.animation.core.FastOutSlowInEasing
-            )
-        ) + fadeOut(
-            animationSpec = androidx.compose.animation.core.tween(180)
-        )
+            animationSpec = tween(220, easing = FastOutSlowInEasing)
+        ) + fadeOut(tween(180))
     ) {
-        // Прозорий фон як у дока/папок — шпалера просвічує через HomeScreen
         val bgAlpha = kotlin.math.max(0.65f, backgroundAlphaPercent / 100f)
         Box(
             modifier = Modifier
@@ -127,21 +110,6 @@ fun AppDrawer(
                     }
                 }
         ) {
-            // ==== Dim overlay ====
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color(0x55000000),
-                                Color(0x77000000),
-                                Color(0xAA000000)
-                            )
-                        )
-                    )
-            )
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -149,7 +117,30 @@ fun AppDrawer(
                     .navigationBarsPadding()
                     .padding(start = 12.dp, end = 48.dp)
             ) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
+
+                // ==== Категорії (таби) ====
+                if (categories.size > 1) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 4.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        categories.forEach { cat ->
+                            CategoryChip(
+                                label = cat.label,
+                                selected = selectedCategory == cat.id,
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    selectedCategory = cat.id
+                                }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(4.dp))
+                }
 
                 LazyVerticalGrid(
                     state = gridState,
@@ -159,7 +150,7 @@ fun AppDrawer(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(apps, key = { it.packageName }) { app ->
+                    items(filtered, key = { it.packageName }) { app ->
                         AppGridItem(app, iconSizeDp, fontSizeSp) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onLaunch(app)
@@ -170,6 +161,47 @@ fun AppDrawer(
             }
         }
     }
+}
+
+@Composable
+private fun CategoryChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Text(
+        text = label,
+        color = if (selected) Color.White else Color.White.copy(alpha = 0.65f),
+        fontSize = 13.sp,
+        modifier = Modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                Brush.verticalGradient(
+                    if (selected) listOf(
+                        Color(0xFF64B5F6).copy(alpha = 0.55f),
+                        Color(0xFF2196F3).copy(alpha = 0.25f)
+                    ) else listOf(
+                        Color(0xE61F1F1F),
+                        Color(0xCC0D0D0D)
+                    )
+                )
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    if (selected) listOf(
+                        Color(0xFF64B5F6).copy(alpha = 0.7f),
+                        Color(0xFF64B5F6).copy(alpha = 0.2f)
+                    ) else listOf(
+                        Color.White.copy(alpha = 0.2f),
+                        Color.White.copy(alpha = 0.05f)
+                    )
+                ),
+                shape = RoundedCornerShape(18.dp)
+            )
+            .clickable { onClick() }
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+    )
 }
 
 @Composable

@@ -8,5 +8,6 @@ data class AppInfo(
     val packageName: String,
     val icon: Drawable,
     val isSystem: Boolean,
-    val bitmap: Bitmap? = null
+    val bitmap: Bitmap? = null,
+    val category: String = "other"
 )

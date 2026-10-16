@@ -29,6 +29,19 @@ class AppRepository(private val context: Context) {
         override fun sizeOf(key: String, value: Drawable): Int = 1
     }
 
+
+    private fun mapCategory(cat: Int): String = when (cat) {
+        ApplicationInfo.CATEGORY_GAME -> "games"
+        ApplicationInfo.CATEGORY_SOCIAL -> "social"
+        ApplicationInfo.CATEGORY_AUDIO,
+        ApplicationInfo.CATEGORY_VIDEO,
+        ApplicationInfo.CATEGORY_IMAGE -> "media"
+        ApplicationInfo.CATEGORY_PRODUCTIVITY,
+        ApplicationInfo.CATEGORY_NEWS -> "tools"
+        ApplicationInfo.CATEGORY_MAPS -> "maps"
+        else -> "other"
+    }
+
     suspend fun loadCached(): List<AppInfo> = withContext(Dispatchers.IO) {
         val list = cache.load()
         coroutineScope {
@@ -36,12 +49,16 @@ class AppRepository(private val context: Context) {
                 async(ioLimited) {
                     val icon = loadIconOnly(cached.packageName)
                     val bmp = try { icon.toBitmap(72, 72) } catch (_: Throwable) { null }
+                    val cat = try {
+                        pm.getApplicationInfo(cached.packageName, 0).category
+                    } catch (_: Throwable) { ApplicationInfo.CATEGORY_UNDEFINED }
                     AppInfo(
                         label = cached.label,
                         packageName = cached.packageName,
                         icon = placeholderIcon,
                         isSystem = cached.isSystem,
-                        bitmap = bmp
+                        bitmap = bmp,
+                        category = mapCategory(cat)
                     )
                 }
             }.awaitAll()
@@ -55,7 +72,7 @@ class AppRepository(private val context: Context) {
         val resolveInfos = pm.queryIntentActivities(intent, PackageManager.MATCH_ALL)
 
         val seen = HashSet<String>()
-        data class Raw(val label: String, val pkg: String, val isSystem: Boolean)
+        data class Raw(val label: String, val pkg: String, val isSystem: Boolean, val category: String)
         val unique = ArrayList<Raw>(resolveInfos.size)
         for (ri in resolveInfos) {
             val appInfo = ri.activityInfo?.applicationInfo ?: continue
@@ -63,7 +80,7 @@ class AppRepository(private val context: Context) {
             if (!seen.add(pkg)) continue
             val label = ri.loadLabel(pm).toString()
             val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-            unique.add(Raw(label, pkg, isSystem))
+            unique.add(Raw(label, pkg, isSystem, mapCategory(appInfo.category)))
         }
 
         val result = coroutineScope {
@@ -71,7 +88,7 @@ class AppRepository(private val context: Context) {
                 async(ioLimited) {
                     val icon = try { pm.getApplicationIcon(r.pkg) } catch (_: Throwable) { pm.defaultActivityIcon }
                     val bmp = try { icon.toBitmap(72, 72) } catch (_: Throwable) { null }
-                    AppInfo(r.label, r.pkg, placeholderIcon, r.isSystem, bmp)
+                    AppInfo(r.label, r.pkg, placeholderIcon, r.isSystem, bmp, r.category)
                 }
             }.awaitAll()
         }

@@ -437,7 +437,8 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             _response.value = "🌐 Роблю скріншот…"
             try {
-                val translator = com.dynamicai.launcher.ocr.ScreenTranslator(getApplication())
+                ensureLlmLoaded()
+                val translator = com.dynamicai.launcher.ocr.ScreenTranslator(getApplication(), llm)
                 val blocks = translator.captureAndTranslate(
                     ocrLangs = "ukr+eng",
                     targetLang = targetLang

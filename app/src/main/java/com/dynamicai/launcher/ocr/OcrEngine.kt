@@ -46,11 +46,23 @@ class OcrEngine(private val context: Context) {
             do {
                 val level = TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE
                 val wordText = iter.getUTF8Text(level)?.trim() ?: continue
-                val box = iter.getBoundingBox(level) ?: continue
-                val conf = iter.confidence(level)
+                val box = iter.getBoundingBox(level)
+                if (box == null || box.size < 4) continue
 
-                if (wordText.isNotBlank() && box.width() > 0 && box.height() > 0) {
-                    result.add(OcrBlock(wordText, box, conf))
+                val left = box[0]
+                val top = box[1]
+                val right = box[2]
+                val bottom = box[3]
+                val conf = iter.confidence(level).toInt()
+
+                if (wordText.isNotBlank() && (right - left) > 0 && (bottom - top) > 0) {
+                    result.add(
+                        OcrBlock(
+                            text = wordText,
+                            bounds = Rect(left, top, right, bottom),
+                            confidence = conf
+                        )
+                    )
                 }
             } while (iter.next(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE))
 

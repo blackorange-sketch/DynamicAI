@@ -37,8 +37,8 @@ class ScreenshotController(private val context: Context) {
             }
 
             val outputFile = File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-                "DynamicAI_${System.currentTimeMillis()}.png"
+                context.cacheDir,
+                "screenshot_${System.currentTimeMillis()}.png"
             )
 
             // Викликаємо Shizuku.newProcess через reflection

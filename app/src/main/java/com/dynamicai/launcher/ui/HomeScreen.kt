@@ -928,7 +928,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             fontSizeSp = settings.fontSizeSp,
             onLaunch = { app -> launchAppWithAnimation(app) },
             onDismiss = { drawerOpen = false },
-            visible = drawerOpen
+            visible = drawerOpen,
+            gridState = drawerGridState
         )
 
         // Діалог створення папки

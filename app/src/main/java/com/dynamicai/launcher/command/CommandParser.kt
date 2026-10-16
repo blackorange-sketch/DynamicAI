@@ -14,6 +14,7 @@ class CommandParser {
     private val reminderRegex2 = Regex("^нагадай\\s+(.+?)\\s+через\\s+(.+)$", RegexOption.IGNORE_CASE)
     private val pomodoroRegex = Regex("^(помодоро|фокус|focus|pomodoro)(?:\\s+(\\d{1,3}))?$", RegexOption.IGNORE_CASE)
     private val translateScreenRegex = Regex("^(переклади? екран|переклад екрану|translate screen|переведи экран)(?:\\s+(?:на\\s+)?(англ|англійськ\\w*|en|польськ\\w*|pl|pol|укр\\w*|uk))?$", RegexOption.IGNORE_CASE)
+    private val translateTextRegex = Regex("^переклади\\s+[\"']?(.+?)[\"']?\\s+на\\s+(англ\\w*|en|польськ\\w*|pl|pol|укр\\w*|uk|нім\\w*|de|рос\\w*|ru)$", RegexOption.IGNORE_CASE)
 
     private val questionStart = Regex("^(хто|що|де|коли|як|чому|скільки|яка|який|яке|чи |розкажи|поясни|who|what|where|when|how|why)\\b.*")
     private val questionEnd = Regex(".*\\?$")
@@ -166,6 +167,19 @@ class CommandParser {
             }
         }
 
+        translateTextRegex.matchEntire(s)?.let {
+            val text = it.groupValues[1].trim()
+            val toRaw = it.groupValues[2].lowercase()
+            val to = when {
+                toRaw.startsWith("англ") || toRaw == "en" -> "en"
+                toRaw.startsWith("поль") || toRaw == "pl" || toRaw == "pol" -> "pl"
+                toRaw.startsWith("укр") || toRaw == "uk" -> "uk"
+                toRaw.startsWith("нім") || toRaw == "de" -> "de"
+                toRaw.startsWith("рос") || toRaw == "ru" -> "ru"
+                else -> "en"
+            }
+            return Command.TranslateText(text, to)
+        }
         translateScreenRegex.matchEntire(s)?.let {
             val langRaw = it.groupValues[2].lowercase()
             val target = when {

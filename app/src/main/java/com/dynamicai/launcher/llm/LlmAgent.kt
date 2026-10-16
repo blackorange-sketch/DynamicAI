@@ -24,6 +24,7 @@ class LlmAgent(private val engine: LlmEngine) {
   target: 'wifi' | 'bluetooth' | 'mobile_data' | 'airplane' | 'location' | 'nfc' | 'dnd' | 'auto_rotate' | 'battery_saver'
   enabled: true | false
 - create_note(text): нотатка
+- translate(text, to): перекласти текст. to: 'uk' | 'en' | 'pl' | 'de' | 'ru'
 - media_play(): відтворити музику
 - media_pause(): пауза
 - media_next(): наступний трек
@@ -39,6 +40,7 @@ class LlmAgent(private val engine: LlmEngine) {
 "яскравіше" → {"tool": "set_brightness", "args": {"level": "up"}}
 "відкрий spotify і включи музику" → {"steps": [{"tool": "open_app", "args": {"name": "spotify"}}, {"tool": "media_play", "args": {}}]}
 "увімкни wifi і блютуз" → {"steps": [{"tool": "set_toggle", "args": {"target": "wifi", "enabled": true}}, {"tool": "set_toggle", "args": {"target": "bluetooth", "enabled": true}}]}
+"переклади Good morning на українську" → {"tool": "translate", "args": {"text": "Good morning", "to": "uk"}}
 
 Якщо не розумієш — {"tool": "unknown", "args": {}}.
 """.trimIndent()
@@ -141,6 +143,7 @@ class LlmAgent(private val engine: LlmEngine) {
                 Command.SetToggle(target, enabledStr == "true")
             }
             "create_note" -> arg("text")?.let { Command.Note(it) }
+            "translate" -> arg("text")?.let { Command.TranslateText(it, arg("to") ?: "en") }
             "media_play" -> Command.MediaControl("play")
             "media_pause" -> Command.MediaControl("pause")
             "media_next" -> Command.MediaControl("next")

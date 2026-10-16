@@ -462,7 +462,47 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+
+    fun translateText(text: String, to: String) {
+        viewModelScope.launch {
+            _response.value = "🌐 Перекладаю…"
+            try {
+                val langName = when (to) {
+                    "en" -> "англійську"
+                    "uk" -> "українську"
+                    "pl" -> "польську"
+                    "de" -> "німецьку"
+                    "ru" -> "російську"
+                    else -> to
+                }
+                val prompt = "Переклади наступний текст на $langName. Виведи ТІЛЬКИ переклад, без пояснень, без лапок:\n\n$text"
+                if (!ensureLlmLoaded()) {
+                    _response.value = "LLM не завантажена"
+                    return@launch
+                }
+                val result = llm.complete(prompt)?.trim()
+                if (result.isNullOrBlank()) {
+                    _response.value = "Не вдалось перекласти"
+                } else {
+                    _response.value = "📝 $text\n➡️ $result"
+                    val st = settingsStorage.load()
+                    if (st.useTts) tts.speak(result)
+                }
+            } catch (t: Throwable) {
+                _response.value = "Помилка перекладу: ${t.message}"
+            }
+        }
+    }
+
     private fun handleResult(result: CommandResult, originalText: String) {
+        if (result is CommandResult.Error && result.message.startsWith("__TRANSLATE_TEXT__")) {
+            val rest = result.message.removePrefix("__TRANSLATE_TEXT__")
+            val parts = rest.split("\u0000", limit = 2)
+            val to = parts.getOrNull(0) ?: "en"
+            val text = parts.getOrNull(1) ?: ""
+            translateText(text, to)
+            return
+        }
         if (result is CommandResult.Error && result.message.startsWith("__TRANSLATE_SCREEN__")) {
             val lang = result.message.removePrefix("__TRANSLATE_SCREEN__").ifBlank { "en" }
             translateScreen(lang)

@@ -751,7 +751,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                     .align(Alignment.CenterEnd)
                     .fillMaxHeight()
                     .zIndex(10f)
-                    .graphicsLayer { alpha = homeAlpha }
             )
         }
 

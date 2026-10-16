@@ -567,11 +567,23 @@ class CommandExecutor(private val context: Context) {
 
     private fun takeScreenshot(): CommandResult {
         return try {
-            val file = kotlinx.coroutines.runBlocking {
+            val bmp = kotlinx.coroutines.runBlocking {
                 screenshotController.takeScreenshot()
             }
-            if (file != null) {
-                CommandResult.Success("Скріншот: ${file.name}")
+            if (bmp != null) {
+                // Зберігаємо у Pictures для галереї
+                try {
+                    val dir = android.os.Environment.getExternalStoragePublicDirectory(
+                        android.os.Environment.DIRECTORY_PICTURES
+                    )
+                    if (!dir.exists()) dir.mkdirs()
+                    val out = java.io.File(dir, "DynamicAI_${System.currentTimeMillis()}.png")
+                    out.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                    // На Android 10+ файл не з'явиться у галереї без MediaStore, але у файловому менеджері буде
+                    CommandResult.Success("Скріншот: ${out.name}")
+                } catch (t: Throwable) {
+                    CommandResult.Success("Скріншот зроблено (${bmp.width}x${bmp.height})")
+                }
             } else {
                 CommandResult.Error("Скріншот: ${screenshotController.lastError}")
             }

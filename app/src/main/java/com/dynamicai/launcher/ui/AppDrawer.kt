@@ -50,10 +50,11 @@ fun AppDrawer(
     onLaunch: (AppInfo) -> Unit,
     onDismiss: () -> Unit,
     visible: Boolean,
+    selectedCategory: String = "all",
+    onCategoryChange: (String) -> Unit = {},
     gridState: LazyGridState = rememberLazyGridState()
 ) {
     val haptic = LocalHapticFeedback.current
-    var selectedCategory by remember { mutableStateOf<String>("all") }
 
     val columns = remember(iconSizeDp) {
         GridCells.Adaptive(minSize = (iconSizeDp + 24).dp)
@@ -150,7 +151,7 @@ fun AppDrawer(
                                 selected = selectedCategory == cat.id,
                                 onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    selectedCategory = cat.id
+                                    onCategoryChange(cat.id)
                                 }
                             )
                         }

@@ -138,6 +138,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     var addToFolderPicker by remember { mutableStateOf<AppInfo?>(null) }
     var overlayActive by remember { mutableStateOf(false) }
     var drawerOpen by remember { mutableStateOf(false) }
+    var drawerCategory by remember { mutableStateOf("all") }
     // Анімація зникнення HomeScreen при відкритті drawer
     val homeAlpha by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (drawerOpen) 0f else 1f,
@@ -355,8 +356,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
     LaunchedEffect(query) { vm.updateQuery(query) }
 
     // Алфавітна стрічка: активний екран визначає джерело
-    val drawerLetters = remember(apps) {
-        apps.mapNotNull { it.label.firstOrNull()?.uppercaseChar() }
+    val drawerAppsAll = remember(apps, hidden, folders) {
+        val folderPkgs = folders.flatMap { it.packageNames }.toSet()
+        apps.filter { it.packageName !in hidden && it.packageName !in folderPkgs }
+    }
+    val drawerFiltered = remember(drawerAppsAll, drawerCategory) {
+        if (drawerCategory == "all") drawerAppsAll
+        else drawerAppsAll.filter { it.category == drawerCategory }
+    }
+    val drawerLetters = remember(drawerFiltered) {
+        drawerFiltered.mapNotNull { it.label.firstOrNull()?.uppercaseChar() }
             .filter { it.isLetter() }
             .distinct().sorted()
     }
@@ -710,7 +719,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                     scrollJob?.cancel()
                     scrollJob = scope.launch {
                         if (drawerOpen) {
-                            val idx = apps.indexOfFirst {
+                            val idx = drawerFiltered.indexOfFirst {
                                 (it.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
                             }
                             if (idx >= 0) {
@@ -911,6 +920,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         }
         AppDrawer(
             apps = drawerApps,
+            selectedCategory = drawerCategory,
+            onCategoryChange = { drawerCategory = it },
             backgroundAlphaPercent = settings.backgroundAlphaPercent,
             iconSizeDp = settings.menuIconSizeDp,
             fontSizeSp = settings.fontSizeSp,

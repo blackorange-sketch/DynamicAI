@@ -10,6 +10,9 @@ class CommandParser {
     private val settings = Regex("^(налаштування|настройки|settings)$")
     private val noteRegex = Regex("^(нотатка|запиши|занотуй|note|запам'ятай)\\s+(.+)")
     private val notesOpenRegex = Regex("^(мої нотатки|покажи нотатки|відкрий нотатки|нотатки|notes|open notes|my notes)$", RegexOption.IGNORE_CASE)
+    private val reminderRegex1 = Regex("^нагадай\\s+через\\s+(.+?)\\s+(.+)$", RegexOption.IGNORE_CASE)
+    private val reminderRegex2 = Regex("^нагадай\\s+(.+?)\\s+через\\s+(.+)$", RegexOption.IGNORE_CASE)
+    private val pomodoroRegex = Regex("^(помодоро|фокус|focus|pomodoro)(?:\\s+(\\d{1,3}))?$", RegexOption.IGNORE_CASE)
 
     private val questionStart = Regex("^(хто|що|де|коли|як|чому|скільки|яка|який|яке|чи |розкажи|поясни|who|what|where|when|how|why)\\b.*")
     private val questionEnd = Regex(".*\\?$")
@@ -162,6 +165,16 @@ class CommandParser {
             }
         }
 
+        pomodoroRegex.matchEntire(s)?.let {
+            val mins = it.groupValues[2].toIntOrNull() ?: 25
+            return Command.Pomodoro(mins.coerceIn(1, 180))
+        }
+        reminderRegex1.matchEntire(s)?.let {
+            return Command.SetReminder(it.groupValues[2].trim(), it.groupValues[1].trim())
+        }
+        reminderRegex2.matchEntire(s)?.let {
+            return Command.SetReminder(it.groupValues[1].trim(), it.groupValues[2].trim())
+        }
         notesOpenRegex.matchEntire(s)?.let { return Command.OpenNotes }
         noteRegex.matchEntire(s)?.let { return Command.Note(it.groupValues[2].trim()) }
 

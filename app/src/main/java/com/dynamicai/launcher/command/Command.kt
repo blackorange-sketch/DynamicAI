@@ -10,6 +10,8 @@ sealed class Command {
     data class AskQuestion(val query: String) : Command()
     data class Note(val text: String) : Command()
     object OpenNotes : Command()
+    data class SetReminder(val text: String, val duration: String) : Command()
+    data class Pomodoro(val minutes: Int = 25) : Command()
     data class SendSms(val contact: String, val text: String?) : Command()
     data class SendEmail(val to: String, val subject: String?) : Command()
     data class MediaControl(val action: String) : Command()   // play, pause, next, prev, stop

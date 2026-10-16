@@ -73,6 +73,8 @@ class CommandExecutor(private val context: Context) {
         Command.DndOff -> handleToggle("dnd", false)
         Command.ToggleFlashlight -> toggleFlashlight()
         is Command.Note -> createNote(cmd.text)
+        is Command.SetReminder -> setReminder(cmd.text, cmd.duration)
+        is Command.Pomodoro -> setPomodoro(cmd.minutes)
         Command.OpenNotes -> CommandResult.Error("__OPEN_NOTES__")
         is Command.SendSms -> sendSms(cmd.contact, cmd.text)
         is Command.SendEmail -> sendEmail(cmd.to, cmd.subject)
@@ -202,6 +204,63 @@ class CommandExecutor(private val context: Context) {
             CommandResult.Success("Набираю: $name")
         } catch (e: Exception) {
             CommandResult.Error("Помилка діалера: ${e.message}")
+        }
+    }
+
+
+    private fun setReminder(text: String, duration: String): CommandResult {
+        val parsed = parseDuration(duration)
+            ?: return CommandResult.Error("Не розпізнав тривалість: $duration")
+        val (seconds, display) = parsed
+        if (seconds <= 0) return CommandResult.Error("Час має бути більше 0")
+        val triggerAt = System.currentTimeMillis() + seconds * 1000L
+        val id = (triggerAt % Int.MAX_VALUE).toInt()
+        return try {
+            val am = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+            if (android.os.Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
+                try {
+                    context.startActivity(
+                        Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                            android.net.Uri.parse("package:${context.packageName}")
+                        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                } catch (_: Throwable) {}
+                return CommandResult.Error("Дай дозвіл на точні будильники")
+            }
+            val intent = Intent(context, com.dynamicai.launcher.alarm.ReminderReceiver::class.java).apply {
+                putExtra("text", text)
+                putExtra("id", id)
+            }
+            val pi = android.app.PendingIntent.getBroadcast(
+                context, id, intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            am.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            CommandResult.Success("Нагадаю через $display: $text")
+        } catch (e: Exception) {
+            CommandResult.Error("Нагадування: ${e.message}")
+        }
+    }
+
+    private fun setPomodoro(minutes: Int): CommandResult {
+        val triggerAt = System.currentTimeMillis() + minutes * 60_000L
+        return try {
+            val am = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+            val intent = Intent(context, com.dynamicai.launcher.alarm.PomodoroReceiver::class.java).apply {
+                putExtra("mode", "work")
+            }
+            val pi = android.app.PendingIntent.getBroadcast(
+                context, 9101, intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            try {
+                am.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            } catch (_: SecurityException) {
+                am.set(android.app.AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            }
+            CommandResult.Success("Помодоро на $minutes хв")
+        } catch (e: Exception) {
+            CommandResult.Error("Помодоро: ${e.message}")
         }
     }
 

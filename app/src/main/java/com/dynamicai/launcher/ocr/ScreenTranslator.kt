@@ -38,6 +38,20 @@ class ScreenTranslator(private val context: Context) {
         onProgress: (stage: String) -> Unit = {}
     ): List<TranslatedBlock> = withContext(Dispatchers.IO) {
         try {
+            // Автозавантаження OCR-мов якщо немає
+            val modelMgr = TessModelManager(context)
+            for (lang in ocrLangs.split("+")) {
+                if (!modelMgr.isDownloaded(lang)) {
+                    onProgress("Завантажую OCR $lang…")
+                    val ok = modelMgr.download(lang) { d, t ->
+                        if (t > 0) onProgress("Завантажую $lang: ${d * 100 / t}%")
+                    }
+                    if (!ok) {
+                        Log.e(TAG, "Failed to download $lang")
+                        return@withContext emptyList()
+                    }
+                }
+            }
             onProgress("Роблю скріншот…")
             val file = screenshot.takeScreenshot()
             if (file == null) {

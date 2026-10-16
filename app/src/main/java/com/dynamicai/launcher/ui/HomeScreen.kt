@@ -723,13 +723,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
                                 (it.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
                             }
                             if (idx >= 0) {
-                                val current = drawerGridState.firstVisibleItemIndex
-                                val d = kotlin.math.abs(idx - current)
-                                when {
-                                    d > 60 -> { drawerGridState.scrollToItem((idx - 5).coerceAtLeast(0)); drawerGridState.animateScrollToItem(idx) }
-                                    d > 20 -> { drawerGridState.scrollToItem((idx - 3).coerceAtLeast(0)); drawerGridState.animateScrollToItem(idx) }
-                                    else -> drawerGridState.animateScrollToItem(idx)
-                                }
+                                try {
+                                    drawerGridState.scrollToItem(idx)
+                                } catch (_: Throwable) {}
                             }
                         } else {
                             val idx = suggestions.indexOfFirst {
@@ -921,7 +917,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
         AppDrawer(
             apps = drawerApps,
             selectedCategory = drawerCategory,
-            onCategoryChange = { drawerCategory = it },
+            onCategoryChange = { newCat ->
+                drawerCategory = newCat
+                scope.launch {
+                    try { drawerGridState.scrollToItem(0) } catch (_: Throwable) {}
+                }
+            },
             backgroundAlphaPercent = settings.backgroundAlphaPercent,
             iconSizeDp = settings.menuIconSizeDp,
             fontSizeSp = settings.fontSizeSp,

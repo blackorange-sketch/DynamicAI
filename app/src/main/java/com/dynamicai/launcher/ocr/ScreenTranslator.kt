@@ -265,7 +265,9 @@ class ScreenTranslator(
 
             val closeEnough = lastBottom < 0 || gap < (lastHeight * 1.6f).toInt()
             val sameColumn = cur.lastOrNull()?.let {
-                kotlin.math.abs(it.bounds.left - b.bounds.left) < (it.bounds.width() * 0.5f).coerceAtLeast(50)
+                val dx = kotlin.math.abs(it.bounds.left - b.bounds.left).toFloat()
+                val tolerance = (it.bounds.width() * 0.5f).coerceAtLeast(50f)
+                dx < tolerance
             } ?: true
 
             val shouldStartNew = cur.isNotEmpty() && (endsSentence || !closeEnough || !sameColumn)

@@ -55,6 +55,9 @@ class FloatingDockService : Service() {
     private var searchOverlayParams: WindowManager.LayoutParams? = null
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val commandParser by lazy { com.dynamicai.launcher.command.CommandParser() }
+    private val llmEngine by lazy { com.dynamicai.launcher.llm.LiteRtLlmEngine(applicationContext) }
+    private val modelDownloader by lazy { com.dynamicai.launcher.llm.ModelDownloader(applicationContext) }
+
     private val commandExecutor by lazy { com.dynamicai.launcher.command.CommandExecutor(applicationContext) }
 
     private val dockPrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
@@ -587,6 +590,46 @@ class FloatingDockService : Service() {
 
     private fun spacer(px: Int): View = View(this).apply {
         layoutParams = LinearLayout.LayoutParams(1, px)
+    }
+
+
+    private fun launchScreenTranslate() {
+        try {
+            expanded = false
+            rebuildContent()
+
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                try {
+                    val app = applicationContext
+                    // Завантажуємо LLM якщо треба
+                    if (!llmEngine.isReady && modelDownloader.isDownloaded) {
+                        try { llmEngine.initialize(modelDownloader.modelFile) } catch (_: Throwable) {}
+                    }
+                    val translator = com.dynamicai.launcher.ocr.ScreenTranslator(app, llmEngine)
+                    val blocks = translator.captureAndTranslate(
+                        ocrLangs = "ukr+eng",
+                        targetLang = "en"
+                    )
+                    if (blocks.isEmpty()) {
+                        android.widget.Toast.makeText(
+                            app,
+                            "Не вдалось перекласти (перевір OCR-мови)",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        com.dynamicai.launcher.ocr.ScreenTranslateOverlay.show(
+                            context = app,
+                            blocks = blocks,
+                            targetLang = "en"
+                        )
+                    }
+                } catch (t: Throwable) {
+                    android.util.Log.e("FloatingDock", "translate failed: ${t.message}", t)
+                }
+            }
+        } catch (t: Throwable) {
+            log("launchScreenTranslate failed: ${t.message}")
+        }
     }
 
     private fun makeCircleButton(

@@ -31,15 +31,13 @@ class OcrEngine(private val context: Context) {
             val api = ensureTess(langs) ?: return@withContext emptyList()
 
             api.setImage(bitmap)
+            // ВАЖЛИВО: спочатку utF8Text — він активує resultIterator
+            api.utF8Text
 
             val result = mutableListOf<OcrBlock>()
             val iter = api.resultIterator
             if (iter == null) {
-                Log.w(TAG, "resultIterator null, fallback to plain text")
-                val text = api.utF8Text ?: ""
-                if (text.isNotBlank()) {
-                    result.add(OcrBlock(text.trim(), Rect(0, 0, bitmap.width, bitmap.height), 0))
-                }
+                Log.w(TAG, "resultIterator null")
                 return@withContext result
             }
 

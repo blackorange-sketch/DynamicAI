@@ -23,7 +23,7 @@ class ScreenTranslator(
 
     companion object {
         private const val TAG = "ScreenTranslator"
-        private const val BATCH_SIZE = 25
+        private const val BATCH_SIZE = 10
     }
 
     private val screenshot = ScreenshotController(context)
@@ -142,16 +142,22 @@ class ScreenTranslator(
     /** Парсить "1. Hello
 2. World" → ["Hello", "World"] */
     private fun parseNumbered(text: String): List<String> {
-        val re = Regex("^\\s*(\\d+)[.):\\]]\\s*(.+)$")
+        val re = Regex("^\\s*(\\d+)\\s*[.):\\]\\-]?\\s*(.+)$")
         val map = mutableMapOf<Int, String>()
         text.lines().forEach { line ->
-            val m = re.find(line.trim())
+            val trimmed = line.trim()
+            if (trimmed.isBlank()) return@forEach
+            val m = re.find(trimmed)
             if (m != null) {
                 val idx = m.groupValues[1].toIntOrNull() ?: return@forEach
-                map[idx] = m.groupValues[2].trim()
+                val value = m.groupValues[2].trim()
+                if (value.isNotBlank()) map[idx] = value
             }
         }
-        if (map.isEmpty()) return emptyList()
+        if (map.isEmpty()) {
+            // Fallback: LLM не дав номерів — беремо просто непорожні рядки
+            return text.lines().map { it.trim() }.filter { it.isNotBlank() }
+        }
         val max = map.keys.maxOrNull() ?: 0
         return (1..max).map { map[it] ?: "" }
     }

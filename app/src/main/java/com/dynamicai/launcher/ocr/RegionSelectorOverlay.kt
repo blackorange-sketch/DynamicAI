@@ -9,6 +9,7 @@ import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -237,7 +238,7 @@ private fun Btn(
             .background(color)
             .then(
                 if (enabled) Modifier.pointerInput(Unit) {
-                    androidx.compose.foundation.gestures.detectTapGestures { onClick() }
+                    detectTapGestures { onClick() }
                 } else Modifier
             )
     ) {

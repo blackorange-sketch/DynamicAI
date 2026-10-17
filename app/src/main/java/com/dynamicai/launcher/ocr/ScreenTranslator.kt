@@ -76,7 +76,11 @@ class ScreenTranslator(
             val valid = blocks.filter {
                 it.text.trim().length >= 2 && (it.confidence == 0 || it.confidence > 40)
             }
-            Log.d(TAG, "Valid: ${valid.size} / ${blocks.size}")
+
+            // Групуємо рядки в абзаци для контекстного перекладу
+            val merged = mergeBlocks(valid)
+            Log.d(TAG, "Merged: ${merged.size} groups (was ${valid.size} lines)")
+            Log.d(TAG, "Valid: ${valid.size} lines / ${blocks.size}")
             if (valid.isEmpty()) return@withContext emptyList()
 
             // Перевірка LLM
@@ -93,7 +97,7 @@ class ScreenTranslator(
             if (targetLang != "uk") mlkit.downloadModel("uk", targetLang)
 
             val translations = mutableListOf<String>()
-            for ((i, block) in valid.withIndex()) {
+            for ((i, block) in merged.withIndex()) {
                 if (i % 5 == 0) onProgress("Перекладено ${i + 1} / ${valid.size}")
                 // Визначаємо мову джерела грубо (uk якщо є кирилиця, інакше en)
                 val hasCyr = block.text.any { it.code in 0x0400..0x04FF }
@@ -109,7 +113,7 @@ class ScreenTranslator(
 
             // Складаємо результат
             val result = mutableListOf<TranslatedBlock>()
-            for ((i, block) in valid.withIndex()) {
+            for ((i, block) in merged.withIndex()) {
                 val tr = translations.getOrNull(i)?.trim().orEmpty()
                 if (tr.isBlank()) continue
                 // Пропускаємо якщо переклад == оригінал (LLM не переклав)
@@ -193,7 +197,11 @@ class ScreenTranslator(
                 if (specials > letters) return@filter false
                 true
             }
-            Log.d(TAG, "Valid: ${valid.size} / ${blocks.size}")
+
+            // Групуємо рядки в абзаци для контекстного перекладу
+            val merged = mergeBlocks(valid)
+            Log.d(TAG, "Merged: ${merged.size} groups (was ${valid.size} lines)")
+            Log.d(TAG, "Valid: ${valid.size} lines / ${blocks.size}")
             if (valid.isEmpty()) return@withContext emptyList()
 
             onProgress("Перекладаю ${valid.size} блоків…")
@@ -201,7 +209,7 @@ class ScreenTranslator(
             if (targetLang != "uk") mlkit.downloadModel("uk", targetLang)
 
             val result = mutableListOf<TranslatedBlock>()
-            for ((i, block) in valid.withIndex()) {
+            for ((i, block) in merged.withIndex()) {
                 if (i % 5 == 0) onProgress("Перекладено ${i + 1} / ${valid.size}")
                 val hasCyr = block.text.any { it.code in 0x0400..0x04FF }
                 val fromLang = if (hasCyr) "uk" else "en"
@@ -230,6 +238,63 @@ class ScreenTranslator(
         } catch (t: Throwable) {
             Log.e(TAG, "captureRegionAndTranslate failed: ${t.message}", t)
             emptyList()
+        }
+    }
+
+
+    /**
+     * Групує OCR-рядки в абзаци/речення для контекстного перекладу.
+     * Правила:
+     *  - Сортує по Y
+     *  - Об'єднує суміжні рядки (вертикальна відстань < ~1.6 висоти)
+     *  - Новий блок починається після . ! ? або при великому відступі
+     *  - Bounds = union (об'єднання) всіх прямокутників групи
+     */
+    private fun mergeBlocks(blocks: List<OcrBlock>): List<OcrBlock> {
+        if (blocks.isEmpty()) return emptyList()
+        val sorted = blocks.sortedWith(compareBy({ it.bounds.top }, { it.bounds.left }))
+        val groups = mutableListOf<MutableList<OcrBlock>>()
+        var cur = mutableListOf<OcrBlock>()
+        var lastBottom = -1
+        var lastHeight = 0
+
+        for (b in sorted) {
+            val h = b.bounds.height().coerceAtLeast(1)
+            val gap = if (lastBottom < 0) 0 else b.bounds.top - lastBottom
+            val endsSentence = cur.lastOrNull()?.text?.trimEnd()?.lastOrNull() in setOf('.', '!', '?', ':')
+
+            val closeEnough = lastBottom < 0 || gap < (lastHeight * 1.6f).toInt()
+            val sameColumn = cur.lastOrNull()?.let {
+                kotlin.math.abs(it.bounds.left - b.bounds.left) < (it.bounds.width() * 0.5f).coerceAtLeast(50)
+            } ?: true
+
+            val shouldStartNew = cur.isNotEmpty() && (endsSentence || !closeEnough || !sameColumn)
+
+            if (shouldStartNew) {
+                if (cur.isNotEmpty()) groups.add(cur)
+                cur = mutableListOf()
+            }
+            cur.add(b)
+            lastBottom = b.bounds.bottom
+            lastHeight = h
+        }
+        if (cur.isNotEmpty()) groups.add(cur)
+
+        return groups.map { group ->
+            val text = group.joinToString(" ") { it.text.trim() }
+                .replace(Regex("\\s+"), " ")
+                .trim()
+            val bounds = group.fold(android.graphics.Rect(
+                group[0].bounds.left, group[0].bounds.top,
+                group[0].bounds.right, group[0].bounds.bottom
+            )) { acc, blk -> acc.apply {
+                left = minOf(left, blk.bounds.left)
+                top = minOf(top, blk.bounds.top)
+                right = maxOf(right, blk.bounds.right)
+                bottom = maxOf(bottom, blk.bounds.bottom)
+            } }
+            val avgConf = group.map { it.confidence }.average().toInt()
+            OcrBlock(text = text, bounds = bounds, confidence = avgConf)
         }
     }
 

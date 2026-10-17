@@ -12,7 +12,7 @@ sealed class Command {
     object OpenNotes : Command()
     data class SetReminder(val text: String, val duration: String) : Command()
     data class Pomodoro(val minutes: Int = 25) : Command()
-    data class TranslateScreen(val targetLang: String = "en") : Command()
+    data class TranslateScreen(val targetLang: String = "uk") : Command()
     data class TranslateText(val text: String, val to: String = "en") : Command()
     data class SendSms(val contact: String, val text: String?) : Command()
     data class SendEmail(val to: String, val subject: String?) : Command()

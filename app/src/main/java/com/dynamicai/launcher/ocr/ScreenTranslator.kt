@@ -40,7 +40,7 @@ class ScreenTranslator(
 
     suspend fun captureAndTranslate(
         ocrLangs: String = "ukr+eng",
-        targetLang: String = "en",
+        targetLang: String = "uk",
         onProgress: (stage: String) -> Unit = {}
     ): List<TranslatedBlock> = withContext(Dispatchers.IO) {
         try {
@@ -98,8 +98,9 @@ class ScreenTranslator(
                 // Визначаємо мову джерела грубо (uk якщо є кирилиця, інакше en)
                 val hasCyr = block.text.any { it.code in 0x0400..0x04FF }
                 val fromLang = if (hasCyr) "uk" else "en"
+                // Якщо source == target — не перекладаємо, але показуємо як є
                 if (fromLang == targetLang) {
-                    translations.add(block.text)
+                    translations.add("")
                     continue
                 }
                 val tr = mlkit.translate(block.text, fromLang, targetLang) ?: ""

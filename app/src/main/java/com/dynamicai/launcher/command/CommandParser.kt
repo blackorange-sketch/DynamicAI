@@ -185,7 +185,7 @@ class CommandParser {
             val target = when {
                 langRaw.startsWith("поль") || langRaw == "pl" || langRaw == "pol" -> "pl"
                 langRaw.startsWith("укр") || langRaw == "uk" -> "uk"
-                else -> "en"
+                else -> "uk"
             }
             return Command.TranslateScreen(target)
         }

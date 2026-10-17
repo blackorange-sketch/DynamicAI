@@ -28,6 +28,7 @@ class ScreenTranslator(
 
     private val screenshot = ScreenshotController(context)
     private val ocr = OcrEngine(context)
+    private val mlkit = MlKitTranslator(context)
 
     private val langName = mapOf(
         "en" to "англійську",
@@ -85,32 +86,24 @@ class ScreenTranslator(
             }
 
             onProgress("Перекладаю ${valid.size} блоків…")
+
+            // ML Kit: завантажуємо модель якщо треба
+            onProgress("Готую модель перекладу…")
+            mlkit.downloadModel("uk", targetLang)
+            mlkit.downloadModel("en", targetLang)
+
             val translations = mutableListOf<String>()
-
-            // Батчинг: по 25 блоків
-            for (batch in valid.chunked(BATCH_SIZE)) {
-                val numbered = batch.mapIndexed { i, b -> "${i + 1}. ${b.text}" }.joinToString("\n")
-                val targetName = langName[targetLang] ?: targetLang
-                val prompt = "Переклади КОЖЕН рядок на $targetName. " +
-                        "Зберігай нумерацію. Виведи ТІЛЬКИ переклад у форматі:\n" +
-                        "1. <переклад>\n2. <переклад>\n...\n\nТекст:\n$numbered"
-
-                val response = try {
-                    llm.complete(prompt)?.trim()
-                } catch (t: Throwable) {
-                    Log.e(TAG, "LLM failed: ${t.message}")
-                    null
-                }
-
-                if (response.isNullOrBlank()) {
-                    Log.w(TAG, "Empty LLM response for batch")
-                    translations.addAll(List(batch.size) { "" })
+            for ((i, block) in valid.withIndex()) {
+                if (i % 5 == 0) onProgress("Перекладено ${i + 1} / ${valid.size}")
+                // Визначаємо мову джерела грубо (uk якщо є кирилиця, інакше en)
+                val hasCyr = block.text.any { it.code in 0x0400..0x04FF }
+                val fromLang = if (hasCyr) "uk" else "en"
+                if (fromLang == targetLang) {
+                    translations.add(block.text)
                     continue
                 }
-
-                // Парсимо відповідь LLM у список рядків
-                val parsed = parseNumbered(response)
-                translations.addAll(parsed)
+                val tr = mlkit.translate(block.text, fromLang, targetLang) ?: ""
+                translations.add(tr)
             }
 
             // Складаємо результат

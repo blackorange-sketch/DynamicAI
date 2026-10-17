@@ -24,6 +24,14 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 
 object ScreenTranslateOverlay {
 
@@ -31,6 +39,7 @@ object ScreenTranslateOverlay {
 
     private var wm: WindowManager? = null
     private var view: ComposeView? = null
+    private var lifecycleOwner: OverlayLifecycleOwner? = null
 
     fun show(
         context: Context,
@@ -41,7 +50,11 @@ object ScreenTranslateOverlay {
         if (view != null) hide()
         try {
             val wmLocal = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val owner = OverlayLifecycleOwner()
+
             val composeView = ComposeView(context).apply {
+                setViewTreeLifecycleOwner(owner)
+                setViewTreeSavedStateRegistryOwner(owner)
                 setContent {
                     TranslateContent(blocks, targetLang, onCopy = onCopy, onClose = { hide() })
                 }
@@ -59,9 +72,11 @@ object ScreenTranslateOverlay {
                 gravity = Gravity.TOP or Gravity.START
             }
 
+            owner.onCreate()
             wmLocal.addView(composeView, params)
             wm = wmLocal
             view = composeView
+            lifecycleOwner = owner
             Log.d(TAG, "Overlay shown with ${blocks.size} blocks")
         } catch (t: Throwable) {
             Log.e(TAG, "show failed: ${t.message}", t)
@@ -74,6 +89,26 @@ object ScreenTranslateOverlay {
         } catch (_: Throwable) {}
         view = null
         wm = null
+        lifecycleOwner?.onDestroy()
+        lifecycleOwner = null
+    }
+
+    /** Мінімальний LifecycleOwner для Compose overlay */
+    private class OverlayLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
+        private val lifecycleRegistry = LifecycleRegistry(this)
+        private val savedStateController = SavedStateRegistryController.create(this)
+
+        override val lifecycle: Lifecycle get() = lifecycleRegistry
+        override val savedStateRegistry: SavedStateRegistry get() = savedStateController.savedStateRegistry
+
+        fun onCreate() {
+            savedStateController.performRestore(null)
+            lifecycleRegistry.currentState = Lifecycle.State.RESUMED
+        }
+
+        fun onDestroy() {
+            lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
+        }
     }
 }
 
@@ -89,7 +124,6 @@ private fun TranslateContent(
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.35f))
     ) {
-        // Верхня панель
         Row(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -106,7 +140,7 @@ private fun TranslateContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "🌐 ${blocks.size} блоків · $targetLang",
+                "${blocks.size} блоків · $targetLang",
                 color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
@@ -120,11 +154,10 @@ private fun TranslateContent(
                     .background(Color(0x33FFFFFF))
                     .clickable { onClose() }
             ) {
-                Text("✕", color = Color.White, fontSize = 18.sp)
+                Text("X", color = Color.White, fontSize = 18.sp)
             }
         }
 
-        // Список перекладених блоків
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -158,10 +191,7 @@ private fun BlockCard(block: TranslatedBlock, onCopy: (String) -> Unit) {
                 color = Color.White.copy(alpha = 0.15f),
                 shape = RoundedCornerShape(14.dp)
             )
-            .clickable {
-                onCopy(block.translatedText)
-                val cm = android.content.ClipboardManager::class
-            }
+            .clickable { onCopy(block.translatedText) }
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         Text(

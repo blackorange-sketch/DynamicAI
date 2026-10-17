@@ -541,6 +541,19 @@ class FloatingDockService : Service() {
 
         column.addView(spacer(dp(8)))
 
+        // Кнопка перекладу екрана
+        column.addView(makeCircleButton(
+            size = settings.overlayIconSizeDp,
+            bgColor = 0x40FF9800.toInt(),
+            borderColor = 0x99FFB74D.toInt(),
+            iconRes = android.R.drawable.ic_menu_compass,
+            iconTint = Color.parseColor("#FFB74D")
+        ) {
+            launchScreenTranslate()
+        })
+
+        column.addView(spacer(dp(8)))
+
         // Іконки з дока — і застосунки, і папки
         val dockPkgs = dockStorage.getDockApps()
         val folders = folderStorage.get()

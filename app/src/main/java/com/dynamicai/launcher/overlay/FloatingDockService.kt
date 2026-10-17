@@ -611,35 +611,41 @@ class FloatingDockService : Service() {
             expanded = false
             rebuildContent()
 
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
-                try {
-                    val app = applicationContext
-                    // Завантажуємо LLM якщо треба
-                    if (!llmEngine.isReady && modelDownloader.isDownloaded) {
-                        try { llmEngine.initialize(modelDownloader.modelFile) } catch (_: Throwable) {}
+            val app = applicationContext
+            com.dynamicai.launcher.ocr.RegionSelectorOverlay.show(
+                context = app,
+                onSelected = { rect ->
+                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                        try {
+                            android.util.Log.d("FloatingDock", "Region: $rect")
+                            // Невелика затримка щоб overlay зник з екрана перед скріншотом
+                            kotlinx.coroutines.delay(150)
+                            val translator = com.dynamicai.launcher.ocr.ScreenTranslator(app, llmEngine)
+                            val blocks = translator.captureRegionAndTranslate(
+                                rect = rect,
+                                ocrLangs = "ukr+eng",
+                                targetLang = "uk"
+                            )
+                            if (blocks.isEmpty()) {
+                                android.widget.Toast.makeText(
+                                    app,
+                                    "Не вдалось перекласти",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                com.dynamicai.launcher.ocr.ScreenTranslateOverlay.show(
+                                    context = app,
+                                    blocks = blocks,
+                                    targetLang = "uk"
+                                )
+                            }
+                        } catch (t: Throwable) {
+                            android.util.Log.e("FloatingDock", "translate region failed: ${t.message}", t)
+                        }
                     }
-                    val translator = com.dynamicai.launcher.ocr.ScreenTranslator(app, llmEngine)
-                    val blocks = translator.captureAndTranslate(
-                        ocrLangs = "ukr+eng",
-                        targetLang = "uk"
-                    )
-                    if (blocks.isEmpty()) {
-                        android.widget.Toast.makeText(
-                            app,
-                            "Не вдалось перекласти (перевір OCR-мови)",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
-                        com.dynamicai.launcher.ocr.ScreenTranslateOverlay.show(
-                            context = app,
-                            blocks = blocks,
-                            targetLang = "uk"
-                        )
-                    }
-                } catch (t: Throwable) {
-                    android.util.Log.e("FloatingDock", "translate failed: ${t.message}", t)
-                }
-            }
+                },
+                onCancel = { }
+            )
         } catch (t: Throwable) {
             log("launchScreenTranslate failed: ${t.message}")
         }

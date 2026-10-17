@@ -68,7 +68,7 @@ class ScreenTranslator(
 
             onProgress("Розпізнаю текст…")
             val blocks = ocr.recognize(bmp, ocrLangs)
-            Log.d(TAG, "OCR: ${blocks.size} blocks")
+            Log.e(TAG, "OCR: ${blocks.size} blocks")
             bmp.recycle()
             if (blocks.isEmpty()) return@withContext emptyList()
 
@@ -79,8 +79,8 @@ class ScreenTranslator(
 
             // Групуємо рядки в абзаци для контекстного перекладу
             val merged = mergeBlocks(valid)
-            Log.d(TAG, "Merged: ${merged.size} groups (was ${valid.size} lines)")
-            Log.d(TAG, "Valid: ${valid.size} lines / ${blocks.size}")
+            Log.e(TAG, "Merged: ${merged.size} groups (was ${valid.size} lines)")
+            Log.e(TAG, "Valid: ${valid.size} lines / ${blocks.size}")
             if (valid.isEmpty()) return@withContext emptyList()
 
             // Перевірка LLM
@@ -128,7 +128,7 @@ class ScreenTranslator(
                 )
             }
 
-            Log.d(TAG, "Translated ${result.size} / ${valid.size}")
+            Log.e(TAG, "Translated ${result.size} / ${valid.size}")
             onProgress("Готово")
             result
         } catch (t: Throwable) {
@@ -151,6 +151,7 @@ class ScreenTranslator(
         onProgress: (stage: String) -> Unit = {}
     ): List<TranslatedBlock> = withContext(Dispatchers.IO) {
         try {
+            Log.e(TAG, "captureRegion START rect=$rect target=$targetLang")
             // Автозавантаження OCR-мов
             val modelMgr = TessModelManager(context)
             for (lang in ocrLangs.split("+")) {
@@ -164,7 +165,12 @@ class ScreenTranslator(
             }
 
             onProgress("Роблю скріншот…")
-            val full = screenshot.takeScreenshot() ?: return@withContext emptyList()
+            val full = screenshot.takeScreenshot()
+            Log.e(TAG, "Screenshot: ${full?.width}x${full?.height}")
+            if (full == null) {
+                Log.e(TAG, "Screenshot NULL")
+                return@withContext emptyList()
+            }
 
             // Crop до rect (захист від виходу за межі)
             val left = rect.left.coerceIn(0, full.width - 1)
@@ -184,7 +190,7 @@ class ScreenTranslator(
             onProgress("Розпізнаю текст…")
             val blocks = ocr.recognize(cropped, ocrLangs)
             cropped.recycle()
-            Log.d(TAG, "OCR region: ${blocks.size} blocks")
+            Log.e(TAG, "OCR region: ${blocks.size} blocks (crop $w x $h)")
             if (blocks.isEmpty()) return@withContext emptyList()
 
             val valid = blocks.filter { b ->
@@ -200,8 +206,8 @@ class ScreenTranslator(
 
             // Групуємо рядки в абзаци для контекстного перекладу
             val merged = mergeBlocks(valid)
-            Log.d(TAG, "Merged: ${merged.size} groups (was ${valid.size} lines)")
-            Log.d(TAG, "Valid: ${valid.size} lines / ${blocks.size}")
+            Log.e(TAG, "Merged: ${merged.size} groups (was ${valid.size} lines)")
+            Log.e(TAG, "Valid: ${valid.size} lines / ${blocks.size}")
             if (valid.isEmpty()) return@withContext emptyList()
 
             onProgress("Перекладаю ${valid.size} блоків…")
@@ -232,7 +238,7 @@ class ScreenTranslator(
                     )
                 )
             }
-            Log.d(TAG, "Region translated ${result.size} / ${valid.size}")
+            Log.e(TAG, "Region translated ${result.size} / ${valid.size}")
             onProgress("Готово")
             result
         } catch (t: Throwable) {

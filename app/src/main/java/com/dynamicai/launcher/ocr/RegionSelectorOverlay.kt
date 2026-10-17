@@ -89,7 +89,7 @@ object RegionSelectorOverlay {
             wm = wmLocal
             view = composeView
             owner = lcOwner
-            Log.d(TAG, "Region selector shown")
+            Log.e(TAG, "Region selector shown")
         } catch (t: Throwable) {
             Log.e(TAG, "show failed: ${t.message}", t)
         }

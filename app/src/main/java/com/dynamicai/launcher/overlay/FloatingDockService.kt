@@ -617,7 +617,7 @@ class FloatingDockService : Service() {
                 onSelected = { rect ->
                     kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
                         try {
-                            android.util.Log.d("FloatingDock", "Region: $rect")
+                            android.util.Log.e("FloatingDock", "Region: $rect")
                             // Невелика затримка щоб overlay зник з екрана перед скріншотом
                             kotlinx.coroutines.delay(150)
                             val translator = com.dynamicai.launcher.ocr.ScreenTranslator(app, llmEngine)
@@ -776,7 +776,7 @@ class FloatingDockService : Service() {
 
         fun log(msg: String) {
             lastLog = msg
-            Log.d("FloatingDock", msg)
+            Log.e("FloatingDock", msg)
         }
 
         @Volatile private var instance: FloatingDockService? = null

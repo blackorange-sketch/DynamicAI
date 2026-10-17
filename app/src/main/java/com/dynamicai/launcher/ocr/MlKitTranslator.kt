@@ -44,7 +44,7 @@ class MlKitTranslator(private val context: Context) {
             suspendCancellableCoroutine { cont ->
                 tr.downloadModelIfNeeded(conditions)
                     .addOnSuccessListener {
-                        Log.d(TAG, "Model downloaded: $key")
+                        Log.e(TAG, "Model downloaded: $key")
                         cont.resume(true)
                     }
                     .addOnFailureListener { e ->

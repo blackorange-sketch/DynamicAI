@@ -89,8 +89,8 @@ class ScreenTranslator(
 
             // ML Kit: завантажуємо модель якщо треба
             onProgress("Готую модель перекладу…")
-            mlkit.downloadModel("uk", targetLang)
             mlkit.downloadModel("en", targetLang)
+            if (targetLang != "uk") mlkit.downloadModel("uk", targetLang)
 
             val translations = mutableListOf<String>()
             for ((i, block) in valid.withIndex()) {

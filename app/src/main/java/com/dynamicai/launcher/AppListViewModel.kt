@@ -433,7 +433,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
 
-    fun translateScreen(targetLang: String) {
+    fun translateScreen(targetLang: String = "uk") {
         viewModelScope.launch {
             _response.value = "🌐 Роблю скріншот…"
             try {

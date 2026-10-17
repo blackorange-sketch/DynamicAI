@@ -621,7 +621,7 @@ class FloatingDockService : Service() {
                     val translator = com.dynamicai.launcher.ocr.ScreenTranslator(app, llmEngine)
                     val blocks = translator.captureAndTranslate(
                         ocrLangs = "ukr+eng",
-                        targetLang = "en"
+                        targetLang = "uk"
                     )
                     if (blocks.isEmpty()) {
                         android.widget.Toast.makeText(
@@ -633,7 +633,7 @@ class FloatingDockService : Service() {
                         com.dynamicai.launcher.ocr.ScreenTranslateOverlay.show(
                             context = app,
                             blocks = blocks,
-                            targetLang = "en"
+                            targetLang = "uk"
                         )
                     }
                 } catch (t: Throwable) {

@@ -72,10 +72,11 @@ class MlKitTranslator(private val context: Context) {
             suspendCancellableCoroutine { cont ->
                 tr.translate(text)
                     .addOnSuccessListener { result ->
+                        Log.e(TAG, "translate OK: '$text' -> '$result'")
                         cont.resume(result)
                     }
                     .addOnFailureListener { e ->
-                        Log.e(TAG, "translate failed: ${e.message}")
+                        Log.e(TAG, "translate FAIL: '$text' err=${e.message}", e)
                         cont.resume(null)
                     }
             }

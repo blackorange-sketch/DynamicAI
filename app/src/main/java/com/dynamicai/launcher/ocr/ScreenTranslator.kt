@@ -216,12 +216,26 @@ class ScreenTranslator(
 
             val result = mutableListOf<TranslatedBlock>()
             for ((i, block) in merged.withIndex()) {
-                if (i % 5 == 0) onProgress("Перекладено ${i + 1} / ${valid.size}")
-                val hasCyr = block.text.any { it.code in 0x0400..0x04FF }
-                val fromLang = if (hasCyr) "uk" else "en"
-                if (fromLang == targetLang) continue
-                val tr = mlkit.translate(block.text, fromLang, targetLang) ?: continue
-                if (tr.isBlank()) continue
+                if (i % 5 == 0) onProgress("Перекладено ${i + 1} / ${merged.size}")
+
+                // Детектор мови: співвідношення кирилиці до всіх літер
+                val totalLetters = block.text.count { it.isLetter() }.coerceAtLeast(1)
+                val cyrLetters = block.text.count { it.code in 0x0400..0x04FF }
+                val cyrRatio = cyrLetters.toFloat() / totalLetters
+                val fromLang = if (cyrRatio > 0.5f) "uk" else "en"
+
+                Log.e(TAG, "Block[$i] cyr=$cyrLetters/$totalLetters (${"%.2f".format(cyrRatio)}) from=$fromLang to=$targetLang text='${block.text.take(40)}'")
+
+                // Якщо fromLang == target — пропускаємо (вже цільовою)
+                if (fromLang == targetLang) {
+                    Log.e(TAG, "Block[$i] SKIP: already $targetLang")
+                    continue
+                }
+
+                val tr = mlkit.translate(block.text, fromLang, targetLang)
+                Log.e(TAG, "Block[$i] translated: '${tr?.take(40) ?: "NULL"}'")
+
+                if (tr.isNullOrBlank()) continue
                 // Координати зсуваємо назад у повний екран
                 val shifted = android.graphics.Rect(
                     block.bounds.left + left,

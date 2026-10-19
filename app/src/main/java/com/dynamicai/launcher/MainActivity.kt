@@ -30,6 +30,8 @@ class MainActivity : ComponentActivity() {
         try { com.dynamicai.launcher.overlay.FloatingDockService.show(this) } catch (_: Exception) {}
     }
 
+    private var aiQuery: String? = null
+
     private fun handleAssistIntent(intent: android.content.Intent?) {
         val action = intent?.action ?: return
         if (action == android.content.Intent.ACTION_ASSIST ||
@@ -40,6 +42,12 @@ class MainActivity : ComponentActivity() {
                     com.dynamicai.launcher.overlay.AiHubOverlay.show(applicationContext)
                 } catch (_: Throwable) {}
             }, 300)
+        }
+        
+        // Читаємо запит від AI Hub
+        val q = intent?.getStringExtra("ai_query")
+        if (!q.isNullOrBlank()) {
+            aiQuery = q
         }
     }
 
@@ -88,7 +96,7 @@ class MainActivity : ComponentActivity() {
                 surface = androidx.compose.ui.graphics.Color.Transparent
             )
             MaterialTheme(colorScheme = colorScheme) {
-                HomeScreen()
+                HomeScreen(initialQuery = aiQuery)
             }
         }
     }

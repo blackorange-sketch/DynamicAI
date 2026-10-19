@@ -83,7 +83,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
-fun HomeScreen(vm: AppListViewModel = viewModel()) {
+fun HomeScreen(vm: AppListViewModel = viewModel(), initialQuery: String? = null) {
     val apps by vm.apps.collectAsStateWithLifecycle()
     val dockPkgs by vm.dockPkgs.collectAsStateWithLifecycle()
     val response by vm.response.collectAsStateWithLifecycle()
@@ -254,6 +254,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel()) {
             )
             overlayPermissionLauncher.launch(intent)
         } catch (_: Exception) {}
+    }
+
+    LaunchedEffect(initialQuery) {
+        if (!initialQuery.isNullOrBlank()) {
+            // Невелика затримка, щоб UI встиг завантажитись
+            kotlinx.coroutines.delay(300)
+            vm.executeCommand(initialQuery)
+        }
     }
 
     LaunchedEffect(Unit) {

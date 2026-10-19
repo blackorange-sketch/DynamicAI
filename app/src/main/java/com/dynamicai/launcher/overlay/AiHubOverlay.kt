@@ -177,15 +177,18 @@ private fun AiHubContent(ctx: Context, onClose: () -> Unit) {
                     )
                 }
                 ActionChip("AI", Color(0xFF2196F3)) {
-                    if (query.isNotBlank()) {
-                        // Запуск лаунчера з запитом
-                        val i = Intent(ctx, com.dynamicai.launcher.MainActivity::class.java).apply {
-                            putExtra("ai_query", query)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        try { ctx.startActivity(i) } catch (_: Throwable) {}
-                    }
                     onClose()
+                    if (query.isNotBlank()) {
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            val i = Intent(ctx, com.dynamicai.launcher.MainActivity::class.java).apply {
+                                putExtra("ai_query", query)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                            }
+                            try { ctx.startActivity(i) } catch (t: Throwable) {
+                                android.util.Log.e("AiHub", "AI intent failed: ${t.message}")
+                            }
+                        }, 200)
+                    }
                 }
             }
 
@@ -239,14 +242,19 @@ private fun AiHubContent(ctx: Context, onClose: () -> Unit) {
                         .background(Color(0x33FF5252))
                         .pointerInput(Unit) {
                             detectTapGestures {
-                                val i = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
-                                    putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Слухаю...")
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                try { ctx.startActivity(i) } catch (_: Throwable) {}
-                                onClose()
+                                onClose() // 1. Закриваємо оверлей
+                                // 2. Запускаємо STT через невелику затримку, щоб оверлей точно зник
+                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                    val i = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
+                                        putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Слухаю...")
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    try { ctx.startActivity(i) } catch (t: Throwable) {
+                                        android.util.Log.e("AiHub", "STT failed: ${t.message}")
+                                    }
+                                }, 200)
                             }
                         }
                 ) {

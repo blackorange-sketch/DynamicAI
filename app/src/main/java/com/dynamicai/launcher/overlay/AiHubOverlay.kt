@@ -21,6 +21,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -154,12 +158,16 @@ private fun AiHubContent(ctx: Context, onClose: () -> Unit) {
                     com.dynamicai.launcher.ocr.RegionSelectorOverlay.show(
                         context = ctx,
                         onSelected = { rect ->
-                            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
-                                kotlinx.coroutines.delay(150)
-                                val translator = com.dynamicai.launcher.ocr.ScreenTranslator(ctx, null)
-                                val blocks = translator.captureRegionAndTranslate(rect, targetLang = "uk")
-                                if (blocks.isNotEmpty()) {
-                                    com.dynamicai.launcher.ocr.ScreenTranslateOverlay.show(ctx, blocks, "uk")
+                            CoroutineScope(Dispatchers.Main).launch {
+                                delay(150)
+                                try {
+                                    val translator = com.dynamicai.launcher.ocr.ScreenTranslator(ctx, null)
+                                    val blocks = translator.captureRegionAndTranslate(rect, targetLang = "uk")
+                                    if (blocks.isNotEmpty()) {
+                                        com.dynamicai.launcher.ocr.ScreenTranslateOverlay.show(ctx, blocks, "uk")
+                                    }
+                                } catch (t: Throwable) {
+                                    android.util.Log.e("AiHub", "translate error: ${t.message}", t)
                                 }
                             }
                         },

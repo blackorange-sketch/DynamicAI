@@ -271,8 +271,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 try { ctx.startActivity(i) } catch (_: Throwable) {}
             }
             "mic" -> {
-                // Викликаємо локальну функцію startVoice(), яка використовує voiceLauncher
-                startVoice()
+                val voiceIntent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
+                    putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Слухаю...")
+                }
+                try {
+                    voiceLauncher.launch(voiceIntent)
+                } catch (t: Throwable) {
+                    android.util.Log.e("HomeScreen", "mic launch failed", t)
+                }
             }
         }
     }

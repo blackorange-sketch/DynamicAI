@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.activity.ComponentActivity
+import androidx.activity.viewModels
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +25,7 @@ import com.dynamicai.launcher.ui.HomeScreen
 data class HubEvent(val action: String, val query: String, val id: Long)
 
 class MainActivity : ComponentActivity() {
+    private val vm: AppListViewModel by viewModels()
     private var hubEvent = mutableStateOf<HubEvent?>(null)
 
     override fun onResume() {
@@ -51,7 +53,7 @@ class MainActivity : ComponentActivity() {
             // Невелика затримка щоб activity встигла стати foreground
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 try {
-                    com.dynamicai.launcher.overlay.AiHubOverlay.show(applicationContext)
+                    com.dynamicai.launcher.overlay.AiHubOverlay.show(applicationContext, vm)
                 } catch (_: Throwable) {}
             }, 300)
         }
@@ -110,7 +112,7 @@ class MainActivity : ComponentActivity() {
                 surface = androidx.compose.ui.graphics.Color.Transparent
             )
             MaterialTheme(colorScheme = colorScheme) {
-                HomeScreen(hubEvent = hubEvent.value)
+                HomeScreen(vm = vm, hubEvent = hubEvent.value)
             }
         }
     }

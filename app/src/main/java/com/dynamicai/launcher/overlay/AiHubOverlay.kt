@@ -14,6 +14,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -57,7 +59,7 @@ object AiHubOverlay {
     private var view: ComposeView? = null
     private var owner: HubLifecycleOwner? = null
 
-    fun show(context: Context) {
+    fun show(context: Context, vm: com.dynamicai.launcher.AppListViewModel? = null) {
         if (view != null) return
         try {
             val wmLocal = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -69,6 +71,7 @@ object AiHubOverlay {
                 setContent {
                     AiHubContent(
                         ctx = context,
+                        vm = vm,
                         onClose = { hide() }
                     )
                 }
@@ -115,8 +118,10 @@ object AiHubOverlay {
 }
 
 @Composable
-private fun AiHubContent(ctx: Context, onClose: () -> Unit) {
+private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewModel?, onClose: () -> Unit) {
     var query by remember { mutableStateOf("") }
+    var aiResponse by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
 
@@ -141,6 +146,29 @@ private fun AiHubContent(ctx: Context, onClose: () -> Unit) {
                 .pointerInput(Unit) { detectTapGestures { } }, // блокуємо клік по фону
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Відповідь AI
+            if (aiResponse.isNotBlank() || isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xEE1A1A1A))
+                        .padding(16.dp)
+                        .heightIn(max = 300.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    if (isLoading) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.CircularProgressIndicator(color = Color(0xFF64B5F6), modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Text("Думаю...", color = Color.White)
+                        }
+                    } else {
+                        Text(aiResponse, color = Color.White, fontSize = 15.sp)
+                    }
+                }
+            }
+
             // Чіпи швидких дій
             Row(
                 modifier = Modifier.fillMaxWidth(),

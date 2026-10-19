@@ -147,12 +147,13 @@ private fun AiHubContent(ctx: Context, onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ActionChip("Пошук", Color(0xFF4285F4)) {
-                    val i = Intent(Intent.ACTION_WEB_SEARCH).apply {
-                        putExtra("query", query.ifBlank { "Google" })
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    onClose()
+                    val i = Intent(ctx, com.dynamicai.launcher.MainActivity::class.java).apply {
+                        putExtra("hub_action", "search")
+                        putExtra("hub_query", query.ifBlank { "Google" })
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                     }
                     try { ctx.startActivity(i) } catch (_: Throwable) {}
-                    onClose()
                 }
                 ActionChip("Переклад", Color(0xFFFF9800)) {
                     onClose()

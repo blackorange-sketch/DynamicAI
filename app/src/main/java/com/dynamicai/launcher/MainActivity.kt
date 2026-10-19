@@ -18,7 +18,10 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.ui.platform.LocalContext
 import com.dynamicai.launcher.ui.HomeScreen
 
+data class HubEvent(val action: String, val query: String, val id: Long)
+
 class MainActivity : ComponentActivity() {
+    private var hubEvent by androidx.compose.runtime.mutableStateOf<HubEvent?>(null)
 
     override fun onResume() {
         super.onResume()
@@ -31,6 +34,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private var aiQuery: String? = null
+
+    private fun handleHubIntent(intent: android.content.Intent?) {
+        val action = intent?.getStringExtra("hub_action") ?: return
+        val q = intent.getStringExtra("hub_query") ?: ""
+        hubEvent = HubEvent(action, q, System.currentTimeMillis())
+    }
 
     private fun handleAssistIntent(intent: android.content.Intent?) {
         val action = intent?.action ?: return
@@ -54,12 +63,14 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         handleAssistIntent(intent)
+        handleHubIntent(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         handleAssistIntent(intent)
+        handleHubIntent(intent)
         setContent {
             // WakeWord: запит дозволу мікрофона + старт сервісу, якщо увімкнено
             val permLauncher = rememberLauncherForActivityResult(
@@ -96,7 +107,7 @@ class MainActivity : ComponentActivity() {
                 surface = androidx.compose.ui.graphics.Color.Transparent
             )
             MaterialTheme(colorScheme = colorScheme) {
-                HomeScreen(initialQuery = aiQuery)
+                HomeScreen(hubEvent = hubEvent)
             }
         }
     }

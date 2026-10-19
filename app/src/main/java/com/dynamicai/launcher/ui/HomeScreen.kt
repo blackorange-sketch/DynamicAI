@@ -83,7 +83,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
-fun HomeScreen(vm: AppListViewModel = viewModel(), initialQuery: String? = null) {
+fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launcher.HubEvent? = null) {
     val apps by vm.apps.collectAsStateWithLifecycle()
     val dockPkgs by vm.dockPkgs.collectAsStateWithLifecycle()
     val response by vm.response.collectAsStateWithLifecycle()
@@ -256,11 +256,29 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), initialQuery: String? = null)
         } catch (_: Exception) {}
     }
 
-    LaunchedEffect(initialQuery) {
-        if (!initialQuery.isNullOrBlank()) {
-            // Невелика затримка, щоб UI встиг завантажитись
-            kotlinx.coroutines.delay(300)
-            vm.executeCommand(initialQuery)
+    LaunchedEffect(hubEvent) {
+        val ev = hubEvent ?: return@LaunchedEffect
+        kotlinx.coroutines.delay(300) // Затримка, щоб лаунчер встиг з'явитися на екрані
+        when (ev.action) {
+            "ai" -> {
+                vm.executeCommand(ev.query)
+            }
+            "search" -> {
+                val i = android.content.Intent(android.content.Intent.ACTION_WEB_SEARCH).apply {
+                    putExtra("query", ev.query)
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try { ctx.startActivity(i) } catch (_: Throwable) {}
+            }
+            "mic" -> {
+                val i = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
+                    putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Слухаю...")
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try { ctx.startActivity(i) } catch (_: Throwable) {}
+            }
         }
     }
 

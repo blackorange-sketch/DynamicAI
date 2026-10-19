@@ -61,11 +61,6 @@ class MainActivity : ComponentActivity() {
                     val on = com.dynamicai.launcher.data.SettingsStorage(applicationContext).load().wakeWordEnabled
                     if (on) {
                     com.dynamicai.launcher.voice.WakeWordService.start(applicationContext)
-                    try {
-                        applicationContext.startService(
-                            android.content.Intent(applicationContext, com.dynamicai.launcher.overlay.CornerGestureService::class.java)
-                        )
-                    } catch (_: Throwable) {}
                 }
                 }
             }

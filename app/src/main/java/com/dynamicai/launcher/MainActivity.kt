@@ -9,6 +9,9 @@ import androidx.core.content.ContextCompat
 import com.dynamicai.launcher.voice.WakeWordService
 
 import android.os.Bundle
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -21,7 +24,7 @@ import com.dynamicai.launcher.ui.HomeScreen
 data class HubEvent(val action: String, val query: String, val id: Long)
 
 class MainActivity : ComponentActivity() {
-    private var hubEvent by androidx.compose.runtime.mutableStateOf<HubEvent?>(null)
+    private var hubEvent = mutableStateOf<HubEvent?>(null)
 
     override fun onResume() {
         super.onResume()
@@ -38,7 +41,7 @@ class MainActivity : ComponentActivity() {
     private fun handleHubIntent(intent: android.content.Intent?) {
         val action = intent?.getStringExtra("hub_action") ?: return
         val q = intent.getStringExtra("hub_query") ?: ""
-        hubEvent = HubEvent(action, q, System.currentTimeMillis())
+        hubEvent.value = HubEvent(action, q, System.currentTimeMillis())
     }
 
     private fun handleAssistIntent(intent: android.content.Intent?) {
@@ -107,7 +110,7 @@ class MainActivity : ComponentActivity() {
                 surface = androidx.compose.ui.graphics.Color.Transparent
             )
             MaterialTheme(colorScheme = colorScheme) {
-                HomeScreen(hubEvent = hubEvent)
+                HomeScreen(hubEvent = hubEvent.value)
             }
         }
     }

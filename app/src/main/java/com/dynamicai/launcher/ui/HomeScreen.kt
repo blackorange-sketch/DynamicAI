@@ -275,9 +275,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                     putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
                     putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Слухаю...")
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 try {
-                    voiceLauncher.launch(voiceIntent)
+                    ctx.startActivity(voiceIntent)
                 } catch (t: Throwable) {
                     android.util.Log.e("HomeScreen", "mic launch failed", t)
                 }

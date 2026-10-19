@@ -11,6 +11,7 @@ class ChatEngine(
     private val webSearch: WebSearchRepository
 ) {
     private val newsRepo = NewsRepository()
+    private val koleoClient = KoleoClient()
     private val translationRepo = TranslationRepository()
 
     companion object {
@@ -69,11 +70,29 @@ class ChatEngine(
      * Повертає готовий контекст або порожній рядок.
      */
     private suspend fun structuredAnswer(question: String, isEvent: Boolean): String {
-        // Шукаємо в інтернеті
+        if (!isEvent) {
+            // Для потягів пробуємо Koleo API
+            val fromTo = extractFromTo(question)
+            if (fromTo != null) {
+                val connections = koleoClient.findConnections(fromTo.first, fromTo.second)
+                if (connections.isNotEmpty()) {
+                    val sb = StringBuilder()
+                    sb.append("🚆 ${fromTo.first} → ${fromTo.second}\n")
+                    connections.forEach { c ->
+                        sb.append("🕐 ${c.departure} → ${c.arrival}")
+                        if (c.duration.isNotBlank()) sb.append(" (${c.duration})")
+                        if (c.price != null) sb.append(" · ${c.price}")
+                        sb.append("\n")
+                    }
+                    return sb.toString().trim()
+                }
+            }
+        }
+
+        // Якщо Koleo не допоміг (або це подія) — шукаємо в інтернеті
         val searchResult = webSearch.search(question)
         val context = webSearch.toContext(searchResult)
         
-        // Формуємо строгий промпт
         val format = if (isEvent) {
             "🎤 Назва події\n📍 Місце\n📅 Дата та час\n🎫 Ціна (якщо є)"
         } else {
@@ -95,6 +114,21 @@ class ChatEngine(
 
         val response = llm.complete(prompt)
         return response?.trim() ?: "Не вдалося отримати відповідь."
+    }
+
+    private fun extractFromTo(question: String): Pair<String, String>? {
+        val q = question.lowercase()
+        // "з Варшави до Кракова"
+        val m1 = Regex("з\\s+([а-яіїєґa-z\\s-]+?)\\s+до\\s+([а-яіїєґa-z\\s-]+)").find(q)
+        if (m1 != null) {
+            return m1.groupValues[1].trim() to m1.groupValues[2].trim()
+        }
+        // "від Варшави до Кракова"
+        val m2 = Regex("від\\s+([а-яіїєґa-z\\s-]+?)\\s+до\\s+([а-яіїєґa-z\\s-]+)").find(q)
+        if (m2 != null) {
+            return m2.groupValues[1].trim() to m2.groupValues[2].trim()
+        }
+        return null
     }
 
     private suspend fun getSmartContext(question: String): String {

@@ -206,17 +206,22 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                     )
                 }
                 ActionChip("AI", Color(0xFF2196F3)) {
-                    onClose()
-                    if (query.isNotBlank()) {
-                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                            val i = Intent(ctx, com.dynamicai.launcher.MainActivity::class.java).apply {
-                                putExtra("ai_query", query)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    if (query.isNotBlank() && vm != null) {
+                        isLoading = true
+                        aiResponse = ""
+                        CoroutineScope(Dispatchers.Main).launch {
+                            try {
+                                vm.chatEngine.answerStreaming(query) { token ->
+                                    aiResponse += token
+                                }
+                            } catch (t: Throwable) {
+                                aiResponse += "\nПомилка: ${t.message}"
+                            } finally {
+                                isLoading = false
                             }
-                            try { ctx.startActivity(i) } catch (t: Throwable) {
-                                android.util.Log.e("AiHub", "AI intent failed: ${t.message}")
-                            }
-                        }, 200)
+                        }
+                    } else if (vm == null) {
+                        aiResponse = "AI не ініціалізовано (vm == null)"
                     }
                 }
             }

@@ -78,6 +78,41 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         false
     }
 
+    override suspend fun streamComplete(prompt: String, onToken: (String) -> Unit): String? = withContext(Dispatchers.IO) {
+        val e = engine ?: return@withContext null
+        try {
+            e.createConversation().use { conversation ->
+                // Спробувати знайти метод sendMessageAsync через reflection
+                val asyncMethod = conversation.javaClass.methods.firstOrNull {
+                    it.name == "sendMessageAsync" && it.parameterTypes.size == 2
+                }
+
+                if (asyncMethod != null) {
+                    // LiteRT-LM підтримує стрімінг
+                    val fullText = StringBuilder()
+                    val callback = { text: String ->
+                        fullText.append(text)
+                        onToken(text)
+                        Unit
+                    }
+                    asyncMethod.invoke(conversation, prompt, callback)
+                    return@withContext fullText.toString()
+                } else {
+                    // Fallback: без стрімінгу
+                    val message = conversation.sendMessage(prompt)
+                    val result = extractText(message) ?: message?.toString() ?: ""
+                    if (result.isNotBlank()) onToken(result)
+                    return@withContext result
+                }
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "streamComplete failed: ${t.message}", t)
+            lastError = "stream exception: ${t.message}"
+            // Fallback на звичайний complete
+            return@withContext complete(prompt)
+        }
+    }
+
     override suspend fun complete(prompt: String): String? = withContext(Dispatchers.IO) {
         val e = engine ?: return@withContext null
         return@withContext try {

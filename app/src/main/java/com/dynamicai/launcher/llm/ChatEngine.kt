@@ -131,6 +131,38 @@ class ChatEngine(
         return null
     }
 
+    /**
+     * Стрімінг-версія answer().
+     */
+    suspend fun answerStreaming(question: String, onToken: (String) -> Unit): String {
+        if (!llm.isReady) return "LLM не активна"
+        try {
+            val smartContext = getSmartContext(question)
+            val context = if (smartContext.isNotBlank()) {
+                smartContext
+            } else {
+                val searchResult = webSearch.search(question)
+                webSearch.toContext(searchResult)
+            }
+
+            val prompt = buildString {
+                append("Ти — корисний AI-асистент у лаунчері Android. Відповідай українською мовою, коротко (максимум 2-3 речення).\n\n")
+                if (context.isNotBlank()) {
+                    append("Ось інформація з інтернету, яка може допомогти:\n")
+                    append(context)
+                    append("\n\n")
+                }
+                append("Питання користувача: ").append(question).append("\n\n")
+                append("Дай точну і коротку відповідь українською.")
+            }
+
+            return llm.streamComplete(prompt, onToken) ?: "Не вдалося отримати відповідь."
+        } catch (t: Throwable) {
+            Log.e(TAG, "answerStreaming failed", t)
+            return "Помилка: ${t.message}"
+        }
+    }
+
     private suspend fun getSmartContext(question: String): String {
         val q = question.lowercase()
         

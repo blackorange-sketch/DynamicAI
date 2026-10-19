@@ -30,9 +30,28 @@ class MainActivity : ComponentActivity() {
         try { com.dynamicai.launcher.overlay.FloatingDockService.show(this) } catch (_: Exception) {}
     }
 
+    private fun handleAssistIntent(intent: android.content.Intent?) {
+        val action = intent?.action ?: return
+        if (action == android.content.Intent.ACTION_ASSIST ||
+            action == "android.intent.action.VOICE_COMMAND") {
+            // Невелика затримка щоб activity встигла стати foreground
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                try {
+                    com.dynamicai.launcher.overlay.AiHubOverlay.show(applicationContext)
+                } catch (_: Throwable) {}
+            }, 300)
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        handleAssistIntent(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        handleAssistIntent(intent)
         setContent {
             // WakeWord: запит дозволу мікрофона + старт сервісу, якщо увімкнено
             val permLauncher = rememberLauncherForActivityResult(

@@ -68,6 +68,35 @@ class ChatEngine(
      * Розумний роутинг за типом питання.
      * Повертає готовий контекст або порожній рядок.
      */
+    private suspend fun structuredAnswer(question: String, isEvent: Boolean): String {
+        // Шукаємо в інтернеті
+        val searchResult = webSearch.search(question)
+        val context = webSearch.toContext(searchResult)
+        
+        // Формуємо строгий промпт
+        val format = if (isEvent) {
+            "🎤 Назва події\n📍 Місце\n📅 Дата та час\n🎫 Ціна (якщо є)"
+        } else {
+            "🚆 Маршрут\n🕐 Час\n⏱ Тривалість\n💰 Ціна (якщо є)"
+        }
+        
+        val prompt = """
+            Ти — AI-асистент. Користувач шукає ${if (isEvent) "концерт/подію" else "транспорт"}.
+            Питання: $question
+            
+            Результати пошуку в інтернеті:
+            ${if (context.isNotBlank()) context else "Немає даних."}
+            
+            Сформуй відповідь СУВОРО у такому форматі (до 5 рядків):
+            $format
+            
+            Якщо в результатах немає конкретних дат/цін, напиши "Не знайдено точних даних" замість вигадування.
+        """.trimIndent()
+
+        val response = llm.complete(prompt)
+        return response?.trim() ?: "Не вдалося отримати відповідь."
+    }
+
     private suspend fun getSmartContext(question: String): String {
         val q = question.lowercase()
         

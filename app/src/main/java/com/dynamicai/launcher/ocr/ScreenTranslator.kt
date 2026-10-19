@@ -43,102 +43,21 @@ class ScreenTranslator(
         targetLang: String = "uk",
         onProgress: (stage: String) -> Unit = {}
     ): List<TranslatedBlock> = withContext(Dispatchers.IO) {
-        try {
-            // Автозавантаження OCR-мов
-            val modelMgr = TessModelManager(context)
-            for (lang in ocrLangs.split("+")) {
-                if (!modelMgr.isDownloaded(lang)) {
-                    onProgress("Завантажую OCR $lang…")
-                    val ok = modelMgr.download(lang) { d, t ->
-                        if (t > 0) onProgress("Завантажую $lang: ${d * 100 / t}%")
-                    }
-                    if (!ok) {
-                        Log.e(TAG, "Failed to download $lang")
-                        return@withContext emptyList()
-                    }
-                }
-            }
-
-            onProgress("Роблю скріншот…")
-            val bmp = screenshot.takeScreenshot()
-            if (bmp == null) {
-                Log.e(TAG, "Screenshot failed: ${screenshot.lastError}")
-                return@withContext emptyList()
-            }
-
-            onProgress("Розпізнаю текст…")
-            val blocks = ocr.recognize(bmp, ocrLangs)
-            Log.e(TAG, "OCR: ${blocks.size} blocks")
-            bmp.recycle()
-            if (blocks.isEmpty()) return@withContext emptyList()
-
-            // Фільтруємо: довжина >= 2, conf > 40
-            val valid = blocks.filter {
-                it.text.trim().length >= 2 && (it.confidence == 0 || it.confidence > 40)
-            }
-
-            // Групуємо рядки в абзаци для контекстного перекладу
-            val merged = mergeBlocks(valid)
-            Log.e(TAG, "Merged: ${merged.size} groups (was ${valid.size} lines)")
-            Log.e(TAG, "Valid: ${valid.size} lines / ${blocks.size}")
-            if (valid.isEmpty()) return@withContext emptyList()
-
-            // Перевірка LLM
-            if (llm == null || !llm.isReady) {
-                Log.e(TAG, "LLM not ready")
-                return@withContext emptyList()
-            }
-
-            onProgress("Перекладаю ${valid.size} блоків…")
-
-            // ML Kit: завантажуємо модель якщо треба
-            onProgress("Готую модель перекладу…")
-            mlkit.downloadModel("en", targetLang)
-            if (targetLang != "uk") mlkit.downloadModel("uk", targetLang)
-
-            val translations = mutableListOf<String>()
-            for ((i, block) in merged.withIndex()) {
-                if (i % 5 == 0) onProgress("Перекладено ${i + 1} / ${valid.size}")
-                // Визначаємо мову джерела грубо (uk якщо є кирилиця, інакше en)
-                val hasCyr = block.text.any { it.code in 0x0400..0x04FF }
-                val fromLang = if (hasCyr) "uk" else "en"
-                // Якщо source == target — не перекладаємо, але показуємо як є
-                if (fromLang == targetLang) {
-                    translations.add("")
-                    continue
-                }
-                val tr = mlkit.translate(block.text, fromLang, targetLang) ?: ""
-                translations.add(tr)
-            }
-
-            // Складаємо результат
-            val result = mutableListOf<TranslatedBlock>()
-            for ((i, block) in merged.withIndex()) {
-                val tr = translations.getOrNull(i)?.trim().orEmpty()
-                if (tr.isBlank()) continue
-                // Пропускаємо якщо переклад == оригінал (LLM не переклав)
-                if (tr.equals(block.text, ignoreCase = true)) continue
-                result.add(
-                    TranslatedBlock(
-                        originalText = block.text,
-                        translatedText = tr,
-                        bounds = block.bounds,
-                        confidence = block.confidence
-                    )
-                )
-            }
-
-            Log.e(TAG, "Translated ${result.size} / ${valid.size}")
-            onProgress("Готово")
-            result
-        } catch (t: Throwable) {
-            Log.e(TAG, "captureAndTranslate failed: ${t.message}", t)
-            emptyList()
+        // Просто делегуємо на region-версію з повним екраном
+        val bmp = screenshot.takeScreenshot()
+        if (bmp == null) {
+            Log.e(TAG, "Screenshot failed: ${screenshot.lastError}")
+            return@withContext emptyList()
         }
+        val fullRect = android.graphics.Rect(0, 0, bmp.width, bmp.height)
+        bmp.recycle()
+        captureRegionAndTranslate(
+            rect = fullRect,
+            ocrLangs = ocrLangs,
+            targetLang = targetLang,
+            onProgress = onProgress
+        )
     }
-
-    /** Парсить "1. Hello
-2. World" → ["Hello", "World"] */
 
     /**
      * Скріншот + crop до rect + OCR + переклад.
@@ -199,8 +118,19 @@ class ScreenTranslator(
                 val letters = t.count { it.isLetter() }
                 if (letters < 2) return@filter false
                 if (b.confidence != 0 && b.confidence <= 40) return@filter false
+                // Сміття: багато спецсимволів
                 val specials = t.count { !it.isLetterOrDigit() && !it.isWhitespace() && it != '.' && it != ',' && it != '!' && it != '?' }
                 if (specials > letters) return@filter false
+                // Сміття: змішані кирилиця + латиниця (OCR-помилка)
+                val hasCyr = t.any { it.code in 0x0400..0x04FF }
+                val hasLat = t.any { it in 'a'..'z' || it in 'A'..'Z' }
+                if (hasCyr && hasLat) {
+                    val latCount = t.count { it in 'a'..'z' || it in 'A'..'Z' }
+                    if (latCount.toFloat() / letters > 0.2f) return@filter false
+                }
+                // Сміття: немає жодного слова >= 2 літер
+                val hasRealWord = t.split(Regex("[\\s\\W]+")).any { it.length >= 2 }
+                if (!hasRealWord) return@filter false
                 true
             }
 
@@ -252,7 +182,7 @@ class ScreenTranslator(
                     )
                 )
             }
-            Log.e(TAG, "Region translated ${result.size} / ${valid.size}")
+            Log.e(TAG, "Region translated ${result.size} / ${merged.size}")
             onProgress("Готово")
             result
         } catch (t: Throwable) {

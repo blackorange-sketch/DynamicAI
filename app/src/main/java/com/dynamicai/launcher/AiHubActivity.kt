@@ -121,7 +121,6 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .layerBackdrop(backdrop) // <--- ЗАХОПЛЮЄМО ВЕСЬ ШАР ДЛЯ BACKDROP
             .background(Color.Black.copy(alpha = 0.3f))
             .clickable(
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },

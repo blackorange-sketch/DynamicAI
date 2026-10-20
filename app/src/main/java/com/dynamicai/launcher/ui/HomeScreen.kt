@@ -49,6 +49,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.CompositionLocalProvider
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -85,7 +86,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
-fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launcher.HubEvent? = null) {
+fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launcher.HubEvent? = null) {    val backdrop = rememberLayerBackdrop()
+    CompositionLocalProvider(LocalBackdrop provides backdrop) {
+
     val backdrop = rememberLayerBackdrop()
     val apps by vm.apps.collectAsStateWithLifecycle()
     val dockPkgs by vm.dockPkgs.collectAsStateWithLifecycle()
@@ -568,8 +571,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     CompositionLocalProvider(LocalBackdrop provides backdrop) {
     Box(
         modifier = Modifier
+                .layerBackdrop(backdrop)
             .fillMaxSize()
-            .layerBackdrop(backdrop)
+            .layerBackdrop(backdrop) // <--- ЗАХОПЛЮЄМО ВЕСЬ ЕКРАН
             .graphicsLayer {
                 alpha = launchFade
                 val s = 0.94f + 0.06f * launchFade
@@ -1581,7 +1585,6 @@ fun AppRow(
             )
         }
     }
-    }
 }
 
 private fun isScreenOn(ctx: android.content.Context): Boolean {
@@ -1589,4 +1592,7 @@ private fun isScreenOn(ctx: android.content.Context): Boolean {
         val pm = ctx.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
         pm.isInteractive
     } catch (_: Throwable) { true }
+    }
+
+    } // end CompositionLocalProvider
 }

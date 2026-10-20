@@ -55,9 +55,11 @@ object AiHubOverlay {
     private var wm: WindowManager? = null
     private var view: ComposeView? = null
     private var owner: HubLifecycleOwner? = null
+    private var appContext: android.content.Context? = null
 
     fun show(context: Context, vm: com.dynamicai.launcher.AppListViewModel? = null) {
         if (view != null) return
+        appContext = context.applicationContext
         try {
             // Ховаємо док, щоб він не перекривав кнопки
             try { FloatingDockService.hide(context) } catch (_: Throwable) {}
@@ -110,7 +112,9 @@ object AiHubOverlay {
         Log.e(TAG, "AI Hub hidden")
         // Повертаємо док (якщо він був увімкнений)
         // (перевірка налаштувань не потрібна, show() сам перевірить)
-        try { FloatingDockService.show(android.app.ApplicationProvider.getApplicationContext()) } catch (_: Throwable) {}
+        appContext?.let {
+            try { FloatingDockService.show(it) } catch (_: Throwable) {}
+        }
     }
 
     private class HubLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {

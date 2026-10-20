@@ -44,13 +44,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kyant.backdrop.effects.vibrancy
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.Backdrop
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -87,7 +80,6 @@ class AiHubActivity : ComponentActivity() {
 
 @Composable
 fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) {
-    val backdrop = rememberLayerBackdrop()
     var query by remember { mutableStateOf("") }
     var aiResponse by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -195,15 +187,8 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .drawBackdrop(
-                                backdrop = backdrop,
-                                shape = { RoundedCornerShape(16.dp) },
-                                effects = {
-                                    blur(24f.dp.toPx())
-                                    lens(refractionHeight = 8f.dp.toPx(), refractionAmount = 12f.dp.toPx())
-                                    vibrancy()
-                                }
-                            )
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0x55101010))
                             .border(0.5.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
                             .padding(16.dp)
                             .heightIn(max = 250.dp)
@@ -226,12 +211,12 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    ActionChip("Пошук", Color(0xFF4285F4), backdrop) {
+                    ActionChip("Пошук", Color(0xFF4285F4)) {
                         if (query.isNotBlank()) {
                             webViewUrl = "https://duckduckgo.com/?q=${android.net.Uri.encode(query)}"
                         }
                     }
-                    ActionChip("Переклад", Color(0xFFFF9800), backdrop) {
+                    ActionChip("Переклад", Color(0xFFFF9800)) {
                         onClose()
                         com.dynamicai.launcher.ocr.RegionSelectorOverlay.show(
                             context = vm.getApplication(),
@@ -248,7 +233,7 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                             onCancel = { }
                         )
                     }
-                    ActionChip("AI", Color(0xFF2196F3), backdrop) {
+                    ActionChip("AI", Color(0xFF2196F3)) {
                         if (query.isNotBlank()) {
                             isLoading = true
                             aiResponse = ""
@@ -271,15 +256,8 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .drawBackdrop(
-                            backdrop = backdrop,
-                            shape = { RoundedCornerShape(28.dp) },
-                            effects = {
-                                blur(32f.dp.toPx())
-                                lens(refractionHeight = 16f.dp.toPx(), refractionAmount = 20f.dp.toPx())
-                                vibrancy()
-                            }
-                        )
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(Color(0x40101010))
                         .border(
                             width = 0.5.dp,
                             brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f))),
@@ -347,22 +325,15 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
 }
 
 @Composable
-private fun ActionChip(label: String, color: Color, backdrop: com.kyant.backdrop.Backdrop, onClick: () -> Unit) {
+private fun ActionChip(label: String, color: Color, onClick: () -> Unit) {
     Text(
         text = label,
         color = Color.White,
         fontSize = 13.sp,
         fontWeight = FontWeight.Medium,
         modifier = Modifier
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { RoundedCornerShape(16.dp) },
-                effects = {
-                    blur(16f.dp.toPx())
-                    lens(refractionHeight = 8f.dp.toPx(), refractionAmount = 10f.dp.toPx())
-                    vibrancy()
-                }
-            )
+            .clip(RoundedCornerShape(16.dp))
+            .background(color.copy(alpha = 0.2f))
             .border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 8.dp)

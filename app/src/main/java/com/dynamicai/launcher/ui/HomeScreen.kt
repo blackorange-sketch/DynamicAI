@@ -569,7 +569,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .layerBackdrop(backdrop) // <--- ЗАХОПЛЮЄМО ВЕСЬ ЕКРАН
+            .layerBackdrop(backdrop)
             .graphicsLayer {
                 alpha = launchFade
                 val s = 0.94f + 0.06f * launchFade
@@ -1581,6 +1581,7 @@ fun AppRow(
             )
         }
     }
+    }
 }
 
 private fun isScreenOn(ctx: android.content.Context): Boolean {
@@ -1588,5 +1589,4 @@ private fun isScreenOn(ctx: android.content.Context): Boolean {
         val pm = ctx.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
         pm.isInteractive
     } catch (_: Throwable) { true }
-    }
 }

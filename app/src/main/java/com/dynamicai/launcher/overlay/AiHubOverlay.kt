@@ -3,31 +3,25 @@ package com.dynamicai.launcher.overlay
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
-import android.net.Uri
 import android.util.Log
 import android.view.Gravity
 import android.view.WindowManager
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +46,9 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 object AiHubOverlay {
     private const val TAG = "AiHubOverlay"
@@ -62,6 +59,9 @@ object AiHubOverlay {
     fun show(context: Context, vm: com.dynamicai.launcher.AppListViewModel? = null) {
         if (view != null) return
         try {
+            // Ховаємо док, щоб він не перекривав кнопки
+            try { FloatingDockService.hide(context) } catch (_: Throwable) {}
+
             val wmLocal = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
             val lcOwner = HubLifecycleOwner()
 
@@ -77,14 +77,17 @@ object AiHubOverlay {
                 }
             }
 
+            // Фокусабельне вікно з затемненням фону
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+                WindowManager.LayoutParams.FLAG_DIM_BEHIND or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.BOTTOM
+                dimAmount = 0.6f // Затемнення фону
             }
 
             lcOwner.onCreate()
@@ -105,6 +108,9 @@ object AiHubOverlay {
         owner?.onDestroy()
         owner = null
         Log.e(TAG, "AI Hub hidden")
+        // Повертаємо док (якщо він був увімкнений)
+        // (перевірка налаштувань не потрібна, show() сам перевірить)
+        try { FloatingDockService.show(android.app.ApplicationProvider.getApplicationContext()) } catch (_: Throwable) {}
     }
 
     private class HubLifecycleOwner : LifecycleOwner, SavedStateRegistryOwner {
@@ -134,16 +140,22 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.85f))
-            .imePadding()
-            .pointerInput(Unit) { detectTapGestures { onClose() } }
+            .background(Color.Black.copy(alpha = 0.4f)) // Додаткове затемнення
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null
+            ) { onClose() } // Клік по фону закриває хаб
     ) {
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 32.dp)
-                .pointerInput(Unit) { detectTapGestures { } }, // блокуємо клік по фону
+                .padding(horizontal = 16.dp, vertical = 24.dp)
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null
+                ) { } // Блокуємо клік по самій панелі
+                .imePadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Відповідь AI
@@ -154,12 +166,12 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color(0xEE1A1A1A))
                         .padding(16.dp)
-                        .heightIn(max = 300.dp)
+                        .heightIn(max = 250.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    if (isLoading) {
+                    if (isLoading && aiResponse.isBlank()) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            androidx.compose.material3.CircularProgressIndicator(color = Color(0xFF64B5F6), modifier = Modifier.size(20.dp))
+                            CircularProgressIndicator(color = Color(0xFF64B5F6), modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                             Spacer(Modifier.width(12.dp))
                             Text("Думаю...", color = Color.White)
                         }
@@ -175,32 +187,26 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ActionChip("Пошук", Color(0xFF4285F4)) {
-                    android.widget.Toast.makeText(ctx, "Пошук: $query", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "Пошук...", Toast.LENGTH_SHORT).show()
                     onClose()
                     val i = Intent(Intent.ACTION_WEB_SEARCH).apply {
                         putExtra("query", query.ifBlank { "Google" })
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
-                    try { ctx.startActivity(i) } catch (t: Throwable) {
-                        android.widget.Toast.makeText(ctx, "Помилка: ${t.message}", android.widget.Toast.LENGTH_LONG).show()
-                    }
+                    try { ctx.startActivity(i) } catch (_: Throwable) {}
                 }
                 ActionChip("Переклад", Color(0xFFFF9800)) {
+                    Toast.makeText(ctx, "Переклад...", Toast.LENGTH_SHORT).show()
                     onClose()
-                    // Запуск Region Selector (потрібен доступ до нього)
                     com.dynamicai.launcher.ocr.RegionSelectorOverlay.show(
                         context = ctx,
                         onSelected = { rect ->
                             CoroutineScope(Dispatchers.Main).launch {
-                                delay(150)
-                                try {
-                                    val translator = com.dynamicai.launcher.ocr.ScreenTranslator(ctx, null)
-                                    val blocks = translator.captureRegionAndTranslate(rect, targetLang = "uk")
-                                    if (blocks.isNotEmpty()) {
-                                        com.dynamicai.launcher.ocr.ScreenTranslateOverlay.show(ctx, blocks, "uk")
-                                    }
-                                } catch (t: Throwable) {
-                                    android.util.Log.e("AiHub", "translate error: ${t.message}", t)
+                                kotlinx.coroutines.delay(150)
+                                val translator = com.dynamicai.launcher.ocr.ScreenTranslator(ctx, null)
+                                val blocks = translator.captureRegionAndTranslate(rect, targetLang = "uk")
+                                if (blocks.isNotEmpty()) {
+                                    com.dynamicai.launcher.ocr.ScreenTranslateOverlay.show(ctx, blocks, "uk")
                                 }
                             }
                         },
@@ -223,12 +229,14 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                             }
                         }
                     } else if (vm == null) {
-                        aiResponse = "AI не ініціалізовано (vm == null)"
+                        aiResponse = "AI не ініціалізовано"
+                    } else {
+                        aiResponse = "Введи питання"
                     }
                 }
             }
 
-            // Поле вводу (Gemini-style)
+            // Поле вводу
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -276,22 +284,16 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                         .size(40.dp)
                         .clip(CircleShape)
                         .background(Color(0x33FF5252))
-                        .pointerInput(Unit) {
-                            detectTapGestures {
-                                onClose() // 1. Закриваємо оверлей
-                                // 2. Запускаємо STT через невелику затримку, щоб оверлей точно зник
-                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                    val i = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
-                                        putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Слухаю...")
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    try { ctx.startActivity(i) } catch (t: Throwable) {
-                                        android.util.Log.e("AiHub", "STT failed: ${t.message}")
-                                    }
-                                }, 200)
+                        .clickable {
+                            Toast.makeText(ctx, "Мікрофон...", Toast.LENGTH_SHORT).show()
+                            onClose()
+                            val voiceIntent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
+                                putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Слухаю...")
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
+                            try { ctx.startActivity(voiceIntent) } catch (_: Throwable) {}
                         }
                 ) {
                     Text("🎤", fontSize = 18.sp)
@@ -312,7 +314,7 @@ private fun ActionChip(label: String, color: Color, onClick: () -> Unit) {
             .clip(RoundedCornerShape(16.dp))
             .background(color.copy(alpha = 0.2f))
             .border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-            .pointerInput(Unit) { detectTapGestures { onClick() } }
+            .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 8.dp)
     )
 }

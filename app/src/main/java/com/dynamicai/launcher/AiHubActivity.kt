@@ -40,6 +40,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kyant.backdrop.effects.vibrancy
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.effects.blur
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.Backdrop
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -75,7 +82,8 @@ class AiHubActivity : ComponentActivity() {
 }
 
 @Composable
-fun AiHubScreen(vm: AppListViewModel, onClose: () -> Unit) {
+fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) {
+    val backdrop = rememberLayerBackdrop()
     var query by remember { mutableStateOf("") }
     var aiResponse by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
@@ -84,7 +92,6 @@ fun AiHubScreen(vm: AppListViewModel, onClose: () -> Unit) {
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
 
-    // Launcher для мікрофона
     val voiceLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -92,7 +99,6 @@ fun AiHubScreen(vm: AppListViewModel, onClose: () -> Unit) {
             val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
             if (!text.isNullOrBlank()) {
                 query = text
-                // Автоматично відправляємо на AI
                 if (!isLoading) {
                     isLoading = true
                     aiResponse = ""
@@ -119,12 +125,31 @@ fun AiHubScreen(vm: AppListViewModel, onClose: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.05f))
+            .layerBackdrop(backdrop) // <--- ЗАХОПЛЮЄМО ВЕСЬ ШАР ДЛЯ BACKDROP
+            .background(Color.Black.copy(alpha = 0.3f))
             .clickable(
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                 indication = null
             ) { onClose() }
     ) {
+        // 1. Фонове зображення (скріншот)
+        if (blurBgPath != null) {
+            val bmp = remember(blurBgPath) {
+                try {
+                    val f = java.io.File(blurBgPath)
+                    if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.absolutePath) else null
+                } catch (_: Throwable) { null }
+            }
+            if (bmp != null) {
+                androidx.compose.foundation.Image(
+                    bitmap = bmp.asImageBitmap(),
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
         if (webViewUrl != null) {
             // Екран WebView
             Column(modifier = Modifier.fillMaxSize().padding(top = 40.dp)) {
@@ -161,13 +186,21 @@ fun AiHubScreen(vm: AppListViewModel, onClose: () -> Unit) {
                     .imePadding(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Відповідь AI
+                // Відповідь AI з liquid glass
                 if (aiResponse.isNotBlank() || isLoading) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0x40101010))
+                            .drawBackdrop(
+                                backdrop = backdrop,
+                                shape = { RoundedCornerShape(16.dp) },
+                                effects = {
+                                    blur(24f.dp.toPx())
+                                    lens(refractionHeight = 8f.dp.toPx(), refractionAmount = 12f.dp.toPx())
+                                    vibrancy()
+                                }
+                            )
+                            .border(0.5.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
                             .padding(16.dp)
                             .heightIn(max = 250.dp)
                             .verticalScroll(rememberScrollState())
@@ -189,12 +222,12 @@ fun AiHubScreen(vm: AppListViewModel, onClose: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    ActionChip("Пошук", Color(0xFF4285F4)) {
+                    ActionChip("Пошук", Color(0xFF4285F4), backdrop) {
                         if (query.isNotBlank()) {
                             webViewUrl = "https://duckduckgo.com/?q=${android.net.Uri.encode(query)}"
                         }
                     }
-                    ActionChip("Переклад", Color(0xFFFF9800)) {
+                    ActionChip("Переклад", Color(0xFFFF9800), backdrop) {
                         onClose()
                         com.dynamicai.launcher.ocr.RegionSelectorOverlay.show(
                             context = vm.getApplication(),
@@ -211,7 +244,7 @@ fun AiHubScreen(vm: AppListViewModel, onClose: () -> Unit) {
                             onCancel = { }
                         )
                     }
-                    ActionChip("AI", Color(0xFF2196F3)) {
+                    ActionChip("AI", Color(0xFF2196F3), backdrop) {
                         if (query.isNotBlank()) {
                             isLoading = true
                             aiResponse = ""
@@ -230,12 +263,19 @@ fun AiHubScreen(vm: AppListViewModel, onClose: () -> Unit) {
                     }
                 }
 
-                // Поле вводу
+                // Поле вводу з liquid glass
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(28.dp))
-                        .background(Color(0x40101010))
+                        .drawBackdrop(
+                            backdrop = backdrop,
+                            shape = { RoundedCornerShape(28.dp) },
+                            effects = {
+                                blur(32f.dp.toPx())
+                                lens(refractionHeight = 16f.dp.toPx(), refractionAmount = 20f.dp.toPx())
+                                vibrancy()
+                            }
+                        )
                         .border(
                             width = 0.5.dp,
                             brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f))),
@@ -303,15 +343,22 @@ fun AiHubScreen(vm: AppListViewModel, onClose: () -> Unit) {
 }
 
 @Composable
-private fun ActionChip(label: String, color: Color, onClick: () -> Unit) {
+private fun ActionChip(label: String, color: Color, backdrop: com.kyant.backdrop.Backdrop, onClick: () -> Unit) {
     Text(
         text = label,
         color = Color.White,
         fontSize = 13.sp,
         fontWeight = FontWeight.Medium,
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(color.copy(alpha = 0.15f))
+            .drawBackdrop(
+                backdrop = backdrop,
+                shape = { RoundedCornerShape(16.dp) },
+                effects = {
+                    blur(16f.dp.toPx())
+                    lens(refractionHeight = 8f.dp.toPx(), refractionAmount = 10f.dp.toPx())
+                    vibrancy()
+                }
+            )
             .border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 8.dp)

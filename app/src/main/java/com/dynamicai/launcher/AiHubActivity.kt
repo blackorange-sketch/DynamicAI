@@ -2,6 +2,10 @@ package com.dynamicai.launcher
 
 import android.content.Intent
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.asImageBitmap
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.view.WindowManager
@@ -76,7 +80,7 @@ class AiHubActivity : ComponentActivity() {
         }
 
         setContent {
-            AiHubScreen(vm = vm, onClose = { finish() })
+            AiHubScreen(vm = vm, blurBgPath = intent.getStringExtra("blur_bg_path"), onClose = { finish() })
         }
     }
 }

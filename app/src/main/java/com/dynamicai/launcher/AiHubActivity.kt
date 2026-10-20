@@ -54,8 +54,19 @@ class AiHubActivity : ComponentActivity() {
         
         // Прозорий фон для активності (щоб бачити лаунчер ззаду)
         window.setBackgroundDrawableResource(android.R.color.transparent)
-        window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-        window.setDimAmount(0.5f)
+
+        // iOS-style blur на Android 12+
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            window.attributes = window.attributes.apply {
+                blurBehindRadius = 80
+            }
+            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            window.setDimAmount(0.15f)
+        } else {
+            window.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            window.setDimAmount(0.5f)
+        }
 
         setContent {
             AiHubScreen(vm = vm, onClose = { finish() })
@@ -108,7 +119,7 @@ fun AiHubScreen(vm: AppListViewModel, onClose: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(Color.Black.copy(alpha = 0.05f))
             .clickable(
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                 indication = null
@@ -156,7 +167,7 @@ fun AiHubScreen(vm: AppListViewModel, onClose: () -> Unit) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xEE1A1A1A))
+                            .background(Color(0x40101010))
                             .padding(16.dp)
                             .heightIn(max = 250.dp)
                             .verticalScroll(rememberScrollState())
@@ -224,10 +235,10 @@ fun AiHubScreen(vm: AppListViewModel, onClose: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(28.dp))
-                        .background(Color(0xEE1A1A1A))
+                        .background(Color(0x40101010))
                         .border(
                             width = 0.5.dp,
-                            brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.3f), Color.White.copy(alpha = 0.05f))),
+                            brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f))),
                             shape = RoundedCornerShape(28.dp)
                         )
                         .padding(horizontal = 20.dp, vertical = 6.dp),
@@ -300,7 +311,7 @@ private fun ActionChip(label: String, color: Color, onClick: () -> Unit) {
         fontWeight = FontWeight.Medium,
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(color.copy(alpha = 0.2f))
+            .background(color.copy(alpha = 0.15f))
             .border(1.dp, color.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 8.dp)

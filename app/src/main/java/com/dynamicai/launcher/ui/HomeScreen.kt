@@ -88,6 +88,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 @Composable
 fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launcher.HubEvent? = null) {
     val backdrop = rememberLayerBackdrop()
+    CompositionLocalProvider(LocalBackdrop provides backdrop) {
+
     val apps by vm.apps.collectAsStateWithLifecycle()
     val dockPkgs by vm.dockPkgs.collectAsStateWithLifecycle()
     val response by vm.response.collectAsStateWithLifecycle()
@@ -566,11 +568,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         label = "launchFade"
     )
 
-    CompositionLocalProvider(LocalBackdrop provides backdrop) {
     Box(
         modifier = Modifier
-            .fillMaxSize()
             .layerBackdrop(backdrop)
+            .fillMaxSize()
             .graphicsLayer {
                 alpha = launchFade
                 val s = 0.94f + 0.06f * launchFade
@@ -1392,6 +1393,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         }
     }
 
+
+    }
 }
 @Composable
 fun AppContextMenu(
@@ -1582,7 +1585,6 @@ fun AppRow(
             )
         }
     }
-    } // end CompositionLocalProvider
 }
 
 private fun isScreenOn(ctx: android.content.Context): Boolean {

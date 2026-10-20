@@ -175,13 +175,15 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ActionChip("Пошук", Color(0xFF4285F4)) {
+                    android.widget.Toast.makeText(ctx, "Пошук: $query", android.widget.Toast.LENGTH_SHORT).show()
                     onClose()
-                    val i = Intent(ctx, com.dynamicai.launcher.MainActivity::class.java).apply {
-                        putExtra("hub_action", "search")
-                        putExtra("hub_query", query.ifBlank { "Google" })
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    val i = Intent(Intent.ACTION_WEB_SEARCH).apply {
+                        putExtra("query", query.ifBlank { "Google" })
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
-                    try { ctx.startActivity(i) } catch (_: Throwable) {}
+                    try { ctx.startActivity(i) } catch (t: Throwable) {
+                        android.widget.Toast.makeText(ctx, "Помилка: ${t.message}", android.widget.Toast.LENGTH_LONG).show()
+                    }
                 }
                 ActionChip("Переклад", Color(0xFFFF9800)) {
                     onClose()

@@ -1,12 +1,11 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
+        id("org.jetbrains.kotlin.plugin.compose")
 }
 
 android {
     namespace = "com.dynamicai.launcher"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         ndk {
@@ -54,10 +53,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
-    kotlinOptions {
-        jvmTarget = "21"
-        freeCompilerArgs += listOf("-Xskip-metadata-version-check")
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+        freeCompilerArgs.add("-Xskip-metadata-version-check")
     }
+}
 
     buildFeatures {
         compose = true
@@ -66,7 +67,7 @@ android {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2025.06.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.02.01")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")

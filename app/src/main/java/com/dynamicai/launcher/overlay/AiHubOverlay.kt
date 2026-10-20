@@ -227,13 +227,16 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                                     aiResponse += token
                                 }
                             } catch (t: Throwable) {
-                                aiResponse += "\nПомилка: ${t.message}"
+                                val err = "Помилка: ${t.message}"
+                                aiResponse += "\n$err"
+                                Toast.makeText(ctx, err, Toast.LENGTH_LONG).show()
                             } finally {
                                 isLoading = false
                             }
                         }
                     } else if (vm == null) {
                         aiResponse = "AI не ініціалізовано"
+                        Toast.makeText(ctx, "VM is null", Toast.LENGTH_SHORT).show()
                     } else {
                         aiResponse = "Введи питання"
                     }

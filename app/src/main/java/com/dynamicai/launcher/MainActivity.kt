@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
             // Невелика затримка щоб activity встигла стати foreground
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 try {
-                    com.dynamicai.launcher.overlay.AiHubOverlay.show(applicationContext, vm)
+                    com.dynamicai.launcher.overlay.AiHubOverlay.show(this@MainActivity, vm)
                 } catch (_: Throwable) {}
             }, 300)
         }

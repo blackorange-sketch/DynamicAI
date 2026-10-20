@@ -138,5 +138,12 @@
             android:name=".overlay.CornerGestureService"
             android:exported="false" />
 
+        <activity
+            android:name=".AiHubActivity"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.DynamicAI.Transparent" />
+
     </application>
 </manifest>

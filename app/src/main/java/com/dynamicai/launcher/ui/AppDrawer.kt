@@ -105,12 +105,19 @@ fun AppDrawer(
                         )
                     )
                 )
-                .pointerInput(Unit) {
-                    detectVerticalDragGestures { _, dragAmount ->
-                        if (dragAmount > 40) onDismiss()
-                    }
-                }
         ) {
+            // Зона свайпу вниз для закриття (тільки зверху)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .pointerInput(Unit) {
+                        detectVerticalDragGestures { _, dragAmount ->
+                            if (dragAmount > 30) onDismiss()
+                        }
+                    }
+            )
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()

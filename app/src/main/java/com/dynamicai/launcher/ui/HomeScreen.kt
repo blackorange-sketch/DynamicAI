@@ -49,9 +49,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.CompositionLocalProvider
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.alpha
@@ -87,7 +84,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 @Composable
 fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launcher.HubEvent? = null) {
-    val backdrop = rememberLayerBackdrop()
     val apps by vm.apps.collectAsStateWithLifecycle()
     val dockPkgs by vm.dockPkgs.collectAsStateWithLifecycle()
     val response by vm.response.collectAsStateWithLifecycle()
@@ -566,11 +562,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         label = "launchFade"
     )
 
-    CompositionLocalProvider(LocalBackdrop provides backdrop) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .layerBackdrop(backdrop)
             .graphicsLayer {
                 alpha = launchFade
                 val s = 0.94f + 0.06f * launchFade
@@ -1393,7 +1387,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
 
 }
-    }
 @Composable
 fun AppContextMenu(
     app: AppInfo,

@@ -88,8 +88,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 @Composable
 fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launcher.HubEvent? = null) {
     val backdrop = rememberLayerBackdrop()
-    CompositionLocalProvider(LocalBackdrop provides backdrop) {
-
     val apps by vm.apps.collectAsStateWithLifecycle()
     val dockPkgs by vm.dockPkgs.collectAsStateWithLifecycle()
     val response by vm.response.collectAsStateWithLifecycle()
@@ -568,10 +566,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         label = "launchFade"
     )
 
+    CompositionLocalProvider(LocalBackdrop provides backdrop) {
     Box(
         modifier = Modifier
-            .layerBackdrop(backdrop)
             .fillMaxSize()
+            .layerBackdrop(backdrop)
             .graphicsLayer {
                 alpha = launchFade
                 val s = 0.94f + 0.06f * launchFade
@@ -1393,9 +1392,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         }
     }
 
-
-    }
 }
+    }
 @Composable
 fun AppContextMenu(
     app: AppInfo,

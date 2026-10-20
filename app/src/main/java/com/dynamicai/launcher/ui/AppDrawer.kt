@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +33,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,6 +57,45 @@ fun AppDrawer(
     gridState: LazyGridState = rememberLazyGridState()
 ) {
     val haptic = LocalHapticFeedback.current
+
+    // Pull-to-dismiss: свайп вниз будь-де, але тільки коли список на верху
+    var accumulatedDrag by remember { mutableFloatStateOf(0f) }
+    val dismissThreshold = 120f
+    
+    val nestedScrollConnection = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: androidx.compose.ui.geometry.Offset,
+                available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+            ): androidx.compose.ui.geometry.Offset {
+                if (source == androidx.compose.ui.input.nestedscroll.NestedScrollSource.Drag) {
+                    val atTop = gridState.firstVisibleItemIndex == 0 
+                                && gridState.firstVisibleItemScrollOffset == 0
+                    if (atTop && available.y > 0f) {
+                        accumulatedDrag += available.y
+                        if (accumulatedDrag > dismissThreshold) {
+                            onDismiss()
+                            accumulatedDrag = 0f
+                        }
+                    } else {
+                        accumulatedDrag = 0f
+                    }
+                }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+            
+            override fun onPreScroll(
+                available: androidx.compose.ui.geometry.Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+            ): androidx.compose.ui.geometry.Offset {
+                if (available.y < 0f) {
+                    accumulatedDrag = 0f
+                }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+        }
+    }
 
     val columns = remember(iconSizeDp) {
         GridCells.Adaptive(minSize = (iconSizeDp + 24).dp)
@@ -106,21 +147,10 @@ fun AppDrawer(
                     )
                 )
         ) {
-            // Зона свайпу вниз для закриття (тільки зверху)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .pointerInput(Unit) {
-                        detectVerticalDragGestures { _, dragAmount ->
-                            if (dragAmount > 30) onDismiss()
-                        }
-                    }
-            )
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .nestedScroll(nestedScrollConnection)
                     .statusBarsPadding()
                     .navigationBarsPadding()
                     .padding(start = 4.dp, end = 32.dp)

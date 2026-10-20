@@ -83,7 +83,7 @@ dependencies {
     implementation("com.google.ai.edge.litertlm:litertlm-android:0.16.1")
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")
     implementation("com.google.mlkit:translate:17.0.3")
-    implementation("io.github.kyant0:backdrop:2.0.1")
+    implementation("io.github.kyant0:backdrop:1.0.6")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 

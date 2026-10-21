@@ -77,7 +77,14 @@ class FloatingDockService : Service() {
             if (isOpen && expanded) {
                 expanded = false
                 rebuildContent()
-                log("keyboard open (broadcast) → collapsed")
+                // Явно оновлюємо layout вікна, щоб воно згорнулось візуально
+                try {
+                    if (::rootLayout.isInitialized) {
+                        rootLayout.requestLayout()
+                        windowManager.updateViewLayout(rootLayout, params)
+                    }
+                } catch (_: Throwable) {}
+                log("keyboard open (broadcast) → collapsed + relayout")
             }
         }
     }

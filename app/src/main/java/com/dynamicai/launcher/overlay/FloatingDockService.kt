@@ -72,6 +72,21 @@ class FloatingDockService : Service() {
     }
     @Volatile private var expanded = false
     private var keyboardListener: android.view.ViewTreeObserver.OnGlobalLayoutListener? = null
+    private val keyboardHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val keyboardCheckRunnable = object : Runnable {
+        override fun run() {
+            try {
+                val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                val isOpen = imm.isAcceptingText
+                if (isOpen && expanded) {
+                    expanded = false
+                    rebuildContent()
+                    log("keyboard open (imm) → collapsed")
+                }
+            } catch (_: Throwable) {}
+            keyboardHandler.postDelayed(this, 400)
+        }
+    }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "updatedAt") {
@@ -124,6 +139,7 @@ class FloatingDockService : Service() {
             stopSelf()
         }
         setupKeyboardDetector()
+        keyboardHandler.post(keyboardCheckRunnable)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -149,6 +165,7 @@ class FloatingDockService : Service() {
             keyboardListener?.let { rootLayout.viewTreeObserver.removeOnGlobalLayoutListener(it) }
         } catch (_: Throwable) {}
         keyboardListener = null
+        keyboardHandler.removeCallbacks(keyboardCheckRunnable)
         if (instance === this) instance = null
         scope.cancel()
         super.onDestroy()

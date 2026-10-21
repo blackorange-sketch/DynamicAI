@@ -754,7 +754,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             }
                             if (idx >= 0) {
                                 try {
-                                    drawerGridState.scrollToItem(idx)
+                                    val current = drawerGridState.firstVisibleItemIndex
+                                    val distance = kotlin.math.abs(idx - current)
+                                    // Для дуже далеких букв — швидкий пре-скрол, потім плавна анімація
+                                    if (distance > 80) {
+                                        drawerGridState.scrollToItem(idx - 10)
+                                    }
+                                    drawerGridState.animateScrollToItem(
+                                        index = idx,
+                                        scrollOffset = 0
+                                    )
                                 } catch (_: Throwable) {}
                             }
                         } else {
@@ -764,11 +773,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             if (idx >= 0) {
                                 val current = listState.firstVisibleItemIndex
                                 val d = kotlin.math.abs(idx - current)
-                                when {
-                                    d > 60 -> { listState.scrollToItem((idx - 5).coerceAtLeast(0)); listState.animateScrollToItem(idx) }
-                                    d > 20 -> { listState.scrollToItem((idx - 3).coerceAtLeast(0)); listState.animateScrollToItem(idx) }
-                                    else -> listState.animateScrollToItem(idx)
+                                if (d > 60) {
+                                    listState.scrollToItem((idx - 5).coerceAtLeast(0))
                                 }
+                                listState.animateScrollToItem(idx)
                             }
                         }
                     }

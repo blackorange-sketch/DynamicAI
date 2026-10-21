@@ -71,6 +71,7 @@ class FloatingDockService : Service() {
         }
     }
     @Volatile private var expanded = false
+    private var keyboardListener: android.view.ViewTreeObserver.OnGlobalLayoutListener? = null
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "updatedAt") {
@@ -122,6 +123,7 @@ class FloatingDockService : Service() {
             log("onCreate failed: ${t::class.simpleName} — ${t.message}")
             stopSelf()
         }
+        setupKeyboardDetector()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -143,6 +145,10 @@ class FloatingDockService : Service() {
         } catch (_: Exception) {}
         try { hideSearchOverlay() } catch (_: Exception) {}
         try { if (::rootLayout.isInitialized) windowManager.removeView(rootLayout) } catch (_: Exception) {}
+        try {
+            keyboardListener?.let { rootLayout.viewTreeObserver.removeOnGlobalLayoutListener(it) }
+        } catch (_: Throwable) {}
+        keyboardListener = null
         if (instance === this) instance = null
         scope.cancel()
         super.onDestroy()
@@ -426,6 +432,32 @@ class FloatingDockService : Service() {
         params.x = 0
         val pct = settings.overlayOffsetYPercent.coerceIn(0, 100)
         params.y = ((pct - 50) * 8).coerceIn(-400, 400)
+    }
+
+
+    private fun setupKeyboardDetector() {
+        try {
+            if (!::rootLayout.isInitialized) return
+            val screenHeight = resources.displayMetrics.heightPixels
+            keyboardListener = android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                try {
+                    val rect = android.graphics.Rect()
+                    rootLayout.getWindowVisibleDisplayFrame(rect)
+                    val keypadHeight = screenHeight - rect.bottom
+                    val isKeyboardOpen = keypadHeight > screenHeight * 0.15
+                    
+                    if (isKeyboardOpen && expanded) {
+                        expanded = false
+                        rebuildContent()
+                        log("keyboard open → collapsed")
+                    }
+                } catch (_: Throwable) {}
+            }
+            rootLayout.viewTreeObserver.addOnGlobalLayoutListener(keyboardListener)
+            log("keyboard detector registered")
+        } catch (t: Throwable) {
+            log("setupKeyboardDetector failed: ${t.message}")
+        }
     }
 
     private fun rebuildContent() {

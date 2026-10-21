@@ -71,22 +71,17 @@ class FloatingDockService : Service() {
         }
     }
     @Volatile private var expanded = false
-    private var keyboardListener: android.view.ViewTreeObserver.OnGlobalLayoutListener? = null
-    private val keyboardHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private val keyboardCheckRunnable = object : Runnable {
-        override fun run() {
-            try {
-                val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-                val isOpen = imm.isAcceptingText
-                if (isOpen && expanded) {
-                    expanded = false
-                    rebuildContent()
-                    log("keyboard open (imm) → collapsed")
-                }
-            } catch (_: Throwable) {}
-            keyboardHandler.postDelayed(this, 400)
+    private val keyboardReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(ctx: android.content.Context?, intent: android.content.Intent?) {
+            val isOpen = intent?.getBooleanExtra("is_open", false) ?: false
+            if (isOpen && expanded) {
+                expanded = false
+                rebuildContent()
+                log("keyboard open (broadcast) → collapsed")
+            }
         }
     }
+    private var receiverRegistered = false
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "updatedAt") {
@@ -138,8 +133,7 @@ class FloatingDockService : Service() {
             log("onCreate failed: ${t::class.simpleName} — ${t.message}")
             stopSelf()
         }
-        setupKeyboardDetector()
-        keyboardHandler.post(keyboardCheckRunnable)
+        registerKeyboardReceiver()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -162,10 +156,11 @@ class FloatingDockService : Service() {
         try { hideSearchOverlay() } catch (_: Exception) {}
         try { if (::rootLayout.isInitialized) windowManager.removeView(rootLayout) } catch (_: Exception) {}
         try {
-            keyboardListener?.let { rootLayout.viewTreeObserver.removeOnGlobalLayoutListener(it) }
+            if (receiverRegistered) {
+                unregisterReceiver(keyboardReceiver)
+                receiverRegistered = false
+            }
         } catch (_: Throwable) {}
-        keyboardListener = null
-        keyboardHandler.removeCallbacks(keyboardCheckRunnable)
         if (instance === this) instance = null
         scope.cancel()
         super.onDestroy()
@@ -452,28 +447,20 @@ class FloatingDockService : Service() {
     }
 
 
-    private fun setupKeyboardDetector() {
+    private fun registerKeyboardReceiver() {
         try {
-            if (!::rootLayout.isInitialized) return
-            val screenHeight = resources.displayMetrics.heightPixels
-            keyboardListener = android.view.ViewTreeObserver.OnGlobalLayoutListener {
-                try {
-                    val rect = android.graphics.Rect()
-                    rootLayout.getWindowVisibleDisplayFrame(rect)
-                    val keypadHeight = screenHeight - rect.bottom
-                    val isKeyboardOpen = keypadHeight > screenHeight * 0.15
-                    
-                    if (isKeyboardOpen && expanded) {
-                        expanded = false
-                        rebuildContent()
-                        log("keyboard open → collapsed")
-                    }
-                } catch (_: Throwable) {}
+            if (!receiverRegistered) {
+                val filter = android.content.IntentFilter("com.dynamicai.KEYBOARD_STATE_CHANGED")
+                if (android.os.Build.VERSION.SDK_INT >= 33) {
+                    registerReceiver(keyboardReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+                } else {
+                    registerReceiver(keyboardReceiver, filter)
+                }
+                receiverRegistered = true
+                log("keyboard broadcast receiver registered")
             }
-            rootLayout.viewTreeObserver.addOnGlobalLayoutListener(keyboardListener)
-            log("keyboard detector registered")
         } catch (t: Throwable) {
-            log("setupKeyboardDetector failed: ${t.message}")
+            log("registerKeyboardReceiver failed: ${t.message}")
         }
     }
 

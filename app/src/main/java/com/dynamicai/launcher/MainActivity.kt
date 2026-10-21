@@ -76,6 +76,22 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         handleAssistIntent(intent)
         handleHubIntent(intent)
+        
+        // Детектор клавіатури → broadcast для FloatingDockService
+        window.decorView.viewTreeObserver.addOnGlobalLayoutListener {
+            try {
+                val rect = android.graphics.Rect()
+                window.decorView.getWindowVisibleDisplayFrame(rect)
+                val screenHeight = resources.displayMetrics.heightPixels
+                val keypadHeight = screenHeight - rect.bottom
+                val isOpen = keypadHeight > screenHeight * 0.15
+                val intent = android.content.Intent("com.dynamicai.KEYBOARD_STATE_CHANGED")
+                    .setPackage(packageName)
+                    .putExtra("is_open", isOpen)
+                sendBroadcast(intent)
+            } catch (_: Throwable) {}
+        }
+        
         setContent {
             // WakeWord: запит дозволу мікрофона + старт сервісу, якщо увімкнено
             val permLauncher = rememberLauncherForActivityResult(

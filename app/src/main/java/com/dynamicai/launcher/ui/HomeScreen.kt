@@ -728,6 +728,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 LiquidSearchBar(
                     query = query,
                     onQueryChange = { query = it },
+                    onFocusChange = { focused -> if (focused) searchMode = true },
                     onSearch = {
                         if (query.isNotBlank()) {
                             if (vm.isCommand(query)) submit(query)

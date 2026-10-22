@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -35,6 +36,7 @@ fun LiquidSearchBar(
     onSearch: () -> Unit,
     onVoice: () -> Unit,
     onClose: () -> Unit,
+    onFocusChange: (Boolean) -> Unit = {},
     focusRequester: FocusRequester? = null,
     modifier: Modifier = Modifier
 ) {
@@ -57,6 +59,7 @@ fun LiquidSearchBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 10.dp)
+                    .onFocusChanged { onFocusChange(it.isFocused) }
                     .then(
                         if (focusRequester != null) Modifier.focusRequester(focusRequester)
                         else Modifier

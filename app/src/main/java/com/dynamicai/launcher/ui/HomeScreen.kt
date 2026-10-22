@@ -672,8 +672,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         state = pagerState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 300.dp)
-                            .weight(1f, fill = false)
+                            .weight(2f)
                     ) { page ->
                         val notesStorage = remember { com.dynamicai.launcher.note.NotesStorage(ctx) }
                         var notesList by remember { mutableStateOf<List<com.dynamicai.launcher.note.Note>>(emptyList()) }
@@ -685,31 +684,19 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             placedWidgets
                                 .filter { it.page == page }
                                 .forEach { widget ->
-                                    androidx.compose.foundation.layout.Box(
-                                        modifier = Modifier.pointerInput(widget.id) {
-                                            detectTapGestures(
-                                                onLongPress = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    placedWidgetsStorage.remove(widget.id)
-                                                    placedWidgets = placedWidgetsStorage.get()
-                                                }
-                                            )
-                                        }
-                                    ) {
-                                        com.dynamicai.launcher.widget.RenderPlacedWidget(
-                                            widget = widget,
-                                            weather = weather,
-                                            showWeather = settings.showWeather,
-                                            notes = notesList,
-                                            notesStorage = notesStorage,
-                                            onWeatherTap = { showWeatherDetail = true },
-                                            onSettingsLongPress = { showSettings = true },
-                                            onNotesToggle = { id -> notesStorage.toggle(id); notesList = notesStorage.get() },
-                                            onNotesDelete = { id -> notesStorage.remove(id); notesList = notesStorage.get() },
-                                            onNotesAdd = { text -> notesStorage.add(text); notesList = notesStorage.get() },
-                                            onOpenAllNotes = { showNotesScreen = true }
-                                        )
-                                    }
+                                    com.dynamicai.launcher.widget.RenderPlacedWidget(
+                                        widget = widget,
+                                        weather = weather,
+                                        showWeather = settings.showWeather,
+                                        notes = notesList,
+                                        notesStorage = notesStorage,
+                                        onWeatherTap = { showWeatherDetail = true },
+                                        onSettingsLongPress = { showSettings = true },
+                                        onNotesToggle = { id -> notesStorage.toggle(id); notesList = notesStorage.get() },
+                                        onNotesDelete = { id -> notesStorage.remove(id); notesList = notesStorage.get() },
+                                        onNotesAdd = { text -> notesStorage.add(text); notesList = notesStorage.get() },
+                                        onOpenAllNotes = { showNotesScreen = true }
+                                    )
                                 }
                         }
                     }

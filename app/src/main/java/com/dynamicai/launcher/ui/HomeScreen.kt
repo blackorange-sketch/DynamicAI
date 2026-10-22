@@ -684,7 +684,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                 .forEach { widget ->
                                     androidx.compose.foundation.layout.Box(
                                         modifier = Modifier.pointerInput(widget.id) {
-                                            androidx.compose.foundation.gestures.detectTapGestures(
+                                            detectTapGestures(
                                                 onLongPress = {
                                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                     placedWidgetsStorage.remove(widget.id)

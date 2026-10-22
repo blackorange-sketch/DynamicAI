@@ -651,7 +651,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         state = pagerState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
+                            .weight(3f)
                     ) { page ->
                         val notesStorage = remember { com.dynamicai.launcher.note.NotesStorage(ctx) }
                         var notesList by remember { mutableStateOf<List<com.dynamicai.launcher.note.Note>>(emptyList()) }
@@ -732,8 +732,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 )
             }
 
-            // Box займає місце ТІЛЬКИ коли список видимий (щоб Pager отримав весь простір для свайпу)
-            if (listVisible || searchMode || query.isNotBlank()) {
             Box(modifier = Modifier.weight(1f)) {
                 androidx.compose.animation.AnimatedVisibility(
                     visible = listVisible || searchMode || query.isNotBlank(),
@@ -868,6 +866,32 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         }
 
         // Папки над доком
+        // Page indicator над доком
+        if (pageCount > 1) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(
+                        bottom = if (dockPkgs.isNotEmpty()) 60.dp else 20.dp
+                    ),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                for (p in 0 until pageCount) {
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .size(if (p == currentPage) 8.dp else 6.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(
+                                if (p == currentPage) Color.White
+                                else Color.White.copy(alpha = 0.35f)
+                            )
+                    )
+                }
+            }
+        }
+
         if (folders.isNotEmpty() && !listVisible && query.isBlank()) {
             Column(
                 modifier = Modifier
@@ -878,30 +902,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         scaleY = homeScale
                     }
                     .padding(bottom = if (dockPkgs.isNotEmpty()) 100.dp else 20.dp)
-                    .padding(horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(horizontal = 16.dp)
             ) {
-                // Page indicator над папками
-                if (pageCount > 1) {
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    ) {
-                        for (p in 0 until pageCount) {
-                            Box(
-                                modifier = Modifier
-                                    .padding(horizontal = 3.dp)
-                                    .size(if (p == currentPage) 8.dp else 6.dp)
-                                    .clip(androidx.compose.foundation.shape.CircleShape)
-                                    .background(
-                                        if (p == currentPage) Color.White
-                                        else Color.White.copy(alpha = 0.35f)
-                                    )
-                            )
-                        }
-                    }
-                }
                 FolderTabs(
                     folders = folders,
                     apps = apps,
@@ -918,31 +920,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     },
                     onLaunchApp = { app -> launchAppWithAnimation(app) }
                 )
-            }
-        }
-
-        // Dots над доком — якщо папок немає
-        if (folders.isEmpty() && pageCount > 1 && !listVisible && query.isBlank()) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .graphicsLayer { alpha = homeAlpha }
-                    .padding(bottom = if (dockPkgs.isNotEmpty()) 95.dp else 20.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                for (p in 0 until pageCount) {
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 3.dp)
-                            .size(if (p == currentPage) 8.dp else 6.dp)
-                            .clip(androidx.compose.foundation.shape.CircleShape)
-                            .background(
-                                if (p == currentPage) Color.White
-                                else Color.White.copy(alpha = 0.35f)
-                            )
-                    )
-                }
             }
         }
 

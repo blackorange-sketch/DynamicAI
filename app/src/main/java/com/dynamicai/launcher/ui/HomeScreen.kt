@@ -686,6 +686,28 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     LaunchedEffect(pagerState.currentPage) {
                         currentPage = pagerState.currentPage
                     }
+
+                    // Dots під віджетами (перед search bar)
+                    if (pageCount > 1) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            for (p in 0 until pageCount) {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(horizontal = 3.dp)
+                                        .size(if (p == currentPage) 8.dp else 6.dp)
+                                        .clip(androidx.compose.foundation.shape.CircleShape)
+                                        .background(
+                                            if (p == currentPage) Color.White
+                                            else Color.White.copy(alpha = 0.35f)
+                                        )
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -866,32 +888,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         }
 
         // Папки над доком
-        // Page indicator над доком
-        if (pageCount > 1) {
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(
-                        bottom = if (dockPkgs.isNotEmpty()) 180.dp else 20.dp
-                    ),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                for (p in 0 until pageCount) {
-                    Box(
-                        modifier = Modifier
-                            .padding(horizontal = 3.dp)
-                            .size(if (p == currentPage) 8.dp else 6.dp)
-                            .clip(androidx.compose.foundation.shape.CircleShape)
-                            .background(
-                                if (p == currentPage) Color.White
-                                else Color.White.copy(alpha = 0.35f)
-                            )
-                    )
-                }
-            }
-        }
-
         if (folders.isNotEmpty() && !listVisible && query.isBlank()) {
             Column(
                 modifier = Modifier

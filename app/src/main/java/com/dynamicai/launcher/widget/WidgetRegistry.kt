@@ -1,6 +1,7 @@
 package com.dynamicai.launcher.widget
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -48,10 +49,16 @@ fun RenderPlacedWidget(
     onOpenAllNotes: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val sizeModifier = when (widget.size) {
+        "small" -> modifier.fillMaxWidth().heightIn(max = 140.dp).padding(bottom = 6.dp)
+        "large" -> modifier.fillMaxWidth().heightIn(min = 280.dp, max = 400.dp).padding(bottom = 10.dp)
+        else -> modifier.fillMaxWidth().padding(bottom = 8.dp)
+    }
+    
     when (widget.type) {
         "weather_clock" -> {
             HomeWidget(
-                modifier = modifier.fillMaxWidth().padding(bottom = 8.dp),
+                modifier = sizeModifier,
                 onSettingsLongPress = onSettingsLongPress,
                 weather = weather,
                 showWeather = showWeather,
@@ -65,7 +72,7 @@ fun RenderPlacedWidget(
                 onDelete = onNotesDelete,
                 onAdd = onNotesAdd,
                 onOpenAll = onOpenAllNotes,
-                modifier = modifier.fillMaxWidth().padding(bottom = 8.dp)
+                modifier = sizeModifier
             )
         }
     }

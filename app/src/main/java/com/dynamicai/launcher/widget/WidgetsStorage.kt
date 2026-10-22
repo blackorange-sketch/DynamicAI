@@ -44,6 +44,10 @@ class WidgetsStorage(context: Context) {
         save(get().filterNot { it.id == id })
     }
 
+    fun updateSize(id: String, newSize: String) {
+        save(get().map { if (it.id == id) it.copy(size = newSize) else it })
+    }
+
     fun moveToPage(id: String, newPage: Int) {
         save(get().map { if (it.id == id) it.copy(page = newPage) else it })
     }
@@ -71,6 +75,7 @@ class WidgetsStorage(context: Context) {
                 put("id", w.id)
                 put("type", w.type)
                 put("page", w.page)
+                put("size", w.size)
             })
         }
         prefs.edit().putString("items", arr.toString()).apply()

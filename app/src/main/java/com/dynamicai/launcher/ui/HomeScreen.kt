@@ -232,6 +232,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         drawerOpen = false
     }
     BackHandler(enabled = !showSettings && openFolder == null && !drawerOpen && (searchMode || query.isNotBlank())) {
+        try { focusManager.clearFocus() } catch (_: Throwable) {}
         query = ""
         searchMode = false
         keyboard?.hide()
@@ -668,19 +669,47 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             placedWidgets
                                 .filter { it.page == page }
                                 .forEach { widget ->
-                                    com.dynamicai.launcher.widget.RenderPlacedWidget(
-                                        widget = widget,
-                                        weather = weather,
-                                        showWeather = settings.showWeather,
-                                        notes = notesList,
-                                        notesStorage = notesStorage,
-                                        onWeatherTap = { showWeatherDetail = true },
-                                        onSettingsLongPress = { showSettings = true },
-                                        onNotesToggle = { id -> notesStorage.toggle(id); notesList = notesStorage.get() },
-                                        onNotesDelete = { id -> notesStorage.remove(id); notesList = notesStorage.get() },
-                                        onNotesAdd = { text -> notesStorage.add(text); notesList = notesStorage.get() },
-                                        onOpenAllNotes = { showNotesScreen = true }
-                                    )
+                                    var showWidgetSettings by remember(widget.id) { mutableStateOf(false) }
+                                    androidx.compose.foundation.layout.Box(
+                                        modifier = Modifier.pointerInput(widget.id) {
+                                            detectTapGestures(
+                                                onLongPress = { showWidgetSettings = true }
+                                            )
+                                        }
+                                    ) {
+                                        com.dynamicai.launcher.widget.RenderPlacedWidget(
+                                            widget = widget,
+                                            weather = weather,
+                                            showWeather = settings.showWeather,
+                                            notes = notesList,
+                                            notesStorage = notesStorage,
+                                            onWeatherTap = { showWeatherDetail = true },
+                                            onSettingsLongPress = { showSettings = true },
+                                            onNotesToggle = { id -> notesStorage.toggle(id); notesList = notesStorage.get() },
+                                            onNotesDelete = { id -> notesStorage.remove(id); notesList = notesStorage.get() },
+                                            onNotesAdd = { text -> notesStorage.add(text); notesList = notesStorage.get() },
+                                            onOpenAllNotes = { showNotesScreen = true }
+                                        )
+                                    }
+                                    if (showWidgetSettings) {
+                                        com.dynamicai.launcher.widget.WidgetSettingsDialog(
+                                            widget = widget,
+                                            pageCount = pageCount,
+                                            onDismiss = { showWidgetSettings = false },
+                                            onDelete = {
+                                                placedWidgetsStorage.remove(widget.id)
+                                                placedWidgets = placedWidgetsStorage.get()
+                                            },
+                                            onSizeChange = { newSize ->
+                                                placedWidgetsStorage.updateSize(widget.id, newSize)
+                                                placedWidgets = placedWidgetsStorage.get()
+                                            },
+                                            onMove = { newPage ->
+                                                placedWidgetsStorage.moveToPage(widget.id, newPage)
+                                                placedWidgets = placedWidgetsStorage.get()
+                                            }
+                                        )
+                                    }
                                 }
                         }
                     }

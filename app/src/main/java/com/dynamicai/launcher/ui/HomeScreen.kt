@@ -872,7 +872,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(
-                        bottom = if (dockPkgs.isNotEmpty()) 60.dp else 20.dp
+                        bottom = if (dockPkgs.isNotEmpty()) 180.dp else 20.dp
                     ),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically

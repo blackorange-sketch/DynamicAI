@@ -642,16 +642,79 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
             if (!searchActive) {
                 if (!listVisible) {
-                            HomeWidget(
-                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                                onSettingsLongPress = { showSettings = true },
-                                weather = weather,
-                                showWeather = settings.showWeather,
-                                onWeatherTap = { showWeatherDetail = true }
-                            )
+                    if (pageCount > 1) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            for (p in 0 until pageCount) {
+                                Box(
+                                    modifier = Modifier
+                                        .padding(horizontal = 3.dp)
+                                        .size(if (p == currentPage) 8.dp else 6.dp)
+                                        .clip(androidx.compose.foundation.shape.CircleShape)
+                                        .background(
+                                            if (p == currentPage) Color.White
+                                            else Color.White.copy(alpha = 0.35f)
+                                        )
+                                )
+                            }
                         }
-
+                    }
+                    
+                    val pagerState = androidx.compose.foundation.pager.rememberPagerState(
+                        initialPage = currentPage,
+                        pageCount = { pageCount }
+                    )
+                    
+                    androidx.compose.foundation.pager.HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxWidth()
+                    ) { page ->
+                        val notesStorage = remember { com.dynamicai.launcher.note.NotesStorage(ctx) }
+                        var notesList by remember { mutableStateOf<List<com.dynamicai.launcher.note.Note>>(emptyList()) }
+                        LaunchedEffect(showNotesScreen, page) {
+                            if (!showNotesScreen) notesList = notesStorage.get()
+                        }
                         
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            placedWidgets
+                                .filter { it.page == page }
+                                .forEach { widget ->
+                                    androidx.compose.foundation.layout.Box(
+                                        modifier = Modifier.pointerInput(widget.id) {
+                                            androidx.compose.foundation.gestures.detectTapGestures(
+                                                onLongPress = {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    placedWidgetsStorage.remove(widget.id)
+                                                    placedWidgets = placedWidgetsStorage.get()
+                                                }
+                                            )
+                                        }
+                                    ) {
+                                        com.dynamicai.launcher.widget.RenderPlacedWidget(
+                                            widget = widget,
+                                            weather = weather,
+                                            showWeather = settings.showWeather,
+                                            notes = notesList,
+                                            notesStorage = notesStorage,
+                                            onWeatherTap = { showWeatherDetail = true },
+                                            onSettingsLongPress = { showSettings = true },
+                                            onNotesToggle = { id -> notesStorage.toggle(id); notesList = notesStorage.get() },
+                                            onNotesDelete = { id -> notesStorage.remove(id); notesList = notesStorage.get() },
+                                            onNotesAdd = { text -> notesStorage.add(text); notesList = notesStorage.get() },
+                                            onOpenAllNotes = { showNotesScreen = true }
+                                        )
+                                    }
+                                }
+                        }
+                    }
+                    
+                    LaunchedEffect(pagerState.currentPage) {
+                        currentPage = pagerState.currentPage
+                    }
+                }
             }
 
             androidx.compose.animation.AnimatedVisibility(

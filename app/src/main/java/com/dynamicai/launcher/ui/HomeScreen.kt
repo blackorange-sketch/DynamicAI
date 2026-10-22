@@ -164,6 +164,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
 
     val focusRequester = remember { FocusRequester() }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     val listState = rememberLazyListState()
     val drawerGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val scope = rememberCoroutineScope()
@@ -330,6 +331,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
 
     fun closeSearch() {
+        try { focusManager.clearFocus() } catch (_: Throwable) {}
         query = ""
         searchMode = false
         keyboard?.hide()

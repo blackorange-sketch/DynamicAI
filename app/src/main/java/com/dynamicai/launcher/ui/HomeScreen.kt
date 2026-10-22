@@ -638,13 +638,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 .statusBarsPadding()
                 .padding(start = 16.dp, end = 64.dp)
         ) {
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(8.dp))
 
             if (!searchActive) {
                 if (!listVisible) {
                     if (pageCount > 1) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -672,7 +672,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         state = pagerState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(2f)
+                            .wrapContentHeight()
                     ) { page ->
                         val notesStorage = remember { com.dynamicai.launcher.note.NotesStorage(ctx) }
                         var notesList by remember { mutableStateOf<List<com.dynamicai.launcher.note.Note>>(emptyList()) }

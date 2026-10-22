@@ -636,7 +636,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     scaleY = homeScale
                 }
                 .statusBarsPadding()
-                .padding(start = 16.dp, end = 64.dp)
+                .padding(start = 16.dp, end = 24.dp)
         ) {
             Spacer(Modifier.height(8.dp))
 

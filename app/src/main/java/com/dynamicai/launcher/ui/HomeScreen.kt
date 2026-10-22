@@ -642,27 +642,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
             if (!searchActive) {
                 if (!listVisible) {
-                    if (pageCount > 1) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            for (p in 0 until pageCount) {
-                                Box(
-                                    modifier = Modifier
-                                        .padding(horizontal = 3.dp)
-                                        .size(if (p == currentPage) 8.dp else 6.dp)
-                                        .clip(androidx.compose.foundation.shape.CircleShape)
-                                        .background(
-                                            if (p == currentPage) Color.White
-                                            else Color.White.copy(alpha = 0.35f)
-                                        )
-                                )
-                            }
-                        }
-                    }
-                    
                     val pagerState = androidx.compose.foundation.pager.rememberPagerState(
                         initialPage = currentPage,
                         pageCount = { pageCount }
@@ -672,7 +651,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         state = pagerState,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .wrapContentHeight()
+                            .weight(1f)
                     ) { page ->
                         val notesStorage = remember { com.dynamicai.launcher.note.NotesStorage(ctx) }
                         var notesList by remember { mutableStateOf<List<com.dynamicai.launcher.note.Note>>(emptyList()) }
@@ -680,7 +659,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             if (!showNotesScreen) notesList = notesStorage.get()
                         }
                         
-                        Column(modifier = Modifier.fillMaxWidth()) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Top
+                        ) {
                             placedWidgets
                                 .filter { it.page == page }
                                 .forEach { widget ->
@@ -884,6 +866,36 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         }
 
         // Папки над доком
+        // Page indicator над доком
+        if (pageCount > 1) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(
+                        bottom = if (folders.isNotEmpty()) {
+                            if (dockPkgs.isNotEmpty()) 150.dp else 70.dp
+                        } else {
+                            if (dockPkgs.isNotEmpty()) 95.dp else 20.dp
+                        }
+                    ),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                for (p in 0 until pageCount) {
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .size(if (p == currentPage) 8.dp else 6.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(
+                                if (p == currentPage) Color.White
+                                else Color.White.copy(alpha = 0.35f)
+                            )
+                    )
+                }
+            }
+        }
+
         if (folders.isNotEmpty() && !listVisible && query.isBlank()) {
             Column(
                 modifier = Modifier

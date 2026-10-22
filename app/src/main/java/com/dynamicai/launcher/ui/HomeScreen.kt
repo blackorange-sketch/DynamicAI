@@ -118,6 +118,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     var showFolderManager by remember { mutableStateOf(false) }
     var showMacroManager by remember { mutableStateOf(false) }
     var showNotesScreen by remember { mutableStateOf(false) }
+    val placedWidgetsStorage = remember { com.dynamicai.launcher.widget.WidgetsStorage(ctx) }
+    var placedWidgets by remember { mutableStateOf<List<com.dynamicai.launcher.widget.PlacedWidget>>(emptyList()) }
+    var showAddWidgetDialog by remember { mutableStateOf(false) }
+    var currentPage by remember { mutableStateOf(0) }
+    val pageCount = remember(placedWidgets) {
+        (placedWidgets.maxOfOrNull { it.page } ?: 0) + 1
+    }
+    LaunchedEffect(Unit) { placedWidgets = placedWidgetsStorage.ensureDefaults() }
     var responseOverlayVisible by remember { mutableStateOf(false) }
     var responseOverlayText by remember { mutableStateOf("") }
     var showRecent by remember { mutableStateOf(false) }
@@ -426,6 +434,18 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             onClose = { showWeatherDetail = false }
         )
         return
+    }
+
+    if (showAddWidgetDialog) {
+        com.dynamicai.launcher.widget.AddWidgetDialog(
+            currentPageCount = pageCount,
+            onDismiss = { showAddWidgetDialog = false },
+            onAdd = { type, page ->
+                placedWidgetsStorage.add(type, page)
+                placedWidgets = placedWidgetsStorage.get()
+                currentPage = page
+            }
+        )
     }
 
     if (showNotesScreen) {
@@ -1148,6 +1168,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             newFolderSelection = emptySet()
                             showMainMenu = false
                             showNewFolderDialog = true
+                        }
+                        MenuItem("Додати віджет") {
+                            showMainMenu = false
+                            showAddWidgetDialog = true
+                        }
+                        if (pageCount > 1) {
+                            MenuItem("Сторінки (${currentPage + 1}/${pageCount})") {
+                                showMainMenu = false
+                                currentPage = (currentPage + 1) % pageCount
+                            }
                         }
                         MenuItem("Оновити контакти") {
                             vm.loadContacts()

@@ -131,6 +131,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     var showRecent by remember { mutableStateOf(false) }
     var showWeatherDetail by remember { mutableStateOf(false) }
     var searchMode by remember { mutableStateOf(false) }
+    var widgetSettingsFor by remember { mutableStateOf<com.dynamicai.launcher.widget.PlacedWidget?>(null) }
     var menuApp by remember { mutableStateOf<AppInfo?>(null) }
     var folderMenuApp by remember { mutableStateOf<AppInfo?>(null) }
     var folderMenuFolder by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
@@ -669,11 +670,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             placedWidgets
                                 .filter { it.page == page }
                                 .forEach { widget ->
-                                    var showWidgetSettings by remember(widget.id) { mutableStateOf(false) }
                                     androidx.compose.foundation.layout.Box(
                                         modifier = Modifier.pointerInput(widget.id) {
                                             detectTapGestures(
-                                                onLongPress = { showWidgetSettings = true }
+                                                onLongPress = { widgetSettingsFor = widget }
                                             )
                                         }
                                     ) {
@@ -691,14 +691,15 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                             onOpenAllNotes = { showNotesScreen = true }
                                         )
                                     }
-                                    if (showWidgetSettings) {
+                                    if (widgetSettingsFor?.id == widget.id) {
                                         com.dynamicai.launcher.widget.WidgetSettingsDialog(
                                             widget = widget,
                                             pageCount = pageCount,
-                                            onDismiss = { showWidgetSettings = false },
+                                            onDismiss = { widgetSettingsFor = null },
                                             onDelete = {
                                                 placedWidgetsStorage.remove(widget.id)
                                                 placedWidgets = placedWidgetsStorage.get()
+                                                widgetSettingsFor = null
                                             },
                                             onSizeChange = { newSize ->
                                                 placedWidgetsStorage.updateSize(widget.id, newSize)

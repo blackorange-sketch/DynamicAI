@@ -1709,11 +1709,6 @@ fun AppRow(
     }
 }
 
-private fun isScreenOn(ctx: android.content.Context): Boolean {
-    return try {
-        val pm = ctx.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
-        pm.isInteractive
-    } catch (_: Throwable) { true }
 
 private fun openGoogleSearch(ctx: android.content.Context, query: String) {
     val url = "https://www.google.com/search?q=" + android.net.Uri.encode(query)
@@ -1721,7 +1716,6 @@ private fun openGoogleSearch(ctx: android.content.Context, query: String) {
         addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     
-    // 1. Спробувати браузер за замовчуванням з налаштувань
     try {
         val st = com.dynamicai.launcher.data.SettingsStorage(ctx).load()
         if (st.defaultBrowser.isNotBlank()) {
@@ -1731,24 +1725,29 @@ private fun openGoogleSearch(ctx: android.content.Context, query: String) {
         }
     } catch (_: Throwable) {}
     
-    // 2. Fallback — Google застосунок
     try {
         val i = android.content.Intent(viewIntent).setPackage("com.google.android.googlequicksearchbox")
         ctx.startActivity(i)
         return
     } catch (_: Throwable) {}
     
-    // 3. Fallback — Chrome
     try {
         val i = android.content.Intent(viewIntent).setPackage("com.android.chrome")
         ctx.startActivity(i)
         return
     } catch (_: Throwable) {}
     
-    // 4. Остання спроба — будь-який браузер (діалог)
     try {
         ctx.startActivity(viewIntent)
     } catch (_: Throwable) {}
 }
+
+private fun isScreenOn(ctx: android.content.Context): Boolean {
+    return try {
+        val pm = ctx.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+        pm.isInteractive
+    } catch (_: Throwable) { true }
+
+
 
 }

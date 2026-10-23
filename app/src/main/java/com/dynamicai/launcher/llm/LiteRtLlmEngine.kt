@@ -17,6 +17,8 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
 
     private var engine: Engine? = null
     private var _isReady = false
+    @Volatile var lastUsedAt: Long = 0L
+        private set
 
     override val isReady: Boolean get() = _isReady
 
@@ -59,6 +61,7 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
             e.initialize()
             engine = e
             _isReady = true
+            lastUsedAt = System.currentTimeMillis()
             true
         })
 
@@ -79,6 +82,7 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
     }
 
     override suspend fun streamComplete(prompt: String, onToken: (String) -> Unit): String? = withContext(Dispatchers.IO) {
+        lastUsedAt = System.currentTimeMillis()
         val e = engine ?: return@withContext null
         try {
             e.createConversation().use { conversation ->
@@ -114,6 +118,7 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
     }
 
     override suspend fun complete(prompt: String): String? = withContext(Dispatchers.IO) {
+        lastUsedAt = System.currentTimeMillis()
         val e = engine ?: return@withContext null
         return@withContext try {
             e.createConversation().use { conversation ->

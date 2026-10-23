@@ -9,6 +9,15 @@ import com.dynamicai.launcher.system.ScreenshotController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+
+object OcrUsageTracker {
+    @Volatile var lastOcrAt: Long = 0L
+    @Volatile var lastMlkitAt: Long = 0L
+    fun recordOcr() { lastOcrAt = System.currentTimeMillis() }
+    fun recordMlkit() { lastMlkitAt = System.currentTimeMillis() }
+}
+
+
 data class TranslatedBlock(
     val originalText: String,
     val translatedText: String,
@@ -108,6 +117,7 @@ class ScreenTranslator(
 
             onProgress("Розпізнаю текст…")
             val blocks = ocr.recognize(cropped, ocrLangs)
+            OcrUsageTracker.recordOcr()
             cropped.recycle()
             Log.e(TAG, "OCR region: ${blocks.size} blocks (crop $w x $h)")
             if (blocks.isEmpty()) return@withContext emptyList()

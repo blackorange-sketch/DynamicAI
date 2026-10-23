@@ -16,6 +16,7 @@ import android.speech.SpeechRecognizer
 import android.util.Log
 import com.dynamicai.launcher.MainActivity
 import com.dynamicai.launcher.command.CommandExecutor
+import com.dynamicai.launcher.command.CommandExecutorProvider
 import com.dynamicai.launcher.command.CommandParser
 import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.data.SettingsStorage
@@ -49,7 +50,7 @@ class WakeWordService : Service() {
 
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private val parser = CommandParser()
-    private val executor by lazy { CommandExecutor(this) }
+    private val executor by lazy { CommandExecutorProvider.get(this) }
     private var recognizer: SpeechRecognizer? = null
     private var apps: List<AppInfo> = emptyList()
     private var listening = false

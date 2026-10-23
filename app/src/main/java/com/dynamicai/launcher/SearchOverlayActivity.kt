@@ -82,7 +82,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
     val keyboard = LocalSoftwareKeyboardController.current
 
     val parser = remember { CommandParser() }
-    val executor = remember { CommandExecutor(ctx) }
+    val executor = remember { com.dynamicai.launcher.command.CommandExecutorProvider.get(ctx) }
     val repo = remember { AppRepository(ctx) }
 
     var query by remember { mutableStateOf("") }

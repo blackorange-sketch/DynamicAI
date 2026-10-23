@@ -17,6 +17,8 @@ class MlKitTranslator(private val context: Context) {
     }
 
     private val translators = mutableMapOf<String, Translator>()
+    @Volatile var lastUsedAt: Long = 0L
+        private set
 
     private fun langCode(code: String): String = when (code.lowercase()) {
         "en" -> TranslateLanguage.ENGLISH
@@ -60,6 +62,7 @@ class MlKitTranslator(private val context: Context) {
 
     /** Перекласти один текст. Модель має бути завантажена. */
     suspend fun translate(text: String, from: String, to: String): String? {
+        lastUsedAt = System.currentTimeMillis()
         return try {
             val key = "${from}_$to"
             val tr = translators.getOrPut(key) {

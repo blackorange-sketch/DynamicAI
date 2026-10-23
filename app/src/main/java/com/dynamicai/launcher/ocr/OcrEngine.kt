@@ -24,9 +24,12 @@ class OcrEngine(private val context: Context) {
     private val modelManager = TessModelManager(context)
     private var tess: TessBaseAPI? = null
     private var currentLangs: String = ""
+    @Volatile var lastUsedAt: Long = 0L
+        private set
 
     /** Розпізнає текст. langs — "ukr" або "ukr+eng". */
     suspend fun recognize(bitmap: Bitmap, langs: String): List<OcrBlock> = withContext(Dispatchers.Default) {
+        lastUsedAt = System.currentTimeMillis()
         try {
             val api = ensureTess(langs) ?: return@withContext emptyList()
 

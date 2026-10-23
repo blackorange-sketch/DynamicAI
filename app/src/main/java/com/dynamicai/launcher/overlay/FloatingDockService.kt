@@ -58,7 +58,7 @@ class FloatingDockService : Service() {
     private val llmEngine by lazy { com.dynamicai.launcher.llm.LiteRtLlmEngine(applicationContext) }
     private val modelDownloader by lazy { com.dynamicai.launcher.llm.ModelDownloader(applicationContext) }
 
-    private val commandExecutor by lazy { com.dynamicai.launcher.command.CommandExecutor(applicationContext) }
+    private val commandExecutor by lazy { com.dynamicai.launcher.command.CommandExecutorProvider.get(applicationContext) }
 
     private val dockPrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "apps") {

@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.dynamicai.launcher.command.CommandExecutor
+import com.dynamicai.launcher.command.CommandExecutorProvider
 import com.dynamicai.launcher.command.CommandParser
 import com.dynamicai.launcher.command.CommandResult
 import com.dynamicai.launcher.data.AppRepository
@@ -39,7 +40,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = AppRepository(app)
     private val dockStorage = DockStorage(app)
     private val parser = CommandParser()
-    private val executor = CommandExecutor(app)
+    private val executor = CommandExecutorProvider.get(app)
     private val historyStorage = CommandHistory(app)
     private val suggestionProvider = SuggestionProvider(app)
     private val contactRepo = ContactRepository(app)
@@ -102,6 +103,45 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     val llmReady: StateFlow<Boolean> = _llmReady.asStateFlow()
 
     // Публічний, але НЕ торкається llm поки не спитають
+
+    private var llmUnloadJob: kotlinx.coroutines.Job? = null
+    
+    /** Авто-вивантаження LLM через 3 хв неактивності. */
+    fun startLlmAutoUnload() {
+        llmUnloadJob?.cancel()
+        llmUnloadJob = viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(60_000L) // перевіряємо кожну хвилину
+                try {
+                    if (llm.isReady && llm.lastUsedAt > 0) {
+                        val idle = System.currentTimeMillis() - llm.lastUsedAt
+                        if (idle > 3 * 60_000L) {
+                            android.util.Log.e("LlmUnload", "Auto-unloading LLM after ${idle / 1000}s idle")
+                            llm.close()
+                            _llmReady.value = false
+                        }
+                    }
+                } catch (_: Throwable) {}
+            }
+        }
+    }
+
+
+    private fun checkOcrMlkitUnload() {
+        try {
+            val now = System.currentTimeMillis()
+            val ocrLast = com.dynamicai.launcher.ocr.OcrUsageTracker.lastOcrAt
+            val mlkitLast = com.dynamicai.launcher.ocr.OcrUsageTracker.lastMlkitAt
+            
+            if (ocrLast > 0 && now - ocrLast > 5 * 60_000L) {
+                android.util.Log.e("OcrUnload", "OCR idle 5+ min")
+            }
+            if (mlkitLast > 0 && now - mlkitLast > 10 * 60_000L) {
+                android.util.Log.e("MlkitUnload", "ML Kit idle 10+ min")
+            }
+        } catch (_: Throwable) {}
+    }
+
     fun checkLlmReady() {
         // Тільки перевірка наявності файлу моделі. Engine НЕ створюється.
         _llmReady.value = downloader.isDownloaded
@@ -112,7 +152,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         if (llm.isReady) return true
         if (!downloader.isDownloaded) return false
         return try {
-            llm.initialize(downloader.modelFile)
+            llm.initialize(downloader.modelFile).also { ok -> if (ok) _llmReady.value = true }
         } catch (_: Throwable) { false }
     }
 

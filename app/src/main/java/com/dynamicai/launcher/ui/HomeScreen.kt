@@ -667,8 +667,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.Top
                         ) {
-                            placedWidgets
-                                .filter { it.page == page }
+                            val pageWidgets = placedWidgets.filter { it.page == page }
+                            val hasFull = pageWidgets.any { it.size == "full" }
+                            val visibleWidgets = if (hasFull) pageWidgets.filter { it.size == "full" } else pageWidgets
+                            
+                            visibleWidgets
                                 .forEach { widget ->
                                     androidx.compose.foundation.layout.Box(
                                         modifier = Modifier.pointerInput(widget.id) {

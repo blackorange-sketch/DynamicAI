@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.widget
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -52,6 +53,7 @@ fun RenderPlacedWidget(
     val sizeModifier = when (widget.size) {
         "small" -> modifier.fillMaxWidth().heightIn(max = 140.dp).padding(bottom = 6.dp)
         "large" -> modifier.fillMaxWidth().heightIn(min = 280.dp, max = 400.dp).padding(bottom = 10.dp)
+        "full" -> modifier.fillMaxSize().padding(bottom = 0.dp)
         else -> modifier.fillMaxWidth().padding(bottom = 8.dp)
     }
     
@@ -72,6 +74,7 @@ fun RenderPlacedWidget(
                 onDelete = onNotesDelete,
                 onAdd = onNotesAdd,
                 onOpenAll = onOpenAllNotes,
+                expanded = widget.size == "full",
                 modifier = sizeModifier
             )
         }

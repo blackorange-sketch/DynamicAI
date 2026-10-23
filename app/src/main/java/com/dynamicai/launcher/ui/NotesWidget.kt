@@ -35,17 +35,18 @@ fun NotesWidget(
     onDelete: (String) -> Unit,
     onAdd: (String) -> Unit,
     onOpenAll: () -> Unit,
+    expanded: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
     var newText by remember { mutableStateOf("") }
-    val maxVisible = 4
+    val maxVisible = if (expanded) 20 else 4
     val visible = notes.take(maxVisible)
     val remaining = (notes.size - maxVisible).coerceAtLeast(0)
 
     Column(
         modifier = modifier
-            .fillMaxWidth()
+            .then(if (expanded) Modifier.fillMaxSize() else Modifier.fillMaxWidth())
             .clip(RoundedCornerShape(22.dp))
             .background(
                 Brush.verticalGradient(
@@ -112,7 +113,7 @@ fun NotesWidget(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 200.dp)
+                    .then(if (expanded) Modifier.weight(1f) else Modifier.heightIn(max = 200.dp))
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {

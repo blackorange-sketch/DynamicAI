@@ -46,7 +46,7 @@ fun WidgetSettingsDialog(
                 Text("Розмір", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("small" to "S", "medium" to "M", "large" to "L").forEach { (id, label) ->
+                    listOf("small" to "S", "medium" to "M", "large" to "L", "full" to "F").forEach { (id, label) ->
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
@@ -65,7 +65,7 @@ fun WidgetSettingsDialog(
                                 )
                                 .clickable { onSizeChange(id) }
                         ) {
-                            Text(label, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

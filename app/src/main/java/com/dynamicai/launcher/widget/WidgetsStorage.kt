@@ -18,7 +18,8 @@ class WidgetsStorage(context: Context) {
                 PlacedWidget(
                     id = o.getString("id"),
                     type = o.getString("type"),
-                    page = o.optInt("page", 0)
+                    page = o.optInt("page", 0),
+                    size = o.optString("size", "medium")
                 )
             }
         } catch (_: Exception) { emptyList() }

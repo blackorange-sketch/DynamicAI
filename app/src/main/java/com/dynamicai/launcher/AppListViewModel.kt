@@ -184,6 +184,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         refreshWeather()
         _history.value = historyStorage.get()
         refresh()
+        startLlmAutoUnload()
         android.util.Log.d("APPINIT", "init done")
     }
 

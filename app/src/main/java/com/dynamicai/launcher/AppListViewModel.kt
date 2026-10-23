@@ -124,7 +124,16 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     private var pendingText: String = ""
 
+    private val runtimePrefs = app.getSharedPreferences("dynamicai_runtime", android.content.Context.MODE_PRIVATE)
+    private val pkgChangeListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "apps_changed_at") {
+            android.util.Log.e("AppListVM", "package changed, refreshing")
+            refresh()
+        }
+    }
+
     init {
+        runtimePrefs.registerOnSharedPreferenceChangeListener(pkgChangeListener)
         android.util.Log.d("APPINIT", "init start, RSS before everything")
         viewModelScope.launch {
             executor.flashlightOn.collect {
@@ -138,7 +147,15 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         android.util.Log.d("APPINIT", "init done")
     }
 
+    fun refreshIfStale() {
+        val last = runtimePrefs.getLong("apps_refreshed_at", 0L)
+        if (System.currentTimeMillis() - last > 60_000L) {
+            refresh()
+        }
+    }
+
     fun refresh() {
+        runtimePrefs.edit().putLong("apps_refreshed_at", System.currentTimeMillis()).apply()
         viewModelScope.launch {
             // 1. Одразу показуємо кешований список (миттєво)
             val cached = try { repo.loadCached() } catch (_: Throwable) { emptyList() }

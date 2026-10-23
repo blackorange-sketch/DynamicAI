@@ -31,6 +31,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         try { com.dynamicai.launcher.overlay.FloatingDockService.hide(this) } catch (_: Exception) {}
+        try { vm.refreshIfStale() } catch (_: Throwable) {}
     }
 
     override fun onPause() {

@@ -766,12 +766,18 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     onFocusChange = { focused -> if (focused) searchMode = true },
                     onSearch = {
                         if (query.isNotBlank()) {
-                            if (vm.isCommand(query)) submit(query)
-                            else if (suggestions.isNotEmpty()) {
-                                vm.executeSuggestion(suggestions.first())
+                            if (vm.isCommand(query)) {
+                                // Справжня команда (wifi, будильник, ліхтарик...) — виконати
+                                submit(query)
+                            } else {
+                                // Звичайний текст — Google пошук
+                                val intent = android.content.Intent(android.content.Intent.ACTION_WEB_SEARCH).apply {
+                                    putExtra(android.app.SearchManager.QUERY, query)
+                                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                try { ctx.startActivity(intent) } catch (_: Throwable) {}
                                 closeSearch()
                             }
-                            else submit(query)
                         }
                     },
                     onVoice = { startVoice() },

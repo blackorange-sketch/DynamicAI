@@ -767,15 +767,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     onSearch = {
                         if (query.isNotBlank()) {
                             if (vm.isCommand(query)) {
-                                // Справжня команда (wifi, будильник, ліхтарик...) — виконати
                                 submit(query)
                             } else {
-                                // Звичайний текст — Google пошук
-                                val intent = android.content.Intent(android.content.Intent.ACTION_WEB_SEARCH).apply {
-                                    putExtra(android.app.SearchManager.QUERY, query)
-                                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                try { ctx.startActivity(intent) } catch (_: Throwable) {}
+                                openGoogleSearch(ctx, query)
                                 closeSearch()
                             }
                         }
@@ -1720,4 +1714,41 @@ private fun isScreenOn(ctx: android.content.Context): Boolean {
         val pm = ctx.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
         pm.isInteractive
     } catch (_: Throwable) { true }
+
+private fun openGoogleSearch(ctx: android.content.Context, query: String) {
+    val url = "https://www.google.com/search?q=" + android.net.Uri.encode(query)
+    val viewIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).apply {
+        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    
+    // 1. Спробувати браузер за замовчуванням з налаштувань
+    try {
+        val st = com.dynamicai.launcher.data.SettingsStorage(ctx).load()
+        if (st.defaultBrowser.isNotBlank()) {
+            val i = android.content.Intent(viewIntent).setPackage(st.defaultBrowser)
+            ctx.startActivity(i)
+            return
+        }
+    } catch (_: Throwable) {}
+    
+    // 2. Fallback — Google застосунок
+    try {
+        val i = android.content.Intent(viewIntent).setPackage("com.google.android.googlequicksearchbox")
+        ctx.startActivity(i)
+        return
+    } catch (_: Throwable) {}
+    
+    // 3. Fallback — Chrome
+    try {
+        val i = android.content.Intent(viewIntent).setPackage("com.android.chrome")
+        ctx.startActivity(i)
+        return
+    } catch (_: Throwable) {}
+    
+    // 4. Остання спроба — будь-який браузер (діалог)
+    try {
+        ctx.startActivity(viewIntent)
+    } catch (_: Throwable) {}
+}
+
 }

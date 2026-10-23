@@ -48,6 +48,7 @@ fun Dock(
     onRecent: () -> Unit,
     showRecentButton: Boolean = true,
     onSwipeUp: () -> Unit,
+    onLongClick: (DockItem) -> Unit = {},
     appeared: Boolean = true,
     modifier: Modifier = Modifier
 ) {
@@ -192,7 +193,10 @@ fun Dock(
                                 ),
                                 shape = RoundedCornerShape((iconSizeDp / 2 + 4).dp)
                             )
-                            .pressable { onLaunch(item) }
+                            .pressable(
+                                onTap = { onLaunch(item) },
+                                onLongPress = { onLongClick(item) }
+                            )
                     ) {
                         Icon(
                             bitmap = it.asImageBitmap(),

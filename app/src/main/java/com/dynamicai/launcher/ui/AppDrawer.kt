@@ -50,6 +50,7 @@ fun AppDrawer(
     iconSizeDp: Int,
     fontSizeSp: Int,
     onLaunch: (AppInfo) -> Unit,
+    onLongClick: (AppInfo) -> Unit = {},
     onDismiss: () -> Unit,
     visible: Boolean,
     selectedCategory: String = "all",
@@ -246,13 +247,14 @@ private fun AppGridItem(
     app: AppInfo,
     iconSizeDp: Int,
     fontSizeSp: Int,
+    onLongClick: () -> Unit = {},
     onTap: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            .pressable(onTap = onTap)
+            .pressable(onTap = onTap, onLongPress = onLongClick)
             .padding(vertical = 6.dp)
     ) {
         val glassBrush = remember {

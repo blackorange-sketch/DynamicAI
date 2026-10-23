@@ -996,6 +996,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             Dock(
                 items = dockItems,
                 iconSizeDp = settings.dockIconSizeDp,
+                onLongClick = { item ->
+                    if (!item.isFolder) {
+                        val app = apps.firstOrNull { it.packageName == item.id }
+                        if (app != null) menuApp = app
+                    }
+                },
                 onLaunch = { item ->
                     if (item.isFolder) {
                         val fid = item.id.removePrefix("folder:")
@@ -1078,6 +1084,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             iconSizeDp = settings.menuIconSizeDp,
             fontSizeSp = settings.fontSizeSp,
             onLaunch = { app -> launchAppWithAnimation(app) },
+            onLongClick = { app -> menuApp = app },
             onDismiss = { drawerOpen = false },
             visible = drawerOpen,
             gridState = drawerGridState
@@ -1504,6 +1511,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                             try { ctx.startActivity(intent) } catch (_: Exception) {}
+                            menuApp = null
+                        }
+                        MenuItem("Видалити з телефону") {
+                            try {
+                                val intent = Intent(Intent.ACTION_DELETE).apply {
+                                    data = Uri.parse("package:${app.packageName}")
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                ctx.startActivity(intent)
+                            } catch (_: Exception) {}
                             menuApp = null
                         }
                     }

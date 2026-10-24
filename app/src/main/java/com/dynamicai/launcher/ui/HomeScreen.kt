@@ -1514,16 +1514,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             menuApp = null
                         }
                         MenuItem("Видалити з телефону") {
-                            android.widget.Toast.makeText(ctx, "Спроба видалити: ${app.packageName}", android.widget.Toast.LENGTH_LONG).show()
                             try {
-                                // Спроба 1: ACTION_UNINSTALL_PACKAGE з підтвердженням
+                                // Спроба 1: ACTION_UNINSTALL_PACKAGE (як у Lawnchair)
                                 val uninstallIntent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
-                                    data = Uri.parse("package:${app.packageName}")
+                                    data = Uri.fromParts("package", app.packageName, null)
                                     putExtra(Intent.EXTRA_RETURN_RESULT, true)
                                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 }
                                 try {
-                                    ctx.startActivity(uninstallIntent)
+                                    val activity = ctx as? android.app.Activity ?: ctx
+                                    activity.startActivity(uninstallIntent)
                                     android.util.Log.e("Uninstall", "ACTION_UNINSTALL_PACKAGE OK")
                                 } catch (e1: Exception) {
                                     android.util.Log.e("Uninstall", "UNINSTALL failed: ${e1.message}", e1)

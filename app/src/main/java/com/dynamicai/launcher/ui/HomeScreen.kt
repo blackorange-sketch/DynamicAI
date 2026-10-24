@@ -1524,13 +1524,20 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                 }
                                 try {
                                     ctx.startActivity(uninstallIntent)
-                                } catch (_: Exception) {
-                                    // Спроба 2: ACTION_DELETE (fallback)
+                                    android.util.Log.e("Uninstall", "ACTION_UNINSTALL_PACKAGE OK")
+                                } catch (e1: Exception) {
+                                    android.util.Log.e("Uninstall", "UNINSTALL failed: ${e1.message}", e1)
                                     val deleteIntent = Intent(Intent.ACTION_DELETE).apply {
                                         data = Uri.parse("package:${app.packageName}")
                                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     }
-                                    ctx.startActivity(deleteIntent)
+                                    try {
+                                        ctx.startActivity(deleteIntent)
+                                        android.util.Log.e("Uninstall", "ACTION_DELETE OK")
+                                    } catch (e2: Exception) {
+                                        android.util.Log.e("Uninstall", "DELETE failed: ${e2.message}", e2)
+                                        throw e2
+                                    }
                                 }
                             } catch (t: Throwable) {
                                 // Спроба 3: Налаштування застосунку з кнопкою видалення

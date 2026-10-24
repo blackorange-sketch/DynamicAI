@@ -165,7 +165,7 @@ fun AppDrawer(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     items(filtered, key = { it.packageName }) { app ->
-                        AppGridItem(app, iconSizeDp, fontSizeSp) {
+                        AppGridItem(app, iconSizeDp, fontSizeSp, onLongClick = { onLongClick(app) }) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onLaunch(app)
                             onDismiss()

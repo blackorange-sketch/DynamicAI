@@ -1514,6 +1514,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             menuApp = null
                         }
                         MenuItem("Видалити з телефону") {
+                            android.widget.Toast.makeText(ctx, "Спроба видалити: ${app.packageName}", android.widget.Toast.LENGTH_LONG).show()
                             try {
                                 // Спроба 1: ACTION_UNINSTALL_PACKAGE з підтвердженням
                                 val uninstallIntent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {

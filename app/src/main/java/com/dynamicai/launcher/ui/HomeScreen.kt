@@ -1515,12 +1515,32 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         }
                         MenuItem("Видалити з телефону") {
                             try {
-                                val intent = Intent(Intent.ACTION_DELETE).apply {
+                                // Спроба 1: ACTION_UNINSTALL_PACKAGE з підтвердженням
+                                val uninstallIntent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
                                     data = Uri.parse("package:${app.packageName}")
+                                    putExtra(Intent.EXTRA_RETURN_RESULT, true)
                                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 }
-                                ctx.startActivity(intent)
-                            } catch (_: Exception) {}
+                                try {
+                                    ctx.startActivity(uninstallIntent)
+                                } catch (_: Exception) {
+                                    // Спроба 2: ACTION_DELETE (fallback)
+                                    val deleteIntent = Intent(Intent.ACTION_DELETE).apply {
+                                        data = Uri.parse("package:${app.packageName}")
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    ctx.startActivity(deleteIntent)
+                                }
+                            } catch (t: Throwable) {
+                                // Спроба 3: Налаштування застосунку з кнопкою видалення
+                                try {
+                                    val settingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.parse("package:${app.packageName}")
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+                                    ctx.startActivity(settingsIntent)
+                                } catch (_: Exception) {}
+                            }
                             menuApp = null
                         }
                     }

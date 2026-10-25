@@ -239,6 +239,14 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                             onCancel = { }
                         )
                     }
+                    ActionChip("🎮 Wild Rift", Color(0xFF9C27B0)) {
+                        try {
+                            ctx.startActivity(android.content.Intent(ctx, com.dynamicai.launcher.WildRiftAdvisorActivity::class.java).apply {
+                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            })
+                        } catch (_: Throwable) {}
+                        onClose()
+                    }
                     ActionChip("AI", Color(0xFF2196F3)) {
                         if (query.isNotBlank()) {
                             isLoading = true

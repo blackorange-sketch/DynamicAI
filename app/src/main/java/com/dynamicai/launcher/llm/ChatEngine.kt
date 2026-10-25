@@ -164,6 +164,33 @@ class ChatEngine(
         }
     }
 
+
+    suspend fun getWildRiftAdvice(myChampion: String, enemies: List<String>): String {
+        if (!llm.isReady) return "LLM не активна"
+        try {
+            val repo = com.dynamicai.launcher.data.WildRiftRepository(context)
+            val me = repo.findChampion(myChampion) ?: return "Чемпіон не знайдений: $myChampion"
+            val enemyChamps = enemies.mapNotNull { repo.findChampion(it) }
+            if (enemyChamps.isEmpty()) return "Не вказано ворожих чемпіонів"
+            
+            val ragContext = repo.buildAdviceContext(me, enemyChamps)
+            
+            val prompt = buildString {
+                append("Ти — експерт з Wild Rift. Дай поради щодо збірки предметів.\n\n")
+                append(ragContext)
+                append("\n\n")
+                append("Формат відповіді (українською, максимум 6 рядків):\n")
+                append("1. Ключові предмети (3-4, через кому)\n")
+                append("2. Проти кожного ворога — 1 предмет + коротка причина\n")
+                append("3. Без пояснень, без вступів, тільки факти.\n")
+            }
+            
+            return llm.complete(prompt)?.trim() ?: "Не вдалося отримати поради"
+        } catch (t: Throwable) {
+            return "Помилка: ${t.message}"
+        }
+    }
+
     private suspend fun getSmartContext(question: String): String {
         val q = question.lowercase()
 

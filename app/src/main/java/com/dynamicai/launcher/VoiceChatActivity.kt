@@ -86,6 +86,31 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     }
     LaunchedEffect(Unit) { resetAutoStop() }
 
+    fun handleUserQuery(text: String) {
+        if (text.isBlank()) return
+        resetAutoStop()
+        messages = messages + ChatMessage("user", text)
+        voiceState = VoiceState.THINKING
+        scope.launch {
+            try {
+                val answer = vm.chatEngine.answer(text)
+                messages = messages + ChatMessage("assistant", answer)
+                voiceState = VoiceState.SPEAKING
+                vm.tts.speakWithCallback(answer) {
+                    scope.launch(Dispatchers.Main) {
+                        if (voiceState == VoiceState.SPEAKING) {
+                            voiceState = VoiceState.LISTENING
+                            startListening()
+                        }
+                    }
+                }
+            } catch (t: Throwable) {
+                errorText = "Помилка: ${t.message}"
+                voiceState = VoiceState.LISTENING
+            }
+        }
+    }
+
     fun startListening() {
         if (listeningRef.value) return
         val recognizer = recognizerRef.value ?: SpeechRecognizer.createSpeechRecognizer(ctx).also {
@@ -144,30 +169,6 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
         }
     }
 
-    fun handleUserQuery(text: String) {
-        if (text.isBlank()) return
-        resetAutoStop()
-        messages = messages + ChatMessage("user", text)
-        voiceState = VoiceState.THINKING
-        scope.launch {
-            try {
-                val answer = vm.chatEngine.answer(text)
-                messages = messages + ChatMessage("assistant", answer)
-                voiceState = VoiceState.SPEAKING
-                vm.tts.speakWithCallback(answer) {
-                    scope.launch(Dispatchers.Main) {
-                        if (voiceState == VoiceState.SPEAKING) {
-                            voiceState = VoiceState.LISTENING
-                            startListening()
-                        }
-                    }
-                }
-            } catch (t: Throwable) {
-                errorText = "Помилка: ${t.message}"
-                voiceState = VoiceState.LISTENING
-            }
-        }
-    }
 
     // Start listening when activity opens
     LaunchedEffect(Unit) { startListening() }

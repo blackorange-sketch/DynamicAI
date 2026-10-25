@@ -1,16 +1,17 @@
 extends Node3D
 
-var model_instance: Node3D
-
 func _ready():
-    # Завантажуємо новий файл model.glb
-    var vrm_scene = load("res://assets/model.glb")
-    if vrm_scene:
-        model_instance = vrm_scene.instantiate()
-        add_child(model_instance)
-        print("3D Model Loaded Successfully!")
+    # Пряме завантаження GLB без кешу .import
+    var gltf = GLTFDocument.new()
+    var state = GLTFState.new()
+    var err = gltf.append_from_file("res://assets/model.glb", state)
+    
+    if err == OK:
+        var scene = gltf.generate_scene(state)
+        add_child(scene)
+        print("3D Model Loaded Successfully via GLTFDocument!")
     else:
-        print("Failed to load 3D model!")
+        print("Failed to load 3D model! Error code: ", err)
         
     var camera = Camera3D.new()
     camera.position = Vector3(0, 1.0, 3.5)

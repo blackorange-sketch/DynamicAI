@@ -29,6 +29,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.sp
 import com.dynamicai.launcher.data.Champion
 import com.dynamicai.launcher.data.WildRiftRepository
@@ -58,6 +61,7 @@ fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
     var showMyChampionPicker by remember { mutableStateOf(false) }
     var showEnemyPicker by remember { mutableStateOf(false) }
     var advice by remember { mutableStateOf("") }
+    var recommendedItems by remember { mutableStateOf<List<String>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     
     Column(
@@ -143,12 +147,14 @@ fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 .clickable(enabled = myChampion != null && enemies.isNotEmpty() && !isLoading) {
                     isLoading = true
                     advice = ""
+                    recommendedItems = emptyList()
                     CoroutineScope(Dispatchers.Main).launch {
                         try {
                             advice = vm.chatEngine.getWildRiftAdvice(
                                 myChampion!!.id,
                                 enemies.map { it.id }
                             )
+                            recommendedItems = repo.getRecommendedItems(enemies)
                         } catch (t: Throwable) {
                             advice = "Помилка: ${t.message}"
                         } finally {
@@ -167,6 +173,18 @@ fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
         }
         
         // Результат
+        if (recommendedItems.isNotEmpty()) {
+            Text("Рекомендовані предмети", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(recommendedItems) { itemId ->
+                    ItemIcon(itemId = itemId, size = 56.dp)
+                }
+            }
+        }
+
         if (advice.isNotBlank()) {
             Text("Поради", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
             Box(
@@ -268,4 +286,43 @@ private fun ChampionPickerDialog(
         },
         containerColor = Color(0xFF1A1A1A)
     )
+}
+
+@Composable
+fun ItemIcon(itemId: String, size: Dp = 44.dp) {
+    val ctx = LocalContext.current
+    val bitmap = remember(itemId) {
+        try {
+            val extensions = listOf("webp", "png", "jpg")
+            for (ext in extensions) {
+                try {
+                    ctx.assets.open("wildrift/item_icons/$itemId.$ext").use { stream ->
+                        val bmp = android.graphics.BitmapFactory.decodeStream(stream)
+                        if (bmp != null) return@remember bmp.asImageBitmap()
+                    }
+                } catch (_: Exception) { }
+            }
+            null
+        } catch (_: Exception) { null }
+    }
+
+    if (bitmap != null) {
+        androidx.compose.foundation.Image(
+            bitmap = bitmap,
+            contentDescription = null,
+            modifier = Modifier
+                .size(size)
+                .clip(RoundedCornerShape(8.dp))
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .size(size)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF2A2A2A)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("📦", fontSize = (size.value * 0.4f).sp)
+        }
+    }
 }

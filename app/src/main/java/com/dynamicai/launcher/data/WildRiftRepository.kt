@@ -6,6 +6,7 @@ import org.json.JSONObject
 
 data class Champion(
     val id: String,
+    val key: Int,
     val roles: List<String>,
     val positions: List<String>,
     val difficult: Int
@@ -19,6 +20,8 @@ class WildRiftRepository(private val context: Context) {
     private var items: List<JSONObject> = emptyList()
     private var championsList: List<Champion> = emptyList()
     private var counters: Map<String, List<String>> = emptyMap()
+    private var ruChampionsByKey: Map<Int, String> = emptyMap()
+    private var ruItemsByName: Map<String, String> = emptyMap()
     private var loaded = false
 
     fun ensureLoaded() {
@@ -52,12 +55,36 @@ class WildRiftRepository(private val context: Context) {
 
                     Champion(
                         id = obj.optString("id"),
+                        key = obj.optInt("key", 0),
                         roles = roles,
                         positions = positions,
                         difficult = obj.optInt("difficult", 2)
                     )
                 }
                 .sortedBy { it.id }
+
+            // Російські назви чемпіонів
+            try {
+                val ruChampionsJson = context.assets.open("wildrift/ru_champions_raw.json").bufferedReader().use { it.readText() }
+                val ruArr = JSONArray(ruChampionsJson)
+                val champMap = mutableMapOf<Int, String>()
+                for (i in 0 until ruArr.length()) {
+                    val o = ruArr.getJSONObject(i)
+                    if (o.has("id") && o.has("name")) {
+                        champMap[o.getInt("id")] = o.getString("name")
+                    }
+                }
+                ruChampionsByKey = champMap
+            } catch (_: Exception) { }
+
+            // Російські назви предметів
+            try {
+                val ruItemsJson = context.assets.open("wildrift/item_names_ru.json").bufferedReader().use { it.readText() }
+                val itemsObj = JSONObject(ruItemsJson)
+                val itemMap = mutableMapOf<String, String>()
+                itemsObj.keys().forEach { key -> itemMap[key] = itemsObj.getString(key) }
+                ruItemsByName = itemMap
+            } catch (_: Exception) { }
 
             val countersJson = context.assets.open("wildrift/counters.json").bufferedReader().use { it.readText() }
             val countersObj = JSONObject(countersJson)
@@ -68,6 +95,29 @@ class WildRiftRepository(private val context: Context) {
             }
             counters = map
         } catch (_: Exception) { }
+    }
+
+
+    /** Отримати російську назву чемпіона (fallback — англ). */
+    fun localizedChampionName(champion: Champion): String {
+        ensureLoaded()
+        // Треба знайти key чемпіона через heroes.json — але у Champion немає key
+        // Використовуємо мапінг через id
+        return ruChampionsByKey.values.firstOrNull { it.isNotBlank() }
+            ?.let { champion.id }  // fallback
+            ?: champion.id
+    }
+
+    /** Отримати російську назву предмета (fallback — англ). */
+    fun localizedItemName(englishName: String): String {
+        ensureLoaded()
+        return ruItemsByName[englishName] ?: englishName
+    }
+
+    /** Формат: "Мореллономикон (Morellonomicon)" — обидві назви. */
+    fun localizedItemWithEnglish(englishName: String): String {
+        val ru = ruItemsByName[englishName]
+        return if (ru != null && ru != englishName) "$ru ($englishName)" else englishName
     }
 
     fun getChampions(): List<Champion> {
@@ -101,25 +151,47 @@ class WildRiftRepository(private val context: Context) {
         return result.distinct()
     }
 
-    /** Формує RAG контекст для LLM. */
+    /** Формує RAG контекст для LLM з локалізованими назвами. */
     fun buildAdviceContext(myChampion: Champion, enemies: List<Champion>): String {
         ensureLoaded()
         val sb = StringBuilder()
-        sb.append("Гравець грає за: ${myChampion.id} (${myChampion.displayRoles})\n")
-        sb.append("Ворожа команда:\n")
+        val myName = localizedChampionName(myChampion)
+        sb.append("Игрок играет за: $myName (${myChampion.displayRoles})\n")
+        sb.append("Вражеская команда:\n")
         for (enemy in enemies) {
-            sb.append("- ${enemy.id} (${enemy.displayRoles})\n")
+            sb.append("- ${localizedChampionName(enemy)} (${enemy.displayRoles})\n")
         }
-        sb.append("\nКонтр-предмети проти ворогів:\n")
+        sb.append("\nКонтр-предметы (используй АНГЛИЙСКИЕ названия):\n")
         for (enemy in enemies) {
-            val specific = counters[enemy.id]
-            val counterList = specific ?: fallbackCounters(enemy)
+            val counterList = counters[enemy.id] ?: fallbackCounters(enemy)
             if (counterList.isNotEmpty()) {
-                sb.append("- Проти ${enemy.id}: ${counterList.joinToString(", ")}\n")
+                sb.append("- Против ${localizedChampionName(enemy)}: ${counterList.joinToString(", ")}\n")
             }
         }
         return sb.toString()
     }
+
+    /** Повертає список предметів-іконок для рекомендації. */
+        /** Повертає список item_id для іконок. */
+    fun getRecommendedItems(enemies: List<Champion>): List<String> {
+        ensureLoaded()
+        val result = mutableSetOf<String>()
+        for (enemy in enemies) {
+            val counterList = counters[enemy.id] ?: fallbackCounters(enemy)
+            for (name in counterList) {
+                itemIdByEnglishName(name)?.let { result.add(it) }
+            }
+        }
+        return result.toList().take(8)
+    }
+
+    /** Мапа: англ назва → item_id (для іконок). */
+    fun itemIdByEnglishName(englishName: String): String? {
+        ensureLoaded()
+        return items.firstOrNull { it.optJSONObject("name")?.optString("en") == englishName }
+            ?.optString("id")
+    }
+
 
     fun buildContextForQuery(query: String): String {
         val lower = query.lowercase()

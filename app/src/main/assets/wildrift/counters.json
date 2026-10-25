@@ -28,5 +28,20 @@
   "Vi": ["Randuin's Omen", "Frozen Heart", "Thornmail", "Plated Steelcaps", "Zhonya's Hourglass"],
   "Jinx": ["Randuin's Omen", "Frozen Heart", "Thornmail", "Plated Steelcaps", "Zhonya's Hourglass"],
   "Caitlyn": ["Randuin's Omen", "Frozen Heart", "Thornmail", "Plated Steelcaps", "Zhonya's Hourglass"],
-  "Ezreal": ["Randuin's Omen", "Frozen Heart", "Thornmail", "Plated Steelcaps", "Zhonya's Hourglass"]
+  "Ezreal": ["Randuin's Omen", "Frozen Heart", "Thornmail", "Plated Steelcaps", "Zhonya's Hourglass"],
+  
+  "_categories": {
+    "anti-heal": ["Morellonomicon", "Mortal Reminder", "Chempunk Chainsword", "Thornmail", "Executioner's Calling"],
+    "armor": ["Randuin's Omen", "Frozen Heart", "Thornmail", "Plated Steelcaps", "Bramble Vest"],
+    "magic_resist": ["Mercury's Treads", "Banshee's Veil", "Hexdrinker", "Maw of Malmortius", "Spirit Visage"],
+    "burst": ["Zhonya's Hourglass", "Guardian Angel", "Banshee's Veil", "Sterak's Gage"],
+    "cc": ["Mercury's Treads", "Mikael's Blessing", "Quicksilver Enchant"],
+    "shields": ["Serpent's Fang"],
+    "sustain": ["Morellonomicon", "Mortal Reminder", "Chempunk Chainsword", "Thornmail", "Executioner's Calling"],
+    "tank": ["Black Cleaver", "Lord Dominik's Regards", "Void Staff"],
+    "assassin": ["Zhonya's Hourglass", "Guardian Angel", "Randuin's Omen"],
+    "marksman": ["Randuin's Omen", "Thornmail", "Frozen Heart"],
+    "mage": ["Banshee's Veil", "Mercury's Treads", "Hexdrinker"],
+    "fighter": ["Bramble Vest", "Thornmail", "Randuin's Omen"]
+  }
 }

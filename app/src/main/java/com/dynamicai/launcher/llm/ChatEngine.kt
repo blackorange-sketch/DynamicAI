@@ -199,7 +199,11 @@ class ChatEngine(
             q.contains("counter") || q.contains("проти") || q.contains("збірк")) {
             val wildRiftContext = wildRiftRepo.buildContextForQuery(question)
             if (wildRiftContext.isNotBlank()) {
-                return "Дані з бази Wild Rift:\n$wildRiftContext\n\nДай відповідь у форматі: 'Проти [чемпіон]: [предмет] (причина)'. Максимум 3-4 предмети."
+                return "Ти — експерт Wild Rift. Ось дані з нашої бази:\n$wildRiftContext\n\n" +
+                        "Дай відповідь українською у форматі:\n" +
+                        "1. Рекомендовані предмети (3-4 назви через кому)\n" +
+                        "2. Проти кожного ворога — 1 предмет + коротка причина\n" +
+                        "3. Не вигадуй предмети, яких немає в списку. Максимум 6 рядків."
             }
         }
         

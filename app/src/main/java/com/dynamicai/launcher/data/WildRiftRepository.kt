@@ -22,6 +22,7 @@ class WildRiftRepository(private val context: Context) {
     private var counters: Map<String, List<String>> = emptyMap()
     private var ruChampionsByKey: Map<Int, String> = emptyMap()
     private var ruItemsByName: Map<String, String> = emptyMap()
+    private var categories: Map<String, List<String>> = emptyMap()
     private var loaded = false
 
     fun ensureLoaded() {
@@ -89,11 +90,21 @@ class WildRiftRepository(private val context: Context) {
             val countersJson = context.assets.open("wildrift/counters.json").bufferedReader().use { it.readText() }
             val countersObj = JSONObject(countersJson)
             val map = mutableMapOf<String, List<String>>()
+            val catMap = mutableMapOf<String, List<String>>()
             countersObj.keys().forEach { key ->
-                val arr = countersObj.getJSONArray(key)
-                map[key] = (0 until arr.length()).map { arr.getString(it) }
+                if (key == "_categories") {
+                    val catsObj = countersObj.getJSONObject(key)
+                    catsObj.keys().forEach { catKey ->
+                        val arr = catsObj.getJSONArray(catKey)
+                        catMap[catKey] = (0 until arr.length()).map { arr.getString(it) }
+                    }
+                } else {
+                    val arr = countersObj.getJSONArray(key)
+                    map[key] = (0 until arr.length()).map { arr.getString(it) }
+                }
             }
             counters = map
+            categories = catMap
         } catch (_: Exception) { }
     }
 

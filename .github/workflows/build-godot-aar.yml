@@ -33,7 +33,7 @@ jobs:
         run: |
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12 -noprompt
 
-      - name: Import Project and Install Template (with timeout)
+      - name: Import Project Assets and Install Template (with timeout)
         run: |
           export ANDROID_HOME=$ANDROID_SDK_ROOT
           # Додаємо таймаут на 5 хвилин, щоб крок не висів вічно

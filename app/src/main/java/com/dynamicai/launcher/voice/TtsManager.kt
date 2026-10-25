@@ -63,6 +63,24 @@ class TtsManager(private val context: Context) {
         }
     }
 
+    fun speakWithCallback(text: String, onDone: () -> Unit) {
+        try {
+            val tts = this.tts ?: run { onDone(); return }
+            val id = "voicechat_${System.currentTimeMillis()}"
+            tts.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {}
+                override fun onDone(utteranceId: String?) { onDone() }
+                @Deprecated("Deprecated in Java")
+                override fun onError(utteranceId: String?) { onDone() }
+            })
+            tts.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, id)
+        } catch (_: Throwable) { onDone() }
+    }
+
+    fun stop() {
+        try { tts?.stop() } catch (_: Throwable) {}
+    }
+
     fun speak(text: String) {
         if (text.isBlank()) return
 

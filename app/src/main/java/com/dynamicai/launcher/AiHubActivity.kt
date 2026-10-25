@@ -239,6 +239,17 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                             onCancel = { }
                         )
                     }
+                    ActionChip("🎙️ Розмова", Color(0xFFE91E63)) {
+                        try {
+                            val app = vm.getApplication<android.app.Application>()
+                            app.startActivity(android.content.Intent(app, com.dynamicai.launcher.VoiceChatActivity::class.java).apply {
+                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            })
+                        } catch (t: Throwable) {
+                            android.util.Log.e("AiHub", "VoiceChat failed: ${t.message}", t)
+                        }
+                        onClose()
+                    }
                     ActionChip("🎮 Wild Rift", Color(0xFF9C27B0)) {
                         try {
                             val app = vm.getApplication<android.app.Application>()

@@ -176,5 +176,10 @@
             android:exported="false"
             android:theme="@style/Theme.DynamicAI" />
 
+        <activity
+            android:name=".VoiceChatActivity"
+            android:exported="false"
+            android:theme="@style/Theme.DynamicAI" />
+
     </application>
 </manifest>

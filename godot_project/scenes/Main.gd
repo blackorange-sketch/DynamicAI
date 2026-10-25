@@ -1,18 +1,18 @@
 extends Node3D
 
+var model_instance: Node3D
+
 func _ready():
-    # Створюємо тестовий куб замість моделі
-    var mesh_instance = MeshInstance3D.new()
-    var box_mesh = BoxMesh.new()
-    mesh_instance.mesh = box_mesh
-    add_child(mesh_instance)
-    
-    # Додаємо камеру
+    var vrm_scene = load("res://assets/anime_girl.glb")
+    if vrm_scene:
+        model_instance = vrm_scene.instantiate()
+        add_child(model_instance)
+        print("VRM Model Loaded Successfully!")
+        
     var camera = Camera3D.new()
     camera.position = Vector3(0, 1.0, 3.5)
     add_child(camera)
     
-    # Додаємо світло
     var light = DirectionalLight3D.new()
     light.rotation_degrees = Vector3(-45, 30, 0)
     add_child(light)

@@ -25,19 +25,19 @@ jobs:
           chmod +x godot
 
           wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz
-          mkdir -p ~/.local/share/godot/templates/4.3.stable
+          # ВИПРАВЛЕНО: правильний шлях export_templates
+          mkdir -p ~/.local/share/godot/export_templates/4.3.stable
           unzip Godot_v4.3-stable_export_templates.tpz -d /tmp/templates
-          mv /tmp/templates/templates/* ~/.local/share/godot/templates/4.3.stable/
+          mv /tmp/templates/templates/* ~/.local/share/godot/export_templates/4.3.stable/
 
       - name: Setup Keystore
         run: |
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12 -noprompt
 
-      - name: Import Project Assets and Install Template (with timeout)
+      - name: Install Android Build Template
         run: |
           export ANDROID_HOME=$ANDROID_SDK_ROOT
-          # Додаємо таймаут на 5 хвилин, щоб крок не висів вічно
-          timeout 300 ./godot --headless --path godot_project --install-android-build-template || echo "Template install timed out, continuing..."
+          ./godot --headless --path godot_project --install-android-build-template
 
       - name: Build AAR
         run: |

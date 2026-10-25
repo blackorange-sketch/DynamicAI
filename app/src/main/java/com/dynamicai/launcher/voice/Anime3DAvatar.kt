@@ -22,7 +22,6 @@ import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
-import io.github.sceneview.rememberEnvironment
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberNodes
 import kotlin.math.sin
@@ -42,10 +41,6 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     val childNodes = rememberNodes()
-    val environment = rememberEnvironment(engine) {
-        // Створюємо оточення з тінями та підсвіткою
-        createHDREnvironment()
-    }
     
     var errorText by remember { mutableStateOf<String?>(null) }
 
@@ -134,7 +129,6 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
             engine = engine,
             modelLoader = modelLoader,
             childNodes = childNodes,
-            environment = environment, // Підключаємо оточення з тінями
             cameraNode = rememberCameraNode(engine) {
                 position = Position(0f, 1.0f, 3.5f)
             }

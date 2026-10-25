@@ -30,10 +30,26 @@ fun Anime3DAvatar(modifier: Modifier = Modifier) {
 
     val modelNode = remember {
         try {
-            ModelNode(
-                modelInstance = modelLoader.createModelInstance("anime_girl.glb"),
-                scaleToUnits = 1.5f
+            val instance = modelLoader.createModelInstance("anime_girl.glb")
+            
+            // Логуємо всі доступні анімації
+            val anims = instance.animations.map { it.name }
+            android.util.Log.d("Anime3D", "Available animations: $anims")
+
+            val node = ModelNode(
+                modelInstance = instance,
+                scaleToUnits = 1.2f // Трохи зменшимо, щоб влазила в екран
             )
+            
+            // Намагаємось запустити анімацію (Idle, Stand або першу-ліпшу)
+            val animToPlay = anims.find { it.contains("Idle", ignoreCase = true) || it.contains("Stand", ignoreCase = true) } ?: anims.firstOrNull()
+            if (animToPlay != null) {
+                node.animationName = animToPlay
+                node.isAnimating = true
+                android.util.Log.d("Anime3D", "Playing animation: $animToPlay")
+            }
+            
+            node
         } catch (e: Exception) {
             errorText = "Помилка: ${e.javaClass.simpleName} - ${e.message}"
             android.util.Log.e("Anime3D", "Load failed", e)
@@ -52,7 +68,8 @@ fun Anime3DAvatar(modifier: Modifier = Modifier) {
             modelLoader = modelLoader,
             childNodes = childNodes,
             cameraNode = rememberCameraNode(engine) {
-                position = Position(0f, 1.2f, 2.5f)
+                // Ставимо камеру навпроти обличчя (приблизно 1.4 метра висоти)
+                position = Position(0f, 1.4f, 3.5f)
             }
         )
     } else {

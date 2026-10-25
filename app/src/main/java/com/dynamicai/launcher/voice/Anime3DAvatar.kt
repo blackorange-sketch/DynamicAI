@@ -19,8 +19,6 @@ import com.dynamicai.launcher.VoiceState
 import io.github.sceneview.Scene
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
-import io.github.sceneview.math.Transform
-import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.rememberCameraNode
@@ -47,24 +45,12 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
     
     var errorText by remember { mutableStateOf<String?>(null) }
 
-    // Додаємо джерело світла для природних кольорів
-    val lightNode = remember {
-        LightNode(engine = engine).apply {
-            type = io.github.sceneview.node.LightNode.Type.DIRECTIONAL
-            intensity = 100_000f
-            transform = Transform(
-                position = Position(2f, 3f, 3f),
-                rotation = Rotation(x = -45f, y = 30f)
-            )
-        }
-    }
-
     val modelNode = remember {
         try {
             val instance = modelLoader.createModelInstance("anime_girl.glb")
             val node = ModelNode(modelInstance = instance, scaleToUnits = 2.0f)
             
-            // Поворот (якщо вона дивиться спиною, зміни y = 180f на y = 0f)
+            // Поворот (якщо дивиться спиною, зміни 180f на 0f)
             node.rotation = Rotation(y = 180f)
             node.position = Position(0f, -1.5f, 0f)
             
@@ -77,7 +63,6 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
 
     if (modelNode != null) {
         LaunchedEffect(modelNode, voiceState) {
-            childNodes.add(lightNode)
             childNodes.add(modelNode)
             
             val head = findBone(modelNode, listOf("C_Head", "Head"))
@@ -154,8 +139,7 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
         Scene(
             modifier = modifier
                 .fillMaxSize()
-                // Блокуємо всі дотики, щоб неможливо було крутити камеру
-                .pointerInput(Unit) { detectTapGestures { } },
+                .pointerInput(Unit) { detectTapGestures { } }, // Блокуємо дотики
             engine = engine,
             modelLoader = modelLoader,
             childNodes = childNodes,

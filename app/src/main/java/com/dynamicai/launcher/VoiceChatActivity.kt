@@ -216,7 +216,10 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
         // 3D-аватар на задньому фоні
         Anime3DAvatar(
             voiceState = voiceState,
-            modifier = Modifier.fillMaxSize().alpha(0.6f)
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.65f) // Займає 65% висоти екрану
+                .align(Alignment.BottomCenter) // Притискаємо до низу
         )
 
         Column(
@@ -276,7 +279,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().height(160.dp),
                 contentAlignment = Alignment.Center
             ) {
-                PulseCircle(voiceState)
+                
             }
 
             // Status + partial

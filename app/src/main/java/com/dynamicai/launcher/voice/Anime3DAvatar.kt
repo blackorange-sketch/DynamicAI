@@ -24,7 +24,6 @@ import io.github.sceneview.rememberNodes
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import kotlin.math.sin
-import kotlin.math.cos
 
 fun findBone(node: Node, names: List<String>): Node? {
     val nodeName = node.name ?: ""
@@ -47,12 +46,16 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
     val modelNode = remember {
         try {
             val instance = modelLoader.createModelInstance("anime_girl.glb")
-            // Збільшуємо масштаб, щоб вона заповнила екран
-            val node = ModelNode(modelInstance = instance, scaleToUnits = 2.5f)
+            val node = ModelNode(modelInstance = instance, scaleToUnits = 2.0f)
             
+            // Розвертаємо її на 180 градусів, щоб дивилася на нас
+            node.rotation = Rotation(y = 180f)
+            // Опускаємо трохи вниз, щоб вона "стояла" на краю екрану
+            node.position = Position(0f, -1.5f, 0f)
+            
+            // Опускаємо руки (якщо знайдемо)
             val leftArm = findBone(node, listOf("L_UpperArm", "UpperArm_L"))
             val rightArm = findBone(node, listOf("R_UpperArm", "UpperArm_R"))
-            
             leftArm?.rotation = Rotation(z = -65f)
             rightArm?.rotation = Rotation(z = 65f)
             
@@ -74,50 +77,49 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
             var time = 0f
             while (true) {
                 withFrameNanos { _ ->
-                    // Швидкість анімації залежить від стану
                     val speed = when(voiceState) {
-                        VoiceState.SPEAKING -> 3f
-                        VoiceState.THINKING -> 1.5f
+                        VoiceState.SPEAKING -> 2f
+                        VoiceState.THINKING -> 1f
                         else -> 1f
                     }
                     time += 0.016f * speed
                     
-                    // Базове дихання
                     val breath = sin(time * 2f) * 2.5f 
                     
                     when (voiceState) {
                         VoiceState.SPEAKING -> {
-                            // Коли говорить: киває головою і трохи рухає плечима
+                            // Активно киває і трохи рухає плечима
                             chest?.rotation = Rotation(x = breath * 1.5f)
                             head?.rotation = Rotation(
-                                x = sin(time * 5f) * 3f, // Кивання
-                                y = sin(time * 2f) * 2f
+                                x = sin(time * 6f) * 4f, 
+                                y = sin(time * 3f) * 3f,
+                                z = sin(time * 4f) * 2f
                             )
                         }
                         VoiceState.THINKING -> {
-                            // Коли думає: нахиляє голову вбік і дивиться вгору
+                            // Нахиляє голову вбік і трохи вгору
                             chest?.rotation = Rotation(x = breath * 0.5f)
                             head?.rotation = Rotation(
-                                x = -5f + sin(time * 1f) * 2f, // Піднятий погляд
-                                z = 10f // Нахил вбік
+                                x = -8f + sin(time * 1f) * 2f, 
+                                z = 15f 
                             )
                         }
                         VoiceState.LISTENING -> {
-                            // Коли слухає: уважно дивиться вперед, легке погойдування
+                            // Уважно слухає, легкий нахил
                             chest?.rotation = Rotation(x = breath)
                             head?.rotation = Rotation(
-                                x = sin(time * 1.2f) * 2f,
-                                y = sin(time * 0.8f) * 3f
+                                x = sin(time * 1.5f) * 2f,
+                                y = sin(time * 1f) * 3f,
+                                z = 5f
                             )
                         }
                         else -> {
-                            // Стан спокою (IDLE)
+                            // Спокій
                             chest?.rotation = Rotation(x = breath)
-                            head?.rotation = Rotation(y = sin(time * 0.5f) * 4f)
+                            head?.rotation = Rotation(y = sin(time * 0.8f) * 4f)
                         }
                     }
                     
-                    // Таз завжди трохи погойдується для природності
                     hips?.rotation = Rotation(z = sin(time * 1.5f) * 1.5f)
                 }
             }
@@ -128,12 +130,9 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
             engine = engine,
             modelLoader = modelLoader,
             childNodes = childNodes,
-            // Робимо фон прозорим (якщо підтримується), або темним
-            // Можна спробувати Color.Transparent, але у Filament іноді потрібен колір
-             
             cameraNode = rememberCameraNode(engine) {
-                // Наближаємо камеру, щоб бачити обличчя і торс
-                position = Position(0f, 1.4f, 2.2f) 
+                // Камера дивиться на рівень обличчя
+                position = Position(0f, 1.2f, 3.0f)
             }
         )
     } else {

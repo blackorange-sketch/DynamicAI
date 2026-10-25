@@ -167,12 +167,12 @@ class ChatEngine(
     private suspend fun getSmartContext(question: String): String {
         val q = question.lowercase()
 
-        // Wild Rift — поради щодо предметів
+        // Wild Rift — поради щодо предметів проти чемпіонів
         if (q.contains("wild rift") || q.contains("item") || q.contains("build") ||
-            q.contains("counter") || q.contains("проти")) {
+            q.contains("counter") || q.contains("проти") || q.contains("збірк")) {
             val wildRiftContext = wildRiftRepo.buildContextForQuery(question)
             if (wildRiftContext.isNotBlank()) {
-                return wildRiftContext
+                return "Дані з бази Wild Rift:\n$wildRiftContext\n\nДай відповідь у форматі: 'Проти [чемпіон]: [предмет] (причина)'. Максимум 3-4 предмети."
             }
         }
         

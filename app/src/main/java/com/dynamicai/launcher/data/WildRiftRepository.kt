@@ -7,7 +7,7 @@ import org.json.JSONObject
 class WildRiftRepository(private val context: Context) {
 
     private var items: List<JSONObject> = emptyList()
-    private var heroes: List<JSONObject> = emptyList()
+    private var counters: Map<String, List<String>> = emptyMap()
 
     init {
         loadData()
@@ -19,76 +19,51 @@ class WildRiftRepository(private val context: Context) {
             val itemsArray = JSONArray(itemsJson)
             items = (0 until itemsArray.length()).map { itemsArray.getJSONObject(it) }
 
-            val heroesJson = context.assets.open("wildrift/heroes.json").bufferedReader().use { it.readText() }
-            val heroesArray = JSONArray(heroesJson)
-            heroes = (0 until heroesArray.length()).map { heroesArray.getJSONObject(it) }
+            val countersJson = context.assets.open("wildrift/counters.json").bufferedReader().use { it.readText() }
+            val countersObj = JSONObject(countersJson)
+            val map = mutableMapOf<String, List<String>>()
+            countersObj.keys().forEach { key ->
+                val arr = countersObj.getJSONArray(key)
+                map[key] = (0 until arr.length()).map { arr.getString(it) }
+            }
+            counters = map
         } catch (e: Exception) {
             // Логування помилок
         }
     }
 
-    /** Пошук предметів, які контр-ять конкретного чемпіона. */
-    fun findItemsAgainstChampion(championName: String): List<JSONObject> {
+    /** Пошук предметів за назвою (частковий збіг). */
+    fun findItemsByName(names: List<String>): List<JSONObject> {
         val result = mutableListOf<JSONObject>()
         for (item in items) {
-            val counters = item.optJSONArray("counters") ?: continue
-            for (i in 0 until counters.length()) {
-                if (counters.getString(i).contains(championName, ignoreCase = true)) {
-                    result.add(item)
-                    break
-                }
+            val name = item.optJSONObject("name")?.optString("en") ?: item.optString("id")
+            if (names.any { name.contains(it, ignoreCase = true) }) {
+                result.add(item)
             }
         }
         return result
     }
 
-    /** Пошук предметів за ключовим словом (наприклад, "anti-heal"). */
-    fun findItemsByMechanic(mechanic: String): List<JSONObject> {
-        val result = mutableListOf<JSONObject>()
-        for (item in items) {
-            val mechanics = item.optJSONArray("mechanics") ?: continue
-            for (i in 0 until mechanics.length()) {
-                if (mechanics.getString(i).contains(mechanic, ignoreCase = true)) {
-                    result.add(item)
-                    break
-                }
-            }
-        }
-        return result
-    }
-
-    /** Формує текстовий контекст для LLM. */
+    /** Формує текстовий контекст для LLM на основі запиту. */
     fun buildContextForQuery(query: String): String {
         val lowerQuery = query.lowercase()
-        val matchedItems = mutableListOf<JSONObject>()
+        val matchedChampions = counters.keys.filter { lowerQuery.contains(it.lowercase()) }
 
-        // Пошук за назвою чемпіона
-        for (hero in heroes) {
-            val id = hero.optString("id", "")
-            if (lowerQuery.contains(id.lowercase())) {
-                matchedItems.addAll(findItemsAgainstChampion(id))
-            }
+        if (matchedChampions.isEmpty()) {
+            return ""
         }
-
-        // Пошук за механікою
-        if (lowerQuery.contains("anti-heal") || lowerQuery.contains("heal")) {
-            matchedItems.addAll(findItemsByMechanic("anti-heal"))
-        }
-        if (lowerQuery.contains("armor")) {
-            matchedItems.addAll(findItemsByMechanic("armor"))
-        }
-        if (lowerQuery.contains("magic resist") || lowerQuery.contains("mr")) {
-            matchedItems.addAll(findItemsByMechanic("magic resist"))
-        }
-
-        val distinctItems = matchedItems.distinctBy { it.optString("id") }
 
         val sb = StringBuilder()
-        sb.append("Актуальні дані Wild Rift (патч 7.3c):\n")
-        for (item in distinctItems.take(5)) {
-            val name = item.optJSONObject("name")?.optString("en") ?: item.optString("id")
-            val desc = item.optJSONObject("description")?.optString("en") ?: ""
-            sb.append("- **$name**: $desc\n")
+        sb.append("Актуальні контр-предмети для чемпіонів (Wild Rift патч 7.3c):\n")
+        for (champ in matchedChampions) {
+            val itemNames = counters[champ] ?: continue
+            sb.append("\n**$champ**:\n")
+            val matchedItems = findItemsByName(itemNames)
+            for (item in matchedItems) {
+                val name = item.optJSONObject("name")?.optString("en") ?: item.optString("id")
+                val desc = item.optJSONObject("description")?.optString("en") ?: ""
+                sb.append("- $name — ${desc.take(120)}\n")
+            }
         }
         return sb.toString()
     }

@@ -3,11 +3,14 @@ extends Node3D
 var model_instance: Node3D
 
 func _ready():
-    var vrm_scene = load("res://assets/anime_girl.glb")
+    # Завантажуємо новий файл model.glb
+    var vrm_scene = load("res://assets/model.glb")
     if vrm_scene:
         model_instance = vrm_scene.instantiate()
         add_child(model_instance)
-        print("VRM Model Loaded Successfully!")
+        print("3D Model Loaded Successfully!")
+    else:
+        print("Failed to load 3D model!")
         
     var camera = Camera3D.new()
     camera.position = Vector3(0, 1.0, 3.5)

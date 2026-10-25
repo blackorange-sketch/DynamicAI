@@ -1,4 +1,4 @@
-name: Build Godot AAR
+name: Export Godot PCK
 
 on:
   workflow_dispatch:
@@ -29,27 +29,15 @@ jobs:
           unzip Godot_v4.3-stable_export_templates.tpz -d /tmp/templates
           mv /tmp/templates/templates/* ~/.local/share/godot/export_templates/4.3.stable/
 
-      - name: Setup Keystore
-        run: |
-          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12 -noprompt
-
-      - name: Install Android Build Template (Manual)
-        run: |
-          export ANDROID_HOME=$ANDROID_SDK_ROOT
-          mkdir -p godot_project/android/build
-          # Розпаковуємо android_source.zip у правильну папку
-          unzip -q ~/.local/share/godot/export_templates/4.3.stable/android_source.zip -d godot_project/android/build/
-          # Створюємо файл .build_version з точною версією Godot
-          echo -n "4.3.stable" > godot_project/android/.build_version
-
-      - name: Build AAR
+      - name: Export PCK
         run: |
           export ANDROID_HOME=$ANDROID_SDK_ROOT
           mkdir -p godot_project/build
-          ./godot --headless --path godot_project --export-release "Android AAR" build/DynamicAIAvatar.aar
+          # Експортуємо пакет ресурсів. Це стандартна і підтримувана операція.
+          ./godot --headless --path godot_project --export-pack "Android AAR" build/DynamicAIAvatar.pck
 
-      - name: Upload AAR Artifact
+      - name: Upload PCK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DynamicAIAvatar-aar
-          path: godot_project/build/DynamicAIAvatar.aar
+          name: DynamicAIAvatar-pck
+          path: godot_project/build/DynamicAIAvatar.pck

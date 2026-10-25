@@ -12,6 +12,7 @@ import androidx.activity.viewModels
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import com.dynamicai.launcher.voice.Anime3DAvatar
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -218,14 +219,6 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
             modifier = Modifier.fillMaxSize().alpha(0.6f)
         )
 
-
-            voiceState = voiceState,
-            modifier = Modifier.fillMaxSize().alpha(0.6f)
-        )
-
-
-        // 3D-аватар на задньому фоні
-        
         Column(
             modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)
         ) {
@@ -283,8 +276,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().height(160.dp),
                 contentAlignment = Alignment.Center
             ) {
-                                    .height(300.dp)
-            )
+                PulseCircle(voiceState)
             }
 
             // Status + partial

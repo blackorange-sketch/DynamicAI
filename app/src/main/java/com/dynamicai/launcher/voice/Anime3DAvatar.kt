@@ -23,8 +23,8 @@ import io.github.sceneview.rememberNodes
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import kotlin.math.sin
+import kotlin.math.cos
 
-// Допоміжна функція для пошуку кісток (з перевіркою на null)
 fun findBone(node: Node, names: List<String>): Node? {
     val nodeName = node.name ?: ""
     if (names.any { nodeName.contains(it, ignoreCase = true) }) return node
@@ -36,7 +36,7 @@ fun findBone(node: Node, names: List<String>): Node? {
 }
 
 @Composable
-fun Anime3DAvatar(modifier: Modifier = Modifier) {
+fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     val childNodes = rememberNodes()
@@ -46,13 +46,12 @@ fun Anime3DAvatar(modifier: Modifier = Modifier) {
     val modelNode = remember {
         try {
             val instance = modelLoader.createModelInstance("anime_girl.glb")
-            val node = ModelNode(modelInstance = instance, scaleToUnits = 1.2f)
+            // Збільшуємо масштаб, щоб вона заповнила екран
+            val node = ModelNode(modelInstance = instance, scaleToUnits = 2.5f)
             
-            // Спроба виправити T-позу (опустити руки вниз)
             val leftArm = findBone(node, listOf("L_UpperArm", "UpperArm_L"))
             val rightArm = findBone(node, listOf("R_UpperArm", "UpperArm_R"))
             
-            // Повертаємо руки вздовж тіла (значення підібрано для стандартного VRM)
             leftArm?.rotation = Rotation(z = -65f)
             rightArm?.rotation = Rotation(z = 65f)
             
@@ -64,43 +63,61 @@ fun Anime3DAvatar(modifier: Modifier = Modifier) {
     }
 
     if (modelNode != null) {
-        LaunchedEffect(modelNode) {
+        LaunchedEffect(modelNode, voiceState) {
             childNodes.add(modelNode)
             
-            // Збираємо всі назви кісток у логи (безпечно для null)
-            val allBones = mutableListOf<String>()
-            fun collectNames(n: Node) {
-                val name = n.name
-                if (!name.isNullOrEmpty()) allBones.add(name)
-                n.childNodes.forEach { collectNames(it) }
-            }
-            collectNames(modelNode)
-            android.util.Log.d("Anime3D_Bones", "Available bones: " + allBones.joinToString(", "))
-            
-            // Знаходимо кістки для анімації
             val head = findBone(modelNode, listOf("C_Head", "Head"))
             val chest = findBone(modelNode, listOf("C_Chest", "Chest", "C_Spine", "Spine"))
             val hips = findBone(modelNode, listOf("C_Hips", "Hips"))
 
             var time = 0f
-            // Нескінченний цикл анімації (оновлюється кожен кадр)
             while (true) {
                 withFrameNanos { _ ->
-                    time += 0.016f // ~60 FPS
+                    // Швидкість анімації залежить від стану
+                    val speed = when(voiceState) {
+                        VoiceState.SPEAKING -> 3f
+                        VoiceState.THINKING -> 1.5f
+                        else -> 1f
+                    }
+                    time += 0.016f * speed
                     
-                    // 1. Дихання (грудна клітка підіймається і опускається)
+                    // Базове дихання
                     val breath = sin(time * 2f) * 2.5f 
-                    chest?.rotation = Rotation(x = breath)
                     
-                    // 2. Рух голови (легкий нахил та погойдування)
-                    head?.rotation = Rotation(
-                        x = breath * 0.5f, 
-                        y = sin(time * 1.2f) * 4f
-                    )
+                    when (voiceState) {
+                        VoiceState.SPEAKING -> {
+                            // Коли говорить: киває головою і трохи рухає плечима
+                            chest?.rotation = Rotation(x = breath * 1.5f)
+                            head?.rotation = Rotation(
+                                x = sin(time * 5f) * 3f, // Кивання
+                                y = sin(time * 2f) * 2f
+                            )
+                        }
+                        VoiceState.THINKING -> {
+                            // Коли думає: нахиляє голову вбік і дивиться вгору
+                            chest?.rotation = Rotation(x = breath * 0.5f)
+                            head?.rotation = Rotation(
+                                x = -5f + sin(time * 1f) * 2f, // Піднятий погляд
+                                z = 10f // Нахил вбік
+                            )
+                        }
+                        VoiceState.LISTENING -> {
+                            // Коли слухає: уважно дивиться вперед, легке погойдування
+                            chest?.rotation = Rotation(x = breath)
+                            head?.rotation = Rotation(
+                                x = sin(time * 1.2f) * 2f,
+                                y = sin(time * 0.8f) * 3f
+                            )
+                        }
+                        else -> {
+                            // Стан спокою (IDLE)
+                            chest?.rotation = Rotation(x = breath)
+                            head?.rotation = Rotation(y = sin(time * 0.5f) * 4f)
+                        }
+                    }
                     
-                    // 3. Перенесення ваги з ноги на ногу (погойдування тазу)
-                    val sway = sin(time * 1.5f) * 1.5f
-                    hips?.rotation = Rotation(z = sway)
+                    // Таз завжди трохи погойдується для природності
+                    hips?.rotation = Rotation(z = sin(time * 1.5f) * 1.5f)
                 }
             }
         }
@@ -110,8 +127,12 @@ fun Anime3DAvatar(modifier: Modifier = Modifier) {
             engine = engine,
             modelLoader = modelLoader,
             childNodes = childNodes,
+            // Робимо фон прозорим (якщо підтримується), або темним
+            // Можна спробувати Color.Transparent, але у Filament іноді потрібен колір
+            backgroundColor = Color(0xFF1E1E1E), 
             cameraNode = rememberCameraNode(engine) {
-                position = Position(0f, 1.4f, 3.5f)
+                // Наближаємо камеру, щоб бачити обличчя і торс
+                position = Position(0f, 1.4f, 2.2f) 
             }
         )
     } else {

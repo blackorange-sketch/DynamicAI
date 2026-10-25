@@ -211,6 +211,13 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
         modifier = Modifier.fillMaxSize()
             .background(Color(0xFF0A0A0A))
     ) {
+
+        // 3D-аватар на задньому фоні
+        Anime3DAvatar(
+            voiceState = voiceState,
+            modifier = Modifier.fillMaxSize().alpha(0.6f) // 60% прозорості, щоб текст читався
+        )
+
         Column(
             modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)
         ) {

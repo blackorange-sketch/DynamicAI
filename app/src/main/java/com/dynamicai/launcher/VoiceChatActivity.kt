@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
@@ -212,12 +213,14 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
             .background(Color(0xFF0A0A0A))
     ) {
 
-        // 3D-аватар на задньому фоні
         Anime3DAvatar(
             voiceState = voiceState,
-            modifier = Modifier.fillMaxSize().alpha(0.6f) // 60% прозорості, щоб текст читався
+            modifier = Modifier.fillMaxSize().alpha(0.6f)
         )
 
+
+        // 3D-аватар на задньому фоні
+        
         Column(
             modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)
         ) {
@@ -275,10 +278,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().height(160.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Anime3DAvatar(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
+                                    .height(300.dp)
             )
             }
 

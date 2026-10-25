@@ -13,6 +13,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.dynamicai.launcher.VoiceState
 import io.github.sceneview.Scene
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
@@ -129,7 +130,7 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
             childNodes = childNodes,
             // Робимо фон прозорим (якщо підтримується), або темним
             // Можна спробувати Color.Transparent, але у Filament іноді потрібен колір
-            backgroundColor = Color(0xFF1E1E1E), 
+             
             cameraNode = rememberCameraNode(engine) {
                 // Наближаємо камеру, щоб бачити обличчя і торс
                 position = Position(0f, 1.4f, 2.2f) 

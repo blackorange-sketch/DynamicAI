@@ -33,16 +33,11 @@ jobs:
         run: |
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12 -noprompt
 
-      - name: Install Android Build Template
+      - name: Manually Install Android Build Template
         run: |
-          export ANDROID_HOME=$ANDROID_SDK_ROOT
-          ./godot --headless --path godot_project --install-android-build-template || true
-
-      - name: Import Project Assets
-        run: |
-          export ANDROID_HOME=$ANDROID_SDK_ROOT
-          # Цей крок генерує .import файли для текстуру та моделей
-          ./godot --headless --path godot_project --import || true
+          # ОБХІД ЗАВИСАННЯ: Розпаковуємо шаблон вручну замість запуску godot --install...
+          mkdir -p godot_project/android/build
+          unzip ~/.local/share/godot/export_templates/4.3.stable/android_source.zip -d godot_project/android/build/
 
       - name: Build AAR
         run: |

@@ -31,11 +31,11 @@ fun Anime3DAvatar(modifier: Modifier = Modifier) {
     
     var errorText by remember { mutableStateOf<String?>(null) }
 
-    // Копіюємо файл з assets у тимчасову пам'ять додатка
+    // Крок 1: Копіюємо файл з assets у кеш (якщо він ще не там)
     val localFile = remember {
         try {
             val file = File(context.cacheDir, "anime_girl.glb")
-            if (!file.exists() || file.length() == 0L) {
+            if (!file.exists() || file.length() < 1000L) { // Перевіряємо, що файл реально важить хоч щось
                 context.assets.open("anime_girl.glb").use { input ->
                     file.outputStream().use { output ->
                         input.copyTo(output)
@@ -50,11 +50,20 @@ fun Anime3DAvatar(modifier: Modifier = Modifier) {
         }
     }
 
+    // Крок 2: Завантажуємо модель
     val modelNode = remember(localFile) {
-        if (localFile == null) return@remember null
+        if (localFile == null || !localFile.exists()) {
+            if (errorText == null) errorText = "Файл не знайдено після копіювання!"
+            return@remember null
+        }
+        
         try {
+            // Використовуємо toURI().toString(), щоб отримати file:///...
+            val uriString = localFile.toURI().toString()
+            android.util.Log.d("Anime3D", "Loading model from: $uriString")
+            
             ModelNode(
-                modelInstance = modelLoader.createModelInstance(localFile.path),
+                modelInstance = modelLoader.createModelInstance(uriString),
                 scaleToUnits = 1.5f
             )
         } catch (e: Exception) {
@@ -80,7 +89,7 @@ fun Anime3DAvatar(modifier: Modifier = Modifier) {
         )
     } else {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(errorText ?: "Завантаження 3D...", color = Color.Red)
+            Text(errorText ?: "Завантаження...", color = Color.Red)
         }
     }
 }

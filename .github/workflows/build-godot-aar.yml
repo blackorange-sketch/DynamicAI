@@ -10,28 +10,39 @@ jobs:
     container:
       image: barichello/godot-ci:4.2.2
     env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+      ANDROID_HOME: /usr/lib/android-sdk
+      ANDROID_SDK_ROOT: /usr/lib/android-sdk
       JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Environment
+      - name: Setup Environment and Paths
         run: |
-          mkdir -p ~/.local/share/godot/templates
-          cp -r /root/.local/share/godot/templates/4.2.2.stable ~/.local/share/godot/templates/ || true
-          # Генеруємо тимчасовий ключ (з -noprompt, щоб не чекав на Enter)
+          # Явно створюємо файл налаштувань Godot з правильними шляхами
+          mkdir -p ~/.config/godot
+          cat > ~/.config/godot/editor_settings-4.tres << 'EOF'
+          [gd_resource format=3]
+
+          [resource]
+          export/android/android_sdk_path = "/usr/lib/android-sdk"
+          export/android/java_sdk_path = "/usr/lib/jvm/java-17-openjdk-amd64"
+          EOF
+          
+          # Генеруємо ключ
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12 -noprompt
 
-      - name: Install Android Build Template
+      - name: Pre-import and Install Template
         run: |
-          godot --headless --path godot_project --install-android-build-template
+          # Спершу імпортуємо проєкт, щоб створити кеш
+          godot --headless --path godot_project --verbose --import || true
+          # Тепер встановлюємо шаблон з логами
+          godot --headless --path godot_project --verbose --install-android-build-template
 
       - name: Build AAR
         run: |
           mkdir -p godot_project/build
-          godot --headless --path godot_project --export-release "Android AAR" build/DynamicAIAvatar.aar
+          godot --headless --path godot_project --verbose --export-release "Android AAR" build/DynamicAIAvatar.aar
 
       - name: Upload AAR Artifact
         uses: actions/upload-artifact@v4

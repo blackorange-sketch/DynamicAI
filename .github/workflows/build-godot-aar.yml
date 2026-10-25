@@ -6,6 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -18,13 +19,11 @@ jobs:
 
       - name: Download Godot and Export Templates
         run: |
-          # Завантажуємо Godot для Linux (x86_64)
           wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
           unzip Godot_v4.3-stable_linux.x86_64.zip
           mv Godot_v4.3-stable_linux.x86_64 godot
           chmod +x godot
 
-          # Завантажуємо офіційні шаблони експорту
           wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz
           mkdir -p ~/.local/share/godot/templates/4.3.stable
           unzip Godot_v4.3-stable_export_templates.tpz -d /tmp/templates
@@ -34,15 +33,11 @@ jobs:
         run: |
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12 -noprompt
 
-      - name: Import Project
+      - name: Import Project and Install Template (with timeout)
         run: |
-          ./godot --headless --editor --quit --path godot_project || true
-
-      - name: Install Android Build Template
-        run: |
-          # Вказуємо Godot, де знаходиться Android SDK на серверах GitHub
           export ANDROID_HOME=$ANDROID_SDK_ROOT
-          ./godot --headless --path godot_project --install-android-build-template || true
+          # Додаємо таймаут на 5 хвилин, щоб крок не висів вічно
+          timeout 300 ./godot --headless --path godot_project --install-android-build-template || echo "Template install timed out, continuing..."
 
       - name: Build AAR
         run: |

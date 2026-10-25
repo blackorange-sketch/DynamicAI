@@ -422,6 +422,17 @@ fun SettingsScreen(
             ) {
                 onSettingsChange(settings.copy(useTts = it))
             }
+            ActionRow(
+                "Обрати голос TTS",
+                icon = Icons.Default.Settings,
+                tint = Color(0xFF9C27B0)
+            ) {
+                try {
+                    val intent = Intent("com.android.settings.TTS_SETTINGS")
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    ctx.startActivity(intent)
+                } catch (_: Exception) {}
+            }
             // TTS слайдери
             TtsSlider(
                 label = "Швидкість озвучення",

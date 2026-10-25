@@ -20,6 +20,7 @@ class TtsManager(private val context: Context) {
     private var tts: TextToSpeech? = null
     private var ready = false
     private var pendingText: String? = null
+    private var pendingCallback: (() -> Unit)? = null
 
     init {
         tts = TextToSpeech(context) { status ->
@@ -38,8 +39,14 @@ class TtsManager(private val context: Context) {
 
                 ready = true
                 pendingText?.let {
-                    speak(it)
+                    val cb = pendingCallback
                     pendingText = null
+                    pendingCallback = null
+                    if (cb != null) {
+                        speakWithCallback(it, cb)
+                    } else {
+                        speak(it)
+                    }
                 }
                 Log.d(TAG, "TTS initialized (speed=${settings.ttsSpeed}, pitch=${settings.ttsPitch})")
             } else {

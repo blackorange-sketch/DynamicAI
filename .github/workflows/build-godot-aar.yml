@@ -6,43 +6,45 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    container:
-      image: barichello/godot-ci:4.2.2
-    env:
-      ANDROID_HOME: /usr/lib/android-sdk
-      ANDROID_SDK_ROOT: /usr/lib/android-sdk
-      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Environment and Paths
-        run: |
-          # Явно створюємо файл налаштувань Godot з правильними шляхами
-          mkdir -p ~/.config/godot
-          cat > ~/.config/godot/editor_settings-4.tres << 'EOF'
-          [gd_resource format=3]
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-          [resource]
-          export/android/android_sdk_path = "/usr/lib/android-sdk"
-          export/android/java_sdk_path = "/usr/lib/jvm/java-17-openjdk-amd64"
-          EOF
-          
-          # Генеруємо ключ
+      - name: Download Godot and Export Templates
+        run: |
+          # Завантажуємо Godot для Linux (x86_64)
+          wget https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_linux.x86_64.zip
+          unzip Godot_v4.2.2-stable_linux.x86_64.zip
+          mv Godot_v4.2.2-stable_linux.x86_64 godot
+          chmod +x godot
+
+          # Завантажуємо офіційні шаблони експорту
+          wget https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_export_templates.tpz
+          mkdir -p ~/.local/share/godot/templates/4.2.2.stable
+          unzip Godot_v4.2.2-stable_export_templates.tpz -d /tmp/templates
+          mv /tmp/templates/templates/* ~/.local/share/godot/templates/4.2.2.stable/
+
+      - name: Setup Keystore
+        run: |
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12 -noprompt
 
-      - name: Pre-import and Install Template
+      - name: Install Android Build Template
         run: |
-          # Спершу імпортуємо проєкт, щоб створити кеш
-          godot --headless --path godot_project --verbose --import || true
-          # Тепер встановлюємо шаблон з логами
-          godot --headless --path godot_project --verbose --install-android-build-template
+          # Вказуємо Godot, де знаходиться Android SDK на серверах GitHub
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
+          ./godot --headless --path godot_project --install-android-build-template || true
 
       - name: Build AAR
         run: |
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
           mkdir -p godot_project/build
-          godot --headless --path godot_project --verbose --export-release "Android AAR" build/DynamicAIAvatar.aar
+          ./godot --headless --path godot_project --export-release "Android AAR" build/DynamicAIAvatar.aar
 
       - name: Upload AAR Artifact
         uses: actions/upload-artifact@v4

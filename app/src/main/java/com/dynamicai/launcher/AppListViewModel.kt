@@ -37,6 +37,32 @@ import kotlinx.coroutines.launch
 
 class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
+    companion object {
+        @Volatile private var sharedLlm: LiteRtLlmEngine? = null
+        @Volatile private var sharedChatEngine: ChatEngine? = null
+        @Volatile private var sharedDownloader: ModelDownloader? = null
+
+        fun getSharedLlm(context: android.content.Context): LiteRtLlmEngine =
+            sharedLlm ?: synchronized(this) {
+                sharedLlm ?: LiteRtLlmEngine(context.applicationContext).also { sharedLlm = it }
+            }
+
+        fun getSharedChatEngine(context: android.content.Context): ChatEngine =
+            sharedChatEngine ?: synchronized(this) {
+                sharedChatEngine ?: ChatEngine(
+                    context.applicationContext,
+                    getSharedLlm(context),
+                    WebSearchRepository()
+                ).also { sharedChatEngine = it }
+            }
+
+        fun getSharedDownloader(context: android.content.Context): ModelDownloader =
+            sharedDownloader ?: synchronized(this) {
+                sharedDownloader ?: ModelDownloader(context.applicationContext).also { sharedDownloader = it }
+            }
+    }
+
+
     private val repo = AppRepository(app)
     private val dockStorage = DockStorage(app)
     private val parser = CommandParser()
@@ -51,14 +77,14 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     val shizukuManager = ShizukuManager(app)
     private val weatherRepo by lazy { WeatherRepository(app) }
 
-    val llm by lazy { LiteRtLlmEngine(app) }
+    val llm by lazy { getSharedLlm(app) }
     val tts by lazy { TtsManager(app) }
-    val downloader by lazy { ModelDownloader(app) }
+    val downloader by lazy { getSharedDownloader(app) }
 
     private val _downloadProgress = MutableStateFlow<ModelDownloader.Progress?>(null)
     val downloadProgress: StateFlow<ModelDownloader.Progress?> = _downloadProgress.asStateFlow()
     private val llmAgent by lazy { LlmAgent(llm) }
-    val chatEngine by lazy { ChatEngine(app, llm, WebSearchRepository()) }
+    val chatEngine by lazy { getSharedChatEngine(app) }
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
     val apps: StateFlow<List<AppInfo>> = _apps.asStateFlow()

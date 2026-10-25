@@ -151,13 +151,13 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
         }
     }
 
-    // Обробка pendingQuery — коли STT розпізнав
+    // Обробка STT через Channel
     LaunchedEffect(Unit) {
         queryChannel.receiveAsFlow().collect { text ->
-        resetAutoStop()
-        messages = messages + ChatMessage("user", text)
-        voiceState = VoiceState.THINKING
-        try {
+            resetAutoStop()
+            messages = messages + ChatMessage("user", text)
+            voiceState = VoiceState.THINKING
+            
             // Чекаємо, поки LLM завантажиться в пам'ять
             if (!vm.ensureLlmLoaded()) {
                 val errMsg = "Модель ШІ не завантажена. Завантажте її в налаштуваннях."
@@ -171,28 +171,27 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                         }
                     }
                 }
-                return@LaunchedEffect
+                return@collect 
             }
 
-            val answer = vm.chatEngine.answer(text)
-            messages = messages + ChatMessage("assistant", answer)
-            voiceState = VoiceState.SPEAKING
-            vm.tts.speakWithCallback(answer) {
-                scope.launch(Dispatchers.Main) {
-                    if (voiceState == VoiceState.SPEAKING) {
-                        voiceState = VoiceState.LISTENING
-                        startListening()
+            try {
+                val answer = vm.chatEngine.answer(text)
+                messages = messages + ChatMessage("assistant", answer)
+                voiceState = VoiceState.SPEAKING
+                vm.tts.speakWithCallback(answer) {
+                    scope.launch(Dispatchers.Main) {
+                        if (voiceState == VoiceState.SPEAKING) {
+                            voiceState = VoiceState.LISTENING
+                            startListening()
+                        }
                     }
                 }
+            } catch (t: Throwable) {
+                errorText = "Помилка: ${t.message}"
+                voiceState = VoiceState.LISTENING
+                startListening()
             }
-        } catch (t: Throwable) {
-            errorText = "Помилка: ${t.message}"
-            voiceState = VoiceState.LISTENING
-            startListening()
         }
-    }
-
-    } // кінець collect
     }
 
     // Start listening when activity opens

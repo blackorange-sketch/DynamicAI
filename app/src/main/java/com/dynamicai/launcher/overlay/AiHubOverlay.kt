@@ -128,6 +128,7 @@ object AiHubOverlay {
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewModel?, onClose: () -> Unit) {
     var query by remember { mutableStateOf("") }
     var aiResponse by remember { mutableStateOf("") }
@@ -186,9 +187,10 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
             }
 
             // Чіпи швидких дій
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ActionChip("Пошук", Color(0xFF4285F4)) {
                     Toast.makeText(ctx, "Пошук...", Toast.LENGTH_SHORT).show()
@@ -217,7 +219,27 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                         onCancel = { }
                     )
                 }
-                ActionChip("AI", Color(0xFF2196F3)) {
+                ActionChip("🎙️ Розмова", Color(0xFFE91E63)) {
+                    try {
+                        ctx.startActivity(android.content.Intent(ctx, com.dynamicai.launcher.VoiceChatActivity::class.java).apply {
+                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        })
+                    } catch (t: Throwable) {
+                        android.util.Log.e("AiHubOverlay", "VoiceChat failed: ${t.message}", t)
+                    }
+                    onClose()
+                }
+                ActionChip("🎮 Wild Rift", Color(0xFF9C27B0)) {
+                    try {
+                        ctx.startActivity(android.content.Intent(ctx, com.dynamicai.launcher.WildRiftAdvisorActivity::class.java).apply {
+                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        })
+                    } catch (t: Throwable) {
+                        android.util.Log.e("AiHubOverlay", "Wild Rift launch failed: ${t.message}", t)
+                    }
+                    onClose()
+                }
+                                ActionChip("AI", Color(0xFF2196F3)) {
                     if (query.isNotBlank() && vm != null) {
                         isLoading = true
                         aiResponse = ""

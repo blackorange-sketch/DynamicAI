@@ -19,13 +19,13 @@ jobs:
       - name: Download Godot and Export Templates
         run: |
           # Завантажуємо Godot для Linux (x86_64)
-          wget https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.3-stable_linux.x86_64.zip
+          wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
           unzip Godot_v4.3-stable_linux.x86_64.zip
           mv Godot_v4.3-stable_linux.x86_64 godot
           chmod +x godot
 
           # Завантажуємо офіційні шаблони експорту
-          wget https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.3-stable_export_templates.tpz
+          wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz
           mkdir -p ~/.local/share/godot/templates/4.3.stable
           unzip Godot_v4.3-stable_export_templates.tpz -d /tmp/templates
           mv /tmp/templates/templates/* ~/.local/share/godot/templates/4.3.stable/

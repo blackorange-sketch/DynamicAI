@@ -60,6 +60,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     var voiceState by remember { mutableStateOf(VoiceState.LISTENING) }
     var webSearchEnabled by remember { mutableStateOf(true) }
     var partialText by remember { mutableStateOf("") }
+    var pendingQuery by remember { mutableStateOf<String?>(null) }
     var errorText by remember { mutableStateOf<String?>(null) }
 
     val recognizerRef = remember { mutableStateOf<SpeechRecognizer?>(null) }
@@ -86,40 +87,15 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     }
     LaunchedEffect(Unit) { resetAutoStop() }
 
-    fun handleUserQuery(text: String) {
-        if (text.isBlank()) return
-        resetAutoStop()
-        messages = messages + ChatMessage("user", text)
-        voiceState = VoiceState.THINKING
-        scope.launch {
-            try {
-                val answer = vm.chatEngine.answer(text)
-                messages = messages + ChatMessage("assistant", answer)
-                voiceState = VoiceState.SPEAKING
-                vm.tts.speakWithCallback(answer) {
-                    scope.launch(Dispatchers.Main) {
-                        if (voiceState == VoiceState.SPEAKING) {
-                            voiceState = VoiceState.LISTENING
-                            startListening()
-                        }
-                    }
-                }
-            } catch (t: Throwable) {
-                errorText = "Помилка: ${t.message}"
-                voiceState = VoiceState.LISTENING
-            }
-        }
-    }
 
-    fun startListening() {
-        if (listeningRef.value) return
-        val recognizer = recognizerRef.value ?: SpeechRecognizer.createSpeechRecognizer(ctx).also {
-            recognizerRef.value = it
-        }
-        recognizer.setRecognitionListener(object : RecognitionListener {
+
+
+
+    // STT listener factory
+    val sttListener = remember {
+        object : RecognitionListener {
             override fun onReadyForSpeech(p: Bundle?) {}
             override fun onBeginningOfSpeech() {
-                // Barge-in: if TTS speaking, stop it
                 if (voiceState == VoiceState.SPEAKING) {
                     vm.tts.stop()
                     voiceState = VoiceState.LISTENING
@@ -130,18 +106,13 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
             override fun onEndOfSpeech() {}
             override fun onError(e: Int) {
                 listeningRef.value = false
-                if (voiceState == VoiceState.LISTENING) {
-                    scope.launch { delay(300); if (voiceState == VoiceState.LISTENING) startListening() }
-                }
             }
             override fun onResults(results: Bundle?) {
                 listeningRef.value = false
                 val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
                 partialText = ""
                 if (text.isNotBlank()) {
-                    handleUserQuery(text)
-                } else if (voiceState == VoiceState.LISTENING) {
-                    scope.launch { delay(300); startListening() }
+                    pendingQuery = text
                 }
             }
             override fun onPartialResults(partial: Bundle?) {
@@ -153,7 +124,15 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 }
             }
             override fun onEvent(e: Int, p: Bundle?) {}
-        })
+        }
+    }
+
+    fun startListening() {
+        if (listeningRef.value) return
+        val recognizer = recognizerRef.value ?: SpeechRecognizer.createSpeechRecognizer(ctx).also {
+            recognizerRef.value = it
+        }
+        recognizer.setRecognitionListener(sttListener)
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
@@ -169,8 +148,31 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
         }
     }
 
-    startListeningRef.value = ::startListening
-
+    // Обробка pendingQuery — коли STT розпізнав
+    LaunchedEffect(pendingQuery) {
+        val text = pendingQuery ?: return@LaunchedEffect
+        pendingQuery = null
+        resetAutoStop()
+        messages = messages + ChatMessage("user", text)
+        voiceState = VoiceState.THINKING
+        try {
+            val answer = vm.chatEngine.answer(text)
+            messages = messages + ChatMessage("assistant", answer)
+            voiceState = VoiceState.SPEAKING
+            vm.tts.speakWithCallback(answer) {
+                scope.launch(Dispatchers.Main) {
+                    if (voiceState == VoiceState.SPEAKING) {
+                        voiceState = VoiceState.LISTENING
+                        startListening()
+                    }
+                }
+            }
+        } catch (t: Throwable) {
+            errorText = "Помилка: ${t.message}"
+            voiceState = VoiceState.LISTENING
+            startListening()
+        }
+    }
 
     // Start listening when activity opens
     LaunchedEffect(Unit) { startListening() }

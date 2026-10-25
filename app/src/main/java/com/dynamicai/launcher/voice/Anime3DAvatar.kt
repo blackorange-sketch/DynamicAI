@@ -35,12 +35,12 @@ fun Anime3DAvatar(modifier: Modifier = Modifier) {
             val node = ModelNode(
                 modelInstance = instance,
                 scaleToUnits = 1.2f,
-                autoAnimate = true, // Автоматично відтворювати анімацію з файлу
-                animationLoop = true // Зациклити
+                autoAnimate = true // Тільки цей параметр
             )
             node
         } catch (e: Exception) {
-            errorText = "Помилка: \${e.javaClass.simpleName} - \${e.message}"
+            // Використовуємо конкатенацію, щоб уникнути проблем з екрануванням
+            errorText = "Помилка: " + e.javaClass.simpleName + " - " + e.message
             android.util.Log.e("Anime3D", "Load failed", e)
             null
         }

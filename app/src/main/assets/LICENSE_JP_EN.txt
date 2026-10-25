@@ -1,0 +1,77 @@
+白雪セレナ Free VRM v1.0
+利用条件サマリー / Usage Terms Summary
+
+この文書は、配布VRMに埋め込まれているVRM 1.0メタデータに合わせた
+利用条件の読みやすい要約です。
+最終的な条件は、配布元の商品ページおよびVRM内メタデータを優先してください。
+
+========================================
+日本語
+========================================
+
+■ 利用者
+一般利用可
+
+■ 改変
+可
+
+■ 再配布
+不可
+改変の有無を問わず、モデルデータそのものの再配布・再販売は禁止です。
+
+■ 商用利用
+可
+VRMメタデータでは法人利用を含む設定です。
+
+■ クレジット
+不要
+任意で表記する場合：
+Project Corelin / ProjectCorelinjp
+
+■ 禁止用途
+・過度に暴力的な用途
+・過度に性的な用途
+・政治・宗教目的での利用
+・反社会的用途
+・差別、憎悪、ヘイトを目的とする用途
+・モデルデータそのものの再配布 / 再販売
+
+© ProjectCorelinjp
+
+========================================
+ENGLISH
+========================================
+
+This document is a human-readable summary of the usage settings
+embedded in the distributed VRM 1.0 metadata.
+
+Final conditions are governed by the distribution page and the VRM metadata.
+
+Avatar use:
+Allowed for everyone.
+
+Modification:
+Allowed.
+
+Redistribution:
+Not allowed.
+Redistribution or resale of the model data itself is prohibited,
+whether modified or unmodified.
+
+Commercial use:
+Allowed, including corporate use, according to the embedded VRM metadata.
+
+Credit:
+Not required.
+Optional credit:
+Project Corelin / ProjectCorelinjp
+
+Prohibited uses:
+- Excessively violent use
+- Excessively sexual use
+- Political or religious use
+- Antisocial use
+- Hate or discriminatory use
+- Redistribution or resale of the model data itself
+
+© ProjectCorelinjp

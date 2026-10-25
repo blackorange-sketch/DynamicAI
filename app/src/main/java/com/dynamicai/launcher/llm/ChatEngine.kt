@@ -14,6 +14,11 @@ class ChatEngine(
     private val koleoClient = KoleoClient()
     private val translationRepo = TranslationRepository()
     private val wildRiftRepo = com.dynamicai.launcher.data.WildRiftRepository(context)
+    private val smalltalkPrompt: String by lazy {
+        try {
+            context.assets.open("llm/smalltalk_prompt.txt").bufferedReader().use { it.readText() }
+        } catch (_: Exception) { "" }
+    }
 
     companion object {
         private const val TAG = "ChatEngine"
@@ -147,7 +152,9 @@ class ChatEngine(
             }
 
             val prompt = buildString {
-                append("Ти — корисний AI-асистент у лаунчері Android. Відповідай українською мовою, коротко (максимум 2-3 речення).\n\n")
+                append(smalltalkPrompt)
+                append("\n\n[USER QUESTION]\n")
+                append("Відповідай українською мовою, коротко (максимум 2-3 речення).\n\n")
                 if (context.isNotBlank()) {
                     append("Ось інформація з інтернету, яка може допомогти:\n")
                     append(context)

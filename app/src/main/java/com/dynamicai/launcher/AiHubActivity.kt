@@ -79,6 +79,7 @@ class AiHubActivity : ComponentActivity() {
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) {
     var query by remember { mutableStateOf("") }
     var aiResponse by remember { mutableStateOf("") }
@@ -213,9 +214,10 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                 }
 
                 // Чіпи
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     ActionChip("Пошук", Color(0xFF4285F4)) {
                         if (query.isNotBlank()) {

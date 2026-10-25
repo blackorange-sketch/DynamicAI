@@ -169,6 +169,8 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
         }
     }
 
+    startListeningRef.value = ::startListening
+
 
     // Start listening when activity opens
     LaunchedEffect(Unit) { startListening() }

@@ -24,9 +24,10 @@ import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import kotlin.math.sin
 
-// Допоміжна функція для пошуку кісток
+// Допоміжна функція для пошуку кісток (з перевіркою на null)
 fun findBone(node: Node, names: List<String>): Node? {
-    if (names.any { node.name.contains(it, ignoreCase = true) }) return node
+    val nodeName = node.name ?: ""
+    if (names.any { nodeName.contains(it, ignoreCase = true) }) return node
     for (child in node.childNodes) {
         val found = findBone(child, names)
         if (found != null) return found
@@ -66,10 +67,11 @@ fun Anime3DAvatar(modifier: Modifier = Modifier) {
         LaunchedEffect(modelNode) {
             childNodes.add(modelNode)
             
-            // Збираємо всі назви кісток у логи (щоб знати точні назви для майбутнього)
+            // Збираємо всі назви кісток у логи (безпечно для null)
             val allBones = mutableListOf<String>()
             fun collectNames(n: Node) {
-                if (n.name.isNotEmpty()) allBones.add(n.name)
+                val name = n.name
+                if (!name.isNullOrEmpty()) allBones.add(name)
                 n.childNodes.forEach { collectNames(it) }
             }
             collectNames(modelNode)

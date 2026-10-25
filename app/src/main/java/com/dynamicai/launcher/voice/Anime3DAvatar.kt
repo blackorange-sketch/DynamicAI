@@ -48,11 +48,12 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
     val modelNode = remember {
         try {
             val instance = modelLoader.createModelInstance("anime_girl.glb")
-            val node = ModelNode(modelInstance = instance, scaleToUnits = 2.0f)
+            // Зменшуємо масштаб, щоб влазила в екран
+            val node = ModelNode(modelInstance = instance, scaleToUnits = 1.5f)
             
-            // Поворот (якщо дивиться спиною, зміни 180f на 0f)
+            // Повертаємо обличчям до нас і ставимо рівно в центр (0, 0, 0)
             node.rotation = Rotation(y = 180f)
-            node.position = Position(0f, -1.5f, 0f)
+            node.position = Position(0f, 0f, 0f)
             
             node
         } catch (e: Exception) {
@@ -77,9 +78,9 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
             while (true) {
                 withFrameNanos { _ ->
                     val speed = when(voiceState) {
-                        VoiceState.SPEAKING -> 3f  // Швидший танець
-                        VoiceState.THINKING -> 1f  // Повільні роздуми
-                        else -> 1.5f               // Спокійний рух
+                        VoiceState.SPEAKING -> 3f
+                        VoiceState.THINKING -> 1f
+                        else -> 1.5f
                     }
                     time += 0.016f * speed
                     
@@ -87,47 +88,34 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
                     
                     when (voiceState) {
                         VoiceState.SPEAKING -> {
-                            // Танець/жестикуляція під час розмови
                             chest?.rotation = Rotation(x = breath, z = sin(time * 2f) * 5f)
-                            head?.rotation = Rotation(
-                                x = sin(time * 4f) * 5f, 
-                                y = sin(time * 3f) * 10f,
-                                z = sin(time * 5f) * 5f
-                            )
+                            head?.rotation = Rotation(x = sin(time * 4f) * 5f, y = sin(time * 3f) * 10f, z = sin(time * 5f) * 5f)
                             hips?.rotation = Rotation(z = sin(time * 3f) * 8f)
-                            
-                            // Махи руками
                             leftArm?.rotation = Rotation(z = -65f + sin(time * 3f) * 30f, x = sin(time * 3f) * 20f)
                             rightArm?.rotation = Rotation(z = 65f - sin(time * 3f) * 30f, x = -sin(time * 3f) * 20f)
                             leftElbow?.rotation = Rotation(y = sin(time * 3f) * 20f)
                             rightElbow?.rotation = Rotation(y = -sin(time * 3f) * 20f)
                         }
                         VoiceState.THINKING -> {
-                            // Задумливі рухи
                             chest?.rotation = Rotation(x = breath * 0.5f)
                             head?.rotation = Rotation(x = -10f + sin(time * 1f) * 3f, z = 15f)
                             hips?.rotation = Rotation(z = sin(time * 1f) * 2f)
-                            
-                            leftArm?.rotation = Rotation(z = -70f) // Руки опущені
+                            leftArm?.rotation = Rotation(z = -70f)
                             rightArm?.rotation = Rotation(z = 70f)
-                            leftElbow?.rotation = Rotation(y = 60f) // Рука біля підборіддя
+                            leftElbow?.rotation = Rotation(y = 60f)
                             rightElbow?.rotation = Rotation(y = -60f)
                         }
                         VoiceState.LISTENING -> {
-                            // Уважне слухання
                             chest?.rotation = Rotation(x = breath)
                             head?.rotation = Rotation(x = sin(time * 1.5f) * 2f, z = 5f)
                             hips?.rotation = Rotation(z = sin(time * 1.5f) * 2f)
-                            
                             leftArm?.rotation = Rotation(z = -65f)
                             rightArm?.rotation = Rotation(z = 65f)
                         }
                         else -> {
-                            // Стан спокою (танцювальне погойдування)
                             chest?.rotation = Rotation(x = breath)
                             head?.rotation = Rotation(y = sin(time * 1.2f) * 6f)
                             hips?.rotation = Rotation(z = sin(time * 1.5f) * 4f)
-                            
                             leftArm?.rotation = Rotation(z = -65f + sin(time * 1.5f) * 10f)
                             rightArm?.rotation = Rotation(z = 65f - sin(time * 1.5f) * 10f)
                         }
@@ -139,12 +127,13 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
         Scene(
             modifier = modifier
                 .fillMaxSize()
-                .pointerInput(Unit) { detectTapGestures { } }, // Блокуємо дотики
+                .pointerInput(Unit) { detectTapGestures { } },
             engine = engine,
             modelLoader = modelLoader,
             childNodes = childNodes,
             cameraNode = rememberCameraNode(engine) {
-                position = Position(0f, 1.2f, 3.0f)
+                // Відсуваємо камеру трохи далі і опускаємо на рівень пояса
+                position = Position(0f, 1.0f, 4.5f)
             }
         )
     } else {

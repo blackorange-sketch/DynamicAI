@@ -67,6 +67,7 @@ kotlin {
 }
 
 dependencies {
+    implementation("org.godotengine:godot:4.3.0")
     implementation("io.github.sceneview:sceneview:2.2.1")
     val composeBom = platform("androidx.compose:compose-bom:2026.02.01")
     implementation(composeBom)

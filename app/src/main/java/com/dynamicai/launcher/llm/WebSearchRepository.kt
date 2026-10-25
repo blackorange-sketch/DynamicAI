@@ -36,32 +36,21 @@ class WebSearchRepository {
     }
 
     private suspend fun searchJoke(): SearchResult = withContext(Dispatchers.IO) {
-        try {
-            val url = "https://v2.jokeapi.dev/joke/Any?lang=en&type=single,twopart"
-            val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 8_000
-                readTimeout = 8_000
-                setRequestProperty("User-Agent", "DynamicAI/1.0")
-            }
-            val body = conn.inputStream.bufferedReader().use { it.readText() }
-            conn.disconnect()
-            val json = JSONObject(body)
-            
-            val jokeText = if (json.optString("type") == "single") {
-                json.optString("joke", "")
-            } else {
-                val setup = json.optString("setup", "")
-                val delivery = json.optString("delivery", "")
-                "$setup\n$delivery"
-            }
-            
-            lastError = "Joke fetched OK"
-            SearchResult("Анекдот: $jokeText", "", emptyList())
-        } catch (t: Throwable) {
-            lastError = "JokeAPI failed: ${t.message}"
-            Log.e(TAG, "Joke search failed", t)
-            SearchResult("", "", emptyList())
-        }
+        val jokes = listOf(
+            "Програміст ставить на ніч два склянки: одну з водою (якщо захоче пити), а другу порожню (якщо не захоче).",
+            "— Як називається людина, яка знає, де знаходиться кінець світу? — Шукач пригод. — А як називається людина, яка знає, де знаходиться початок кінця світу? — Програміст, який знайшов баг у чужому коді.",
+            "Зустрічаються два програмісти. — Ти знаєш, що таке рекурсія? — Щоб зрозуміти, що таке рекурсія, спочатку треба зрозуміти, що таке рекурсія.",
+            "— Чому програмісти плутають Хелловін і Різдво? — Тому що Oct 31 == Dec 25.",
+            "Засновник Apple помер і потрапив до раю. Бог каже: — Стива, я чув ти дуже любив яблука. Ось тобі золоте. Стив бере його, крутить у руках і питає: — А де ти взяв таку круту шліфовку?",
+            "Найкращий спосіб приховати від дружини покупку нового iPhone — покласти його в коробку від пилососа. Вона туди ніколи не загляне.",
+            "— Докторе, я постійно бачу як у мене на телефоні з'являється 1% заряду. Я вмираю? — Так, через 1 хвилину.",
+            "Купив кінь копита. Тепер ходить щасливий і цокає.",
+            "— Чому у кави завжди поганий настрій? — Бо її постійно заварюють!",
+            "Йде людина по пустелі, бачить — лежить на піску нова сим-карта. Взяв він її, вставив у телефон, а там SMS: «Вітаємо з тим, що ви приєдналися до оператора «Сахара-Телеком». Щоб активувати номер, наберіть 1000 доларів і закопайте в пісок»."
+        )
+        val randomJoke = jokes.random()
+        lastError = "Local Joke OK"
+        SearchResult("Анекдот: " + randomJoke, "", emptyList())
     }
 
     private suspend fun searchWikipedia(query: String): SearchResult = withContext(Dispatchers.IO) {

@@ -22,6 +22,7 @@ import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.rememberCameraNode
 import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberEnvironment
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberNodes
 import kotlin.math.sin
@@ -41,26 +42,24 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     val childNodes = rememberNodes()
+    val environment = rememberEnvironment(engine) {
+        // Створюємо оточення з тінями та підсвіткою
+        createHDREnvironment()
+    }
     
     var errorText by remember { mutableStateOf<String?>(null) }
 
     val modelNode = remember {
         try {
             val instance = modelLoader.createModelInstance("anime_girl.glb")
-            val node = ModelNode(modelInstance = instance, scaleToUnits = 1.5f)
+            val node = ModelNode(
+                modelInstance = instance, 
+                scaleToUnits = 1.5f
+            )
             
             node.rotation = Rotation(y = 180f)
             node.position = Position(0f, -1.2f, 0f)
             
-            // Робимо матеріали менш блискучими (прибираємо ефект пластику)
-            try {
-                instance.materialInstances.forEach { matInst ->
-                    val mat = matInst.material
-                    mat.metallicFactor = 0.0f
-                    mat.roughnessFactor = 1.0f
-                }
-            } catch (_: Throwable) {}
-
             node
         } catch (e: Exception) {
             errorText = "Помилка: " + e.javaClass.simpleName + " - " + e.message
@@ -84,7 +83,6 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
             while (true) {
                 withFrameNanos { _ ->
                     time += 0.016f
-                    
                     val breath = sin(time * 1.5f) * 1.5f 
                     val sway = sin(time * 0.8f) * 2.0f
                     
@@ -128,17 +126,15 @@ fun Anime3DAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
         Scene(
             modifier = modifier
                 .fillMaxSize()
-                // Цей спосіб перехоплює всі дотики, не даючи камері рухатися
                 .pointerInput(Unit) {
                     awaitPointerEventScope {
-                        while (true) {
-                            awaitPointerEvent().changes.forEach { it.consume() }
-                        }
+                        while (true) { awaitPointerEvent().changes.forEach { it.consume() } }
                     }
                 },
             engine = engine,
             modelLoader = modelLoader,
             childNodes = childNodes,
+            environment = environment, // Підключаємо оточення з тінями
             cameraNode = rememberCameraNode(engine) {
                 position = Position(0f, 1.0f, 3.5f)
             }

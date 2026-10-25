@@ -271,18 +271,40 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
             }
 
             // Status + partial
-            Text(
-                text = when (voiceState) {
-                    VoiceState.LISTENING -> if (partialText.isNotBlank()) "🎤 $partialText" else "🎤 Слухаю…"
-                    VoiceState.THINKING -> "🧠 Думаю…"
-                    VoiceState.SPEAKING -> "🔊 Відповідаю…"
-                    VoiceState.IDLE -> ""
-                },
-                color = Color.White.copy(alpha = 0.8f),
-                fontSize = 14.sp,
+            androidx.compose.foundation.layout.Row(
                 modifier = Modifier.fillMaxWidth(),
-                fontWeight = FontWeight.Medium
-            )
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Text(
+                    text = when (voiceState) {
+                        VoiceState.LISTENING -> if (partialText.isNotBlank()) "🎤 $partialText" else "🎤 Слухаю…"
+                        VoiceState.THINKING -> "🧠 Думаю…"
+                        VoiceState.SPEAKING -> "🔊 Відповідаю…"
+                        VoiceState.IDLE -> ""
+                    },
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 14.sp,
+                    modifier = Modifier.weight(1f),
+                    fontWeight = FontWeight.Medium
+                )
+                
+                // Кнопка з'являється лише під час мовлення ШІ
+                if (voiceState == VoiceState.SPEAKING) {
+                    Text(
+                        text = "⏹ Зупинити",
+                        color = Color(0xFFFF8A80),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .clickable {
+                                vm.tts.stop()
+                                voiceState = VoiceState.LISTENING
+                                startListening()
+                            }
+                            .padding(8.dp)
+                    )
+                }
+            }
             if (errorText != null) {
                 Text(errorText!!, color = Color(0xFFFF8A80), fontSize = 12.sp)
             }

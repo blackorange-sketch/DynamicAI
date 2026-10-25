@@ -94,7 +94,7 @@ fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 .padding(16.dp)
         ) {
             Text(
-                myChampion?.let { "${it.id} — ${it.displayRoles}" } ?: "Обрати…",
+                myChampion?.let { "${repo.localizedChampionName(it)} — ${it.displayRoles}" } ?: "Обрати…",
                 color = if (myChampion != null) Color.White else Color.White.copy(alpha = 0.4f),
                 fontSize = 15.sp
             )
@@ -204,6 +204,7 @@ fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
         ChampionPickerDialog(
             title = "Твій чемпіон",
             champions = champions,
+            repo = repo,
             onPick = { myChampion = it; showMyChampionPicker = false },
             onDismiss = { showMyChampionPicker = false }
         )
@@ -214,6 +215,7 @@ fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
         ChampionPickerDialog(
             title = "Додати ворога",
             champions = champions.filter { it !in enemies },
+            repo = repo,
             onPick = { if (enemies.size < 5) enemies = enemies + it; showEnemyPicker = false },
             onDismiss = { showEnemyPicker = false }
         )
@@ -234,13 +236,14 @@ private fun IconButtonBack(onClick: () -> Unit) {
 private fun ChampionPickerDialog(
     title: String,
     champions: List<Champion>,
+    repo: WildRiftRepository,
     onPick: (Champion) -> Unit,
     onDismiss: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     val filtered = remember(query, champions) {
         if (query.isBlank()) champions
-        else champions.filter { it.id.contains(query, ignoreCase = true) }
+        else champions.filter { it.id.contains(query, ignoreCase = true) || repo.localizedChampionName(it).contains(query, ignoreCase = true) }
     }
     
     AlertDialog(

@@ -112,11 +112,7 @@ class WildRiftRepository(private val context: Context) {
     /** Отримати російську назву чемпіона (fallback — англ). */
     fun localizedChampionName(champion: Champion): String {
         ensureLoaded()
-        // Треба знайти key чемпіона через heroes.json — але у Champion немає key
-        // Використовуємо мапінг через id
-        return ruChampionsByKey.values.firstOrNull { it.isNotBlank() }
-            ?.let { champion.id }  // fallback
-            ?: champion.id
+        return ruChampionsByKey[champion.key] ?: champion.id
     }
 
     /** Отримати російську назву предмета (fallback — англ). */

@@ -100,6 +100,13 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                     aiResponse = ""
                     CoroutineScope(Dispatchers.Main).launch {
                         try {
+                            aiResponse = "🧠 Завантажую LLM…"
+                            val loaded = vm.ensureLlmLoaded()
+                            if (!loaded) {
+                                aiResponse = "LLM не завантажена"
+                                return@launch
+                            }
+                            aiResponse = ""
                             vm.chatEngine.answerStreaming(query) { token -> aiResponse += token }
                         } catch (t: Throwable) {
                             aiResponse += "\nПомилка: ${t.message}"
@@ -238,6 +245,13 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                             aiResponse = ""
                             CoroutineScope(Dispatchers.Main).launch {
                                 try {
+                                    aiResponse = "🧠 Завантажую LLM…"
+                                    val loaded = vm.ensureLlmLoaded()
+                                    if (!loaded) {
+                                        aiResponse = "LLM не завантажена"
+                                        return@launch
+                                    }
+                                    aiResponse = ""
                                     vm.chatEngine.answerStreaming(query) { token -> aiResponse += token }
                                 } catch (t: Throwable) {
                                     aiResponse += "\nПомилка: ${t.message}"

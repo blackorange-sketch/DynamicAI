@@ -148,7 +148,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Викликається лениво при першому реальному запиті LLM. */
-    private suspend fun ensureLlmLoaded(): Boolean {
+    suspend fun ensureLlmLoaded(): Boolean {
         if (llm.isReady) return true
         if (!downloader.isDownloaded) return false
         return try {
@@ -443,6 +443,8 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         // Питання → ChatEngine (LLM + Web Search)
         if (cmd is com.dynamicai.launcher.command.Command.AskQuestion) {
             viewModelScope.launch {
+                _response.value = "🧠 Завантажую LLM…"
+                ensureLlmLoaded()
                 _response.value = "🔍 Шукаю…"
                 val answer = chatEngine.answer(cmd.query)
                 _response.value = answer

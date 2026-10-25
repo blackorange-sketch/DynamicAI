@@ -13,6 +13,7 @@ class ChatEngine(
     private val newsRepo = NewsRepository()
     private val koleoClient = KoleoClient()
     private val translationRepo = TranslationRepository()
+    private val wildRiftRepo = com.dynamicai.launcher.data.WildRiftRepository(context)
 
     companion object {
         private const val TAG = "ChatEngine"
@@ -165,6 +166,15 @@ class ChatEngine(
 
     private suspend fun getSmartContext(question: String): String {
         val q = question.lowercase()
+
+        // Wild Rift — поради щодо предметів
+        if (q.contains("wild rift") || q.contains("item") || q.contains("build") ||
+            q.contains("counter") || q.contains("проти")) {
+            val wildRiftContext = wildRiftRepo.buildContextForQuery(question)
+            if (wildRiftContext.isNotBlank()) {
+                return wildRiftContext
+            }
+        }
         
         // Погода → Open-Meteo
         if (q.contains("погод") || q.contains("weather") ||

@@ -157,6 +157,22 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
         messages = messages + ChatMessage("user", text)
         voiceState = VoiceState.THINKING
         try {
+            // Чекаємо, поки LLM завантажиться в пам'ять
+            if (!vm.ensureLlmLoaded()) {
+                val errMsg = "Модель ШІ не завантажена. Завантажте її в налаштуваннях."
+                messages = messages + ChatMessage("assistant", errMsg)
+                voiceState = VoiceState.SPEAKING
+                vm.tts.speakWithCallback(errMsg) {
+                    scope.launch(Dispatchers.Main) {
+                        if (voiceState == VoiceState.SPEAKING) {
+                            voiceState = VoiceState.LISTENING
+                            startListening()
+                        }
+                    }
+                }
+                return@LaunchedEffect
+            }
+
             val answer = vm.chatEngine.answer(text)
             messages = messages + ChatMessage("assistant", answer)
             voiceState = VoiceState.SPEAKING

@@ -12,13 +12,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Environment
+        run: |
+          mkdir -p ~/.local/share/godot/templates
+          cp -r /root/.local/share/godot/templates/4.2.2.stable ~/.local/share/godot/templates/ || true
+          # Генеруємо тимчасовий ключ для підпису Android
+          keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12
+
+      - name: Install Android Build Template
+        run: |
+          godot --headless --path godot_project --install-android-build-template
+
       - name: Build AAR
         run: |
-          mkdir -p build
-          godot --headless --export-release "Android AAR" build/DynamicAIAvatar.aar
+          mkdir -p godot_project/build
+          godot --headless --path godot_project --export-release "Android AAR" build/DynamicAIAvatar.aar
 
       - name: Upload AAR Artifact
         uses: actions/upload-artifact@v4
         with:
           name: DynamicAIAvatar-aar
-          path: build/DynamicAIAvatar.aar
+          path: godot_project/build/DynamicAIAvatar.aar

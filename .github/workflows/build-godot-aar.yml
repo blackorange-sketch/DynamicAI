@@ -33,11 +33,14 @@ jobs:
         run: |
           keytool -keyalg RSA -genkeypair -alias androiddebugkey -keypass android -keystore debug.keystore -storepass android -dname "CN=Android Debug,O=Android,C=US" -validity 9999 -deststoretype pkcs12 -noprompt
 
-      - name: Manually Install Android Build Template
+      - name: Install Android Build Template (Manual)
         run: |
-          # ОБХІД ЗАВИСАННЯ: Розпаковуємо шаблон вручну замість запуску godot --install...
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
           mkdir -p godot_project/android/build
-          unzip -q ~/.local/share/godot/export_templates/4.3.stable/android_source.zip -d godot_project/android/
+          # Розпаковуємо android_source.zip у правильну папку
+          unzip -q ~/.local/share/godot/export_templates/4.3.stable/android_source.zip -d godot_project/android/build/
+          # Створюємо файл .build_version з точною версією Godot
+          echo -n "4.3.stable" > godot_project/android/.build_version
 
       - name: Build AAR
         run: |

@@ -241,10 +241,13 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                     }
                     ActionChip("🎮 Wild Rift", Color(0xFF9C27B0)) {
                         try {
-                            ctx.startActivity(android.content.Intent(ctx, com.dynamicai.launcher.WildRiftAdvisorActivity::class.java).apply {
+                            val app = vm.getApplication<android.app.Application>()
+                            app.startActivity(android.content.Intent(app, com.dynamicai.launcher.WildRiftAdvisorActivity::class.java).apply {
                                 addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                             })
-                        } catch (_: Throwable) {}
+                        } catch (t: Throwable) {
+                            android.util.Log.e("AiHub", "Wild Rift launch failed: ${t.message}", t)
+                        }
                         onClose()
                     }
                     ActionChip("AI", Color(0xFF2196F3)) {

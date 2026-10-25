@@ -37,7 +37,7 @@ jobs:
         run: |
           # ОБХІД ЗАВИСАННЯ: Розпаковуємо шаблон вручну замість запуску godot --install...
           mkdir -p godot_project/android/build
-          unzip ~/.local/share/godot/export_templates/4.3.stable/android_source.zip -d godot_project/android/build/
+          unzip -q ~/.local/share/godot/export_templates/4.3.stable/android_source.zip -d godot_project/android/
 
       - name: Build AAR
         run: |

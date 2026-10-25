@@ -25,7 +25,6 @@ jobs:
           chmod +x godot
 
           wget https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_export_templates.tpz
-          # ВИПРАВЛЕНО: правильний шлях export_templates
           mkdir -p ~/.local/share/godot/export_templates/4.3.stable
           unzip Godot_v4.3-stable_export_templates.tpz -d /tmp/templates
           mv /tmp/templates/templates/* ~/.local/share/godot/export_templates/4.3.stable/
@@ -37,7 +36,13 @@ jobs:
       - name: Install Android Build Template
         run: |
           export ANDROID_HOME=$ANDROID_SDK_ROOT
-          ./godot --headless --path godot_project --install-android-build-template
+          ./godot --headless --path godot_project --install-android-build-template || true
+
+      - name: Import Project Assets
+        run: |
+          export ANDROID_HOME=$ANDROID_SDK_ROOT
+          # Цей крок генерує .import файли для текстуру та моделей
+          ./godot --headless --path godot_project --import || true
 
       - name: Build AAR
         run: |

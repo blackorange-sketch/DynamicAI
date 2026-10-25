@@ -150,7 +150,12 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     /** Викликається лениво при першому реальному запиті LLM. */
     suspend fun ensureLlmLoaded(): Boolean {
         if (llm.isReady) return true
-        if (!downloader.isDownloaded) return false
+        android.util.Log.d("LLM_DEBUG", "Checking model file: ${downloader.modelFile.absolutePath}")
+        android.util.Log.d("LLM_DEBUG", "Exists: ${downloader.modelFile.exists()}, Size: ${downloader.modelFile.length()} bytes")
+        if (!downloader.isDownloaded) {
+            android.util.Log.e("LLM_DEBUG", "Model NOT downloaded or size < 100MB!")
+            return false
+        }
         return try {
             llm.initialize(downloader.modelFile).also { ok -> if (ok) _llmReady.value = true }
         } catch (_: Throwable) { false }

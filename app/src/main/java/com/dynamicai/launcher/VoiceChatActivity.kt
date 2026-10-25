@@ -37,6 +37,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.receiveAsFlow
 
 enum class VoiceState { LISTENING, THINKING, SPEAKING, IDLE }
 
@@ -60,7 +62,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     var voiceState by remember { mutableStateOf(VoiceState.LISTENING) }
     var webSearchEnabled by remember { mutableStateOf(true) }
     var partialText by remember { mutableStateOf("") }
-    var pendingQuery by remember { mutableStateOf<String?>(null) }
+    val queryChannel = remember { Channel<String>(Channel.CONFLATED) }
     var errorText by remember { mutableStateOf<String?>(null) }
 
     val recognizerRef = remember { mutableStateOf<SpeechRecognizer?>(null) }
@@ -112,7 +114,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
                 partialText = ""
                 if (text.isNotBlank()) {
-                    pendingQuery = text
+                    queryChannel.trySend(text)
                 }
             }
             override fun onPartialResults(partial: Bundle?) {
@@ -150,9 +152,8 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     }
 
     // Обробка pendingQuery — коли STT розпізнав
-    LaunchedEffect(pendingQuery) {
-        val text = pendingQuery ?: return@LaunchedEffect
-        pendingQuery = null
+    LaunchedEffect(Unit) {
+        queryChannel.receiveAsFlow().collect { text ->
         resetAutoStop()
         messages = messages + ChatMessage("user", text)
         voiceState = VoiceState.THINKING
@@ -189,6 +190,9 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
             voiceState = VoiceState.LISTENING
             startListening()
         }
+    }
+
+    } // кінець collect
     }
 
     // Start listening when activity opens

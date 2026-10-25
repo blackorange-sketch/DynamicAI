@@ -7,5 +7,3 @@ config/features=PackedStringArray("4.3", "GL Compatibility")
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 
-[editor_plugins]
-enabled=PackedStringArray("res://addons/mtoon/plugin.cfg", "res://addons/vrm/plugin.cfg")

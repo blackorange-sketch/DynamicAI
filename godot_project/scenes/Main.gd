@@ -3,7 +3,7 @@ extends Node3D
 var model_instance: Node3D
 
 func _ready():
-    var vrm_scene = load("res://assets/anime_girl.vrm")
+    var vrm_scene = load("res://assets/anime_girl.glb")
     if vrm_scene:
         model_instance = vrm_scene.instantiate()
         add_child(model_instance)

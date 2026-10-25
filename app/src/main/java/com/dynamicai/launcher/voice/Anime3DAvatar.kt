@@ -12,7 +12,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import io.github.sceneview.Scene
 import io.github.sceneview.math.Position
 import io.github.sceneview.rememberCameraNode
@@ -20,54 +19,23 @@ import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberModelLoader
 import io.github.sceneview.rememberNodes
 import io.github.sceneview.node.ModelNode
-import java.io.File
 
 @Composable
 fun Anime3DAvatar(modifier: Modifier = Modifier) {
-    val context = LocalContext.current
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     val childNodes = rememberNodes()
     
     var errorText by remember { mutableStateOf<String?>(null) }
 
-    // Крок 1: Копіюємо файл з assets у кеш (якщо він ще не там)
-    val localFile = remember {
+    val modelNode = remember {
         try {
-            val file = File(context.cacheDir, "anime_girl.glb")
-            if (!file.exists() || file.length() < 1000L) { // Перевіряємо, що файл реально важить хоч щось
-                context.assets.open("anime_girl.glb").use { input ->
-                    file.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-            }
-            file
-        } catch (e: Exception) {
-            errorText = "Помилка копіювання: ${e.message}"
-            android.util.Log.e("Anime3D", "Copy failed", e)
-            null
-        }
-    }
-
-    // Крок 2: Завантажуємо модель
-    val modelNode = remember(localFile) {
-        if (localFile == null || !localFile.exists()) {
-            if (errorText == null) errorText = "Файл не знайдено після копіювання!"
-            return@remember null
-        }
-        
-        try {
-            // Використовуємо toURI().toString(), щоб отримати file:///...
-            val uriString = localFile.toURI().toString()
-            android.util.Log.d("Anime3D", "Loading model from: $uriString")
-            
             ModelNode(
-                modelInstance = modelLoader.createModelInstance(uriString),
+                modelInstance = modelLoader.createModelInstance("anime_girl.glb"),
                 scaleToUnits = 1.5f
             )
         } catch (e: Exception) {
-            errorText = "Помилка моделі: ${e.javaClass.simpleName} - ${e.message}"
+            errorText = "Помилка: ${e.javaClass.simpleName} - ${e.message}"
             android.util.Log.e("Anime3D", "Load failed", e)
             null
         }

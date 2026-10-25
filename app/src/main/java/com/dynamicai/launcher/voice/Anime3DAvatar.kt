@@ -31,7 +31,7 @@ fun Anime3DAvatar(modifier: Modifier = Modifier) {
     
     var errorText by remember { mutableStateOf<String?>(null) }
 
-    // Копіюємо файл з assets у тимчасову пам'ять додатка (Filament не читає assets напряму)
+    // Копіюємо файл з assets у тимчасову пам'ять додатка
     val localFile = remember {
         try {
             val file = File(context.cacheDir, "anime_girl.glb")
@@ -44,7 +44,8 @@ fun Anime3DAvatar(modifier: Modifier = Modifier) {
             }
             file
         } catch (e: Exception) {
-            errorText = "Помилка копіювання файлу: \${e.message}"
+            errorText = "Помилка копіювання: ${e.message}"
+            android.util.Log.e("Anime3D", "Copy failed", e)
             null
         }
     }
@@ -57,7 +58,8 @@ fun Anime3DAvatar(modifier: Modifier = Modifier) {
                 scaleToUnits = 1.5f
             )
         } catch (e: Exception) {
-            errorText = "Помилка завантаження моделі: \${e.javaClass.simpleName} - \${e.message}"
+            errorText = "Помилка моделі: ${e.javaClass.simpleName} - ${e.message}"
+            android.util.Log.e("Anime3D", "Load failed", e)
             null
         }
     }
@@ -78,7 +80,7 @@ fun Anime3DAvatar(modifier: Modifier = Modifier) {
         )
     } else {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text(errorText ?: "Завантаження...", color = Color.Red)
+            Text(errorText ?: "Завантаження 3D...", color = Color.Red)
         }
     }
 }

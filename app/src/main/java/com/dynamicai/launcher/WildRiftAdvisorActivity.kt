@@ -277,7 +277,7 @@ private fun ChampionPickerDialog(
                                 .padding(vertical = 10.dp, horizontal = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(champ.id, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                            Text(repo.localizedChampionName(champ), color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
                             Text(champ.displayRoles, color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
                         }
                     }

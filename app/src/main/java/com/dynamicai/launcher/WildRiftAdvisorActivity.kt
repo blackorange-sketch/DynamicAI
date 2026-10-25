@@ -51,6 +51,7 @@ class WildRiftAdvisorActivity : ComponentActivity() {
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
     val ctx = LocalContext.current
     val repo = remember { WildRiftRepository(ctx) }

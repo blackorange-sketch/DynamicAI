@@ -77,9 +77,6 @@ class TtsManager(private val context: Context) {
         } catch (_: Throwable) { onDone() }
     }
 
-    fun stop() {
-        try { tts?.stop() } catch (_: Throwable) {}
-    }
 
     fun speak(text: String) {
         if (text.isBlank()) return

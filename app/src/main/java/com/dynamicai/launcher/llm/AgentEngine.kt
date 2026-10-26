@@ -142,12 +142,10 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     toolCall.startsWith("playMusic") -> {
                         val query = getArg("query").ifEmpty { "музика" }
                         try {
-                            val ctx = context.applicationContext
-                            ctx.startService(Intent(ctx, com.dynamicai.launcher.music.MusicService::class.java))
-                            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
-                                kotlinx.coroutines.delay(500)
-                                com.dynamicai.launcher.music.MusicService.instance?.playByQuery(query)
+                            val intent = Intent(context, com.dynamicai.launcher.music.MusicService::class.java).apply {
+                                putExtra("query", query)
                             }
+                            context.startService(intent)
                             "Вмикаю без реклами: $query"
                         } catch (e: Exception) {
                             "Помилка: ${e.message}"

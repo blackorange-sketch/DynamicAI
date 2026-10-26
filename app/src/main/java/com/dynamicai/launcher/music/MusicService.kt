@@ -1,6 +1,7 @@
 package com.dynamicai.launcher.music
 
 import android.util.Log
+import android.content.Intent
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -43,6 +44,14 @@ class MusicService : MediaSessionService() {
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val query = intent?.getStringExtra("query")
+        if (!query.isNullOrBlank()) {
+            playByQuery(query)
+        }
+        return START_STICKY
+    }
 
     fun playByQuery(query: String) {
         scope.launch {

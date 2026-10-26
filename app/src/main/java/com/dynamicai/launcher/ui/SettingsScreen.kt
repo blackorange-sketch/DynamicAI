@@ -100,8 +100,7 @@ fun SettingsScreen(
         }
 
         val ctx = LocalContext.current
-    var showGoogleLogin by remember { mutableStateOf(false) }
-        var showOverlayPermDialog by remember { mutableStateOf(false) }
+            var showOverlayPermDialog by remember { mutableStateOf(false) }
         var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
         LaunchedEffect(Unit) { installedApps = AppRepository(ctx).loadCached() }
 
@@ -356,8 +355,7 @@ fun SettingsScreen(
         GlassSectionHeader("Дозволи")
         GlassCard {
             val ctx = LocalContext.current
-    var showGoogleLogin by remember { mutableStateOf(false) }
-            var hasWriteSettings by remember {
+                var hasWriteSettings by remember {
                 mutableStateOf(
                     if (android.os.Build.VERSION.SDK_INT >= 23)
                         android.provider.Settings.System.canWrite(ctx)
@@ -399,39 +397,6 @@ fun SettingsScreen(
             )
         }
 
-        GlassSectionHeader("Google Акаунт")
-        GlassCard {
-            if (GoogleAuthManager.isLoggedIn(ctx)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-                ) {
-                    Text("✅", fontSize = 20.sp)
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Акаунт підключено", color = Color.White, fontSize = 14.sp)
-                        Text(
-                            GoogleAuthManager.getEmail(ctx) ?: "Використовується для сервісів",
-                            color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp
-                        )
-                    }
-                    TextButton(onClick = { 
-                        GoogleAuthManager.logout(ctx) 
-                    }) {
-                        Text("Вийти", color = Color(0xFFEF5350))
-                    }
-                }
-            } else {
-                ActionRow(
-                    "Увійти в Google",
-                    androidx.compose.material.icons.Icons.Default.AccountCircle,
-                    Color(0xFFEA4335)
-                ) {
-                    showGoogleLogin = true
-                }
-            }
-        }
-        
         GlassSectionHeader("Bluetooth")
         BluetoothTestRow()
 
@@ -842,8 +807,7 @@ private fun GlassChip(label: String, selected: Boolean, onClick: () -> Unit) {
 @Composable
 private fun ShizukuTestRow() {
     val ctx = LocalContext.current
-    var showGoogleLogin by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+        val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf("Перевірка…") }
     var tasks by remember { mutableStateOf("") }
     var permCode by remember { mutableStateOf(0) }
@@ -904,8 +868,7 @@ private fun LlmTestRow(onTest: suspend (String) -> String?) {
     var loading by remember { mutableStateOf(false) }
 
     val ctx = LocalContext.current
-    var showGoogleLogin by remember { mutableStateOf(false) }
-
+    
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text("Тест LLM", color = Color(0xFF64B5F6), fontSize = 13.sp)
 
@@ -969,8 +932,7 @@ private fun LlmTestRow(onTest: suspend (String) -> String?) {
 @Composable
 private fun BluetoothTestRow() {
     val ctx = LocalContext.current
-    var showGoogleLogin by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+        val scope = rememberCoroutineScope()
     val manager = remember { com.dynamicai.launcher.system.BluetoothManager(ctx) }
     var diagnostic by remember { mutableStateOf("") }
     var nameInput by remember { mutableStateOf("") }
@@ -1231,11 +1193,4 @@ private fun AppPickerRow(
         )
     }
 
-    if (showGoogleLogin) {
-        GoogleLoginDialog(
-            context = ctx,
-            onDismiss = { showGoogleLogin = false },
-            onSuccess = { showGoogleLogin = false }
-        )
-    }
-}
+    

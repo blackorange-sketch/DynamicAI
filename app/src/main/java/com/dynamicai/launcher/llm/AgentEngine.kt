@@ -140,20 +140,17 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                         "Згортаю додаток на головний екран."
                     }
                     toolCall.startsWith("playMusic") -> {
-                        val query = getArg("query")
-                        val hasSearch = query.isNotEmpty()
-                        if (hasSearch) {
-                            val uri = Uri.parse("https://music.youtube.com/search?q=$query")
-                            val intent = Intent(Intent.ACTION_VIEW, uri).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
-                            context.startActivity(intent)
-                            "Відкриваю пошук у YT Music: $query"
-                        } else {
-                            val launchIntent = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.youtube.music")
-                            if (launchIntent != null) {
-                                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(launchIntent)
+                        val query = getArg("query").ifEmpty { "музика" }
+                        try {
+                            val ctx = context.applicationContext
+                            ctx.startService(Intent(ctx, com.dynamicai.launcher.music.MusicService::class.java))
+                            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                                kotlinx.coroutines.delay(500)
+                                com.dynamicai.launcher.music.MusicService.instance?.playByQuery(query)
                             }
-                            "Відкриваю YT Music."
+                            "Вмикаю без реклами: $query"
+                        } catch (e: Exception) {
+                            "Помилка: ${e.message}"
                         }
                     }
                     else -> "Невідомий інструмент: $toolCall"

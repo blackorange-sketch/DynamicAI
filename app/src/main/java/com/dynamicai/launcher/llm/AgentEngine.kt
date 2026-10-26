@@ -45,7 +45,8 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
             Користувач: "Включи музику" -> TOOL_CALL: openApp(name="Музика")
             Користувач: "Відкрий галерею" -> TOOL_CALL: openApp(name="Галерея")
             Користувач: "Закрий YouTube" -> TOOL_CALL: closeApp(name="YouTube")
-            Користувач: "Увімкни музику" -> TOOL_CALL: playMusic(query="музика")
+            Користувач: "Увімкни музику" -> TOOL_CALL: playMusic(query="")
+            Користувач: "Увімкни гурт Океан Ельзи" -> TOOL_CALL: playMusic(query="Океан Ельзи")
             
             Якщо інструмент не потрібен, просто дай коротку текстову відповідь.
         """.trimIndent()
@@ -205,41 +206,41 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     }
                     
                     toolCall.startsWith("closeApp") -> {
-                        val appName = getArg("name")
-                        val apps = appRepo.loadInstalledApps()
-                        val app = apps.find { it.label.contains(appName, ignoreCase = true) }
-                        if (app != null) {
-                            // Спроба закрити через налаштування (єдиний спосіб без Root)
-                            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                data = Uri.parse("package:${app.packageName}")
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            context.startActivity(intent)
-                            "Відкрив налаштування ${app.label}. Натисніть 'Зупинити', щоб закрити."
-                        } else "Додаток '$appName' не знайдено."
+                        // Імітуємо натискання кнопки "Додому" (згортає додаток)
+                        val intent = Intent(Intent.ACTION_MAIN).apply {
+                            addCategory(Intent.CATEGORY_HOME)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                        "Згортаю додаток на головний екран."
                     }
                     
                     toolCall.startsWith("playMusic") -> {
-                        val query = getArg("query").ifEmpty { "музика" }
+                        val query = getArg("query").ifEmpty { "" }
                         try {
-                            // Системний інтент для відтворення музики
-                            val intent = Intent(android.provider.MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).apply {
-                                putExtra(android.app.SearchManager.QUERY, query)
+                            // Відкриваємо YT Music з пошуковим запитом (або просто головну)
+                            val uri = if (query.isNotEmpty()) {
+                                Uri.parse("https://music.youtube.com/search?q=$query")
+                            } else {
+                                Uri.parse("https://music.youtube.com")
+                            }
+                            
+                            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                                setPackage("com.google.android.apps.youtube.music")
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                             context.startActivity(intent)
-                            "Вмикаю музику: $query"
+                            if (query.isNotEmpty()) "Відкриваю YT Music та шукаю: $query" else "Відкриваю YT Music."
                         } catch (e: Exception) {
-                            // Якщо системний інтент не спрацював, відкриваємо YouTube Music
+                            // Якщо YT Music не встановлено, відкриваємо у браузері
                             try {
-                                val ytMusicIntent = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.youtube.music")
-                                if (ytMusicIntent != null) {
-                                    ytMusicIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    context.startActivity(ytMusicIntent)
-                                    "Відкриваю YouTube Music."
-                                } else "Не знайдено музичного додатка."
+                                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/search?q=$query")).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(webIntent)
+                                "Відкриваю YT Music у браузері."
                             } catch (ex: Exception) {
-                                "Не вдалося увімкнути музику."
+                                "Не вдалося відкрити музику."
                             }
                         }
                     }

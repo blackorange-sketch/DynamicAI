@@ -48,24 +48,20 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
         if (response.startsWith("TOOL_CALL:")) {
             val toolCall = response.substringAfter("TOOL_CALL:").trim()
             
-            // Допоміжна функція для безпечного витягування аргументів
             fun getArg(key: String): String {
                 return Regex("""${key}="([^"]+)"""").find(toolCall)?.groupValues?.get(1) ?: ""
             }
             
             return@withContext try {
                 when {
-                                    toolCall.startsWith("openApp") -> {
-                    val appName = getArg("name")
-                    val apps = appRepo.loadInstalledApps() // Використовуємо правильний метод
-                    val app = apps.find { appInfo -> appInfo.label.contains(appName, ignoreCase = true) }
-                    if (app != null) {
-                        // Використовуємо існуючий метод запуску
-                        val success = appRepo.launchApp(app.packageName)
-                        if (success) "Відкриваю ${app.label}"
-                        else "Не вдалося відкрити ${app.label}"
-                    } else "Додаток '$appName' не знайдено."
-                } else "Не вдалося відкрити ${app.label}"
+                    toolCall.startsWith("openApp") -> {
+                        val appName = getArg("name")
+                        val apps = appRepo.loadInstalledApps()
+                        val app = apps.find { appInfo -> appInfo.label.contains(appName, ignoreCase = true) }
+                        if (app != null) {
+                            val success = appRepo.launchApp(app.packageName)
+                            if (success) "Відкриваю ${app.label}"
+                            else "Не вдалося відкрити ${app.label}"
                         } else "Додаток '$appName' не знайдено."
                     }
                     
@@ -81,7 +77,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     
                     toolCall.startsWith("getWeather") -> {
                         val city = getArg("city").ifEmpty { "Київ" }
-                        "У місті $city зараз сонячно, +20°C." // Заглушка
+                        "У місті $city зараз сонячно, +20°C. (Демо)"
                     }
                     
                     toolCall.startsWith("setAlarm") -> {
@@ -164,8 +160,8 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
             } catch (e: Exception) {
                 "Помилка виконання інструменту: ${e.message}"
             }
+        } else {
+            response
         }
-        
-        return@withContext response
     }
 }

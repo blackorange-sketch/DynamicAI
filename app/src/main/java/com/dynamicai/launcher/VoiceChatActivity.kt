@@ -26,19 +26,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.sin
@@ -109,39 +106,40 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
 
     LaunchedEffect(Unit) { startListening() }
 
-    // Анімація для HUD (скануюче коло)
-    val infiniteTransition = rememberInfiniteTransition(label = "hud")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(4000, easing = LinearEasing), RepeatMode.Restart), label = "rot"
-    )
-    val pulse by infiniteTransition.animateFloat(
-        initialValue = 0.8f, targetValue = 1.2f,
-        animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse"
+    // Плавна анімація "дихання" для скляної кулі
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ), label = "pulse"
     )
 
-    val primaryColor = Color(0xFF00E5FF) // Неоновий блакитний
-    val accentColor = if (voiceState == VoiceState.SPEAKING) Color(0xFFFF4081) else if (voiceState == VoiceState.LISTENING) Color(0xFF00E676) else primaryColor
-
+    // Градієнтний фон у стилі Liquid Glass
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF050505)) // Майже чорний
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(Color(0xFF1E1E28), Color(0xFF0A0A0A)),
+                    radius = 1200f
+                )
+            )
     ) {
-        // Футуристична сітка на фоні
+        // Розмиті кольорові плями на фоні
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val step = 60.dp.toPx()
-            val lineColor = Color.White.copy(alpha = 0.03f)
-            var x = 0f
-            while (x < size.width) {
-                drawLine(lineColor, Offset(x, 0f), Offset(x, size.height), 1f)
-                x += step
-            }
-            var y = 0f
-            while (y < size.height) {
-                drawLine(lineColor, Offset(0f, y), Offset(size.width, y), 1f)
-                y += step
-            }
+            drawCircle(
+                brush = Brush.radialGradient(listOf(Color(0xFF64B5F6).copy(alpha = 0.15f), Color.Transparent)),
+                radius = 400f,
+                center = androidx.compose.ui.geometry.Offset(size.width * 0.2f, size.height * 0.3f)
+            )
+            drawCircle(
+                brush = Brush.radialGradient(listOf(Color(0xFFE91E63).copy(alpha = 0.15f), Color.Transparent)),
+                radius = 400f,
+                center = androidx.compose.ui.geometry.Offset(size.width * 0.8f, size.height * 0.7f)
+            )
         }
 
         Column(
@@ -153,21 +151,8 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "NEURAL INTERFACE v2.0",
-                    color = primaryColor.copy(alpha = 0.7f),
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 2.sp
-                )
-                Text(
-                    text = "[X]",
-                    color = primaryColor.copy(alpha = 0.7f),
-                    fontSize = 16.sp,
-                    fontFamily = FontFamily.Monospace,
-                    modifier = Modifier.clickable(onClick = onClose)
-                )
+                Text("Голосовий асистент", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text("✕", color = Color.White.copy(alpha = 0.6f), fontSize = 22.sp, modifier = Modifier.padding(8.dp).clickable(onClick = onClose))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -176,7 +161,7 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(messages) { msg ->
                     val isUser = msg.role == "user"
@@ -187,17 +172,12 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                         Box(
                             modifier = Modifier
                                 .widthIn(max = 280.dp)
-                                .clip(RoundedCornerShape(4.dp)) // Гострі кути для футуризму
-                                .background(if (isUser) primaryColor.copy(alpha = 0.1f) else Color.White.copy(alpha = 0.05f))
-                                .border(1.dp, if (isUser) primaryColor.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
-                                .padding(12.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(Color.White.copy(alpha = if (isUser) 0.15f else 0.08f))
+                                .border(0.5.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
+                                .padding(14.dp)
                         ) {
-                            Text(
-                                text = msg.content, 
-                                color = Color.White, 
-                                fontSize = 15.sp,
-                                fontFamily = FontFamily.SansSerif
-                            )
+                            Text(msg.content, color = Color.White, fontSize = 15.sp)
                         }
                     }
                 }
@@ -205,79 +185,73 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Футуристичний індикатор (HUD)
+            // Центральний індикатор (Siri-like скляна куля)
             Box(modifier = Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
-                Canvas(modifier = Modifier.size(100.dp).graphicsLayer { scaleX = pulse; scaleY = pulse }) {
-                    // Зовнішнє коло
-                    drawCircle(color = accentColor.copy(alpha = 0.2f), style = Stroke(width = 2.dp.toPx()))
-                    // Скануючі дуги
-                    drawArc(color = accentColor, startAngle = rotation, sweepAngle = 60f, useCenter = false, style = Stroke(width = 4.dp.toPx()))
-                    drawArc(color = accentColor, startAngle = rotation + 180f, sweepAngle = 60f, useCenter = false, style = Stroke(width = 4.dp.toPx()))
-                    // Внутрішнє ядро
-                    drawCircle(color = accentColor.copy(alpha = 0.8f), radius = 15.dp.toPx())
+                val orbColor = when (voiceState) {
+                    VoiceState.LISTENING -> Color(0xFF4CAF50)
+                    VoiceState.SPEAKING -> Color(0xFFE91E63)
+                    VoiceState.THINKING -> Color(0xFF2196F3)
+                    else -> Color.Gray
                 }
                 
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }
+                        .clip(CircleShape)
+                        .background(Brush.radialGradient(listOf(orbColor.copy(alpha = 0.6f), orbColor.copy(alpha = 0.1f))))
+                        .border(1.dp, orbColor.copy(alpha = 0.3f), CircleShape)
+                )
                 if (voiceState == VoiceState.THINKING) {
-                    CircularProgressIndicator(color = primaryColor, modifier = Modifier.size(120.dp))
+                    CircularProgressIndicator(color = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(100.dp), strokeWidth = 1.dp)
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Поле вводу (Термінал)
+            // Поле вводу (Liquid Glass)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.Black)
-                    .border(1.dp, primaryColor.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .padding(4.dp),
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .border(0.5.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
+                    .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(">", color = primaryColor, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(start = 8.dp))
                 BasicTextField(
                     value = query,
                     onValueChange = { query = it },
-                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                    textStyle = TextStyle(color = primaryColor, fontSize = 16.sp, fontFamily = FontFamily.Monospace),
-                    cursorBrush = SolidColor(primaryColor),
+                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                    textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
+                    cursorBrush = SolidColor(Color.White),
                     decorationBox = { inner ->
-                        if (query.isEmpty()) Text("Введіть запит...", color = primaryColor.copy(alpha = 0.3f), fontSize = 16.sp, fontFamily = FontFamily.Monospace)
+                        if (query.isEmpty()) Text("Запитай або скажи...", color = Color.White.copy(alpha = 0.4f), fontSize = 16.sp)
                         inner()
                     }
                 )
-                Box(
-                    modifier = Modifier.size(40.dp).clip(CircleShape).background(primaryColor.copy(alpha = 0.2f)).clickable { 
-                        if (query.isNotBlank()) {
-                            messages = messages + ChatMessage("user", query)
-                            processQuery(query, vm, scope) { newState -> voiceState = newState }
-                            query = ""
-                        }
-                    },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("▶", color = primaryColor, fontSize = 16.sp)
+                IconButtonLike("➤", Color(0xFF64B5F6)) {
+                    if (query.isNotBlank()) {
+                        messages = messages + ChatMessage("user", query)
+                        processQuery(query, vm, scope) { newState -> voiceState = newState }
+                        query = ""
+                    }
                 }
-                Box(
-                    modifier = Modifier.size(40.dp).clip(CircleShape).background(if (voiceState == VoiceState.LISTENING) accentColor.copy(alpha = 0.3f) else Color.Transparent).clickable { startListening() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("🎤", fontSize = 18.sp)
-                }
+                IconButtonLike("🎤", if (voiceState == VoiceState.LISTENING) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.6f)) { startListening() }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Нижні кнопки
+            // Нижні кнопки (як в AiHub, але в стилі Glass)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                FuturisticChip("🔍", "ПОШУК") { ctx.startActivity(Intent(Intent.ACTION_WEB_SEARCH)) }
-                FuturisticChip("🌐", "ПЕРЕКЛАД") { /* Логіка */ }
-                FuturisticChip("🤖", "ШІ") { /* Логіка */ }
-                FuturisticChip("🎮", "WILD RIFT") { ctx.startActivity(Intent(ctx, WildRiftAdvisorActivity::class.java)) }
+                ActionChip("Пошук", Color(0xFF4285F4)) { ctx.startActivity(Intent(Intent.ACTION_WEB_SEARCH)) }
+                ActionChip("Переклад", Color(0xFFFF9800)) { /* Логіка */ }
+                ActionChip("AI", Color(0xFF2196F3)) { /* Логіка */ }
+                ActionChip("Wild Rift", Color(0xFF9C27B0)) { ctx.startActivity(Intent(ctx, WildRiftAdvisorActivity::class.java)) }
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -285,18 +259,26 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
 }
 
 @Composable
-fun FuturisticChip(icon: String, label: String, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(RoundedCornerShape(4.dp))
-            .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.3f), RoundedCornerShape(4.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp, horizontal = 12.dp)
+fun IconButtonLike(icon: String, tint: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier.size(48.dp).clip(CircleShape).background(tint.copy(alpha = 0.15f)).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        Text(icon, fontSize = 20.sp)
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(label, color = Color(0xFF00E5FF).copy(alpha = 0.7f), fontSize = 9.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.sp)
+        Text(icon, color = tint, fontSize = 20.sp)
+    }
+}
+
+@Composable
+fun ActionChip(label: String, color: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(color.copy(alpha = 0.2f))
+            .border(0.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
+    ) {
+        Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }
 }
 

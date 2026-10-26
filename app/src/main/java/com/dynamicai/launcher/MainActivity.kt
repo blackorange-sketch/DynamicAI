@@ -53,9 +53,11 @@ class MainActivity : ComponentActivity() {
             action == "android.intent.action.VOICE_COMMAND") {
             // Невелика затримка щоб activity встигла стати foreground
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                try {
-                    com.dynamicai.launcher.overlay.// AiHubOverlay.show(this@MainActivity, vm)
-                } catch (_: Throwable) {}
+                                    try {
+                        val i = android.content.Intent(this@MainActivity, com.dynamicai.launcher.VoiceChatActivity::class.java)
+                        i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(i)
+                    } catch (_: Throwable) {}
             }, 300)
         }
         

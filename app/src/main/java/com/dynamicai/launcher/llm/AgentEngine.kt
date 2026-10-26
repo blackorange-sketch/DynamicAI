@@ -221,12 +221,10 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     }
                     
                     toolCall.startsWith("playMusic") -> {
-                        // Не підставляємо "музика" за замовчуванням. Якщо запит порожній - просто відкриваємо.
                         val query = getArg("query")
                         val hasSearch = query.isNotEmpty()
                         
                         try {
-                            // Якщо є пошук - відкриваємо результати. Якщо ні - головну сторінку.
                             val uri = if (hasSearch) {
                                 Uri.parse("https://music.youtube.com/search?q=$query")
                             } else {
@@ -238,17 +236,29 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                             }
                             context.startActivity(intent)
                             
-                            // Автоматично клікаємо Play ТІЛЬКИ якщо був пошуковий запит
-                            if (hasSearch && com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
-                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                    val success = com.dynamicai.launcher.accessibility.AppAutomationService.clickPlayInYtMusic()
-                                    android.util.Log.d("AgentEngine", "YT Music Play click result: $success")
-                                }, 5000)
-                                "Вмикаю: $query"
-                            } else if (hasSearch) {
-                                "Відкриваю пошук: $query (Увімкніть доступність для автозапуску)"
+                            if (hasSearch) {
+                                // Сценарій 1: Пошук. Клікаємо перший результат.
+                                if (com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
+                                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                        val success = com.dynamicai.launcher.accessibility.AppAutomationService.clickFirstSearchResult()
+                                        android.util.Log.d("AgentEngine", "YT Music Search click result: $success")
+                                    }, 5000)
+                                    "Вмикаю: $query"
+                                } else {
+                                    "Відкриваю пошук: $query (Увімкніть доступність)"
+                                }
                             } else {
-                                "Відкриваю YT Music."
+                                // Сценарій 2: Просто "включи музику" (відновлюємо останню пісню)
+                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                    try {
+                                        val audioManager = context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+                                        val downEvent = android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_MEDIA_PLAY)
+                                        val upEvent = android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_MEDIA_PLAY)
+                                        audioManager.dispatchMediaKeyEvent(downEvent)
+                                        audioManager.dispatchMediaKeyEvent(upEvent)
+                                    } catch (_: Exception) {}
+                                }, 2500)
+                                "Вмикаю музику."
                             }
                         } catch (e: Exception) {
                             "Не вдалося відкрити YT Music."

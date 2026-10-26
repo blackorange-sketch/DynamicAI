@@ -235,6 +235,55 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 .align(Alignment.BottomCenter) // Притискаємо до низу
         )
 
+                if (showAvatarSettings) {
+                    AlertDialog(
+                        onDismissRequest = { 
+                            showAvatarSettings = false 
+                            AvatarSettings.save(appContext)
+                        },
+                        title = { Text("Налаштування аватара") },
+                        text = {
+                            Column {
+                                Text("Розмір: ${String.format("%.1f", AvatarSettings.scale)}")
+                                Slider(
+                                    value = AvatarSettings.scale,
+                                    onValueChange = { AvatarSettings.scale = it },
+                                    valueRange = 0.5f..2.0f
+                                )
+                                
+                                Text("Зсув вгору/вниз: ${AvatarSettings.offsetY.toInt()}")
+                                Slider(
+                                    value = AvatarSettings.offsetY,
+                                    onValueChange = { AvatarSettings.offsetY = it },
+                                    valueRange = -500f..500f
+                                )
+                                
+                                Text("Зсув вліво/вправо: ${AvatarSettings.offsetX.toInt()}")
+                                Slider(
+                                    value = AvatarSettings.offsetX,
+                                    onValueChange = { AvatarSettings.offsetX = it },
+                                    valueRange = -300f..300f
+                                )
+                                
+                                Text("Поворот: ${AvatarSettings.rotationY.toInt()}°")
+                                Slider(
+                                    value = AvatarSettings.rotationY,
+                                    onValueChange = { AvatarSettings.rotationY = it },
+                                    valueRange = 0f..360f
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { 
+                                showAvatarSettings = false 
+                                AvatarSettings.save(appContext)
+                            }) {
+                                Text("Готово")
+                            }
+                        }
+                    )
+                }
+
         Column(
             modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)
         ) {
@@ -368,53 +417,6 @@ fun PulseCircle(state: VoiceState) {
 
                 
         // Діалог налаштувань аватара
-        if (showAvatarSettings) {
-            AlertDialog(
-                onDismissRequest = { 
-                    showAvatarSettings = false 
-                    AvatarSettings.save(appContext)
-                },
-                title = { Text("Налаштування аватара") },
-                text = {
-                    Column {
-                        Text("Розмір: ${String.format("%.1f", AvatarSettings.scale)}")
-                        Slider(
-                            value = AvatarSettings.scale,
-                            onValueChange = { AvatarSettings.scale = it },
-                            valueRange = 0.5f..2.0f
-                        )
-                        
-                        Text("Зсув вгору/вниз: ${AvatarSettings.offsetY.toInt()}")
-                        Slider(
-                            value = AvatarSettings.offsetY,
-                            onValueChange = { AvatarSettings.offsetY = it },
-                            valueRange = -500f..500f
-                        )
-                        
-                        Text("Зсув вліво/вправо: ${AvatarSettings.offsetX.toInt()}")
-                        Slider(
-                            value = AvatarSettings.offsetX,
-                            onValueChange = { AvatarSettings.offsetX = it },
-                            valueRange = -300f..300f
-                        )
-                        
-                        Text("Поворот: ${AvatarSettings.rotationY.toInt()}°")
-                        Slider(
-                            value = AvatarSettings.rotationY,
-                            onValueChange = { AvatarSettings.rotationY = it },
-                            valueRange = 0f..360f
-                        )
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = { 
-                        showAvatarSettings = false 
-                        AvatarSettings.save(appContext)
-                    }) {
-                        Text("Готово")
-                    }
-                }
-            )
-        }
+        
 
 }

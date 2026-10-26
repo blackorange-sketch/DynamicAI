@@ -221,17 +221,20 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     }
                     
                     toolCall.startsWith("playMusic") -> {
-                        val query = getArg("query")
-                        val hasSearch = query.isNotEmpty()
-                        
+                        val query = getArg("query").ifEmpty { "музика" }
                         try {
-                            if (hasSearch) {
-                                // ШВИДКИЙ ПОШУК: Відкриваємо одразу сторінку результатів через URI
-                                val uri = Uri.parse("https://music.youtube.com/search?q=$query")
-                                val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                                }
+                            // Запускаємо наш локальний сервіс
+                            val intent = Intent(context, com.dynamicai.launcher.music.MusicPlayerService::class.java)
+                            context.startService(intent)
+                            
+                            // Передаємо запит на відтворення
+                            com.dynamicai.launcher.music.MusicPlayerService.instance?.playByQuery(query)
+                            
+                            "Вмикаю без реклами: $query"
+                        } catch (e: Exception) {
+                            "Помилка плеєра: ${e.message}"
+                        }
+                    }
                                 context.startActivity(intent)
                                 
                                 if (com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {

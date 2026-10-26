@@ -52,3 +52,8 @@
     volatile <fields>;
 }
 
+
+# Godot Engine Rules
+-keep class org.godotengine.godot.** { *; }
+-keepclassmembers class org.godotengine.godot.** { *; }
+-dontwarn org.godotengine.godot.**

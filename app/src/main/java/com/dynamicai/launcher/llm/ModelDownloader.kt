@@ -7,7 +7,9 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import android.util.Log
 import java.io.File
+import android.util.Log
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -48,6 +50,7 @@ class ModelDownloader(private val context: Context) {
 
         try {
             val response = client.newCall(request).execute()
+            Log.d("ModelDownloader", "Response code: ${response.code}, URL: $url")
             if (!response.isSuccessful) {
                 emit(Progress.Error("Сервер ${response.code}"))
                 return@flow
@@ -96,6 +99,7 @@ class ModelDownloader(private val context: Context) {
 
         try {
             val response = client.newCall(request).execute()
+            Log.d("ModelDownloader", "Response code: ${response.code}, URL: $url")
             if (!response.isSuccessful) {
                 emit(Progress.Error("Сервер ${response.code}"))
                 return@flow

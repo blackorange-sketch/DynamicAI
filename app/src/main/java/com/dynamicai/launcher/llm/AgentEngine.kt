@@ -221,36 +221,37 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     }
                     
                     toolCall.startsWith("playMusic") -> {
-                        val query = getArg("query").ifEmpty { "музика" }
+                        // Не підставляємо "музика" за замовчуванням. Якщо запит порожній - просто відкриваємо.
+                        val query = getArg("query")
+                        val hasSearch = query.isNotEmpty()
+                        
                         try {
-                            // Відкриваємо через URI (без setPackage, щоб уникнути помилок)
-                            val uri = Uri.parse("https://music.youtube.com/search?q=$query")
+                            // Якщо є пошук - відкриваємо результати. Якщо ні - головну сторінку.
+                            val uri = if (hasSearch) {
+                                Uri.parse("https://music.youtube.com/search?q=$query")
+                            } else {
+                                Uri.parse("https://music.youtube.com")
+                            }
+                            
                             val intent = Intent(Intent.ACTION_VIEW, uri).apply {
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                             context.startActivity(intent)
                             
-                            // Якщо AccessibilityService увімкнено, автоматично натискаємо Play
-                            if (com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
+                            // Автоматично клікаємо Play ТІЛЬКИ якщо був пошуковий запит
+                            if (hasSearch && com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
                                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                                     val success = com.dynamicai.launcher.accessibility.AppAutomationService.clickPlayInYtMusic()
                                     android.util.Log.d("AgentEngine", "YT Music Play click result: $success")
-                                }, 5000) // Збільшили до 5 секунд
+                                }, 5000)
                                 "Вмикаю: $query"
+                            } else if (hasSearch) {
+                                "Відкриваю пошук: $query (Увімкніть доступність для автозапуску)"
                             } else {
-                                "Відкриваю YT Music. (Увімкніть сервіс доступності для автозапуску)"
+                                "Відкриваю YT Music."
                             }
                         } catch (e: Exception) {
-                            // Якщо YT Music не встановлено, відкриваємо у браузері
-                            try {
-                                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/search?q=$query")).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                context.startActivity(webIntent)
-                                "Відкриваю YT Music у браузері."
-                            } catch (ex: Exception) {
-                                "Помилка: ${e.message}"
-                            }
+                            "Не вдалося відкрити YT Music."
                         }
                     }
                     

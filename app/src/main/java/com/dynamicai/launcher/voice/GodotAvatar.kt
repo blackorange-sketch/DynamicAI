@@ -42,12 +42,7 @@ fun GodotAvatar(
                 activity?.supportFragmentManager?.beginTransaction()?.apply {
                     // Додаємо перевірку, щоб не створювати дублікат фрагмента
                     if (activity.supportFragmentManager.findFragmentById(container.id) == null) {
-                        val fragment = GodotFragment().apply {
-                    arguments = Bundle().apply {
-                        putString("main_pack", "res://godot/DynamicAIAvatar.pck")
-                    }
-                }
-                replace(container.id, fragment)
+                        replace(container.id, GodotFragment())
                         commit()
                     }
                 }

@@ -52,6 +52,10 @@ class VoiceChatActivity : FragmentActivity(), org.godotengine.godot.GodotHost {
     private var godotInstance: org.godotengine.godot.Godot? = null
 
     override fun getActivity(): FragmentActivity = this
+
+    override fun getCommandLine(): MutableList<String> {
+        return mutableListOf("--main-pack", "godot/DynamicAIAvatar.pck")
+    }
     override fun getGodot(): org.godotengine.godot.Godot? = godotInstance
 
     private val vm: AppListViewModel by viewModels()

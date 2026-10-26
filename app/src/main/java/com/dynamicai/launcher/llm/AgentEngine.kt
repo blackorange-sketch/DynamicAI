@@ -222,26 +222,28 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     toolCall.startsWith("playMusic") -> {
                         val query = getArg("query").ifEmpty { "музика" }
                         try {
-                            // Використовуємо системний інтент для відтворення за пошуковим запитом
-                            val intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).apply {
-                                putExtra(SearchManager.QUERY, query)
+                            // 1. Відкриваємо YT Music з пошуком
+                            val uri = Uri.parse("https://music.youtube.com/search?q=$query")
+                            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                                setPackage("com.google.android.apps.youtube.music")
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                             context.startActivity(intent)
+                            
+                            // 2. Чекаємо 3.5 секунди, поки додаток завантажить результати, і тиснемо Play
+                            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                try {
+                                    val audioManager = context.getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager
+                                    val downEvent = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY)
+                                    val upEvent = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY)
+                                    audioManager.dispatchMediaKeyEvent(downEvent)
+                                    audioManager.dispatchMediaKeyEvent(upEvent)
+                                } catch (_: Exception) {}
+                            }, 3500)
+                            
                             "Вмикаю: $query"
                         } catch (e: Exception) {
-                            // Якщо системний інтент не спрацював, відкриваємо YT Music з пошуком
-                            try {
-                                val uri = Uri.parse("https://music.youtube.com/search?q=$query")
-                                val ytIntent = Intent(Intent.ACTION_VIEW, uri).apply {
-                                    setPackage("com.google.android.apps.youtube.music")
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                context.startActivity(ytIntent)
-                                "Відкриваю пошук у YT Music: $query. (Натисніть Play вручну)"
-                            } catch (ex: Exception) {
-                                "Не вдалося відтворити музику."
-                            }
+                            "Не вдалося відкрити YT Music."
                         }
                     }
                     

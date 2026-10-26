@@ -18,8 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import com.dynamicai.launcher.music.YouTubeMusicLoginScreen
-import com.dynamicai.launcher.music.AuthManager
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -470,17 +468,7 @@ fun SettingsScreen(
                     HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(top = 8.dp))
                 }
             }
-
-            // Кнопка входу в YouTube Music
-            if (!AuthManager.isLoggedIn(ctx)) {
-                ActionRow("Увійти в YouTube Music", androidx.compose.material.icons.Icons.Default.PlayArrow, Color(0xFFFF0000)) {
-                    // Тут треба відкрити екран входу (можна через діалог)
-                }
-            } else {
-                Text("YouTube Music: авторизовано", color = Color(0xFF4CAF50), fontSize = 12.sp)
-            }
-            
-            // Toggle завжди видно
+// Toggle завжди видно
             SwitchRow(
                 label = "Озвучувати відповіді (TTS)",
                 checked = settings.useTts,

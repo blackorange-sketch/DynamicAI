@@ -68,6 +68,9 @@ kotlin {
 }
 
 dependencies {
+    // Media3 для відео-шпалер
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-ui:1.4.1")
     // Inner для YouTube Music API
     // Media3 для відтворення
     // OkHttp (для Inner)

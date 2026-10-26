@@ -70,31 +70,19 @@ kotlin {
 
 dependencies {
     // Inner для YouTube Music API
-    implementation(project(":innertube")) // Перевірте актуальну версію
     // Media3 для відтворення
-    implementation("androidx.media3:media3-exoplayer:1.4.1")
-    implementation("androidx.media3:media3-session:1.4.1")
-    implementation("androidx.media3:media3-ui:1.4.1")
     // OkHttp (для Inner)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // Ktor (Inner використовує Ktor)
-    implementation("io.ktor:ktor-client-okhttp:2.3.12")
-    implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
 
     // NewPipe Extractor для YouTube Music без реклами
-    implementation("com.github.teamnewpipe:NewPipeExtractor:v0.26.0")
     // Media3 для відтворення аудіо
-    implementation("androidx.media3:media3-exoplayer:1.4.1")
-    implementation("androidx.media3:media3-session:1.4.1")
-    implementation("androidx.media3:media3-ui:1.4.1")
     // OkHttp для Downloader
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // Glance для віджета
     implementation("androidx.glance:glance-appwidget:1.2.0")
     implementation("androidx.glance:glance-material3:1.2.0")
     // Core library desugaring
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.4")
 
 
     implementation("androidx.fragment:fragment-ktx:1.8.5")
@@ -111,7 +99,6 @@ dependencies {
     implementation("androidx.palette:palette-ktx:1.0.0")
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
-    implementation("androidx.media3:media3-exoplayer:1.5.1")
     implementation("androidx.savedstate:savedstate-ktx:1.2.1")
     implementation("com.google.ai.edge.litertlm:litertlm-android:0.16.1")
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")

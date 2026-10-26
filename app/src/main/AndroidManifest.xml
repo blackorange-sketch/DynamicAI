@@ -212,13 +212,6 @@
                 android:resource="@xml/music_widget_info" />
         </receiver>
     
-        <service
-            android:name=".music.MusicPlayerService"
-            android:exported="true"
-            android:foregroundServiceType="mediaPlayback">
-            <intent-filter>
-                <action android:name="androidx.media3.session.MediaSessionService" />
-            </intent-filter>
-        </service>
+        
     </application>
 </manifest>

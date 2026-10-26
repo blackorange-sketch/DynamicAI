@@ -304,15 +304,18 @@ fun processQuery(
             }
             
             val answer = vm.chatEngine.answerWithAgent(text)
-            onMessage(ChatMessage("assistant", answer))
             onStateChange(VoiceState.SPEAKING)
             
             android.util.Log.d("VoiceChat", "Trying to speak: $answer")
             
+            // 1. Спочатку запускаємо TTS (щоб він почав синтез якомога швидше)
             vm.tts.speakWithCallback(answer) { 
                 android.util.Log.d("VoiceChat", "TTS onDone callback triggered")
                 onStateChange(VoiceState.LISTENING) 
             }
+            
+            // 2. Потім показуємо текст на екрані (це займе 1-2 мілісекунди)
+            onMessage(ChatMessage("assistant", answer))
         } catch (e: Exception) {
             onMessage(ChatMessage("assistant", "Помилка: ${e.message}"))
             onStateChange(VoiceState.IDLE)

@@ -231,13 +231,16 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                                 Uri.parse("https://music.youtube.com")
                             }
                             
+                            // Додаємо прапорці, щоб не створювати дублікати в Recent Apps
                             val intent = Intent(Intent.ACTION_VIEW, uri).apply {
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
                             }
                             context.startActivity(intent)
                             
                             if (hasSearch) {
-                                // Сценарій 1: Пошук. Клікаємо перший результат.
+                                // Пошук: клікаємо перший результат
                                 if (com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
                                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                                         val success = com.dynamicai.launcher.accessibility.AppAutomationService.clickFirstSearchResult()
@@ -248,17 +251,16 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                                     "Відкриваю пошук: $query (Увімкніть доступність)"
                                 }
                             } else {
-                                // Сценарій 2: Просто "включи музику" (відновлюємо останню пісню)
-                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                    try {
-                                        val audioManager = context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
-                                        val downEvent = android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_MEDIA_PLAY)
-                                        val upEvent = android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_MEDIA_PLAY)
-                                        audioManager.dispatchMediaKeyEvent(downEvent)
-                                        audioManager.dispatchMediaKeyEvent(upEvent)
-                                    } catch (_: Exception) {}
-                                }, 2500)
-                                "Вмикаю музику."
+                                // Просто "включи музику": клікаємо Play у міні-плеєрі або на головній
+                                if (com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
+                                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                        val success = com.dynamicai.launcher.accessibility.AppAutomationService.clickPlayButton()
+                                        android.util.Log.d("AgentEngine", "YT Music Play click result: $success")
+                                    }, 2500)
+                                    "Вмикаю музику."
+                                } else {
+                                    "Відкриваю YT Music. (Увімкніть доступність)"
+                                }
                             }
                         } catch (e: Exception) {
                             "Не вдалося відкрити YT Music."

@@ -16,6 +16,7 @@ class AppAutomationService : AccessibilityService() {
         fun clickText(text: String): Boolean = instance?.findAndClick(text, false) ?: false
         fun clickDescription(desc: String): Boolean = instance?.findAndClick(desc, true) ?: false
         fun clickFirstSearchResult(): Boolean = instance?.clickFirstSearchResult() ?: false
+        fun clickPlayButton(): Boolean = instance?.clickPlayButton() ?: false
     }
 
     override fun onServiceConnected() {
@@ -90,6 +91,32 @@ class AppAutomationService : AccessibilityService() {
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
             if (clickFirstClickableChild(child)) return true
+        }
+        return false
+    }
+
+    fun clickPlayButton(): Boolean {
+        val root = rootInActiveWindow ?: return false
+        
+        // 1. Шукаємо кнопку Play за описом (працює для міні-плеєра та головної)
+        val descriptions = listOf("Play", "Відтворити", "Грати", "Play song", "Відтворити пісню", "Відтворити все", "Resume")
+        for (desc in descriptions) {
+            if (searchAndClick(root, desc, true)) return true
+        }
+        
+        // 2. Шукаємо за стандартними ID
+        val playIds = listOf(
+            "com.google.android.apps.youtube.music:id/play_button",
+            "com.google.android.apps.youtube.music:id/player_play_pause_button",
+            "com.google.android.apps.youtube.music:id/play_pause_button",
+            "com.google.android.apps.youtube.music:id/controls_play_pause",
+            "com.google.android.apps.youtube.music:id/play_pause"
+        )
+        for (id in playIds) {
+            val nodes = root.findAccessibilityNodeInfosByViewId(id)
+            for (n in nodes) {
+                if (n.isClickable && n.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
+            }
         }
         return false
     }

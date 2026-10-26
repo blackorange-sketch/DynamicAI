@@ -1,6 +1,7 @@
 package com.dynamicai.launcher.voice
 
 import android.view.View
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -12,30 +13,40 @@ import com.dynamicai.launcher.VoiceState
 import org.godotengine.godot.GodotFragment
 
 @Composable
-fun GodotAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
-    AndroidView(
+fun GodotAvatar(
+    voiceState: VoiceState, 
+    scale: Float, 
+    offsetY: Float, 
+    offsetX: Float, 
+    rotationY: Float, 
+    modifier: Modifier = Modifier
+) {
+    Box(
         modifier = modifier
             .fillMaxSize()
             .graphicsLayer {
-                // Застосовуємо збережені налаштування
-                scaleX = AvatarSettings.scale
-                scaleY = AvatarSettings.scale
-                translationX = AvatarSettings.offsetX
-                translationY = AvatarSettings.offsetY
-                rotationY = AvatarSettings.rotationY
-            },
-        factory = { context ->
-            val container = FragmentContainerView(context).apply {
-                id = View.generateViewId()
+                scaleX = scale
+                scaleY = scale
+                translationX = offsetX
+                translationY = offsetY
+                this.rotationY = rotationY
             }
-            
-            val activity = context as? FragmentActivity
-            activity?.supportFragmentManager?.beginTransaction()?.apply {
-                replace(container.id, GodotFragment())
-                commit()
+    ) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { context ->
+                val container = FragmentContainerView(context).apply {
+                    id = View.generateViewId()
+                }
+                
+                val activity = context as? FragmentActivity
+                activity?.supportFragmentManager?.beginTransaction()?.apply {
+                    replace(container.id, GodotFragment())
+                    commit()
+                }
+                
+                container
             }
-            
-            container
-        }
-    )
+        )
+    }
 }

@@ -33,10 +33,15 @@ class ModelDownloader(private val context: Context) {
     fun downloadUrl(url: String, fileName: String): Flow<Progress> = flow {
         val client = OkHttpClient.Builder()
             .connectTimeout(60, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
             .readTimeout(60, TimeUnit.SECONDS)
             .build()
 
-        val request = Request.Builder().url(url).build()
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+            .build()
         val file = File(context.filesDir, fileName)
         val tempFile = File(context.filesDir, "$fileName.tmp")
 
@@ -78,6 +83,8 @@ class ModelDownloader(private val context: Context) {
     fun download(): Flow<Progress> = flow {
         val client = OkHttpClient.Builder()
             .connectTimeout(60, TimeUnit.SECONDS)
+            .followRedirects(true)
+            .followSslRedirects(true)
             .readTimeout(60, TimeUnit.SECONDS)
             .build()
 

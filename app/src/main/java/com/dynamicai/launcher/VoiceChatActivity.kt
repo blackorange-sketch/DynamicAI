@@ -227,8 +227,12 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 
 
         // 3D-аватар на задньому фоні
-        Anime3DAvatar(
+        GodotAvatar(
             voiceState = voiceState,
+            scale = AvatarSettings.scale,
+            offsetY = AvatarSettings.offsetY,
+            offsetX = AvatarSettings.offsetX,
+            rotationY = AvatarSettings.rotationY,
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.65f) // Займає 65% висоти екрану

@@ -3,9 +3,10 @@ package com.dynamicai.launcher.voice
 import android.view.View
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.FragmentContainerView
@@ -21,16 +22,12 @@ fun GodotAvatar(
     rotationY: Float, 
     modifier: Modifier = Modifier
 ) {
+    // Використовуємо безпечні Modifier.scale та Modifier.offset замість graphicsLayer
     Box(
         modifier = modifier
             .fillMaxSize()
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-                translationX = offsetX
-                translationY = offsetY
-                this.rotationY = rotationY
-            }
+            .scale(scale)
+            .offset(x = offsetX.dp, y = offsetY.dp)
     ) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
@@ -41,8 +38,11 @@ fun GodotAvatar(
                 
                 val activity = context as? FragmentActivity
                 activity?.supportFragmentManager?.beginTransaction()?.apply {
-                    replace(container.id, GodotFragment())
-                    commit()
+                    // Додаємо перевірку, щоб не створювати дублікат фрагмента
+                    if (activity.supportFragmentManager.findFragmentById(container.id) == null) {
+                        replace(container.id, GodotFragment())
+                        commit()
+                    }
                 }
                 
                 container

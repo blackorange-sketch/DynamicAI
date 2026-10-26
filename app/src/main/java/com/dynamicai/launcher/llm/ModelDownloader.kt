@@ -68,6 +68,9 @@ class ModelDownloader(private val context: Context) {
                         if (total > 0) {
                             val percent = ((downloaded * 100) / total).toInt()
                             emit(Progress.Downloading(percent, downloaded / 1_000_000, total / 1_000_000))
+                        } else {
+                            // Якщо сервер не вказав розмір (наприклад, AWS), показуємо просто завантажені МБ
+                            emit(Progress.Downloading(0, downloaded / 1_000_000, 0))
                         }
                     }
                 }

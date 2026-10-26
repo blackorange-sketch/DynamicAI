@@ -63,6 +63,32 @@ fun AddWidgetDialog(
                     }
                 }
 
+                                // Системний музичний віджет
+                val ctx = androidx.compose.ui.platform.LocalContext.current
+                Text("Системні", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.05f))
+                        .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                        .clickable {
+                            com.dynamicai.launcher.music.WidgetPinner.requestPin(ctx)
+                            onDismiss()
+                        }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("🎵", fontSize = 20.sp)
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text("Музичний плеєр", color = Color.White, fontSize = 14.sp)
+                        Text("Системний (ReVanced)", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
+                    }
+                }
+
                 Spacer(Modifier.height(16.dp))
 
                 Text("Сторінка", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)

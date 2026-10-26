@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.AlarmClock
+import android.view.KeyEvent
+import android.media.AudioManager
 import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.data.WildRiftRepository
 import kotlinx.coroutines.Dispatchers
@@ -218,7 +220,6 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     toolCall.startsWith("playMusic") -> {
                         val query = getArg("query").ifEmpty { "" }
                         try {
-                            // Відкриваємо YT Music з пошуковим запитом (або просто головну)
                             val uri = if (query.isNotEmpty()) {
                                 Uri.parse("https://music.youtube.com/search?q=$query")
                             } else {
@@ -230,9 +231,21 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                             context.startActivity(intent)
-                            if (query.isNotEmpty()) "Відкриваю YT Music та шукаю: $query" else "Відкриваю YT Music."
+                            
+                            // Даємо YT Music час відкритися, а потім імітуємо натискання "Play"
+                            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                                kotlinx.coroutines.delay(2500) // 2.5 секунди на завантаження
+                                try {
+                                    val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                                    val downEvent = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY)
+                                    val upEvent = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY)
+                                    audioManager.dispatchMediaKeyEvent(downEvent)
+                                    audioManager.dispatchMediaKeyEvent(upEvent)
+                                } catch (_: Exception) {}
+                            }
+                            
+                            if (query.isNotEmpty()) "Вмикаю: $query" else "Вмикаю музику."
                         } catch (e: Exception) {
-                            // Якщо YT Music не встановлено, відкриваємо у браузері
                             try {
                                 val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/search?q=$query")).apply {
                                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

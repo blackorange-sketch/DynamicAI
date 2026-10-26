@@ -7,8 +7,8 @@
 package com.tamed.music.innertube
 
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.engine.darwin.Darwin
 
-fun createPortableInnertubeHttpClient(): HttpClient = HttpClient(OkHttp) {
+actual fun createPortableInnertubeHttpClient(): HttpClient = HttpClient(Darwin) {
     configurePortableInnertubeClient()
 }

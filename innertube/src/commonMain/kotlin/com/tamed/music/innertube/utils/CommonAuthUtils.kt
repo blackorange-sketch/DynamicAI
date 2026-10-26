@@ -86,4 +86,4 @@ internal fun sha1(input: String): String {
     }
 }
 
-internal fun currentTimeMillis(): Long
+internal expect fun currentTimeMillis(): Long

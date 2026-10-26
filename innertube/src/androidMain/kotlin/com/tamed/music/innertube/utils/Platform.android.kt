@@ -6,4 +6,4 @@
 
 package com.tamed.music.innertube.utils
 
-internal fun currentTimeMillis(): Long = System.currentTimeMillis()
+internal actual fun currentTimeMillis(): Long = System.currentTimeMillis()

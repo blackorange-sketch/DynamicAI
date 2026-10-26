@@ -15,7 +15,7 @@ class AppAutomationService : AccessibilityService() {
 
         fun clickText(text: String): Boolean = instance?.findAndClick(text, false) ?: false
         fun clickDescription(desc: String): Boolean = instance?.findAndClick(desc, true) ?: false
-        fun clickPlayInYtMusic(): Boolean = instance?.clickPlayInYtMusic() ?: false
+        fun clickFirstSearchResult(): Boolean = instance?.clickFirstSearchResult() ?: false
     }
 
     override fun onServiceConnected() {
@@ -60,39 +60,37 @@ class AppAutomationService : AccessibilityService() {
         return false
     }
 
-    fun clickPlayInYtMusic(): Boolean {
+    fun clickFirstSearchResult(): Boolean {
         val root = rootInActiveWindow ?: return false
         
-        // 1. Шукаємо кнопку Play за описом
-        val descriptions = listOf("Play", "Відтворити", "Грати", "Play song", "Відтворити пісню", "Відтворити все")
-        for (desc in descriptions) {
-            if (searchAndClick(root, desc, true)) return true
-        }
-        
-        // 2. Шукаємо за ID (найпоширеніші варіанти)
-        val playIds = listOf(
-            "com.google.android.apps.youtube.music:id/play_button",
-            "com.google.android.apps.youtube.music:id/player_play_pause_button",
-            "com.google.android.apps.youtube.music:id/play_pause_button",
-            "com.google.android.apps.youtube.music:id/controls_play_pause",
-            "com.google.android.apps.youtube.music:id/play_pause"
+        // Шукаємо контейнери списків (RecyclerView), які є на екрані пошуку
+        val listIds = listOf(
+            "com.google.android.apps.youtube.music:id/recycler_view",
+            "com.google.android.apps.youtube.music:id/item_recycler_view",
+            "com.google.android.apps.youtube.music:id/results_recycler_view"
         )
-        for (id in playIds) {
-            val nodes = root.findAccessibilityNodeInfosByViewId(id)
-            for (n in nodes) {
-                if (n.isClickable && n.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
+        
+        for (id in listIds) {
+            val lists = root.findAccessibilityNodeInfosByViewId(id)
+            for (list in lists) {
+                if (list.childCount > 0) {
+                    val firstItem = list.getChild(0)
+                    if (clickFirstClickableChild(firstItem)) {
+                        return true
+                    }
+                }
             }
         }
-        
-        // 3. Якщо кнопки Play немає, клікаємо на перший результат пошуку (він зазвичай починає грати)
-        val listNodes = root.findAccessibilityNodeInfosByViewId("com.google.android.apps.youtube.music:id/item_recycler_view")
-        if (listNodes.isNotEmpty()) {
-            val firstItem = listNodes[0].getChild(0)
-            if (firstItem != null && firstItem.isClickable) {
-                return firstItem.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-            }
+        return false
+    }
+    
+    private fun clickFirstClickableChild(node: AccessibilityNodeInfo?): Boolean {
+        if (node == null) return false
+        if (node.isClickable && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            if (clickFirstClickableChild(child)) return true
         }
-        
         return false
     }
 }

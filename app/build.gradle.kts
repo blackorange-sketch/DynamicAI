@@ -70,7 +70,7 @@ kotlin {
 
 dependencies {
     // Inner для YouTube Music API
-    implementation("com.github.faraasaaay:inner:1.0.0") // Перевірте актуальну версію
+    implementation(project(":innertube")) // Перевірте актуальну версію
     // Media3 для відтворення
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-session:1.4.1")

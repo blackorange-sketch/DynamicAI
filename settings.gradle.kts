@@ -16,3 +16,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "DynamicAI"
 include(":app")
+
+include(":innertube")

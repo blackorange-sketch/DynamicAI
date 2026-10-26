@@ -59,6 +59,9 @@ class VoiceChatActivity : FragmentActivity() {
 
 @Composable
 fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
+    val appContext = LocalContext.current
+    var showAvatarSettings by remember { mutableStateOf(false) }
+
 
         
     val ctx = LocalContext.current
@@ -363,9 +366,7 @@ fun PulseCircle(state: VoiceState) {
 
     
 
-        val appContext = LocalContext.current
-        var showAvatarSettings by remember { mutableStateOf(false) }
-        
+                
         // Діалог налаштувань аватара
         if (showAvatarSettings) {
             AlertDialog(

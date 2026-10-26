@@ -79,3 +79,17 @@
 # Зберігаємо класи Rhino (потрібні для роботи NewPipe)
 -keep class org.mozilla.javascript.** { *; }
 -keep class org.schabi.newpipe.extractor.** { *; }
+
+# WorkManager & Room ProGuard rules (для Glance Widget)
+-keep class androidx.work.** { *; }
+-keep class androidx.room.** { *; }
+-keep class androidx.sqlite.** { *; }
+-keep class androidx.glance.** { *; }
+-dontwarn androidx.work.**
+-dontwarn androidx.room.**
+-dontwarn androidx.glance.**
+
+# Room generated classes
+-keep class * extends androidx.room.RoomDatabase
+-keep @androidx.room.Entity class *
+-dontwarn androidx.sqlite.db.SupportSQLiteOpenHelper$Factory

@@ -55,17 +55,17 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
             
             return@withContext try {
                 when {
-                    toolCall.startsWith("openApp") -> {
-                        val appName = getArg("name")
-                        val apps = appRepo.getInstalledApps()
-                        val app = apps.find { it.label.contains(appName, ignoreCase = true) }
-                        if (app != null) {
-                            val intent = context.packageManager.getLaunchIntentForPackage(app.packageName)
-                            if (intent != null) {
-                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(intent)
-                                "Відкриваю ${app.label}"
-                            } else "Не вдалося відкрити ${app.label}"
+                                    toolCall.startsWith("openApp") -> {
+                    val appName = getArg("name")
+                    val apps = appRepo.loadInstalledApps() // Використовуємо правильний метод
+                    val app = apps.find { appInfo -> appInfo.label.contains(appName, ignoreCase = true) }
+                    if (app != null) {
+                        // Використовуємо існуючий метод запуску
+                        val success = appRepo.launchApp(app.packageName)
+                        if (success) "Відкриваю ${app.label}"
+                        else "Не вдалося відкрити ${app.label}"
+                    } else "Додаток '$appName' не знайдено."
+                } else "Не вдалося відкрити ${app.label}"
                         } else "Додаток '$appName' не знайдено."
                     }
                     

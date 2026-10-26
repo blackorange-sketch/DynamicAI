@@ -83,6 +83,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     val tts by lazy { TtsManager(app) }
     val downloader by lazy { getSharedDownloader(app) }
     private val prefs = getApplication<android.app.Application>().getSharedPreferences("llm_prefs", android.content.Context.MODE_PRIVATE)
+    var downloadingModelId by androidx.compose.runtime.mutableStateOf<String?>(null)
     var currentModelId by androidx.compose.runtime.mutableStateOf(prefs.getString("current_model_id", "gemma-4-E2B") ?: "gemma-4-E2B")
 
     private val _downloadProgress = MutableStateFlow<ModelDownloader.Progress?>(null)
@@ -666,14 +667,22 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun downloadModel(model: com.dynamicai.launcher.llm.LlmModel) {
         viewModelScope.launch {
+            downloadingModelId = model.id
+            _downloadProgress.value = null
             downloader.downloadUrl(model.url, model.fileName).collect { progress ->
                 _downloadProgress.value = progress
                 if (progress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Complete) {
                     _downloadProgress.value = null
+                    downloadingModelId = null
                     setCurrentModel(model.id)
                 }
             }
         }
+    }
+
+    fun clearDownloadError() {
+        _downloadProgress.value = null
+        downloadingModelId = null
     }
 
     fun deleteModel(model: com.dynamicai.launcher.llm.LlmModel) {

@@ -45,7 +45,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.LinearProgressIndicatorButton
 import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.model.AppInfo
 
@@ -440,6 +441,30 @@ fun SettingsScreen(
                             }
                         }
                     }
+                    
+                    // Блок прогресу та помилок (з'являється тільки для моделі, що завантажується)
+                    if (vm.downloadingModelId == model.id) {
+                        val prog = vm.downloadProgress.value
+                        if (prog is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            LinearProgressIndicator(
+                                progress = { prog.percent / 100f },
+                                modifier = Modifier.fillMaxWidth().height(4.dp),
+                                color = Color(0xFF64B5F6)
+                            )
+                            val progressText = if (prog.totalMb > 0) 
+                                "${prog.percent}% (${prog.downloadedMb} / ${prog.totalMb} МБ)" 
+                            else 
+                                "${prog.downloadedMb} МБ завантажено..."
+                            Text(progressText, color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                        } else if (prog is com.dynamicai.launcher.llm.ModelDownloader.Progress.Error) {
+                            Text("Помилка: ${prog.message}", color = Color(0xFFEF5350), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                            TextButton(onClick = { vm.clearDownloadError() }) {
+                                Text("Сховати", color = Color.Gray, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                    
                     HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(top = 8.dp))
                 }
             }

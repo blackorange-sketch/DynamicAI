@@ -31,6 +31,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
         10. navigateTo(destination: String) -> Відкриває Google Maps з маршрутом.
         11. closeApp(name: String) -> Закриває додаток.
         12. playMusic(query: String) -> Відтворює музику (через системний плеєр).
+        13. tapText(text: String) -> Натискає на елемент з текстом на екрані (для автоматизації).
     """.trimIndent()
 
     suspend fun processWithTools(question: String): String = withContext(Dispatchers.IO) {
@@ -222,28 +223,35 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     toolCall.startsWith("playMusic") -> {
                         val query = getArg("query").ifEmpty { "музика" }
                         try {
-                            // 1. Відкриваємо YT Music з пошуком
-                            val uri = Uri.parse("https://music.youtube.com/search?q=$query")
-                            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-                                setPackage("com.google.android.apps.youtube.music")
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            if (!com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
+                                "Спочатку увімкніть сервіс автоматизації в налаштуваннях Android (Доступність)."
+                            } else {
+                                val uri = Uri.parse("https://music.youtube.com/search?q=$query")
+                                val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                                    setPackage("com.google.android.apps.youtube.music")
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(intent)
+                                
+                                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                                    val success = com.dynamicai.launcher.accessibility.AppAutomationService.clickPlayInYtMusic()
+                                    android.util.Log.d("AgentEngine", "YT Music Play click result: $success")
+                                }, 4000)
+                                
+                                "Вмикаю: $query"
                             }
-                            context.startActivity(intent)
-                            
-                            // 2. Чекаємо 3.5 секунди, поки додаток завантажить результати, і тиснемо Play
-                            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                try {
-                                    val audioManager = context.getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager
-                                    val downEvent = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY)
-                                    val upEvent = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY)
-                                    audioManager.dispatchMediaKeyEvent(downEvent)
-                                    audioManager.dispatchMediaKeyEvent(upEvent)
-                                } catch (_: Exception) {}
-                            }, 3500)
-                            
-                            "Вмикаю: $query"
                         } catch (e: Exception) {
                             "Не вдалося відкрити YT Music."
+                        }
+                    }
+                    
+                    toolCall.startsWith("tapText") -> {
+                        val text = getArg("text")
+                        if (!com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
+                            "Сервіс автоматизації вимкнено."
+                        } else {
+                            val ok = com.dynamicai.launcher.accessibility.AppAutomationService.clickText(text)
+                            if (ok) "Натиснув: $text" else "Не знайшов елемент '$text' на екрані."
                         }
                     }
                     

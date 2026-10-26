@@ -248,10 +248,10 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ActionChip("Пошук", Color(0xFF4285F4)) { ctx.startActivity(Intent(Intent.ACTION_WEB_SEARCH)) }
-                ActionChip("Переклад", Color(0xFFFF9800)) { /* Логіка */ }
-                ActionChip("AI", Color(0xFF2196F3)) { /* Логіка */ }
-                ActionChip("Wild Rift", Color(0xFF9C27B0)) { ctx.startActivity(Intent(ctx, WildRiftAdvisorActivity::class.java)) }
+                LiquidChip("Пошук", Color(0xFF4285F4)) { ctx.startActivity(Intent(Intent.ACTION_WEB_SEARCH)) }
+                LiquidChip("Переклад", Color(0xFFFF9800)) { /* Логіка */ }
+                LiquidChip("AI", Color(0xFF2196F3)) { /* Логіка */ }
+                LiquidChip("Wild Rift", Color(0xFF9C27B0)) { ctx.startActivity(Intent(ctx, WildRiftAdvisorActivity::class.java)) }
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -269,7 +269,7 @@ fun IconButtonLike(icon: String, tint: Color, onClick: () -> Unit) {
 }
 
 @Composable
-fun ActionChip(label: String, color: Color, onClick: () -> Unit) {
+fun LiquidChip(label: String, color: Color, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))

@@ -50,8 +50,7 @@ class ModelDownloader(private val context: Context) {
 
         try {
             val response = client.newCall(request).execute()
-            Log.d("ModelDownloader", "Response code: ${response.code}, URL: $url")
-            if (!response.isSuccessful) {
+                        if (!response.isSuccessful) {
                 emit(Progress.Error("Сервер ${response.code}"))
                 return@flow
             }
@@ -99,8 +98,7 @@ class ModelDownloader(private val context: Context) {
 
         try {
             val response = client.newCall(request).execute()
-            Log.d("ModelDownloader", "Response code: ${response.code}, URL: $url")
-            if (!response.isSuccessful) {
+                        if (!response.isSuccessful) {
                 emit(Progress.Error("Сервер ${response.code}"))
                 return@flow
             }

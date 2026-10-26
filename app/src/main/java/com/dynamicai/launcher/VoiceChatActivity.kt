@@ -59,6 +59,9 @@ class VoiceChatActivity : FragmentActivity() {
 
 @Composable
 fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
+    val appContext = LocalContext.current
+    var showAvatarSettings by remember { mutableStateOf(false) }
+
     val ctx = LocalContext.current
     val storage = remember { VoiceChatStorage(ctx) }
     val scope = rememberCoroutineScope()
@@ -219,9 +222,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
         modifier = Modifier.fillMaxSize()
             .background(Color(0xFF0A0A0A))
     ) {
-        val appContext = LocalContext.current
-        var showAvatarSettings by remember { mutableStateOf(false) }
-
+                
 
         // 3D-аватар на задньому фоні
         Anime3DAvatar(

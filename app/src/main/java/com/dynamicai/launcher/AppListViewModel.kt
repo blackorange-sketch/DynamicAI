@@ -34,6 +34,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -80,7 +82,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     val llm by lazy { getSharedLlm(app) }
     val tts by lazy { TtsManager(app) }
     val downloader by lazy { getSharedDownloader(app) }
-    private val prefs = app.getSharedPreferences("llm_prefs", android.content.Context.MODE_PRIVATE)
+    private val prefs = getApplication<android.app.Application>().getSharedPreferences("llm_prefs", android.content.Context.MODE_PRIVATE)
     var currentModelId by androidx.compose.runtime.mutableStateOf(prefs.getString("current_model_id", "gemma-4-E2B") ?: "gemma-4-E2B")
 
     private val _downloadProgress = MutableStateFlow<ModelDownloader.Progress?>(null)
@@ -660,9 +662,6 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         currentModelId = modelId
         prefs.edit().putString("current_model_id", modelId).apply()
         // Перезавантажуємо LLM з новою моделлю
-        (llm as? com.dynamicai.launcher.llm.LiteRtLlmEngine)?.let { engine ->
-            engine.shutdown() // Якщо є такий метод
-        }
     }
 
     fun downloadModel(model: com.dynamicai.launcher.llm.LlmModel) {
@@ -679,7 +678,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteModel(model: com.dynamicai.launcher.llm.LlmModel) {
         viewModelScope.launch {
-            com.dynamicai.launcher.llm.ModelRepository.deleteModel(app, model)
+            com.dynamicai.launcher.llm.ModelRepository.deleteModel(getApplication(), model)
             if (currentModelId == model.id) {
                 currentModelId = "gemma-4-E2B" // Фолбек
                 prefs.edit().putString("current_model_id", "gemma-4-E2B").apply()

@@ -29,6 +29,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import com.dynamicai.launcher.data.LauncherSettings
 import com.dynamicai.launcher.system.ShizukuManager
 import kotlinx.coroutines.launch
@@ -398,7 +399,7 @@ fun SettingsScreen(
         GlassSectionHeader("Локальна LLM")
         GlassCard {
             val downloadedModels = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)
-            val downloadProgress = vm.downloadProgress.value
+            val downloadProgress = downloadProgress
 
             com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.forEach { model ->
                 val isDownloaded = downloadedModels.any { it.id == model.id }
@@ -421,18 +422,18 @@ fun SettingsScreen(
                             if (isSelected) {
                                 Text("✓ Активна", color = Color(0xFF4CAF50), fontSize = 12.sp)
                             } else {
-                                TextButton(onClick = { vm.setCurrentModel(model.id) }) {
+                                TextButton(onClick = { onSelectModel(model.id) }) {
                                     Text("Обрати", color = Color(0xFF64B5F6), fontSize = 12.sp)
                                 }
                             }
-                            IconButton(onClick = { vm.deleteModel(model) }) {
+                            IconButton(onClick = { onDeleteModel(model) }) {
                                 Icon(androidx.compose.material.icons.Icons.Default.Delete, contentDescription = "Видалити", tint = Color(0xFFEF5350))
                             }
                         } else {
                             if (downloadProgress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFF64B5F6), strokeWidth = 2.dp)
                             } else {
-                                TextButton(onClick = { vm.downloadModel(model) }) {
+                                TextButton(onClick = { onDownloadModel(model) }) {
                                     Text("Завантажити", color = Color(0xFF64B5F6), fontSize = 12.sp)
                                 }
                             }

@@ -12,7 +12,6 @@ import androidx.activity.viewModels
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import com.dynamicai.launcher.voice.Anime3DAvatar
 import androidx.compose.foundation.layout.*
 import com.dynamicai.launcher.voice.AvatarSettings
 import com.dynamicai.launcher.voice.GodotAvatar

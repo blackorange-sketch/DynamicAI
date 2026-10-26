@@ -233,16 +233,15 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                             context.startActivity(intent)
                             
                             // Даємо YT Music час відкритися, а потім імітуємо натискання "Play"
-                            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Main) {
-                                kotlinx.coroutines.delay(2500) // 2.5 секунди на завантаження
+                            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                                 try {
-                                    val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                                    val audioManager = context.getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager
                                     val downEvent = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY)
                                     val upEvent = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY)
                                     audioManager.dispatchMediaKeyEvent(downEvent)
                                     audioManager.dispatchMediaKeyEvent(upEvent)
                                 } catch (_: Exception) {}
-                            }
+                            }, 2500)
                             
                             if (query.isNotEmpty()) "Вмикаю: $query" else "Вмикаю музику."
                         } catch (e: Exception) {

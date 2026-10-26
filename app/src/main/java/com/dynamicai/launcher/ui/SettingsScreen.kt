@@ -51,6 +51,7 @@ import com.dynamicai.launcher.model.AppInfo
 
 @Composable
 fun SettingsScreen(
+    vm: com.dynamicai.launcher.AppListViewModel,
     settings: LauncherSettings,
     onSettingsChange: (LauncherSettings) -> Unit,
     hiddenCount: Int,
@@ -399,7 +400,7 @@ fun SettingsScreen(
         GlassSectionHeader("Локальна LLM")
         GlassCard {
             val downloadedModels = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)
-            val downloadProgress = downloadProgress
+            val downloadProgress = vm.downloadProgress.value
 
             com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.forEach { model ->
                 val isDownloaded = downloadedModels.any { it.id == model.id }
@@ -413,7 +414,7 @@ fun SettingsScreen(
                             val statusText = if (isDownloaded) "Завантажено" else "Не завантажено (${model.sizeBytes / 1_000_000} МБ)"
                             Text(statusText, color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
                             
-                            if (downloadProgress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading && !isDownloaded) {
+                            if (vm.downloadProgress.value is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading && !isDownloaded) {
                                 Text("Завантаження... ${downloadProgress.percent}%", color = Color(0xFF64B5F6), fontSize = 11.sp)
                             }
                         }
@@ -422,18 +423,18 @@ fun SettingsScreen(
                             if (isSelected) {
                                 Text("✓ Активна", color = Color(0xFF4CAF50), fontSize = 12.sp)
                             } else {
-                                TextButton(onClick = { onSelectModel(model.id) }) {
+                                TextButton(onClick = { vm.setCurrentModel(model.id) }) {
                                     Text("Обрати", color = Color(0xFF64B5F6), fontSize = 12.sp)
                                 }
                             }
-                            IconButton(onClick = { onDeleteModel(model) }) {
+                            IconButton(onClick = { vm.deleteModel(model) }) {
                                 Icon(androidx.compose.material.icons.Icons.Default.Delete, contentDescription = "Видалити", tint = Color(0xFFEF5350))
                             }
                         } else {
-                            if (downloadProgress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading) {
+                            if (vm.downloadProgress.value is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFF64B5F6), strokeWidth = 2.dp)
                             } else {
-                                TextButton(onClick = { onDownloadModel(model) }) {
+                                TextButton(onClick = { vm.downloadModel(model) }) {
                                     Text("Завантажити", color = Color(0xFF64B5F6), fontSize = 12.sp)
                                 }
                             }

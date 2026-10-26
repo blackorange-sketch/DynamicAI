@@ -526,6 +526,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
     if (showSettings) {
         SettingsScreen(
+                vm = vm,
             settings = settings,
             onSettingsChange = { vm.updateSettings(it) },
             hiddenCount = hidden.size,

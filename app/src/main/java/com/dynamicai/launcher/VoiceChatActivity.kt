@@ -5,7 +5,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.content.Intent
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -44,7 +44,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 
 enum class VoiceState { LISTENING, THINKING, SPEAKING, IDLE }
 
-class VoiceChatActivity : ComponentActivity() {
+class VoiceChatActivity : FragmentActivity() {
     private val vm: AppListViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

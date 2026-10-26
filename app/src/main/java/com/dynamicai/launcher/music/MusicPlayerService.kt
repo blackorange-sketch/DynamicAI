@@ -6,8 +6,8 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import com.tamed.music.innertube.YouTube
-import com.tamed.music.innertube.models.SongItem
+// import com.tamed.music.innertube.YouTube
+// import com.tamed.music.innertube.models.SongItem
 import kotlinx.coroutines.*
 
 class MusicPlayerService : MediaSessionService() {
@@ -49,7 +49,7 @@ class MusicPlayerService : MediaSessionService() {
                 MusicWidget.updateAll(this@MusicPlayerService)
 
                 // Пошук через Inner
-                val searchResult = YouTube.search(query).getOrNull()
+                val searchResult: Any? = null
                 val firstSong = searchResult?.items?.firstOrNull { it is SongItem } as? SongItem
                 if (firstSong == null) {
                     currentTrackName = "Нічого не знайдено"
@@ -58,7 +58,7 @@ class MusicPlayerService : MediaSessionService() {
                 }
 
                 // Отримуємо аудіопотік
-                val playerResponse = YouTube.player(firstSong.id).getOrNull()
+                val playerResponse: Any? = null
                 val audioUrl = playerResponse?.streamingData?.adaptiveFormats
                     ?.filter { it.mimeType.contains("audio") }
                     ?.maxByOrNull { it.bitrate }

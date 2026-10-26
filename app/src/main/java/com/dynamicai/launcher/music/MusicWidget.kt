@@ -72,7 +72,8 @@ class MusicWidget : GlanceAppWidget() {
     
     // Функція для оновлення віджета звідусіль
     companion object {
-        suspend fun updateAll(context: Context) {
+        fun updateAll(context: Context) {
+        CoroutineScope(Dispatchers.IO).launch {
             val manager = GlanceAppWidgetManager(context)
             val ids = manager.getGlanceIds(MusicWidget::class.java)
             ids.forEach { id ->

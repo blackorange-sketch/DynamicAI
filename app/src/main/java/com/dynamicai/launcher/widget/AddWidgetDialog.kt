@@ -15,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -27,11 +26,11 @@ fun AddWidgetDialog(
 ) {
     var selectedType by remember { mutableStateOf(WidgetRegistry.available.first().id) }
     var selectedPage by remember { mutableStateOf(0) }
-    // Якщо користувач хоче нову сторінку — +1
     var pagesAvailable by remember { mutableStateOf(currentPageCount.coerceAtLeast(1)) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = Color(0xFF1A1A1A),
         title = { Text("Додати віджет", color = Color.White) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
@@ -63,31 +62,7 @@ fun AddWidgetDialog(
                     }
                 }
 
-                                // Системний музичний віджет
-                val ctx = androidx.compose.ui.platform.LocalContext.current
-                Text("Системні", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
-                Spacer(Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.05f))
-                        .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
-                        .clickable {
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("🎵", fontSize = 20.sp)
-                    Spacer(Modifier.width(10.dp))
-                    Column {
-                        Text("Музичний плеєр", color = Color.White, fontSize = 14.sp)
-                        Text("Системний (ReVanced)", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
-                    }
-                }
-
                 Spacer(Modifier.height(16.dp))
-
                 Text("Сторінка", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -109,38 +84,36 @@ fun AddWidgetDialog(
                                 )
                                 .clickable { selectedPage = p }
                         ) {
-                            Text("${p + 1}", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            Text("${p + 1}", color = Color.White, fontSize = 14.sp)
                         }
                     }
-                    // Кнопка "+ Нова сторінка"
+                    // Кнопка "+" для нової сторінки
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
                             .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0x224CAF50))
+                            .background(Color.White.copy(alpha = 0.05f))
                             .border(1.dp, Color(0xFF4CAF50).copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                             .clickable {
-                                selectedPage = pagesAvailable
-                                pagesAvailable += 1
+                                pagesAvailable++
+                                selectedPage = pagesAvailable - 1
                             }
                     ) {
-                        Text("+", color = Color(0xFF4CAF50), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text("+", color = Color(0xFF4CAF50), fontSize = 20.sp)
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                onAdd(selectedType, selectedPage)
-                onDismiss()
-            }) { Text("Додати", color = Color(0xFF64B5F6)) }
+            TextButton(onClick = { onAdd(selectedType, selectedPage) }) {
+                Text("Додати", color = Color(0xFF64B5F6))
+            }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
                 Text("Скасувати", color = Color.White.copy(alpha = 0.6f))
             }
-        },
-        containerColor = Color(0xFF1A1A1A)
+        }
     )
 }

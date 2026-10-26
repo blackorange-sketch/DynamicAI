@@ -29,6 +29,52 @@ class ModelDownloader(private val context: Context) {
         data class Error(val message: String) : Progress()
     }
 
+
+    fun downloadUrl(url: String, fileName: String): Flow<Progress> = flow {
+        val client = OkHttpClient.Builder()
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .build()
+
+        val request = Request.Builder().url(url).build()
+        val file = File(context.filesDir, fileName)
+        val tempFile = File(context.filesDir, "$fileName.tmp")
+
+        try {
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) {
+                emit(Progress.Error("Сервер ${response.code}"))
+                return@flow
+            }
+            val body = response.body ?: run {
+                emit(Progress.Error("Порожня відповідь"))
+                return@flow
+            }
+            val total = body.contentLength()
+            var downloaded: Long = 0
+
+            body.byteStream().use { input ->
+                tempFile.outputStream().use { output ->
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                        downloaded += bytesRead
+                        if (total > 0) {
+                            val percent = ((downloaded * 100) / total).toInt()
+                            emit(Progress.Downloading(percent, downloaded / 1_000_000, total / 1_000_000))
+                        }
+                    }
+                }
+            }
+            if (file.exists()) file.delete()
+            tempFile.renameTo(file)
+            emit(Progress.Complete(file))
+        } catch (t: Throwable) {
+            emit(Progress.Error(t.message ?: "Помилка"))
+        }
+    }
+
     fun download(): Flow<Progress> = flow {
         val client = OkHttpClient.Builder()
             .connectTimeout(60, TimeUnit.SECONDS)

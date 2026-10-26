@@ -82,6 +82,7 @@ class AiHubActivity : ComponentActivity() {
 @OptIn(ExperimentalLayoutApi::class)
 fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) {
     var query by remember { mutableStateOf("") }
+    var showModelSettings by remember { mutableStateOf(false) }
     var aiResponse by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var webViewUrl by remember { mutableStateOf<String?>(null) }
@@ -375,4 +376,44 @@ private fun ActionChip(label: String, color: Color, onClick: () -> Unit) {
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 8.dp)
     )
+
+    if (showModelSettings) {
+        AlertDialog(
+            onDismissRequest = { showModelSettings = false },
+            title = { Text("Моделі ШІ (LLM)") },
+            text = {
+                Column {
+                    val downloaded = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)
+                    com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.forEach { model ->
+                        val isDownloaded = downloaded.any { it.id == model.id }
+                        val isSelected = model.id == vm.currentModelId
+                        val progress = vm.downloadProgress.value
+                        
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(model.name, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = Color.White)
+                                Text(if (isDownloaded) "Завантажено" else "Не завантажено (${model.sizeBytes / 1_000_000} МБ)", fontSize = 12.sp, color = Color.Gray)
+                                if (progress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading && !isDownloaded) {
+                                    Text("Завантаження... ${progress.percent}%", color = Color.Green, fontSize = 12.sp)
+                                }
+                            }
+                            if (isDownloaded) {
+                                if (isSelected) {
+                                    Text("Активна", color = Color.Green, fontSize = 12.sp)
+                                } else {
+                                    TextButton(onClick = { vm.setCurrentModel(model.id) }) { Text("Обрати") }
+                                }
+                                IconButton(onClick = { vm.deleteModel(model) }) { Text("🗑️") }
+                            } else {
+                                TextButton(onClick = { vm.downloadModel(model) }) { Text("Завантажити") }
+                            }
+                        }
+                        androidx.compose.material3.Divider()
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showModelSettings = false }) { Text("Закрити") } }
+        )
+    }
+
 }

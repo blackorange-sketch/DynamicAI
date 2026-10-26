@@ -80,6 +80,8 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     val llm by lazy { getSharedLlm(app) }
     val tts by lazy { TtsManager(app) }
     val downloader by lazy { getSharedDownloader(app) }
+    private val prefs = app.getSharedPreferences("llm_prefs", android.content.Context.MODE_PRIVATE)
+    var currentModelId by androidx.compose.runtime.mutableStateOf(prefs.getString("current_model_id", "gemma-4-E2B") ?: "gemma-4-E2B")
 
     private val _downloadProgress = MutableStateFlow<ModelDownloader.Progress?>(null)
     val downloadProgress: StateFlow<ModelDownloader.Progress?> = _downloadProgress.asStateFlow()
@@ -178,12 +180,15 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         if (llm.isReady) return true
         android.util.Log.d("LLM_DEBUG", "Checking model file: ${downloader.modelFile.absolutePath}")
         android.util.Log.d("LLM_DEBUG", "Exists: ${downloader.modelFile.exists()}, Size: ${downloader.modelFile.length()} bytes")
-        if (!downloader.isDownloaded) {
-            android.util.Log.e("LLM_DEBUG", "Model NOT downloaded or size < 100MB!")
+        val model = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.find { it.id == currentModelId }
+            ?: com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.first()
+        val modelFile = com.dynamicai.launcher.llm.ModelRepository.getModelFile(app, model)
+        if (!modelFile.exists()) {
+            android.util.Log.e("LLM_DEBUG", "Model NOT downloaded: ${model.name}")
             return false
         }
         return try {
-            llm.initialize(downloader.modelFile).also { ok -> if (ok) _llmReady.value = true }
+            llm.initialize(modelFile).also { ok -> if (ok) _llmReady.value = true }
         } catch (_: Throwable) { false }
     }
 
@@ -650,4 +655,36 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         tts.shutdown()
         super.onCleared()
     }
+
+    fun setCurrentModel(modelId: String) {
+        currentModelId = modelId
+        prefs.edit().putString("current_model_id", modelId).apply()
+        // Перезавантажуємо LLM з новою моделлю
+        (llm as? com.dynamicai.launcher.llm.LiteRtLlmEngine)?.let { engine ->
+            engine.shutdown() // Якщо є такий метод
+        }
+    }
+
+    fun downloadModel(model: com.dynamicai.launcher.llm.LlmModel) {
+        viewModelScope.launch {
+            downloader.downloadUrl(model.url, model.fileName).collect { progress ->
+                _downloadProgress.value = progress
+                if (progress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Complete) {
+                    _downloadProgress.value = null
+                    setCurrentModel(model.id)
+                }
+            }
+        }
+    }
+
+    fun deleteModel(model: com.dynamicai.launcher.llm.LlmModel) {
+        viewModelScope.launch {
+            com.dynamicai.launcher.llm.ModelRepository.deleteModel(app, model)
+            if (currentModelId == model.id) {
+                currentModelId = "gemma-4-E2B" // Фолбек
+                prefs.edit().putString("current_model_id", "gemma-4-E2B").apply()
+            }
+        }
+    }
+
 }

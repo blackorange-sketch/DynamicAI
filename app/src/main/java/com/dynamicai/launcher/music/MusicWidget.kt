@@ -45,7 +45,7 @@ class MusicWidget : GlanceAppWidget() {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = MusicPlayerService.currentTrackName,
+                text = ReVancedController.currentTrackName,
                 style = TextStyle(
                     color = ColorProvider(Color.White),
                     fontSize = 14.sp,
@@ -60,7 +60,7 @@ class MusicWidget : GlanceAppWidget() {
             ) {
                 // Кнопка Play/Pause
                 Text(
-                    text = if (MusicPlayerService.isPlaying) "⏸" else "▶️",
+                    text = if (ReVancedController.isPlaying) "⏸" else "▶️",
                     modifier = GlanceModifier
                         .padding(8.dp)
                         .clickable(actionRunCallback<TogglePlaybackAction>()),
@@ -88,7 +88,7 @@ class TogglePlaybackAction : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters
     ) {
-        MusicPlayerService.instance?.togglePlayPause()
+        ReVancedController.instance?.togglePlayPause()
         // Віджет оновиться автоматично через слухач у сервісі
     }
 }

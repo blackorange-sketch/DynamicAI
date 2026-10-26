@@ -44,6 +44,9 @@ class VoiceChatActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Ініціалізуємо контролер для ReVanced
+        com.dynamicai.launcher.music.ReVancedController(applicationContext)
+        
         setContent {
             val vm: AppListViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
             VoiceAssistantScreen(vm = vm, onClose = { finish() })

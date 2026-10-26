@@ -129,7 +129,7 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
             .fillMaxSize()
             .background(
                 Brush.radialGradient(
-                    colors = listOf(Color(0xFF1E1E28), Color(0xFF0A0A0A)),
+                    colors = listOf(Color(0xFF14141E), Color(0xFF050505)),
                     radius = 1200f
                 )
             )
@@ -161,6 +161,26 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 Text("✕", color = Color.White.copy(alpha = 0.6f), fontSize = 22.sp, modifier = Modifier.padding(8.dp).clickable(onClick = onClose))
             }
 
+            // Велика фонова куля (водяний знак)
+            val bgOrbColor = when (voiceState) {
+                VoiceState.LISTENING -> Color(0xFF4CAF50)
+                VoiceState.SPEAKING -> Color(0xFFE91E63)
+                VoiceState.THINKING -> Color(0xFF2196F3)
+                else -> Color.Gray
+            }
+            Box(
+                modifier = Modifier
+                    .align(androidx.compose.ui.Alignment.BottomCenter)
+                    .padding(bottom = 80.dp)
+                    .size(300.dp)
+                    .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(
+                        androidx.compose.ui.graphics.Brush.radialGradient(
+                            listOf(bgOrbColor.copy(alpha = 0.15f), Color.Transparent)
+                        )
+                    )
+            )
             Spacer(modifier = Modifier.height(16.dp))
 
             // Чат
@@ -191,29 +211,7 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Центральний індикатор (Siri-like скляна куля)
-            Box(modifier = Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) {
-                val orbColor = when (voiceState) {
-                    VoiceState.LISTENING -> Color(0xFF4CAF50)
-                    VoiceState.SPEAKING -> Color(0xFFE91E63)
-                    VoiceState.THINKING -> Color(0xFF2196F3)
-                    else -> Color.Gray
-                }
-                
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }
-                        .clip(CircleShape)
-                        .background(Brush.radialGradient(listOf(orbColor.copy(alpha = 0.6f), orbColor.copy(alpha = 0.1f))))
-                        .border(1.dp, orbColor.copy(alpha = 0.3f), CircleShape)
-                )
-                if (voiceState == VoiceState.THINKING) {
-                    CircularProgressIndicator(color = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(100.dp), strokeWidth = 1.dp)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+            
 
             // Поле вводу (Liquid Glass)
             Row(

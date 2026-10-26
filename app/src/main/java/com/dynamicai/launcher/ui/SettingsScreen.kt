@@ -191,6 +191,7 @@ fun SettingsScreen(
         }
 
         // ==== Погода ====
+        GlassSectionHeader("🧩 Віджети та Інструменти")
         GlassSectionHeader("Погода")
         GlassCard {
             SwitchRow("Показувати погоду", settings.showWeather, Icons.Default.Star, Color(0xFFFFB300)) {
@@ -210,6 +211,7 @@ fun SettingsScreen(
         }
 
         // ==== Фон лаунчера ====
+        GlassSectionHeader("🎨 Зовнішній вигляд")
         GlassSectionHeader("Фон лаунчера")
         GlassCard {
             SizeSliderRow(
@@ -341,6 +343,7 @@ fun SettingsScreen(
         }
 
         // ==== Дії ====
+        GlassSectionHeader("⚙️ Система")
         GlassSectionHeader("Shizuku")
         ShizukuTestRow()
 
@@ -400,6 +403,7 @@ fun SettingsScreen(
         GlassSectionHeader("Bluetooth")
         BluetoothTestRow()
 
+        GlassSectionHeader("🤖 ШІ та Асистент")
         GlassSectionHeader("Локальна LLM")
         GlassCard {
             val downloadedModels = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)

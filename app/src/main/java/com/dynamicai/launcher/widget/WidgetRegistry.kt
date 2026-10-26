@@ -79,5 +79,8 @@ fun RenderPlacedWidget(
                 modifier = sizeModifier
             )
         }
+        "music" -> {
+            MusicWidget(size = widget.size, modifier = sizeModifier)
+        }
     }
 }

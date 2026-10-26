@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import com.dynamicai.launcher.voice.Anime3DAvatar
 import androidx.compose.foundation.layout.*
 import com.dynamicai.launcher.voice.AvatarSettings
+import com.dynamicai.launcher.voice.GodotAvatar
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.AlertDialog

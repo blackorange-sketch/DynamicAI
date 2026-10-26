@@ -219,6 +219,9 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
         modifier = Modifier.fillMaxSize()
             .background(Color(0xFF0A0A0A))
     ) {
+        val appContext = LocalContext.current
+        var showAvatarSettings by remember { mutableStateOf(false) }
+
 
         // 3D-аватар на задньому фоні
         Anime3DAvatar(
@@ -365,7 +368,7 @@ fun PulseCircle(state: VoiceState) {
             AlertDialog(
                 onDismissRequest = { 
                     showAvatarSettings = false 
-                    AvatarSettings.save(context)
+                    AvatarSettings.save(appContext)
                 },
                 title = { Text("Налаштування аватара") },
                 text = {
@@ -402,7 +405,7 @@ fun PulseCircle(state: VoiceState) {
                 confirmButton = {
                     TextButton(onClick = { 
                         showAvatarSettings = false 
-                        AvatarSettings.save(context)
+                        AvatarSettings.save(appContext)
                     }) {
                         Text("Готово")
                     }

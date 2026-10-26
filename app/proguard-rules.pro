@@ -75,3 +75,17 @@
 -keep class * extends androidx.room.RoomDatabase
 -keep @androidx.room.Entity class *
 -dontwarn androidx.sqlite.db.SupportSQLiteOpenHelper$Factory
+
+# === NewPipeExtractor & its dependencies (Rhino, Jsoup, Re2j) ===
+-dontwarn com.google.re2j.**
+-dontwarn java.beans.**
+-dontwarn javax.script.**
+-dontwarn jdk.dynalink.**
+-dontwarn org.mozilla.javascript.**
+-dontwarn org.jsoup.**
+-dontwarn org.slf4j.**
+
+-keep class com.google.re2j.** { *; }
+-keep class org.mozilla.javascript.** { *; }
+-keep class org.jsoup.** { *; }
+-keep class org.schabi.newpipe.extractor.** { *; }

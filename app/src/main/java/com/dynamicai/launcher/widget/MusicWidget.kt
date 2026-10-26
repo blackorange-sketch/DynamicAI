@@ -1,6 +1,7 @@
 package com.dynamicai.launcher.widget
 
 import android.content.Context
+import android.content.Intent
 import android.media.AudioManager
 import android.view.KeyEvent
 import androidx.compose.foundation.background
@@ -35,12 +36,8 @@ fun MusicWidget(size: String, modifier: Modifier = Modifier) {
     val maxVolume = remember { audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC) }
     var currentVolume by remember { mutableStateOf(audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat()) }
 
-    // Спільний Liquid Glass фон
     val glassBackground = Brush.verticalGradient(
-        colors = listOf(
-            Color(0x33FFFFFF), // Світле скло зверху
-            Color(0x11FFFFFF)  // Темніше скло знизу
-        )
+        colors = listOf(Color(0x33FFFFFF), Color(0x11FFFFFF))
     )
     val glassBorder = Color.White.copy(alpha = 0.15f)
 
@@ -51,18 +48,18 @@ fun MusicWidget(size: String, modifier: Modifier = Modifier) {
             .border(0.5.dp, glassBorder, RoundedCornerShape(24.dp))
     ) {
         when (size) {
-            "small" -> SmallMusicContent(isPlaying, audioManager) { isPlaying = it }
-            "large", "full" -> LargeMusicContent(size, isPlaying, audioManager, currentVolume, maxVolume) { 
+            "small" -> SmallMusicContent(context, isPlaying, audioManager) { isPlaying = it }
+            "large", "full" -> LargeMusicContent(context, size, isPlaying, audioManager, currentVolume, maxVolume) { 
                 isPlaying = it 
                 audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, currentVolume.toInt(), 0)
             }
-            else -> MediumMusicContent(isPlaying, audioManager) { isPlaying = it }
+            else -> MediumMusicContent(context, isPlaying, audioManager) { isPlaying = it }
         }
     }
 }
 
 @Composable
-fun SmallMusicContent(isPlaying: Boolean, audioManager: AudioManager, onPlayStateChange: (Boolean) -> Unit) {
+fun SmallMusicContent(context: Context, isPlaying: Boolean, audioManager: AudioManager, onPlayStateChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -70,16 +67,14 @@ fun SmallMusicContent(isPlaying: Boolean, audioManager: AudioManager, onPlayStat
     ) {
         PlayControlButton("⏮") { sendMediaKey(audioManager, KeyEvent.KEYCODE_MEDIA_PREVIOUS) }
         PlayControlButton(if (isPlaying) "⏸" else "▶️", isMain = true) {
-            val code = if (isPlaying) KeyEvent.KEYCODE_MEDIA_PAUSE else KeyEvent.KEYCODE_MEDIA_PLAY
-            sendMediaKey(audioManager, code)
-            onPlayStateChange(!isPlaying)
+            handlePlayPause(context, audioManager, isPlaying, onPlayStateChange)
         }
         PlayControlButton("⏭") { sendMediaKey(audioManager, KeyEvent.KEYCODE_MEDIA_NEXT) }
     }
 }
 
 @Composable
-fun MediumMusicContent(isPlaying: Boolean, audioManager: AudioManager, onPlayStateChange: (Boolean) -> Unit) {
+fun MediumMusicContent(context: Context, isPlaying: Boolean, audioManager: AudioManager, onPlayStateChange: (Boolean) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -98,9 +93,7 @@ fun MediumMusicContent(isPlaying: Boolean, audioManager: AudioManager, onPlaySta
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
             PlayControlButton("⏮") { sendMediaKey(audioManager, KeyEvent.KEYCODE_MEDIA_PREVIOUS) }
             PlayControlButton(if (isPlaying) "⏸" else "▶️", isMain = true) {
-                val code = if (isPlaying) KeyEvent.KEYCODE_MEDIA_PAUSE else KeyEvent.KEYCODE_MEDIA_PLAY
-                sendMediaKey(audioManager, code)
-                onPlayStateChange(!isPlaying)
+                handlePlayPause(context, audioManager, isPlaying, onPlayStateChange)
             }
             PlayControlButton("⏭") { sendMediaKey(audioManager, KeyEvent.KEYCODE_MEDIA_NEXT) }
         }
@@ -109,10 +102,9 @@ fun MediumMusicContent(isPlaying: Boolean, audioManager: AudioManager, onPlaySta
 
 @Composable
 fun LargeMusicContent(
-    size: String, isPlaying: Boolean, audioManager: AudioManager, volume: Float, maxVolume: Int, onPlayStateChange: (Boolean) -> Unit
+    context: Context, size: String, isPlaying: Boolean, audioManager: AudioManager, volume: Float, maxVolume: Int, onPlayStateChange: (Boolean) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        // Верхня частина: Іконка та Назва
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)).background(Color(0x449C27B0)),
@@ -121,17 +113,16 @@ fun LargeMusicContent(
             Spacer(Modifier.width(16.dp))
             Column {
                 Text("ReVanced Music", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                Text("Невідомий трек", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("Натисніть Play, щоб відкрити", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         
         Spacer(Modifier.height(16.dp))
         
-        // Повзунок гучності
         Text("Гучність", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
         Slider(
             value = volume,
-            onValueChange = { onPlayStateChange(isPlaying) }, // Тригер оновлення
+            onValueChange = { onPlayStateChange(isPlaying) },
             valueRange = 0f..maxVolume.toFloat(),
             colors = SliderDefaults.colors(
                 thumbColor = Color.White,
@@ -142,7 +133,6 @@ fun LargeMusicContent(
         
         Spacer(Modifier.height(8.dp))
         
-        // Кнопки керування
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
@@ -151,15 +141,12 @@ fun LargeMusicContent(
             PlayControlButton("⏮") { sendMediaKey(audioManager, KeyEvent.KEYCODE_MEDIA_PREVIOUS) }
             Spacer(Modifier.width(16.dp))
             PlayControlButton(if (isPlaying) "⏸" else "▶️", isMain = true) {
-                val code = if (isPlaying) KeyEvent.KEYCODE_MEDIA_PAUSE else KeyEvent.KEYCODE_MEDIA_PLAY
-                sendMediaKey(audioManager, code)
-                onPlayStateChange(!isPlaying)
+                handlePlayPause(context, audioManager, isPlaying, onPlayStateChange)
             }
             Spacer(Modifier.width(16.dp))
             PlayControlButton("⏭") { sendMediaKey(audioManager, KeyEvent.KEYCODE_MEDIA_NEXT) }
         }
         
-        // Плейлист для Full розміру
         if (size == "full") {
             Spacer(Modifier.height(16.dp))
             Text("Черга відтворення", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
@@ -190,6 +177,53 @@ fun PlayControlButton(icon: String, isMain: Boolean = false, onClick: () -> Unit
     ) {
         Text(icon, color = Color.White, fontSize = if (isMain) 22.sp else 18.sp)
     }
+}
+
+private fun handlePlayPause(
+    context: Context, 
+    audioManager: AudioManager, 
+    isPlaying: Boolean, 
+    onStateChange: (Boolean) -> Unit
+) {
+    if (isPlaying) {
+        // Музика грає - ставимо на паузу
+        sendMediaKey(audioManager, KeyEvent.KEYCODE_MEDIA_PAUSE)
+        onStateChange(false)
+    } else {
+        // Музика не грає
+        if (audioManager.isMusicActive) {
+            // Активна сесія є - продовжуємо
+            sendMediaKey(audioManager, KeyEvent.KEYCODE_MEDIA_PLAY)
+            onStateChange(true)
+        } else {
+            // Сесії немає - відкриваємо ReVanced
+            val packageName = findReVancedPackage(context)
+            if (packageName != null) {
+                val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
+                if (launchIntent != null) {
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(launchIntent)
+                }
+            }
+        }
+    }
+}
+
+private fun findReVancedPackage(context: Context): String? {
+    val possiblePackages = listOf(
+        "com.google.android.apps.youtube.music",
+        "anddea.youtube.music",
+        "app.revanced.android.apps.youtube.music"
+    )
+    for (pkg in possiblePackages) {
+        try {
+            context.packageManager.getPackageInfo(pkg, 0)
+            return pkg
+        } catch (_: Exception) {}
+    }
+    // Якщо не знайшли за відомими ID - шукаємо за назвою
+    val apps = context.packageManager.getInstalledApplications(0)
+    return apps.find { it.loadLabel(context.packageManager).toString().contains("YouTube Music", ignoreCase = true) }?.packageName
 }
 
 private fun sendMediaKey(audioManager: AudioManager, keyCode: Int) {

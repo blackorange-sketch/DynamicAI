@@ -24,7 +24,8 @@ object WidgetRegistry {
 
     val available = listOf(
         WidgetType("weather_clock", "Погода та годинник", "🌤️"),
-        WidgetType("notes", "Нотатки", "📝")
+        WidgetType("notes", "Нотатки", "📝"),
+        WidgetType("music", "Музичний плеєр", "🎵")
         // майбутні: "calendar", "battery", "quick_actions"
     )
 

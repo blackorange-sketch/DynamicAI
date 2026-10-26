@@ -104,7 +104,11 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
         recognizer?.startListening(intent)
     }
 
-    LaunchedEffect(Unit) { startListening() }
+    LaunchedEffect(Unit) { 
+        // "Прогріваємо" TTS-двигун заздалегідь, щоб перша відповідь була без затримки
+        vm.tts
+        startListening() 
+    }
 
     // Плавна анімація "дихання" для скляної кулі
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")

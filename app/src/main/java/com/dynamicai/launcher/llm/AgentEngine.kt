@@ -223,10 +223,9 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     toolCall.startsWith("playMusic") -> {
                         val query = getArg("query").ifEmpty { "музика" }
                         try {
-                            // Повертаємо робочий варіант через URI
+                            // Відкриваємо через URI (без setPackage, щоб уникнути помилок)
                             val uri = Uri.parse("https://music.youtube.com/search?q=$query")
                             val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-                                setPackage("com.google.android.apps.youtube.music")
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                             context.startActivity(intent)
@@ -236,7 +235,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                                     val success = com.dynamicai.launcher.accessibility.AppAutomationService.clickPlayInYtMusic()
                                     android.util.Log.d("AgentEngine", "YT Music Play click result: $success")
-                                }, 4000)
+                                }, 5000) // Збільшили до 5 секунд
                                 "Вмикаю: $query"
                             } else {
                                 "Відкриваю YT Music. (Увімкніть сервіс доступності для автозапуску)"

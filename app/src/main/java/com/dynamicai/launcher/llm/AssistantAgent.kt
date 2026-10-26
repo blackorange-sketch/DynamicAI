@@ -22,7 +22,7 @@ class AssistantAgent(context: Context, private val llmModel: Model) {
         suspend fun getWeather(@Param("Назва міста, наприклад, Київ") city: String): String {
             return withContext(Dispatchers.IO) {
                 try {
-                    val weather = weatherRepo.getWeather(city)
+                    val weather = weatherRepo.loadCachedWeather(city)
                     "Погода у місті $city: ${weather ?: "дані недоступні"}"
                 } catch (e: Exception) {
                     "Не вдалося отримати погоду: ${e.message}"

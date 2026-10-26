@@ -17,6 +17,7 @@ class AppAutomationService : AccessibilityService() {
         fun clickDescription(desc: String): Boolean = instance?.findAndClick(desc, true) ?: false
         fun clickFirstSearchResult(): Boolean = instance?.clickFirstSearchResult() ?: false
         fun clickPlayButton(): Boolean = instance?.clickPlayButton() ?: false
+        fun searchAndPlay(query: String) { instance?.searchAndPlay(query) }
     }
 
     override fun onServiceConnected() {
@@ -119,5 +120,69 @@ class AppAutomationService : AccessibilityService() {
             }
         }
         return false
+    }
+
+    fun searchAndPlay(query: String) {
+        val root = rootInActiveWindow ?: return
+        
+        // 1. Знаходимо і клікаємо іконку пошуку (якщо ми на головній)
+        val searchNodes = root.findAccessibilityNodeInfosByViewId("com.google.android.apps.youtube.music:id/search_button")
+        if (searchNodes.isNotEmpty() && searchNodes[0].isClickable) {
+            searchNodes[0].performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        } else {
+            // Якщо ID не знайдено, шукаємо за описом
+            searchAndClick(root, "Search", true)
+        }
+        
+        // Даємо час на відкриття поля введення
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            val newRoot = rootInActiveWindow ?: return@postDelayed
+            
+            // 2. Знаходимо поле введення
+            val editTexts = newRoot.findAccessibilityNodeInfosByViewId("com.google.android.apps.youtube.music:id/search_edit_text")
+            val searchField = if (editTexts.isNotEmpty()) editTexts[0] else {
+                // Якщо не знайшли за ID, шукаємо будь-який EditText
+                val allEditTexts = mutableListOf<AccessibilityNodeInfo>()
+                findNodesByClassName(newRoot, "android.widget.EditText", allEditTexts)
+                allEditTexts.firstOrNull()
+            }
+            
+            if (searchField != null) {
+                // 3. Вводимо текст
+                val arguments = android.os.Bundle().apply {
+                    putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, query)
+                }
+                searchField.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
+                
+                // 4. Натискаємо Enter (імітація)
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    val finalRoot = rootInActiveWindow ?: return@postDelayed
+                    
+                    // Шукаємо кнопку або елемент з текстом "Пісня" (щоб уникнути кліку на картку гурту)
+                    val songNodes = finalRoot.findAccessibilityNodeInfosByText("Пісня")
+                    if (songNodes.isNotEmpty()) {
+                        // Клікаємо на батьківський елемент, щоб запустити пісню
+                        var parent = songNodes[0].parent
+                        while (parent != null) {
+                            if (parent.isClickable && parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                                return@postDelayed
+                            }
+                            parent = parent.parent
+                        }
+                    }
+                    
+                    // Якщо "Пісня" не знайдено, просто клікаємо перший результат нижче пошуку
+                    clickFirstSearchResult()
+                    
+                }, 3000) // 3 секунди на завантаження результатів
+            }
+        }, 1500) // 1.5 секунди на відкриття пошуку
+    }
+    
+    private fun findNodesByClassName(node: AccessibilityNodeInfo, className: String, outList: MutableList<AccessibilityNodeInfo>) {
+        if (node.className?.toString() == className) outList.add(node)
+        for (i in 0 until node.childCount) {
+            node.getChild(i)?.let { findNodesByClassName(it, className, outList) }
+        }
     }
 }

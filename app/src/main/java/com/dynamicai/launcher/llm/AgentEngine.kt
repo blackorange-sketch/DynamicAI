@@ -225,45 +225,38 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                         val hasSearch = query.isNotEmpty()
                         
                         try {
-                            val uri = if (hasSearch) {
-                                Uri.parse("https://music.youtube.com/search?q=$query")
+                            // Відкриваємо YT Music через звичайний запуск (без дублікатів у тасках)
+                            val launchIntent = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.youtube.music")
+                            if (launchIntent != null) {
+                                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(launchIntent)
                             } else {
-                                Uri.parse("https://music.youtube.com")
+                                return@withContext "YT Music не встановлено."
                             }
-                            
-                            // Додаємо прапорці, щоб не створювати дублікати в Recent Apps
-                            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                            }
-                            context.startActivity(intent)
                             
                             if (hasSearch) {
-                                // Пошук: клікаємо перший результат
+                                // Шукаємо та вмикаємо пісню через Accessibility
                                 if (com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
                                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                        val success = com.dynamicai.launcher.accessibility.AppAutomationService.clickFirstSearchResult()
-                                        android.util.Log.d("AgentEngine", "YT Music Search click result: $success")
-                                    }, 5000)
-                                    "Вмикаю: $query"
+                                        com.dynamicai.launcher.accessibility.AppAutomationService.searchAndPlay(query)
+                                    }, 2500) // Чекаємо, поки додаток відкриється
+                                    "Шукаю та вмикаю: $query"
                                 } else {
-                                    "Відкриваю пошук: $query (Увімкніть доступність)"
+                                    "Відкриваю YT Music. (Увімкніть доступність для пошуку)"
                                 }
                             } else {
-                                // Просто "включи музику": клікаємо Play у міні-плеєрі або на головній
+                                // Просто натискаємо Play
                                 if (com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
                                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                        val success = com.dynamicai.launcher.accessibility.AppAutomationService.clickPlayButton()
-                                        android.util.Log.d("AgentEngine", "YT Music Play click result: $success")
+                                        com.dynamicai.launcher.accessibility.AppAutomationService.clickPlayButton()
                                     }, 2500)
                                     "Вмикаю музику."
                                 } else {
-                                    "Відкриваю YT Music. (Увімкніть доступність)"
+                                    "Відкриваю YT Music."
                                 }
                             }
                         } catch (e: Exception) {
-                            "Не вдалося відкрити YT Music."
+                            "Помилка: ${e.message}"
                         }
                     }
                     

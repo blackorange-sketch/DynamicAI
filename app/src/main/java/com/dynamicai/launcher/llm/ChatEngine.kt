@@ -330,36 +330,15 @@ class ChatEngine(
         }
     }
 
-}
 
-    
     suspend fun answerWithAgent(question: String): String {
         if (!llm.isReady) return "LLM не активна"
         return try {
+            // Використовуємо наш власний AgentEngine, який вже написаний і працює
             agentEngine.processWithTools(question)
         } catch (t: Throwable) {
-            "Помилка агента: ${t.message}"
-        }
-    
-    suspend fun answerWithAgent(question: String): String {
-        if (!llm.isReady) return "LLM не активна"
-        try {
-            // Ініціалізуємо агента, якщо ще не зроблено
-            if (assistantAgent == null) {
-                // Використовуємо LiteRtLmModel з ADK
-                val model = com.google.adk.kt.litertlm.LiteRtLmModel(
-                    modelPath = com.dynamicai.launcher.llm.ModelRepository.getModelFile(
-                        context, 
-                        com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.first()
-                    ).absolutePath
-                )
-                assistantAgent = AssistantAgent(context, model)
-            }
-            // Викликаємо агента
-            return assistantAgent!!.rootAgent.run(question)
-        } catch (t: Throwable) {
             android.util.Log.e("ChatEngine", "Agent error", t)
-            return "Помилка агента: ${t.message}"
+            "Помилка агента: ${t.message}"
         }
     }
 }

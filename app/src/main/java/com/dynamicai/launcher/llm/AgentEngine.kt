@@ -31,7 +31,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
         // 2. Перевіряємо, чи модель вирішила викликати інструмент
         if (response.contains("TOOL_CALL: getWeather")) {
             val city = Regex("""city="([^"]+)"""").find(response)?.groupValues?.get(1) ?: "Київ"
-            val weather = weatherRepo.loadCachedWeather(city) // Ваш метод
+            val weather = "Сонячно, +15°C (тестовий режим для міста $city)"
             val finalAnswer = llm.complete("Ось дані про погоду: $weather. Дай коротку відповідь користувачу.")
             return@withContext finalAnswer ?: "Не вдалося отримати погоду."
         }

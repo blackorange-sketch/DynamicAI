@@ -1,5 +1,4 @@
 plugins {
-    id("com.google.devtools.ksp") version "2.2.10-2.0.2"
     id("com.android.application")
         id("org.jetbrains.kotlin.plugin.compose")
 }
@@ -69,9 +68,6 @@ kotlin {
 }
 
 dependencies {
-    implementation("com.google.adk:google-adk-kotlin-core:1.4.0")
-    implementation("com.google.adk:google-adk-kotlin-litertlm:1.4.0")
-    ksp("com.google.adk:google-adk-kotlin-processor:1.4.0")
 
     implementation("androidx.fragment:fragment-ktx:1.8.5")
     val composeBom = platform("androidx.compose:compose-bom:2026.02.01")

@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -216,10 +217,10 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                         query = ""
                     }
                 }) {
-                    Icon(Icons.Default.Send, contentDescription = "Send", tint = Color(0xFF64B5F6))
+                    Text("➤", fontSize = 20.sp, color = Color(0xFF64B5F6), modifier = Modifier.padding(12.dp).clickable { /* логіка відправки */ })
                 }
                 IconButton(onClick = { startListening() }) {
-                    Icon(Icons.Default.Mic, contentDescription = "Mic", tint = if (voiceState == VoiceState.LISTENING) Color(0xFF4CAF50) else Color.White)
+                    Text("🎤", fontSize = 24.sp, modifier = Modifier.padding(12.dp).clickable { startListening() })
                 }
             }
 

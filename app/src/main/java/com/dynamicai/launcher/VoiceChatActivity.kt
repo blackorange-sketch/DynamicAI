@@ -197,7 +197,10 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     }
 
     // Start listening when activity opens
-    LaunchedEffect(Unit) { startListening() }
+    LaunchedEffect(Unit) { 
+        AvatarSettings.load(ctx)
+        startListening() 
+    }
 
     DisposableEffect(Unit) {
         onDispose {
@@ -228,6 +231,8 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
             // Header
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("🎙️ Голосова розмова", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text("⚙️", color = Color.White.copy(alpha = 0.6f), fontSize = 20.sp,
+                    modifier = Modifier.padding(8.dp).clickable { showAvatarSettings = true })
                 Text("✕", color = Color.White.copy(alpha = 0.6f), fontSize = 22.sp,
                     modifier = Modifier.padding(8.dp).clickable(onClick = onClose))
             }
@@ -348,4 +353,47 @@ fun PulseCircle(state: VoiceState) {
             .clip(CircleShape)
             .background(Brush.radialGradient(listOf(color.copy(alpha = 0.6f), color.copy(alpha = 0.1f))))
     )
+
+    // Діалог налаштувань аватара
+    if (showAvatarSettings) {
+        AlertDialog(
+            onDismissRequest = { 
+                showAvatarSettings = false 
+                AvatarSettings.save(ctx)
+            },
+            title = { Text("Налаштування аватара") },
+            text = {
+                Column {
+                    Text("Розмір: ${String.format("%.1f", AvatarSettings.scale)}")
+                    Slider(
+                        value = AvatarSettings.scale,
+                        onValueChange = { AvatarSettings.scale = it },
+                        valueRange = 0.5f..2.0f
+                    )
+                    
+                    Text("Зсув вгору/вниз: ${AvatarSettings.offsetY.toInt()}")
+                    Slider(
+                        value = AvatarSettings.offsetY,
+                        onValueChange = { AvatarSettings.offsetY = it },
+                        valueRange = -500f..500f
+                    )
+                    
+                    Text("Зсув вліво/вправо: ${AvatarSettings.offsetX.toInt()}")
+                    Slider(
+                        value = AvatarSettings.offsetX,
+                        onValueChange = { AvatarSettings.offsetX = it },
+                        valueRange = -300f..300f
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { 
+                    showAvatarSettings = false 
+                    AvatarSettings.save(ctx)
+                }) {
+                    Text("Готово")
+                }
+            }
+        )
+    }
 }

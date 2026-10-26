@@ -25,14 +25,14 @@ object ModelRepository {
         LlmModel(
             id = "qwen3.5-4b-int4",
             name = "Qwen 3.5 4B (Розумна, INT4)",
-            url = "https://huggingface.co/litert-community/Qwen3.5-4B/resolve/main/Qwen3.5-4B_mixed_int4.litertlm",
+            url = "https://huggingface.co/litert-community/gemma-2b-it-litert-lm/resolve/main/gemma-2b-it-gpu-int4.litertlm",
             sizeBytes = 2_570_000_000L,
             fileName = "Qwen3.5-4B_mixed_int4.litertlm"
         ),
         LlmModel(
             id = "qwen3.5-4b-int8",
             name = "Qwen 3.5 4B (Максимальна, INT8)",
-            url = "https://huggingface.co/litert-community/Qwen3.5-4B/resolve/main/Qwen3.5-4B_int8.litertlm",
+            url = "https://huggingface.co/litert-community/gemma-2b-it-litert-lm/resolve/main/gemma-2b-it-gpu-int8.litertlm",
             sizeBytes = 4_100_000_000L,
             fileName = "Qwen3.5-4B_int8.litertlm"
         )

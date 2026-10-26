@@ -50,8 +50,12 @@ class ModelDownloader(private val context: Context) {
         try {
             val response = client.newCall(request).execute()
             Log.d("ModelDownloader", "Response code: ${response.code}, URL: $MODEL_URL")
+            if (response.code == 404) {
+                emit(Progress.Error("Модель не знайдена (404). URL недійсний."))
+                return@flow
+            }
             if (!response.isSuccessful) {
-                emit(Progress.Error("Сервер ${response.code}"))
+                emit(Progress.Error("HTTP ${response.code} - Перевірте URL"))
                 return@flow
             }
             val body = response.body ?: run {
@@ -99,8 +103,12 @@ class ModelDownloader(private val context: Context) {
         try {
             val response = client.newCall(request).execute()
             Log.d("ModelDownloader", "Response code: ${response.code}, URL: $MODEL_URL")
+            if (response.code == 404) {
+                emit(Progress.Error("Модель не знайдена (404). URL недійсний."))
+                return@flow
+            }
             if (!response.isSuccessful) {
-                emit(Progress.Error("Сервер ${response.code}"))
+                emit(Progress.Error("HTTP ${response.code} - Перевірте URL"))
                 return@flow
             }
             val body = response.body ?: run {

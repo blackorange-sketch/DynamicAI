@@ -299,7 +299,7 @@ fun processQuery(
                 vm.tts.speakWithCallback(err) { onStateChange(VoiceState.LISTENING) }
                 return@launch
             }
-            val answer = vm.chatEngine.answer(text)
+            val answer = vm.chatEngine.answerWithAgent(text)
             onMessage(ChatMessage("assistant", answer)) // ДОДАЄМО ВІДПОВІДЬ У ЧАТ
             onStateChange(VoiceState.SPEAKING)
             vm.tts.speakWithCallback(answer) { onStateChange(VoiceState.LISTENING) }

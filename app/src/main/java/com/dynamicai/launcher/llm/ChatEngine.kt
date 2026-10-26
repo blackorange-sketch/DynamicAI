@@ -14,6 +14,8 @@ class ChatEngine(
     private val koleoClient = KoleoClient()
     private val translationRepo = TranslationRepository()
     private val wildRiftRepo = com.dynamicai.launcher.data.WildRiftRepository(context)
+    private var assistantAgent: AssistantAgent? = null
+    private val agentEngine = AgentEngine(context, llm)
     private val smalltalkPrompt: String by lazy {
         try {
             context.assets.open("llm/smalltalk_prompt.txt").bufferedReader().use { it.readText() }
@@ -329,3 +331,13 @@ class ChatEngine(
     }
 
 }
+
+    
+    suspend fun answerWithAgent(question: String): String {
+        if (!llm.isReady) return "LLM не активна"
+        return try {
+            agentEngine.processWithTools(question)
+        } catch (t: Throwable) {
+            "Помилка агента: ${t.message}"
+        }
+    }

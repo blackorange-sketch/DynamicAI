@@ -83,7 +83,7 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                     partialText = ""
                     if (text.isNotBlank()) {
                         messages = messages + ChatMessage("user", text)
-                        processQuery(text, vm, scope) { newState -> voiceState = newState }
+                        processQuery(text, vm, scope, { newState -> voiceState = newState }, { newMsg -> messages = messages + newMsg })
                     } else {
                         voiceState = VoiceState.IDLE
                     }
@@ -233,7 +233,7 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 IconButtonLike("➤", Color(0xFF64B5F6)) {
                     if (query.isNotBlank()) {
                         messages = messages + ChatMessage("user", query)
-                        processQuery(query, vm, scope) { newState -> voiceState = newState }
+                        processQuery(query, vm, scope, { newState -> voiceState = newState }, { newMsg -> messages = messages + newMsg })
                         query = ""
                     }
                 }
@@ -282,20 +282,29 @@ fun LiquidChip(label: String, color: Color, onClick: () -> Unit) {
     }
 }
 
-fun processQuery(text: String, vm: AppListViewModel, scope: kotlinx.coroutines.CoroutineScope, onStateChange: (VoiceState) -> Unit) {
+fun processQuery(
+    text: String, 
+    vm: AppListViewModel, 
+    scope: kotlinx.coroutines.CoroutineScope, 
+    onStateChange: (VoiceState) -> Unit,
+    onMessage: (ChatMessage) -> Unit
+) {
     onStateChange(VoiceState.THINKING)
     scope.launch {
         try {
             if (!vm.ensureLlmLoaded()) {
                 val err = "Модель ШІ не завантажена. Завантажте її в налаштуваннях."
+                onMessage(ChatMessage("assistant", err)) // Додаємо в чат
                 onStateChange(VoiceState.SPEAKING)
                 vm.tts.speakWithCallback(err) { onStateChange(VoiceState.LISTENING) }
                 return@launch
             }
             val answer = vm.chatEngine.answer(text)
+            onMessage(ChatMessage("assistant", answer)) // ДОДАЄМО ВІДПОВІДЬ У ЧАТ
             onStateChange(VoiceState.SPEAKING)
             vm.tts.speakWithCallback(answer) { onStateChange(VoiceState.LISTENING) }
         } catch (e: Exception) {
+            onMessage(ChatMessage("assistant", "Помилка: ${e.message}")) // Показуємо помилку
             onStateChange(VoiceState.IDLE)
         }
     }

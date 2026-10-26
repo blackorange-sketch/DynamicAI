@@ -169,18 +169,22 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 else -> Color.Gray
             }
             Box(
-                modifier = Modifier
-                    .align(androidx.compose.ui.Alignment.BottomCenter)
-                    .padding(bottom = 80.dp)
-                    .size(300.dp)
-                    .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }
-                    .clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(
-                        androidx.compose.ui.graphics.Brush.radialGradient(
-                            listOf(bgOrbColor.copy(alpha = 0.15f), Color.Transparent)
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = androidx.compose.ui.Alignment.BottomCenter
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(bottom = 80.dp)
+                        .size(300.dp)
+                        .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(
+                            androidx.compose.ui.graphics.Brush.radialGradient(
+                                listOf(bgOrbColor.copy(alpha = 0.15f), Color.Transparent)
+                            )
                         )
-                    )
-            )
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
             // Чат

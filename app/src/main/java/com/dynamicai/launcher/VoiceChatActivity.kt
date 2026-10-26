@@ -83,7 +83,7 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                     partialText = ""
                     if (text.isNotBlank()) {
                         messages = messages + ChatMessage("user", text)
-                        processQuery(text, vm, scope, { newState -> voiceState = newState }, { newMsg -> messages = messages + newMsg }) { recognizer?.stopListening(); recognizer?.cancel() } { recognizer?.stopListening(); recognizer?.cancel() }
+                        processQuery(text, vm, scope, { newState -> voiceState = newState }, { newMsg -> messages = messages + newMsg }, { recognizer?.stopListening(); recognizer?.cancel() }) { recognizer?.stopListening(); recognizer?.cancel() }
                     } else {
                         voiceState = VoiceState.IDLE
                     }
@@ -233,7 +233,7 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 IconButtonLike("➤", Color(0xFF64B5F6)) {
                     if (query.isNotBlank()) {
                         messages = messages + ChatMessage("user", query)
-                        processQuery(query, vm, scope, { newState -> voiceState = newState }, { newMsg -> messages = messages + newMsg }) { recognizer?.stopListening(); recognizer?.cancel() } { recognizer?.stopListening(); recognizer?.cancel() }
+                        processQuery(query, vm, scope, { newState -> voiceState = newState }, { newMsg -> messages = messages + newMsg }, { recognizer?.stopListening(); recognizer?.cancel() }) { recognizer?.stopListening(); recognizer?.cancel() }
                         query = ""
                     }
                 }

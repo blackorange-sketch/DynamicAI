@@ -69,6 +69,19 @@ kotlin {
 }
 
 dependencies {
+    // Inner для YouTube Music API
+    implementation("com.github.faraasaaay:inner:1.0.0") // Перевірте актуальну версію
+    // Media3 для відтворення
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-session:1.4.1")
+    implementation("androidx.media3:media3-ui:1.4.1")
+    // OkHttp (для Inner)
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Ktor (Inner використовує Ktor)
+    implementation("io.ktor:ktor-client-okhttp:2.3.12")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
+
     // NewPipe Extractor для YouTube Music без реклами
     implementation("com.github.teamnewpipe:NewPipeExtractor:v0.26.0")
     // Media3 для відтворення аудіо

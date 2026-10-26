@@ -1,15 +1,13 @@
 package com.dynamicai.launcher.music
 
-import android.app.PendingIntent
 import android.content.Intent
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-import org.schabi.newpipe.extractor.NewPipe
-import org.schabi.newpipe.extractor.ServiceList
-import org.schabi.newpipe.extractor.stream.StreamInfo
+import com.tamed.music.innertube.YouTube
+import com.tamed.music.innertube.models.SongItem
 import kotlinx.coroutines.*
 
 class MusicPlayerService : MediaSessionService() {
@@ -25,8 +23,8 @@ class MusicPlayerService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        NewPipe.init(DownloaderImpl())
-        
+        AuthManager.loadCookie(this) // Завантажуємо cookie при старті
+
         val player = ExoPlayer.Builder(this).build()
         mediaSession = MediaSession.Builder(this, player).build()
 
@@ -49,32 +47,42 @@ class MusicPlayerService : MediaSessionService() {
             try {
                 currentTrackName = "Завантаження..."
                 MusicWidget.updateAll(this@MusicPlayerService)
-                
-                val extractor = ServiceList.YouTube.getSearchExtractor(query)
-                extractor.fetchPage()
-                val firstItem = extractor.initialPage.items.firstOrNull() ?: return@launch
-                val url = firstItem.url
-                
-                val info = StreamInfo.getInfo(ServiceList.YouTube, url)
-                val audioStream = info.audioStreams
-                    .filter { it.isUrl && it.averageBitrate > 0 }
-                    .maxByOrNull { it.averageBitrate }
-                    ?: return@launch
-                
+
+                // Пошук через Inner
+                val searchResult = YouTube.search(query).getOrNull()
+                val firstSong = searchResult?.items?.firstOrNull { it is SongItem } as? SongItem
+                if (firstSong == null) {
+                    currentTrackName = "Нічого не знайдено"
+                    MusicWidget.updateAll(this@MusicPlayerService)
+                    return@launch
+                }
+
+                // Отримуємо аудіопотік
+                val playerResponse = YouTube.player(firstSong.id).getOrNull()
+                val audioUrl = playerResponse?.streamingData?.adaptiveFormats
+                    ?.filter { it.mimeType.contains("audio") }
+                    ?.maxByOrNull { it.bitrate }
+                    ?.url
+                if (audioUrl == null) {
+                    currentTrackName = "Помилка отримання потоку"
+                    MusicWidget.updateAll(this@MusicPlayerService)
+                    return@launch
+                }
+
                 val mediaItem = MediaItem.Builder()
-                    .setUri(audioStream.url)
+                    .setUri(audioUrl)
                     .setMediaMetadata(
                         androidx.media3.common.MediaMetadata.Builder()
-                            .setTitle(info.name)
-                            .setArtist(info.uploaderName)
+                            .setTitle(firstSong.title)
+                            .setArtist(firstSong.artists?.joinToString { it.name } ?: "")
                             .build()
                     ).build()
-                
+
                 mediaSession?.player?.setMediaItem(mediaItem)
                 mediaSession?.player?.prepare()
                 mediaSession?.player?.play()
             } catch (e: Exception) {
-                currentTrackName = "Помилка завантаження"
+                currentTrackName = "Помилка"
                 MusicWidget.updateAll(this@MusicPlayerService)
                 e.printStackTrace()
             }

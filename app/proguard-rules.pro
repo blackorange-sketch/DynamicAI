@@ -63,3 +63,7 @@
 -keep class org.mozilla.classfile.ClassFileWriter
 -dontwarn org.mozilla.javascript.tools.**
 -keep class org.schabi.newpipe.extractor.** { *; }
+
+# Inner ProGuard rules
+-keep class com.tamed.music.innertube.** { *; }
+-dontwarn com.tamed.music.innertube.**

@@ -80,6 +80,7 @@ class TtsManager(private val context: Context) {
                 @Deprecated("Deprecated in Java")
                 override fun onError(utteranceId: String?) { onDone() }
             })
+            Log.d(TAG, "Speaking: $text")
             tts.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, id)
         } catch (_: Throwable) { onDone() }
     }

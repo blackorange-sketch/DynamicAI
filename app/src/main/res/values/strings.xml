@@ -2,4 +2,6 @@
     <string name="app_name">DynamicAI</string>
     <string name="wallpaper_description">Відео-шпалери DynamicAI</string>
     <string name="accessibility_service_description">Служба для визначення стану клавіатури (щоб згортати плаваючий док)</string>
+    <string name="accessibility_service_label">DynamicAI Automation</string>
+    <string name="accessibility_service_description">Дозволяє асистенту DynamicAI автоматично натискати кнопки в інших додатках (наприклад, Play у YouTube Music) для виконання ваших голосових команд.</string>
 </resources>

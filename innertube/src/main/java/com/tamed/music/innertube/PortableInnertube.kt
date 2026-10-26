@@ -726,4 +726,4 @@ internal fun HttpClientConfig<*>.configurePortableInnertubeClient() {
     }
 }
 
-// fun createPortableInnertubeHttpClient(): HttpClient
+fun createPortableInnertubeHttpClient(): HttpClient

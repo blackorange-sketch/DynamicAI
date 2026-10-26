@@ -184,7 +184,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         android.util.Log.d("LLM_DEBUG", "Exists: ${downloader.modelFile.exists()}, Size: ${downloader.modelFile.length()} bytes")
         val model = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.find { it.id == currentModelId }
             ?: com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.first()
-        val modelFile = com.dynamicai.launcher.llm.ModelRepository.getModelFile(app, model)
+        val modelFile = com.dynamicai.launcher.llm.ModelRepository.getModelFile(getApplication(), model)
         if (!modelFile.exists()) {
             android.util.Log.e("LLM_DEBUG", "Model NOT downloaded: ${model.name}")
             return false

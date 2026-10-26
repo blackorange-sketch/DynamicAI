@@ -46,7 +46,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.LinearProgressIndicatorButton
+import androidx.compose.material3.LinearProgressIndicator
 import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.model.AppInfo
 

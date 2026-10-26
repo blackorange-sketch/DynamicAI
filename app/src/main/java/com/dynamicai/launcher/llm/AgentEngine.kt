@@ -225,31 +225,38 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                         val hasSearch = query.isNotEmpty()
                         
                         try {
-                            // Відкриваємо YT Music через звичайний запуск (без дублікатів у тасках)
-                            val launchIntent = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.youtube.music")
-                            if (launchIntent != null) {
-                                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                context.startActivity(launchIntent)
-                            } else {
-                                return@withContext "YT Music не встановлено."
-                            }
-                            
                             if (hasSearch) {
-                                // Шукаємо та вмикаємо пісню через Accessibility
+                                // ШВИДКИЙ ПОШУК: Відкриваємо одразу сторінку результатів через URI
+                                val uri = Uri.parse("https://music.youtube.com/search?q=$query")
+                                val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                }
+                                context.startActivity(intent)
+                                
                                 if (com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
+                                    // Зменшуємо затримку до 1.5 секунди (стільки треба, щоб завантажились результати)
                                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                        com.dynamicai.launcher.accessibility.AppAutomationService.searchAndPlay(query)
-                                    }, 2500) // Чекаємо, поки додаток відкриється
-                                    "Шукаю та вмикаю: $query"
+                                        // Клікаємо перший результат
+                                        com.dynamicai.launcher.accessibility.AppAutomationService.clickFirstSearchResult()
+                                    }, 1500)
+                                    "Швидко вмикаю: $query"
                                 } else {
-                                    "Відкриваю YT Music. (Увімкніть доступність для пошуку)"
+                                    "Відкриваю пошук: $query"
                                 }
                             } else {
-                                // Просто натискаємо Play
+                                // Просто "включи музику" - відкриваємо додаток і тиснемо Play
+                                val launchIntent = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.youtube.music")
+                                if (launchIntent != null) {
+                                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                    context.startActivity(launchIntent)
+                                }
+                                
                                 if (com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
                                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                                         com.dynamicai.launcher.accessibility.AppAutomationService.clickPlayButton()
-                                    }, 2500)
+                                    }, 1500)
                                     "Вмикаю музику."
                                 } else {
                                     "Відкриваю YT Music."

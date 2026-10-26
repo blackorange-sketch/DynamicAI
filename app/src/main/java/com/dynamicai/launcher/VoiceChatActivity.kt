@@ -57,6 +57,7 @@ class VoiceChatActivity : FragmentActivity(), org.godotengine.godot.GodotHost {
     private val vm: AppListViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        godotInstance = org.godotengine.godot.Godot(this)
         enableEdgeToEdge()
         setContent { VoiceChatScreen(vm, onClose = { finish() }) }
     }

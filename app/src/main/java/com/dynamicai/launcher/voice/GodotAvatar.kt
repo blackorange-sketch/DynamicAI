@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.voice
 
+import android.os.Bundle
 import android.view.View
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,7 +42,12 @@ fun GodotAvatar(
                 activity?.supportFragmentManager?.beginTransaction()?.apply {
                     // Додаємо перевірку, щоб не створювати дублікат фрагмента
                     if (activity.supportFragmentManager.findFragmentById(container.id) == null) {
-                        replace(container.id, GodotFragment())
+                        val fragment = GodotFragment().apply {
+                    arguments = Bundle().apply {
+                        putString("main_pack", "res://godot/DynamicAIAvatar.pck")
+                    }
+                }
+                replace(container.id, fragment)
                         commit()
                     }
                 }

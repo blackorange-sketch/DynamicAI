@@ -95,7 +95,7 @@ class CornerGestureService : Service() {
                     if (dy > SWIPE_THRESHOLD && dx < 100) {
                         triggered = true
                         Log.e(TAG, "swipe up detected from corner")
-                        AiHubOverlay.show(applicationContext)
+                        // AiHubOverlay.show(applicationContext)
                     }
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {

@@ -75,9 +75,6 @@ fun AddWidgetDialog(
                         .background(Color.White.copy(alpha = 0.05f))
                         .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
                         .clickable {
-                            com.dynamicai.launcher.music.WidgetPinner.requestPin(ctx)
-                            onDismiss()
-                        }
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {

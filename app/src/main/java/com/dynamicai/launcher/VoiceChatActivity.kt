@@ -83,7 +83,7 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                     partialText = ""
                     if (text.isNotBlank()) {
                         messages = messages + ChatMessage("user", text)
-                        processQuery(text, vm, scope, { newState -> voiceState = newState }, { newMsg -> messages = messages + newMsg }) { recognizer?.stopListening(); recognizer?.cancel() }
+                        processQuery(text, vm, scope, { newState -> voiceState = newState }, { newMsg -> messages = messages + newMsg }) { recognizer?.stopListening(); recognizer?.cancel() } { recognizer?.stopListening(); recognizer?.cancel() }
                     } else {
                         voiceState = VoiceState.IDLE
                     }
@@ -233,7 +233,7 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 IconButtonLike("➤", Color(0xFF64B5F6)) {
                     if (query.isNotBlank()) {
                         messages = messages + ChatMessage("user", query)
-                        processQuery(query, vm, scope, { newState -> voiceState = newState }, { newMsg -> messages = messages + newMsg }) { recognizer?.stopListening(); recognizer?.cancel() }
+                        processQuery(query, vm, scope, { newState -> voiceState = newState }, { newMsg -> messages = messages + newMsg }) { recognizer?.stopListening(); recognizer?.cancel() } { recognizer?.stopListening(); recognizer?.cancel() }
                         query = ""
                     }
                 }
@@ -287,24 +287,34 @@ fun processQuery(
     vm: AppListViewModel, 
     scope: kotlinx.coroutines.CoroutineScope, 
     onStateChange: (VoiceState) -> Unit,
-    onMessage: (ChatMessage) -> Unit
+    onMessage: (ChatMessage) -> Unit,
+    stopListening: () -> Unit
 ) {
     onStateChange(VoiceState.THINKING)
+    stopListening() // Зупиняємо мікрофон, щоб звільнити аудіо-фокус
+    
     scope.launch {
         try {
             if (!vm.ensureLlmLoaded()) {
                 val err = "Модель ШІ не завантажена. Завантажте її в налаштуваннях."
-                onMessage(ChatMessage("assistant", err)) // Додаємо в чат
+                onMessage(ChatMessage("assistant", err))
                 onStateChange(VoiceState.SPEAKING)
                 vm.tts.speakWithCallback(err) { onStateChange(VoiceState.LISTENING) }
                 return@launch
             }
+            
             val answer = vm.chatEngine.answerWithAgent(text)
-            onMessage(ChatMessage("assistant", answer)) // ДОДАЄМО ВІДПОВІДЬ У ЧАТ
+            onMessage(ChatMessage("assistant", answer))
             onStateChange(VoiceState.SPEAKING)
-            vm.tts.speakWithCallback(answer) { onStateChange(VoiceState.LISTENING) }
+            
+            android.util.Log.d("VoiceChat", "Trying to speak: $answer")
+            
+            vm.tts.speakWithCallback(answer) { 
+                android.util.Log.d("VoiceChat", "TTS onDone callback triggered")
+                onStateChange(VoiceState.LISTENING) 
+            }
         } catch (e: Exception) {
-            onMessage(ChatMessage("assistant", "Помилка: ${e.message}")) // Показуємо помилку
+            onMessage(ChatMessage("assistant", "Помилка: ${e.message}"))
             onStateChange(VoiceState.IDLE)
         }
     }

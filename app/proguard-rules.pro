@@ -67,3 +67,15 @@
 # Inner ProGuard rules
 -keep class com.tamed.music.innertube.** { *; }
 -dontwarn com.tamed.music.innertube.**
+
+# NewPipe Extractor / Rhino / SLF4J ProGuard rules
+-dontwarn java.beans.**
+-dontwarn javax.script.**
+-dontwarn jdk.dynalink.**
+-dontwarn org.mozilla.javascript.**
+-dontwarn org.slf4j.**
+-dontwarn org.schabi.newpipe.extractor.**
+
+# Зберігаємо класи Rhino (потрібні для роботи NewPipe)
+-keep class org.mozilla.javascript.** { *; }
+-keep class org.schabi.newpipe.extractor.** { *; }

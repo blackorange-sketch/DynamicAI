@@ -25,6 +25,8 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
         8. openCamera() -> Відкриває додаток камери.
         9. openUrl(url: String) -> Відкриває веб-сайт за посиланням.
         10. navigateTo(destination: String) -> Відкриває Google Maps з маршрутом.
+        11. closeApp(name: String) -> Закриває додаток.
+        12. playMusic(query: String) -> Відтворює музику (через системний плеєр).
     """.trimIndent()
 
     suspend fun processWithTools(question: String): String = withContext(Dispatchers.IO) {
@@ -42,6 +44,8 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
             Користувач: "Відкрий YouTube" -> TOOL_CALL: openApp(name="YouTube")
             Користувач: "Включи музику" -> TOOL_CALL: openApp(name="Музика")
             Користувач: "Відкрий галерею" -> TOOL_CALL: openApp(name="Галерея")
+            Користувач: "Закрий YouTube" -> TOOL_CALL: closeApp(name="YouTube")
+            Користувач: "Увімкни музику" -> TOOL_CALL: playMusic(query="музика")
             
             Якщо інструмент не потрібен, просто дай коротку текстову відповідь.
         """.trimIndent()
@@ -198,6 +202,46 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                         }
                         context.startActivity(intent)
                         "Будую маршрут до: $dest"
+                    }
+                    
+                    toolCall.startsWith("closeApp") -> {
+                        val appName = getArg("name")
+                        val apps = appRepo.loadInstalledApps()
+                        val app = apps.find { it.label.contains(appName, ignoreCase = true) }
+                        if (app != null) {
+                            // Спроба закрити через налаштування (єдиний спосіб без Root)
+                            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.parse("package:${app.packageName}")
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                            "Відкрив налаштування ${app.label}. Натисніть 'Зупинити', щоб закрити."
+                        } else "Додаток '$appName' не знайдено."
+                    }
+                    
+                    toolCall.startsWith("playMusic") -> {
+                        val query = getArg("query").ifEmpty { "музика" }
+                        try {
+                            // Системний інтент для відтворення музики
+                            val intent = Intent(android.provider.MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).apply {
+                                putExtra(android.app.SearchManager.QUERY, query)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                            "Вмикаю музику: $query"
+                        } catch (e: Exception) {
+                            // Якщо системний інтент не спрацював, відкриваємо YouTube Music
+                            try {
+                                val ytMusicIntent = context.packageManager.getLaunchIntentForPackage("com.google.android.apps.youtube.music")
+                                if (ytMusicIntent != null) {
+                                    ytMusicIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(ytMusicIntent)
+                                    "Відкриваю YouTube Music."
+                                } else "Не знайдено музичного додатка."
+                            } catch (ex: Exception) {
+                                "Не вдалося увімкнути музику."
+                            }
+                        }
                     }
                     
                     else -> "Невідомий інструмент: $toolCall"

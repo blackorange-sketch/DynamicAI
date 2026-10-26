@@ -394,8 +394,10 @@ fun SettingsScreen(
             )
         }
 
-        GlassSectionHeader("Bluetooth")
-        BluetoothTestRow()
+        GlassSectionHeader("Система та Інтеграції")
+        GlassCard {
+            BluetoothTestRow()
+        }
 
         GlassSectionHeader("Локальна LLM")
         GlassCard {
@@ -444,6 +446,12 @@ fun SettingsScreen(
                 }
             }
 
+            
+            } // Кінець циклу моделей
+        } // Кінець GlassCard LLM
+
+        GlassSectionHeader("Голос та Озвучення")
+        GlassCard {
             // Toggle завжди видно
             SwitchRow(
                 label = "Озвучувати відповіді (TTS)",

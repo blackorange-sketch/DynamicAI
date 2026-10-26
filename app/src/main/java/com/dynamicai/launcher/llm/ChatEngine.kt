@@ -14,7 +14,6 @@ class ChatEngine(
     private val koleoClient = KoleoClient()
     private val translationRepo = TranslationRepository()
     private val wildRiftRepo = com.dynamicai.launcher.data.WildRiftRepository(context)
-    private var assistantAgent: AssistantAgent? = null
     private val agentEngine = AgentEngine(context, llm)
     private val smalltalkPrompt: String by lazy {
         try {

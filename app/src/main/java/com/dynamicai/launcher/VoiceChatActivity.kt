@@ -49,9 +49,10 @@ import kotlinx.coroutines.flow.receiveAsFlow
 enum class VoiceState { LISTENING, THINKING, SPEAKING, IDLE }
 
 class VoiceChatActivity : FragmentActivity(), org.godotengine.godot.GodotHost {
+    private var godotInstance: org.godotengine.godot.Godot? = null
 
     override fun getActivity(): FragmentActivity = this
-    override fun getGodot(): org.godotengine.godot.Godot? = null
+    override fun getGodot(): org.godotengine.godot.Godot? = godotInstance
 
     private val vm: AppListViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {

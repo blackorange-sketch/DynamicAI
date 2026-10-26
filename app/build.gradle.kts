@@ -9,7 +9,8 @@ android {
 
     defaultConfig {
         ndk {
-            abiFilters += listOf("arm64-v8a")
+            abiFilters.clear()
+            abiFilters.add("arm64-v8a")
         }
 
         applicationId = "com.dynamicai.launcher"

@@ -41,6 +41,7 @@ class ModelDownloader(private val context: Context) {
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+            .header("Accept-Encoding", "identity")
             .build()
         val file = File(context.filesDir, fileName)
         val tempFile = File(context.filesDir, "$fileName.tmp")
@@ -66,7 +67,7 @@ class ModelDownloader(private val context: Context) {
                         output.write(buffer, 0, bytesRead)
                         downloaded += bytesRead
                         if (total > 0) {
-                            val percent = ((downloaded * 100) / total).toInt()
+                            val percent = if (total > 0) ((downloaded * 100) / total).toInt() else 0
                             emit(Progress.Downloading(percent, downloaded / 1_000_000, total / 1_000_000))
                         } else {
                             // Якщо сервер не вказав розмір (наприклад, AWS), показуємо просто завантажені МБ

@@ -15,7 +15,7 @@ class AppAutomationService : AccessibilityService() {
 
         fun clickText(text: String): Boolean = instance?.findAndClick(text, false) ?: false
         fun clickDescription(desc: String): Boolean = instance?.findAndClick(desc, true) ?: false
-        fun clickPlayInYtMusic(): Boolean = instance?.clickPlayButton() ?: false
+        fun clickPlayInYtMusic(): Boolean = instance?.clickPlayInYtMusic() ?: false
     }
 
     override fun onServiceConnected() {

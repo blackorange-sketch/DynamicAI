@@ -1,5 +1,7 @@
 package com.dynamicai.launcher.llm
 
+import android.util.Log
+
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -7,9 +9,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import android.util.Log
 import java.io.File
-import android.util.Log
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit

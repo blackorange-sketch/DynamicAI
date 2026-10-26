@@ -68,6 +68,8 @@ fun SettingsScreen(
     onOpenDockEditor: () -> Unit,
     onOpenFolderManager: () -> Unit,
     onOpenMacroManager: () -> Unit = {},
+    val ctx = LocalContext.current
+    var showOverlayPermDialog by remember { mutableStateOf(false) }
     onOpenNotes: () -> Unit = {},
     llmDownloaded: Boolean,
     llmReady: Boolean,
@@ -96,8 +98,6 @@ fun SettingsScreen(
             Text("Налаштування", color = Color.White, fontSize = 22.sp)
         }
 
-        val ctx = LocalContext.current
-        var showOverlayPermDialog by remember { mutableStateOf(false) }
         var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
         LaunchedEffect(Unit) { installedApps = AppRepository(ctx).loadCached() }
 
@@ -351,7 +351,6 @@ fun SettingsScreen(
         // ==== LLM ====
         GlassSectionHeader("Дозволи")
         GlassCard {
-            val ctx = LocalContext.current
             var hasWriteSettings by remember {
                 mutableStateOf(
                     if (android.os.Build.VERSION.SDK_INT >= 23)
@@ -788,7 +787,6 @@ private fun GlassChip(label: String, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun ShizukuTestRow() {
-    val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf("Перевірка…") }
     var tasks by remember { mutableStateOf("") }
@@ -849,7 +847,6 @@ private fun LlmTestRow(onTest: suspend (String) -> String?) {
     var answer by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
 
-    val ctx = LocalContext.current
 
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text("Тест LLM", color = Color(0xFF64B5F6), fontSize = 13.sp)
@@ -913,7 +910,6 @@ private fun LlmTestRow(onTest: suspend (String) -> String?) {
 
 @Composable
 private fun BluetoothTestRow() {
-    val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val manager = remember { com.dynamicai.launcher.system.BluetoothManager(ctx) }
     var diagnostic by remember { mutableStateOf("") }

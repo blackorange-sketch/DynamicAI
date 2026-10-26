@@ -39,6 +39,9 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
             Приклади:
             Користувач: "Розбуди мене о 7 ранку" -> TOOL_CALL: setAlarm(hour="7", minute="0", message="Доброго ранку!")
             Користувач: "Знайди в ютубі котиків" -> TOOL_CALL: playYouTube(query="котики")
+            Користувач: "Відкрий YouTube" -> TOOL_CALL: openApp(name="YouTube")
+            Користувач: "Включи музику" -> TOOL_CALL: openApp(name="Музика")
+            Користувач: "Відкрий галерею" -> TOOL_CALL: openApp(name="Галерея")
             
             Якщо інструмент не потрібен, просто дай коротку текстову відповідь.
         """.trimIndent()
@@ -55,15 +58,57 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
             return@withContext try {
                 when {
                     toolCall.startsWith("openApp") -> {
-                        val appName = getArg("name")
-                        val apps = appRepo.loadInstalledApps()
-                        val app = apps.find { appInfo -> appInfo.label.contains(appName, ignoreCase = true) }
-                        if (app != null) {
-                            val success = appRepo.launchApp(app.packageName)
-                            if (success) "Відкриваю ${app.label}"
-                            else "Не вдалося відкрити ${app.label}"
-                        } else "Додаток '$appName' не знайдено."
+                    val appName = getArg("name")
+                    val apps = appRepo.loadInstalledApps()
+                    
+                    // Шукаємо додаток за назвою (ігноруючи регістр та пробіли)
+                    val searchName = appName.lowercase().trim()
+                    var app = apps.find { it.label.lowercase().contains(searchName) }
+                    
+                    // Спроба розпізнати загальні назви (Галерея, Музика, Камера)
+                    if (app == null) {
+                        val keyword = when {
+                            searchName.contains("галере") || searchName.contains("фото") -> "фото"
+                            searchName.contains("музик") -> "music"
+                            searchName.contains("браузер") -> "chrome"
+                            searchName.contains("ютуб") || searchName.contains("youtube") -> "youtube"
+                            else -> ""
+                        }
+                        if (keyword.isNotEmpty()) {
+                            app = apps.find { it.label.lowercase().contains(keyword) }
+                        }
                     }
+
+                    if (app != null) {
+                        val success = appRepo.launchApp(app.packageName)
+                        if (success) "Відкриваю ${app.label}"
+                        else "Не вдалося відкрити ${app.label}"
+                    } else {
+                        // Якщо додаток не знайдено, пробуємо системні інтенти
+                        try {
+                            val intent = when {
+                                searchName.contains("галере") || searchName.contains("фото") -> 
+                                    Intent(Intent.ACTION_VIEW).apply { type = "image/*" }
+                                searchName.contains("музик") -> 
+                                    Intent(Intent.ACTION_VIEW).apply { type = "audio/*" }
+                                searchName.contains("камер") -> 
+                                    Intent("android.media.action.STILL_IMAGE_CAMERA")
+                                searchName.contains("ютуб") || searchName.contains("youtube") -> 
+                                    Intent(Intent.ACTION_VIEW, Uri.parse("https://youtube.com"))
+                                else -> null
+                            }
+                            if (intent != null) {
+                                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(intent)
+                                "Відкриваю системний додаток для '$appName'"
+                            } else {
+                                "Додаток '$appName' не знайдено."
+                            }
+                        } catch (e: Exception) {
+                            "Додаток '$appName' не знайдено."
+                        }
+                    }
+                }
                     
                     toolCall.startsWith("getWildRiftAdvice") -> {
                         val me = getArg("myChampion")

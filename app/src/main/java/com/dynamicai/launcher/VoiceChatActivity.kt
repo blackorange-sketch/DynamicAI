@@ -384,6 +384,13 @@ fun PulseCircle(state: VoiceState) {
                         onValueChange = { AvatarSettings.offsetX = it },
                         valueRange = -300f..300f
                     )
+                    
+                    Text("Поворот: ${AvatarSettings.rotationY.toInt()}°")
+                    Slider(
+                        value = AvatarSettings.rotationY,
+                        onValueChange = { AvatarSettings.rotationY = it },
+                        valueRange = 0f..360f
+                    )
                 }
             },
             confirmButton = {

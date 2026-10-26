@@ -10,16 +10,19 @@ object AvatarSettings {
     private const val KEY_SCALE = "scale"
     private const val KEY_OFFSET_Y = "offset_y"
     private const val KEY_OFFSET_X = "offset_x"
+    private const val KEY_ROTATION = "rotation_y"
 
     var scale by mutableFloatStateOf(1.0f)
     var offsetY by mutableFloatStateOf(0f)
     var offsetX by mutableFloatStateOf(0f)
+    var rotationY by mutableFloatStateOf(0f)
 
     fun load(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         scale = prefs.getFloat(KEY_SCALE, 1.0f)
         offsetY = prefs.getFloat(KEY_OFFSET_Y, 0f)
         offsetX = prefs.getFloat(KEY_OFFSET_X, 0f)
+        rotationY = prefs.getFloat(KEY_ROTATION, 0f)
     }
 
     fun save(context: Context) {
@@ -28,6 +31,7 @@ object AvatarSettings {
             .putFloat(KEY_SCALE, scale)
             .putFloat(KEY_OFFSET_Y, offsetY)
             .putFloat(KEY_OFFSET_X, offsetX)
+            .putFloat(KEY_ROTATION, rotationY)
             .apply()
     }
 }

@@ -22,6 +22,7 @@ fun GodotAvatar(voiceState: VoiceState, modifier: Modifier = Modifier) {
                 scaleY = AvatarSettings.scale
                 translationX = AvatarSettings.offsetX
                 translationY = AvatarSettings.offsetY
+                rotationY = AvatarSettings.rotationY
             },
         factory = { context ->
             val container = FragmentContainerView(context).apply {

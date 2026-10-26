@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.AlarmClock
+import android.provider.MediaStore
+import android.app.SearchManager
 import android.view.KeyEvent
 import android.media.AudioManager
 import com.dynamicai.launcher.data.AppRepository
@@ -218,41 +220,27 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     }
                     
                     toolCall.startsWith("playMusic") -> {
-                        val query = getArg("query").ifEmpty { "" }
+                        val query = getArg("query").ifEmpty { "музика" }
                         try {
-                            val uri = if (query.isNotEmpty()) {
-                                Uri.parse("https://music.youtube.com/search?q=$query")
-                            } else {
-                                Uri.parse("https://music.youtube.com")
-                            }
-                            
-                            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-                                setPackage("com.google.android.apps.youtube.music")
+                            // Використовуємо системний інтент для відтворення за пошуковим запитом
+                            val intent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH).apply {
+                                putExtra(SearchManager.QUERY, query)
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                             context.startActivity(intent)
-                            
-                            // Даємо YT Music час відкритися, а потім імітуємо натискання "Play"
-                            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                                try {
-                                    val audioManager = context.getSystemService(android.content.Context.AUDIO_SERVICE) as AudioManager
-                                    val downEvent = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY)
-                                    val upEvent = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY)
-                                    audioManager.dispatchMediaKeyEvent(downEvent)
-                                    audioManager.dispatchMediaKeyEvent(upEvent)
-                                } catch (_: Exception) {}
-                            }, 2500)
-                            
-                            if (query.isNotEmpty()) "Вмикаю: $query" else "Вмикаю музику."
+                            "Вмикаю: $query"
                         } catch (e: Exception) {
+                            // Якщо системний інтент не спрацював, відкриваємо YT Music з пошуком
                             try {
-                                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/search?q=$query")).apply {
+                                val uri = Uri.parse("https://music.youtube.com/search?q=$query")
+                                val ytIntent = Intent(Intent.ACTION_VIEW, uri).apply {
+                                    setPackage("com.google.android.apps.youtube.music")
                                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 }
-                                context.startActivity(webIntent)
-                                "Відкриваю YT Music у браузері."
+                                context.startActivity(ytIntent)
+                                "Відкриваю пошук у YT Music: $query. (Натисніть Play вручну)"
                             } catch (ex: Exception) {
-                                "Не вдалося відкрити музику."
+                                "Не вдалося відтворити музику."
                             }
                         }
                     }

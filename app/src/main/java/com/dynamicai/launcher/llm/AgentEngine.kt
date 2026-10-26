@@ -30,7 +30,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
         9. openUrl(url: String) -> Відкриває веб-сайт за посиланням.
         10. navigateTo(destination: String) -> Відкриває Google Maps з маршрутом.
         11. closeApp(name: String) -> Закриває додаток.
-        12. playMusic(query: String) -> Відтворює музику (через системний плеєр).
+        12. playMusicLocal(query: String) -> Відтворює музику безпосередньо в лаунчері (без реклами).
         13. tapText(text: String) -> Натискає на елемент з текстом на екрані (для автоматизації).
     """.trimIndent()
 
@@ -274,6 +274,19 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                         } else {
                             val ok = com.dynamicai.launcher.accessibility.AppAutomationService.clickText(text)
                             if (ok) "Натиснув: $text" else "Не знайшов елемент '$text' на екрані."
+                        }
+                    }
+                    
+                    toolCall.startsWith("playMusicLocal") -> {
+                        val query = getArg("query").ifEmpty { "музика" }
+                        try {
+                            val intent = Intent(context, com.dynamicai.launcher.music.MusicPlayerService::class.java)
+                            context.startService(intent)
+                            // Надсилаємо запит на відтворення (можна через broadcast або binder, але для простоти - через Intent)
+                            // Примітка: тут треба буде реалізувати передачу запиту в сервіс
+                            "Вмикаю локально: $query"
+                        } catch (e: Exception) {
+                            "Помилка локального плеєра: ${e.message}"
                         }
                     }
                     

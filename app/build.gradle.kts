@@ -51,6 +51,7 @@ android {
     }
 
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
@@ -68,6 +69,20 @@ kotlin {
 }
 
 dependencies {
+    // NewPipe Extractor для YouTube Music без реклами
+    implementation("com.github.teamnewpipe:NewPipeExtractor:v0.26.0")
+    // Media3 для відтворення аудіо
+    implementation("androidx.media3:media3-exoplayer:1.4.1")
+    implementation("androidx.media3:media3-session:1.4.1")
+    implementation("androidx.media3:media3-ui:1.4.1")
+    // OkHttp для Downloader
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Glance для віджета
+    implementation("androidx.glance:glance-appwidget:1.2.0")
+    implementation("androidx.glance:glance-material3:1.2.0")
+    // Core library desugaring
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.1.4")
+
 
     implementation("androidx.fragment:fragment-ktx:1.8.5")
     val composeBom = platform("androidx.compose:compose-bom:2026.02.01")

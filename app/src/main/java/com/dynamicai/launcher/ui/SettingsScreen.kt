@@ -400,7 +400,7 @@ fun SettingsScreen(
         GlassSectionHeader("Локальна LLM")
         GlassCard {
             val downloadedModels = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)
-            val downloadProgress = vm.downloadProgress.value
+            val progressState = vm.downloadProgress.value
 
             com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.forEach { model ->
                 val isDownloaded = downloadedModels.any { it.id == model.id }
@@ -415,7 +415,7 @@ fun SettingsScreen(
                             Text(statusText, color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
                             
                             if (vm.downloadProgress.value is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading && !isDownloaded) {
-                                Text("Завантаження... ${downloadProgress.percent}%", color = Color(0xFF64B5F6), fontSize = 11.sp)
+                                Text("Завантаження... ${progressState.percent}%", color = Color(0xFF64B5F6), fontSize = 11.sp)
                             }
                         }
                         
@@ -431,7 +431,7 @@ fun SettingsScreen(
                                 Icon(androidx.compose.material.icons.Icons.Default.Delete, contentDescription = "Видалити", tint = Color(0xFFEF5350))
                             }
                         } else {
-                            if (vm.downloadProgress.value is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading) {
+                            if (progressState is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFF64B5F6), strokeWidth = 2.dp)
                             } else {
                                 TextButton(onClick = { vm.downloadModel(model) }) {

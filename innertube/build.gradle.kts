@@ -22,7 +22,6 @@ android {
 
     sourceSets {
         getByName("main") {
-            // Вказуємо, де лежать джерела KMP
             java.srcDirs("src/commonMain/kotlin", "src/androidMain/kotlin")
             res.srcDirs("src/commonMain/resources", "src/androidMain/res")
         }
@@ -37,7 +36,7 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.12")
     implementation("io.ktor:ktor-client-okhttp:2.3.12")
     
-    // Залежності, які були в Inner
+    // Залежності Inner
     implementation("org.brotli:dec:0.1.2")
     implementation("com.github.teamnewpipe:NewPipeExtractor:v0.26.0")
     implementation("com.google.re2j:re2j:1.7")

@@ -1,14 +1,14 @@
 package com.dynamicai.launcher.music
 
-import android.content.Intent
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
-// import com.tamed.music.innertube.YouTube
-// import com.tamed.music.innertube.models.SongItem
 import kotlinx.coroutines.*
+import org.schabi.newpipe.extractor.NewPipe
+import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.stream.StreamInfo
 
 class MusicPlayerService : MediaSessionService() {
     companion object {
@@ -23,7 +23,7 @@ class MusicPlayerService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        AuthManager.loadCookie(this) // Завантажуємо cookie при старті
+        try { NewPipe.init(DownloaderImpl()) } catch (_: Throwable) {}
 
         val player = ExoPlayer.Builder(this).build()
         mediaSession = MediaSession.Builder(this, player).build()
@@ -48,33 +48,29 @@ class MusicPlayerService : MediaSessionService() {
                 currentTrackName = "Завантаження..."
                 MusicWidget.updateAll(this@MusicPlayerService)
 
-                // Пошук через Inner
-                val searchResult: Any? = null
-                val firstSong = searchResult?.items?.firstOrNull { it is SongItem } as? SongItem
-                if (firstSong == null) {
+                val extractor = ServiceList.YouTube.getSearchExtractor(query)
+                extractor.fetchPage()
+                val firstItem = extractor.initialPage.items.firstOrNull() ?: run {
                     currentTrackName = "Нічого не знайдено"
                     MusicWidget.updateAll(this@MusicPlayerService)
                     return@launch
                 }
 
-                // Отримуємо аудіопотік
-                val playerResponse: Any? = null
-                val audioUrl = playerResponse?.streamingData?.adaptiveFormats
-                    ?.filter { it.mimeType.contains("audio") }
-                    ?.maxByOrNull { it.bitrate }
-                    ?.url
-                if (audioUrl == null) {
-                    currentTrackName = "Помилка отримання потоку"
-                    MusicWidget.updateAll(this@MusicPlayerService)
-                    return@launch
-                }
+                val info = StreamInfo.getInfo(ServiceList.YouTube, firstItem.url)
+                val audioStream = info.audioStreams
+                    .filter { it.isUrl && it.averageBitrate > 0 }
+                    .maxByOrNull { it.averageBitrate } ?: run {
+                        currentTrackName = "Помилка потоку"
+                        MusicWidget.updateAll(this@MusicPlayerService)
+                        return@launch
+                    }
 
                 val mediaItem = MediaItem.Builder()
-                    .setUri(audioUrl)
+                    .setUri(audioStream.url)
                     .setMediaMetadata(
                         androidx.media3.common.MediaMetadata.Builder()
-                            .setTitle(firstSong.title)
-                            .setArtist(firstSong.artists?.joinToString { it.name } ?: "")
+                            .setTitle(info.name)
+                            .setArtist(info.uploaderName ?: "")
                             .build()
                     ).build()
 
@@ -82,9 +78,8 @@ class MusicPlayerService : MediaSessionService() {
                 mediaSession?.player?.prepare()
                 mediaSession?.player?.play()
             } catch (e: Exception) {
-                currentTrackName = "Помилка"
+                currentTrackName = "Помилка: ${e.message}"
                 MusicWidget.updateAll(this@MusicPlayerService)
-                e.printStackTrace()
             }
         }
     }
@@ -97,10 +92,7 @@ class MusicPlayerService : MediaSessionService() {
 
     override fun onDestroy() {
         instance = null
-        mediaSession?.run {
-            player.release()
-            release()
-        }
+        mediaSession?.run { player.release(); release() }
         mediaSession = null
         scope.cancel()
         super.onDestroy()

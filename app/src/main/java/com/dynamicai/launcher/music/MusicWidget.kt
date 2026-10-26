@@ -8,7 +8,6 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.ActionParameters
-import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -28,24 +27,21 @@ import kotlinx.coroutines.launch
 
 class MusicWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        provideContent {
-            MusicWidgetContent()
-        }
+        provideContent { MusicWidgetContent() }
     }
 
     @Composable
     fun MusicWidgetContent() {
-        // Стиль Liquid Glass: темний напівпрозорий фон
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(Color(0xCC0A0A0A)) // Напівпрозорий чорний
+                .background(Color(0xCC0A0A0A))
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = ReVancedController.currentTrackName,
+                text = MusicPlayerService.currentTrackName,
                 style = TextStyle(
                     color = ColorProvider(Color.White),
                     fontSize = 14.sp,
@@ -58,9 +54,8 @@ class MusicWidget : GlanceAppWidget() {
                 modifier = GlanceModifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Кнопка Play/Pause
                 Text(
-                    text = if (ReVancedController.isPlaying) "⏸" else "▶️",
+                    text = if (MusicPlayerService.isPlaying) "⏸" else "▶️",
                     modifier = GlanceModifier
                         .padding(8.dp)
                         .clickable(actionRunCallback<TogglePlaybackAction>()),
@@ -69,15 +64,17 @@ class MusicWidget : GlanceAppWidget() {
             }
         }
     }
-    
-    // Функція для оновлення віджета звідусіль
+
     companion object {
         fun updateAll(context: Context) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val manager = GlanceAppWidgetManager(context)
-            val ids = manager.getGlanceIds(MusicWidget::class.java)
-            ids.forEach { id ->
-                MusicWidget().update(context, id)
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val manager = GlanceAppWidgetManager(context)
+                    val ids = manager.getGlanceIds(MusicWidget::class.java)
+                    ids.forEach { id ->
+                        MusicWidget().update(context, id)
+                    }
+                } catch (_: Throwable) {}
             }
         }
     }
@@ -89,8 +86,7 @@ class TogglePlaybackAction : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters
     ) {
-        ReVancedController.instance?.togglePlayPause()
-        // Віджет оновиться автоматично через слухач у сервісі
+        MusicPlayerService.instance?.togglePlayPause()
     }
 }
 

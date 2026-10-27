@@ -47,6 +47,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import com.dynamicai.launcher.music.GoogleAuthManager
 import androidx.compose.material.icons.filled.AccountCircle
+import com.dynamicai.launcher.morning.WakeUpDetector
+import com.dynamicai.launcher.morning.MorningBriefingService
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.LinearProgressIndicator
 import com.dynamicai.launcher.data.AppRepository
@@ -418,6 +421,46 @@ fun SettingsScreen(
                     val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}"))
                     ctx.startActivity(intent)
                 }
+            }
+        }
+
+                GlassSectionHeader("🌅 Ранковий брифінг")
+        GlassCard {
+            val wakeDetector = remember { WakeUpDetector(ctx) }
+            var morningEnabled by remember { mutableStateOf(wakeDetector.isEnabled()) }
+            val avgHour = remember { wakeDetector.getAverageWakeHour() }
+            val avgMinute = remember { wakeDetector.getAverageWakeMinute() }
+            
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Розумний ранковий брифінг", color = Color.White, fontSize = 14.sp)
+                    Text(
+                        if (avgHour >= 0) "Середній час пробудження: ${String.format("%02d:%02d", avgHour, avgMinute)}" 
+                        else "Ще недостатньо даних (потрібно 3+ дні)",
+                        color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp
+                    )
+                }
+                Switch(
+                    checked = morningEnabled,
+                    onCheckedChange = {
+                        morningEnabled = it
+                        wakeDetector.setEnabled(it)
+                    },
+                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                        checkedThumbColor = Color(0xFF4CAF50)
+                    )
+                )
+            }
+            
+            ActionRow(
+                "Тестувати брифінг зараз",
+                androidx.compose.material.icons.Icons.Default.PlayArrow,
+                Color(0xFFFF9800)
+            ) {
+                MorningBriefingService.start(ctx)
             }
         }
 

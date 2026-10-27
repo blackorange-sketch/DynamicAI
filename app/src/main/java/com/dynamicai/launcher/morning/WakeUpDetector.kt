@@ -12,12 +12,20 @@ class WakeUpDetector(private val context: Context) {
         private const val KEY_LAST_UNLOCK = "last_unlock"
         private const val KEY_LAST_WAKE = "last_wake"
         private const val KEY_WAKE_HISTORY = "wake_history"
+        private const val KEY_ENABLED = "morning_enabled"
         private const val LONG_SLEEP_THRESHOLD = 5 * 3600 * 1000L // 5 годин
     }
 
     private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
+    fun isEnabled(): Boolean = prefs.getBoolean(KEY_ENABLED, true)
+    
+    fun setEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ENABLED, enabled).apply()
+    }
+
     fun onUserPresent() {
+        if (!isEnabled()) return
         val now = System.currentTimeMillis()
         val lastUnlock = prefs.getLong(KEY_LAST_UNLOCK, 0)
         val lastWake = prefs.getLong(KEY_LAST_WAKE, 0)

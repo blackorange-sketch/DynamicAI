@@ -121,7 +121,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     val placedWidgetsStorage = remember { com.dynamicai.launcher.widget.WidgetsStorage(ctx) }
     var placedWidgets by remember { mutableStateOf<List<com.dynamicai.launcher.widget.PlacedWidget>>(emptyList()) }
     var showAddWidgetDialog by remember { mutableStateOf(false) }
-    var showModuleManager by remember { mutableStateOf(false) }
     var currentSettingsCategory by remember { mutableStateOf<String?>(null) }
     var currentPage by remember { mutableStateOf(0) }
     val pageCount = remember(placedWidgets) {
@@ -524,46 +523,24 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 onClose = { showSettings = false }
             )
         } else {
-            SettingsScreen(
-                initialCategory = currentSettingsCategory,
-                onBackToMenu = { currentSettingsCategory = null },
+            Box(modifier = Modifier.fillMaxSize()) {
+                SettingsScreen(
                 vm = vm,
-                settings = settings,
-                onSettingsChange = { vm.updateSettings(it) },
-                hiddenCount = hidden.size,
-                foldersCount = folders.size,
-                onClearHistory = { vm.clearHistory() },
-                onRefreshContacts = { vm.loadContacts() },
-                onClearHidden = { vm.clearHidden() },
-                onDownloadLlm = { vm.downloadModel() },
-                overlayActive = overlayActive,
-                overlayPermissionGranted = overlayPermissionGranted,
-                onToggleOverlay = {
-                    if (overlayActive) {
-                        com.dynamicai.launcher.overlay.FloatingDockService.stop(ctx)
-                        overlayActive = false
-                        ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
-                            .edit().putBoolean("overlayEnabled", false).commit()
-                    } else {
-                        com.dynamicai.launcher.overlay.FloatingDockService.start(ctx)
-                        overlayActive = true
-                        ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
-                            .edit().putBoolean("overlayEnabled", true).commit()
-                    }
-                },
-                onRequestOverlayPermission = { requestOverlayPermission() },
-                llmDownloaded = vm.downloader.isDownloaded,
-                llmReady = llmReady,
-                versionName = BuildConfig.VERSION_NAME,
-                onOpenWallpaper = { showWallpaper = true },
-                onOpenDockEditor = { showDockEditor = true },
-                onOpenFolderManager = { showFolderManager = true },
-                onOpenMacroManager = { showMacroManager = true },
-                onOpenNotes = { showNotesScreen = true },
-                onClose = { showSettings = false },
-                onTestLlm = { prompt -> vm.testLlm(prompt) },
-                onOpenModuleManager = { showModuleManager = true }
-            )
+            settings = settings,
+            onSettingsChange = { vm.updateSettings(it)
+                // Кнопка "Назад" поверх SettingsScreen
+                Box(
+                    modifier = Modifier
+                        .align(androidx.compose.ui.Alignment.TopStart)
+                        .padding(16.dp)
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.6f))
+                        .clickable { currentSettingsCategory = null }
+                        .padding(8.dp)
+                ) {
+                    Text("← Назад", color = Color.White, fontSize = 14.sp)
+                }
+            }
         }
         return
     }

@@ -496,13 +496,14 @@ fun SettingsScreen(
 
         GlassSectionHeader("🧩 Розширення")
         GlassCard {
+            val context = androidx.compose.ui.platform.LocalContext.current
             Row(
                 modifier = Modifier.fillMaxWidth().clickable {
                     val intent = android.content.Intent(
-                        androidx.compose.ui.platform.LocalContext.current,
+                        context,
                         com.dynamicai.launcher.ui.ModuleManagerActivity::class.java
                     )
-                    androidx.compose.ui.platform.LocalContext.current.startActivity(intent)
+                    context.startActivity(intent)
                 }.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {

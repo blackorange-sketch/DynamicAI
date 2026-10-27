@@ -81,6 +81,8 @@ fun SettingsScreen(
     onClose: () -> Unit,
     onTestLlm: suspend (String) -> String? = { null }
     onOpenModuleManager: () -> Unit = {},
+    initialCategory: String? = null,
+    onBackToMenu: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -90,6 +92,17 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 12.dp)
     ) {
+        // Кнопка "Назад" (тільки якщо ми в категорії)
+        if (initialCategory != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("← Назад до категорій", color = Color(0xFF64B5F6), fontSize = 16.sp,
+                    modifier = Modifier.clickable { onBackToMenu() })
+            }
+        }
+
         // Header — glass
         Row(
             modifier = Modifier

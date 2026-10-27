@@ -58,7 +58,6 @@ import com.dynamicai.launcher.model.AppInfo
 @Composable
 fun SettingsScreen(
     vm: com.dynamicai.launcher.AppListViewModel,
-    initialCategory: String? = null,
     settings: LauncherSettings,
     onSettingsChange: (LauncherSettings) -> Unit,
     hiddenCount: Int,
@@ -1286,14 +1285,5 @@ private fun AppPickerRow(
             onPick = { onPick(it); showDialog = false },
             onDismiss = { showDialog = false }
         )
-    }
-
-    
-
-    // Кнопка назад (тільки якщо є initialCategory)
-    if (initialCategory != null) {
-        TextButton(onClick = onBack) {
-            Text("← Назад до категорій", color = Color(0xFF64B5F6))
-        }
     }
 }

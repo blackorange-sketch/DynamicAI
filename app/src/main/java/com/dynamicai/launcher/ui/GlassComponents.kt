@@ -68,26 +68,31 @@ fun GlassCard(
 ) {
     Column(
         modifier = modifier
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(cornerRadius),
+                clip = false
+            )
             .clip(RoundedCornerShape(cornerRadius))
             .background(
-                brush = Brush.linearGradient(
+                brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.15f),
-                        Color.White.copy(alpha = 0.05f)
+                        Color(0xFF2A2A2A).copy(alpha = 0.75f),
+                        Color(0xFF121212).copy(alpha = 0.85f)
                     )
                 )
             )
             .border(
                 width = 1.dp,
-                brush = Brush.linearGradient(
+                brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.6f),
-                        Color.White.copy(alpha = 0.1f)
+                        Color.White.copy(alpha = 0.3f),
+                        Color.White.copy(alpha = 0.05f)
                     )
                 ),
                 shape = RoundedCornerShape(cornerRadius)
             )
-            .padding(vertical = 4.dp),
+            .padding(vertical = 6.dp),
         content = content
     )
 }

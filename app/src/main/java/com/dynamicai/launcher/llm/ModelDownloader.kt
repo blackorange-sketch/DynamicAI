@@ -95,7 +95,7 @@ class ModelDownloader(private val context: Context) {
             println("DYN_LLM: DOWNLOAD FAILED $detail")
             emit(Progress.Error(detail))
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     private fun trustAllSslClient(builder: OkHttpClient.Builder): OkHttpClient {
         try {

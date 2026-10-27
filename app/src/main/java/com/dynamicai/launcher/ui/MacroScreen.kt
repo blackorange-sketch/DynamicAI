@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -42,7 +43,7 @@ fun MacroScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.95f))
+            .background(AppTheme.colors.background.copy(alpha = 0.95f))
             .statusBarsPadding()
     ) {
         Row(
@@ -50,16 +51,16 @@ fun MacroScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onClose) {
-                Icon(Icons.Default.ArrowBack, "Назад", tint = Color.White)
+                Icon(Icons.Default.ArrowBack, "Назад", tint = AppTheme.colors.textPrimary)
             }
-            Text("Макроси", color = Color.White, fontSize = 22.sp, modifier = Modifier.weight(1f))
+            Text("Макроси", color = AppTheme.colors.textPrimary, fontSize = 22.sp, modifier = Modifier.weight(1f))
             IconButton(onClick = {
                 editId = null
                 editName = ""
                 editSteps = ""
                 showEditor = true
             }) {
-                Icon(Icons.Default.Add, "Новий макрос", tint = Color(0xFF64B5F6))
+                Icon(Icons.Default.Add, "Новий макрос", tint = AppTheme.colors.accent)
             }
         }
 
@@ -67,7 +68,7 @@ fun MacroScreen(
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     "Немає макросів.\nТап + — створити перший.\n\nПриклад:\nІм'я: Доброго ранку\nКроки (кожен на новому рядку):\nувімкни wifi\nяскравіше\nвідкрий spotify",
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = AppTheme.colors.textSecondary,
                     fontSize = 13.sp
                 )
             }
@@ -93,44 +94,44 @@ fun MacroScreen(
     if (showEditor) {
         AlertDialog(
             onDismissRequest = { showEditor = false },
-            title = { Text(if (editId == null) "Новий макрос" else "Редагувати", color = Color.White) },
+            title = { Text(if (editId == null) "Новий макрос" else "Редагувати", color = AppTheme.colors.textPrimary) },
             text = {
                 Column {
-                    Text("Назва", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                    Text("Назва", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                     Spacer(Modifier.height(4.dp))
                     BasicTextField(
                         value = editName,
                         onValueChange = { editName = it },
-                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
-                        cursorBrush = SolidColor(Color(0xFF64B5F6)),
+                        textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
+                        cursorBrush = SolidColor(AppTheme.colors.accent),
                         singleLine = true,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
+                            .background(AppTheme.colors.textPrimary.copy(alpha = 0.08f))
                             .padding(horizontal = 10.dp, vertical = 8.dp),
                         decorationBox = { inner ->
-                            if (editName.isEmpty()) Text("Доброго ранку", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                            if (editName.isEmpty()) Text("Доброго ранку", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
                             inner()
                         }
                     )
                     Spacer(Modifier.height(12.dp))
-                    Text("Кроки (кожен на новому рядку)", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                    Text("Кроки (кожен на новому рядку)", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                     Spacer(Modifier.height(4.dp))
                     BasicTextField(
                         value = editSteps,
                         onValueChange = { editSteps = it },
-                        textStyle = TextStyle(color = Color.White, fontSize = 13.sp),
-                        cursorBrush = SolidColor(Color(0xFF64B5F6)),
+                        textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 13.sp),
+                        cursorBrush = SolidColor(AppTheme.colors.accent),
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(min = 100.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
+                            .background(AppTheme.colors.textPrimary.copy(alpha = 0.08f))
                             .padding(horizontal = 10.dp, vertical = 8.dp),
                         decorationBox = { inner ->
                             if (editSteps.isEmpty()) {
-                                Text("увімкни wifi\nяскравіше\nвідкрий spotify", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                                Text("увімкни wifi\nяскравіше\nвідкрий spotify", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
                             }
                             inner()
                         }
@@ -145,12 +146,12 @@ fun MacroScreen(
                         onSave(Macro(id = id, name = editName.trim(), steps = steps))
                     }
                     showEditor = false
-                }) { Text("Зберегти", color = Color(0xFF64B5F6)) }
+                }) { Text("Зберегти", color = AppTheme.colors.accent) }
             },
             dismissButton = {
-                TextButton(onClick = { showEditor = false }) { Text("Скасувати", color = Color.White.copy(alpha = 0.6f)) }
+                TextButton(onClick = { showEditor = false }) { Text("Скасувати", color = AppTheme.colors.textSecondary) }
             },
-            containerColor = Color(0xFF1A1A1A)
+            containerColor = AppTheme.colors.surface
         )
     }
 }
@@ -167,7 +168,7 @@ private fun MacroRow(
             .fillMaxWidth()
             .padding(vertical = 6.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(Color.White.copy(alpha = 0.06f))
+            .background(AppTheme.colors.textPrimary.copy(alpha = 0.06f))
             .pointerInput(macro.id) { detectTapGestures(onLongPress = { onEdit() }, onTap = { onRun() }) }
             .padding(horizontal = 12.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -177,20 +178,20 @@ private fun MacroRow(
             modifier = Modifier
                 .size(36.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(Color(0xFFFFB300).copy(alpha = 0.18f))
+                .background(AppTheme.colors.warning.copy(alpha = 0.18f))
         ) {
-            Icon(Icons.Default.PlayArrow, null, tint = Color(0xFFFFB300), modifier = Modifier.size(20.dp))
+            Icon(Icons.Default.PlayArrow, null, tint = AppTheme.colors.warning, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(macro.name, color = Color.White, fontSize = 15.sp)
-            Text("${macro.steps.size} крок(ів) • тап — запустити", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
+            Text(macro.name, color = AppTheme.colors.textPrimary, fontSize = 15.sp)
+            Text("${macro.steps.size} крок(ів) • тап — запустити", color = AppTheme.colors.textSecondary, fontSize = 11.sp)
         }
         IconButton(onClick = onEdit) {
-            Icon(Icons.Default.Edit, "Редагувати", tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Edit, "Редагувати", tint = AppTheme.colors.textSecondary, modifier = Modifier.size(18.dp))
         }
         IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Delete, "Видалити", tint = Color(0xFFFF8A80), modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Delete, "Видалити", tint = AppTheme.colors.danger, modifier = Modifier.size(18.dp))
         }
     }
 }

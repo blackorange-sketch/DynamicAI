@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Context
@@ -110,9 +111,9 @@ fun WallpaperScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onClose) {
-                Icon(Icons.Default.ArrowBack, "Назад", tint = Color.White)
+                Icon(Icons.Default.ArrowBack, "Назад", tint = AppTheme.colors.textPrimary)
             }
-            Text("Шпалери", color = Color.White, fontSize = 22.sp)
+            Text("Шпалери", color = AppTheme.colors.textPrimary, fontSize = 22.sp)
         }
 
         GlassSectionHeader("Системні")
@@ -120,7 +121,7 @@ fun WallpaperScreen(
             GlassActionRow("Обрати шпалери (система)") { openSystemWallpaper() }
             Text(
                 "Галерея, системні, живі, Google Wallpapers",
-                color = Color.White.copy(alpha = 0.5f),
+                color = AppTheme.colors.textSecondary,
                 fontSize = 12.sp,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
@@ -139,7 +140,7 @@ fun WallpaperScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Без звуку", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    Text("Без звуку", color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
                     Switch(
                         checked = muted,
                         onCheckedChange = { m ->
@@ -147,8 +148,8 @@ fun WallpaperScreen(
                             VideoWallpaperService.setMuted(ctx, m)
                         },
                         colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF64B5F6)
+                            checkedThumbColor = AppTheme.colors.textPrimary,
+                            checkedTrackColor = AppTheme.colors.accent
                         )
                     )
                 }
@@ -160,7 +161,7 @@ fun WallpaperScreen(
             } else {
                 Text(
                     "Обери відео → активуй як live wallpaper",
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = AppTheme.colors.textSecondary,
                     fontSize = 12.sp,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
@@ -172,7 +173,7 @@ fun WallpaperScreen(
             GlassCard {
                 Text(
                     "Остання подія: $lastLog",
-                    color = Color(0xFF64B5F6),
+                    color = AppTheme.colors.accent,
                     fontSize = 11.sp,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
@@ -187,7 +188,7 @@ fun WallpaperScreen(
 private fun GlassActionRow(label: String, onClick: () -> Unit) {
     Text(
         label,
-        color = Color.White,
+        color = AppTheme.colors.textPrimary,
         fontSize = 14.sp,
         modifier = Modifier
             .fillMaxWidth()

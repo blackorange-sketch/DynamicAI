@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -47,7 +48,7 @@ fun NotesScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.95f))
+            .background(AppTheme.colors.background.copy(alpha = 0.95f))
             .statusBarsPadding()
     ) {
         Row(
@@ -55,14 +56,14 @@ fun NotesScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onClose) {
-                Icon(Icons.Default.ArrowBack, "Назад", tint = Color.White)
+                Icon(Icons.Default.ArrowBack, "Назад", tint = AppTheme.colors.textPrimary)
             }
-            Text("Нотатки", color = Color.White, fontSize = 22.sp, modifier = Modifier.weight(1f))
+            Text("Нотатки", color = AppTheme.colors.textPrimary, fontSize = 22.sp, modifier = Modifier.weight(1f))
             IconButton(onClick = {
                 editText = ""
                 showEditor = true
             }) {
-                Icon(Icons.Default.Add, "Нова нотатка", tint = Color(0xFF64B5F6))
+                Icon(Icons.Default.Add, "Нова нотатка", tint = AppTheme.colors.accent)
             }
         }
 
@@ -70,7 +71,7 @@ fun NotesScreen(
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     "Немає нотаток.\nТап + — створити.\n\nАбо скажи: «занотуй купити хліб»",
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = AppTheme.colors.textSecondary,
                     fontSize = 13.sp
                 )
             }
@@ -97,22 +98,22 @@ fun NotesScreen(
     if (showEditor) {
         AlertDialog(
             onDismissRequest = { showEditor = false },
-            title = { Text("Нотатка", color = Color.White) },
+            title = { Text("Нотатка", color = AppTheme.colors.textPrimary) },
             text = {
                 BasicTextField(
                     value = editText,
                     onValueChange = { editText = it },
-                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
-                    cursorBrush = SolidColor(Color(0xFF64B5F6)),
+                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
+                    cursorBrush = SolidColor(AppTheme.colors.accent),
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 80.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(AppTheme.colors.textPrimary.copy(alpha = 0.08f))
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                     decorationBox = { inner ->
                         if (editText.isEmpty()) {
-                            Text("Купити хліб…", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                            Text("Купити хліб…", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
                         }
                         inner()
                     }
@@ -125,12 +126,12 @@ fun NotesScreen(
                         notes = storage.get()
                     }
                     showEditor = false
-                }) { Text("Зберегти", color = Color(0xFF64B5F6)) }
+                }) { Text("Зберегти", color = AppTheme.colors.accent) }
             },
             dismissButton = {
-                TextButton(onClick = { showEditor = false }) { Text("Скасувати", color = Color.White.copy(alpha = 0.6f)) }
+                TextButton(onClick = { showEditor = false }) { Text("Скасувати", color = AppTheme.colors.textSecondary) }
             },
-            containerColor = Color(0xFF1A1A1A)
+            containerColor = AppTheme.colors.surface
         )
     }
 }
@@ -147,7 +148,7 @@ private fun NoteRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(Color.White.copy(alpha = 0.06f))
+            .background(AppTheme.colors.textPrimary.copy(alpha = 0.06f))
             .pointerInput(note.id) { detectTapGestures(onLongPress = { onEdit() }) }
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -158,31 +159,31 @@ private fun NoteRow(
                 .size(24.dp)
                 .clip(CircleShape)
                 .background(
-                    if (note.done) Color(0xFF4CAF50).copy(alpha = 0.5f)
-                    else Color.White.copy(alpha = 0.1f)
+                    if (note.done) AppTheme.colors.success.copy(alpha = 0.5f)
+                    else AppTheme.colors.glassBorder.copy(alpha = 0.7f)
                 )
                 .pointerInput(note.id) { detectTapGestures { onToggle() } }
         ) {
             if (note.done) {
-                Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Check, null, tint = AppTheme.colors.textPrimary, modifier = Modifier.size(16.dp))
             }
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 note.text,
-                color = if (note.done) Color.White.copy(alpha = 0.5f) else Color.White,
+                color = if (note.done) AppTheme.colors.textSecondary else AppTheme.colors.textPrimary,
                 fontSize = 14.sp,
                 textDecoration = if (note.done) TextDecoration.LineThrough else TextDecoration.None
             )
             Text(
                 dateFmt.format(Date(note.createdAt)),
-                color = Color.White.copy(alpha = 0.35f),
+                color = AppTheme.colors.textPrimary.copy(alpha = 0.35f),
                 fontSize = 11.sp
             )
         }
         IconButton(onClick = onDelete) {
-            Icon(Icons.Default.Delete, "Видалити", tint = Color(0xFFFF8A80), modifier = Modifier.size(18.dp))
+            Icon(Icons.Default.Delete, "Видалити", tint = AppTheme.colors.danger, modifier = Modifier.size(18.dp))
         }
     }
 }

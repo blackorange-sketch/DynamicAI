@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.macro
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -50,21 +51,21 @@ fun MacroScreen(onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("⚡ Макроси", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text("⚡ Макроси", color = AppTheme.colors.textPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("+", color = Color(0xFF00E676), fontSize = 28.sp, fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(8.dp).clickable {
                             editingMacro = null
                             showEditor = true
                         })
-                    Text("✕", color = Color.White.copy(alpha = 0.6f), fontSize = 24.sp,
+                    Text("✕", color = AppTheme.colors.textSecondary, fontSize = 24.sp,
                         modifier = Modifier.padding(8.dp).clickable(onClick = onClose))
                 }
             }
             Spacer(Modifier.height(16.dp))
 
             if (macros.isEmpty()) {
-                Text("Натисни +, щоб створити свій перший макрос", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+                Text("Натисни +, щоб створити свій перший макрос", color = AppTheme.colors.textSecondary, fontSize = 14.sp)
             }
 
             LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -151,32 +152,32 @@ fun MacroEditorDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF14141E),
-        title = { Text(if (macro == null) "Новий макрос" else "Редагувати", color = Color.White) },
+        title = { Text(if (macro == null) "Новий макрос" else "Редагувати", color = AppTheme.colors.textPrimary) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState()).heightIn(max = 500.dp)) {
-                Text("Назва", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                Text("Назва", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 BasicTextField(
                     value = name,
                     onValueChange = { name = it },
-                    textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
+                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
                     cursorBrush = SolidColor(Color(0xFF00E676)),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
-                        .clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.05f))
+                        .clip(RoundedCornerShape(12.dp)).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
                         .padding(12.dp),
                     decorationBox = { inner ->
-                        if (name.isEmpty()) Text("Наприклад: Доброї ночі", color = Color.White.copy(alpha = 0.4f))
+                        if (name.isEmpty()) Text("Наприклад: Доброї ночі", color = AppTheme.colors.textSecondary)
                         inner()
                     }
                 )
 
                 Spacer(Modifier.height(12.dp))
-                Text("Іконка", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                Text("Іконка", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     iconOptions.take(6).forEach { ic ->
                         Box(
                             modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp))
-                                .background(if (icon == ic) Color(0xFF00E676).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.05f))
+                                .background(if (icon == ic) Color(0xFF00E676).copy(alpha = 0.3f) else AppTheme.colors.textPrimary.copy(alpha = 0.05f))
                                 .clickable { icon = ic },
                             contentAlignment = Alignment.Center
                         ) { Text(ic, fontSize = 20.sp) }
@@ -184,43 +185,43 @@ fun MacroEditorDialog(
                 }
 
                 Spacer(Modifier.height(12.dp))
-                Text("Колір", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                Text("Колір", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     colorOptions.forEach { c ->
                         Box(
                             modifier = Modifier.size(28.dp).clip(RoundedCornerShape(50))
                                 .background(Color(c))
-                                .border(if (colorHex == c) 2.dp else 0.dp, Color.White, RoundedCornerShape(50))
+                                .border(if (colorHex == c) 2.dp else 0.dp, AppTheme.colors.textPrimary, RoundedCornerShape(50))
                                 .clickable { colorHex = c }
                         )
                     }
                 }
 
                 Spacer(Modifier.height(16.dp))
-                Text("Кроки (${steps.size})", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                Text("Кроки (${steps.size})", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 steps.forEachIndexed { i, s ->
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                            .clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = 0.05f))
+                            .clip(RoundedCornerShape(8.dp)).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
                             .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("${i + 1}.", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                        Text("${i + 1}.", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                         Spacer(Modifier.width(8.dp))
-                        Text(s, color = Color.White, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                        Text(s, color = AppTheme.colors.textPrimary, fontSize = 12.sp, modifier = Modifier.weight(1f))
                         Text("✕", color = Color(0xFFFF5252), fontSize = 14.sp,
                             modifier = Modifier.clickable { steps.removeAt(i) })
                     }
                 }
 
                 Spacer(Modifier.height(8.dp))
-                Text("Додати крок", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                Text("Додати крок", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(4.dp))
                 stepTemplates.forEach { (label, cmd) ->
                     Text(
                         "+ $label",
-                        color = Color(0xFF64B5F6),
+                        color = AppTheme.colors.accent,
                         fontSize = 13.sp,
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                             .clickable { steps.add(cmd) }
@@ -231,13 +232,13 @@ fun MacroEditorDialog(
                 BasicTextField(
                     value = newStep,
                     onValueChange = { newStep = it },
-                    textStyle = TextStyle(color = Color.White, fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
                     cursorBrush = SolidColor(Color(0xFF00E676)),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                        .clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = 0.05f))
+                        .clip(RoundedCornerShape(8.dp)).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
                         .padding(8.dp),
                     decorationBox = { inner ->
-                        if (newStep.isEmpty()) Text("TOOL_CALL: ...", color = Color.White.copy(alpha = 0.3f), fontSize = 12.sp)
+                        if (newStep.isEmpty()) Text("TOOL_CALL: ...", color = AppTheme.colors.textMuted, fontSize = 12.sp)
                         inner()
                     }
                 )
@@ -255,7 +256,7 @@ fun MacroEditorDialog(
                 }
             }) { Text("Зберегти", color = Color(0xFF00E676)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Скасувати", color = Color.White.copy(alpha = 0.6f)) } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
     )
 }
 
@@ -266,16 +267,16 @@ fun MacroCard(macro: Macro, isRunning: Boolean, onRun: () -> Unit, onEdit: () ->
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.05f))
-            .border(0.5.dp, if (isRunning) color else Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+            .background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
+            .border(0.5.dp, if (isRunning) color else AppTheme.colors.glassBorder.copy(alpha = 0.7f), RoundedCornerShape(16.dp))
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(macro.icon, fontSize = 24.sp)
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f).clickable(enabled = !isRunning, onClick = onEdit)) {
-            Text(macro.name, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            Text("${macro.steps.size} кроків · тап для редагування", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
+            Text(macro.name, color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Text("${macro.steps.size} кроків · тап для редагування", color = AppTheme.colors.textSecondary, fontSize = 11.sp)
         }
         Text(if (isRunning) "⏳" else "▶️", fontSize = 20.sp, modifier = Modifier.clickable(enabled = !isRunning, onClick = onRun).padding(8.dp))
         Text("🗑️", fontSize = 18.sp, modifier = Modifier.padding(4.dp).clickable { onDelete() })

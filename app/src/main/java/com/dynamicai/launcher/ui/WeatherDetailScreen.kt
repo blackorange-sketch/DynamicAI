@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
@@ -42,7 +43,7 @@ fun WeatherDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = backgroundAlphaPercent / 100f))
+            .background(AppTheme.colors.background.copy(alpha = backgroundAlphaPercent / 100f))
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 12.dp)
@@ -53,12 +54,12 @@ fun WeatherDetailScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onClose) {
-                Icon(Icons.Default.ArrowBack, "Назад", tint = Color.White)
+                Icon(Icons.Default.ArrowBack, "Назад", tint = AppTheme.colors.textPrimary)
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text("Погода", color = Color.White, fontSize = 22.sp)
+                Text("Погода", color = AppTheme.colors.textPrimary, fontSize = 22.sp)
                 if (cityName.isNotBlank()) {
-                    Text(cityName, color = Color(0xFF64B5F6), fontSize = 13.sp)
+                    Text(cityName, color = AppTheme.colors.accent, fontSize = 13.sp)
                 }
             }
         }
@@ -75,7 +76,7 @@ fun WeatherDetailScreen(
                 GlassCard {
                     Text(
                         "Не вдалось: ${state.message}",
-                        color = Color(0xFFFF6B6B), fontSize = 14.sp,
+                        color = AppTheme.colors.danger, fontSize = 14.sp,
                         modifier = Modifier.padding(16.dp)
                     )
                 }
@@ -91,15 +92,15 @@ fun WeatherDetailScreen(
                         Spacer(Modifier.height(8.dp))
                         Text(
                             "${state.tempC}°${state.unit}",
-                            color = Color.White,
+                            color = AppTheme.colors.textPrimary,
                             fontSize = 56.sp,
                             fontWeight = FontWeight.Light
                         )
-                        Text(state.description, color = Color.White.copy(alpha = 0.7f), fontSize = 16.sp)
+                        Text(state.description, color = AppTheme.colors.textSecondary, fontSize = 16.sp)
                         Spacer(Modifier.height(6.dp))
                         Text(
                             "Відчувається як ${state.feelsLike}° · мін ${state.tempMin}° · макс ${state.tempMax}°",
-                            color = Color.White.copy(alpha = 0.5f),
+                            color = AppTheme.colors.textSecondary,
                             fontSize = 12.sp
                         )
                     }
@@ -113,17 +114,17 @@ fun WeatherDetailScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         DetailItem(
-                            icon = { Icon(Icons.Default.Info, null, tint = Color(0xFF64B5F6)) },
+                            icon = { Icon(Icons.Default.Info, null, tint = AppTheme.colors.accent) },
                             value = "${state.humidity}%",
                             label = "Вологість"
                         )
                         DetailItem(
-                            icon = { Icon(Icons.Default.Refresh, null, tint = Color(0xFF81C784)) },
+                            icon = { Icon(Icons.Default.Refresh, null, tint = AppTheme.colors.successLight) },
                             value = "${state.windSpeed} км/г",
                             label = "Вітер"
                         )
                         DetailItem(
-                            icon = { Icon(Icons.Default.Info, null, tint = Color(0xFFFF8A65)) },
+                            icon = { Icon(Icons.Default.Info, null, tint = AppTheme.colors.warning) },
                             value = "${state.pressure}",
                             label = "Тиск"
                         )
@@ -140,7 +141,7 @@ fun WeatherDetailScreen(
                         ) {
                             if (state.uvIndex > 0) {
                                 DetailItem(
-                                    icon = { Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107)) },
+                                    icon = { Icon(Icons.Default.Star, null, tint = AppTheme.colors.warning) },
                                     value = "${state.uvIndex}",
                                     label = uvLabel(state.uvIndex)
                                 )
@@ -181,7 +182,7 @@ fun WeatherDetailScreen(
                 Spacer(Modifier.height(14.dp))
                 Text(
                     "Відкрити детальний прогноз у браузері",
-                    color = Color(0xFF64B5F6),
+                    color = AppTheme.colors.accent,
                     fontSize = 14.sp,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -214,8 +215,8 @@ private fun DetailItem(
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         icon()
         Spacer(Modifier.height(4.dp))
-        Text(value, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-        Text(label, color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, textAlign = TextAlign.Center)
+        Text(value, color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = AppTheme.colors.textSecondary, fontSize = 11.sp, textAlign = TextAlign.Center)
     }
 }
 
@@ -228,28 +229,28 @@ private fun ForecastRow(day: WeatherState.DailyForecast) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.width(90.dp)) {
-            Text(day.dayName, color = Color.White, fontSize = 14.sp)
-            Text(day.date, color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp)
+            Text(day.dayName, color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+            Text(day.date, color = AppTheme.colors.textSecondary, fontSize = 11.sp)
         }
         Text(day.icon, fontSize = 22.sp)
         Spacer(Modifier.width(10.dp))
         Text(
             day.description,
-            color = Color.White.copy(alpha = 0.6f),
+            color = AppTheme.colors.textSecondary,
             fontSize = 12.sp,
             modifier = Modifier.weight(1f),
             maxLines = 1
         )
         Text(
             "${day.tempMax}°",
-            color = Color.White,
+            color = AppTheme.colors.textPrimary,
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium
         )
         Spacer(Modifier.width(6.dp))
         Text(
             "${day.tempMin}°",
-            color = Color.White.copy(alpha = 0.5f),
+            color = AppTheme.colors.textSecondary,
             fontSize = 13.sp
         )
     }
@@ -262,7 +263,7 @@ private fun HorizontalDividerCompat() {
             .fillMaxWidth()
             .padding(horizontal = 14.dp)
             .height(0.5.dp)
-            .background(Color.White.copy(alpha = 0.08f))
+            .background(AppTheme.colors.textPrimary.copy(alpha = 0.08f))
     )
 }
 

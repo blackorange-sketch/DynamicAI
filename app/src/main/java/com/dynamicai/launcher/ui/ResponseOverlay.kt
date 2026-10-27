@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -51,8 +52,8 @@ fun ResponseOverlay(
                 .background(
                     brush = Brush.verticalGradient(
                         listOf(
-                            Color(0xF0202020),
-                            Color(0xE00D0D0D)
+                            AppTheme.colors.surface.copy(alpha = 0.94f),
+                            AppTheme.colors.glassBackgroundAlt.copy(alpha = 0.88f)
                         )
                     )
                 )
@@ -60,8 +61,8 @@ fun ResponseOverlay(
                     width = 1.dp,
                     brush = Brush.verticalGradient(
                         listOf(
-                            Color.White.copy(alpha = 0.35f),
-                            Color.White.copy(alpha = 0.08f)
+                            AppTheme.colors.textPrimary.copy(alpha = 0.35f),
+                            AppTheme.colors.textPrimary.copy(alpha = 0.08f)
                         )
                     ),
                     shape = RoundedCornerShape(24.dp)
@@ -74,7 +75,7 @@ fun ResponseOverlay(
             Row(verticalAlignment = Alignment.Top) {
                 Text(
                     text = text,
-                    color = Color.White,
+                    color = AppTheme.colors.textPrimary,
                     fontSize = 15.sp,
                     modifier = Modifier
                         .weight(1f)
@@ -84,7 +85,7 @@ fun ResponseOverlay(
                 Icon(
                     Icons.Default.Close,
                     contentDescription = "Закрити",
-                    tint = Color.White.copy(alpha = 0.5f),
+                    tint = AppTheme.colors.textSecondary,
                     modifier = Modifier.size(20.dp)
                 )
             }

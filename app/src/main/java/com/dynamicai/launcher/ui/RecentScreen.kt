@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -49,7 +50,7 @@ fun RecentScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.85f))
+                .background(AppTheme.colors.background.copy(alpha = 0.85f))
         ) {
             // Прозорий шар для тапу-закриття (верхня половина)
             Box(
@@ -84,13 +85,13 @@ fun RecentScreen(
                 ) {
                     Text(
                         "Нещодавні",
-                        color = Color.White,
+                        color = AppTheme.colors.textPrimary,
                         fontSize = 18.sp,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
                         "${tasks.size}",
-                        color = Color.White.copy(alpha = 0.4f),
+                        color = AppTheme.colors.textSecondary,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(end = 12.dp)
                     )
@@ -101,8 +102,8 @@ fun RecentScreen(
                                 .background(
                                     brush = Brush.verticalGradient(
                                         listOf(
-                                            Color.White.copy(alpha = 0.12f),
-                                            Color.White.copy(alpha = 0.03f)
+                                            AppTheme.colors.textPrimary.copy(alpha = 0.12f),
+                                            AppTheme.colors.textPrimary.copy(alpha = 0.03f)
                                         )
                                     )
                                 )
@@ -115,11 +116,11 @@ fun RecentScreen(
                             Icon(
                                 Icons.Default.Delete,
                                 contentDescription = null,
-                                tint = Color(0xFF64B5F6),
+                                tint = AppTheme.colors.accent,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(Modifier.width(5.dp))
-                            Text("Очистити", color = Color(0xFF64B5F6), fontSize = 13.sp)
+                            Text("Очистити", color = AppTheme.colors.accent, fontSize = 13.sp)
                         }
                     }
                 }
@@ -133,7 +134,7 @@ fun RecentScreen(
                     ) {
                         Text(
                             "Немає нещодавніх застосунків",
-                            color = Color.White.copy(alpha = 0.4f),
+                            color = AppTheme.colors.textSecondary,
                             fontSize = 15.sp
                         )
                     }
@@ -189,7 +190,7 @@ private fun RecentCard(
                     colors = listOf(
                         accentColor.copy(alpha = 0.5f),
                         accentColor.copy(alpha = 0.15f),
-                        Color(0xFF0D0D0D)
+                        AppTheme.colors.background
                     ),
                     radius = 300f
                 )
@@ -198,8 +199,8 @@ private fun RecentCard(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.3f),
-                        Color.White.copy(alpha = 0.05f)
+                        AppTheme.colors.textMuted,
+                        AppTheme.colors.textPrimary.copy(alpha = 0.05f)
                     )
                 ),
                 shape = RoundedCornerShape(20.dp)
@@ -235,8 +236,8 @@ private fun RecentCard(
                     .background(
                         brush = Brush.verticalGradient(
                             listOf(
-                                Color.White.copy(alpha = 0.15f),
-                                Color.White.copy(alpha = 0.04f)
+                                AppTheme.colors.glassBorder,
+                                AppTheme.colors.textPrimary.copy(alpha = 0.04f)
                             )
                         )
                     )
@@ -244,8 +245,8 @@ private fun RecentCard(
                         width = 0.5.dp,
                         brush = Brush.verticalGradient(
                             listOf(
-                                Color.White.copy(alpha = 0.35f),
-                                Color.White.copy(alpha = 0.1f)
+                                AppTheme.colors.textPrimary.copy(alpha = 0.35f),
+                                AppTheme.colors.glassBorder.copy(alpha = 0.7f)
                             )
                         ),
                         shape = RoundedCornerShape(14.dp)
@@ -266,7 +267,7 @@ private fun RecentCard(
             // Назва
             Text(
                 task.label,
-                color = Color.White,
+                color = AppTheme.colors.textPrimary,
                 fontSize = 11.sp,
                 maxLines = 1,
                 modifier = Modifier.padding(horizontal = 2.dp)

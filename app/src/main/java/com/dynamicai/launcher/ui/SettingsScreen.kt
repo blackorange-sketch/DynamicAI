@@ -89,6 +89,14 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 12.dp)
     ) {
+        if (initialCategory != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).clickable { onBackToMenu() },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("← Назад до категорій", color = Color(0xFF64B5F6), fontSize = 16.sp)
+            }
+        }
         // Header — glass
         Row(
             modifier = Modifier

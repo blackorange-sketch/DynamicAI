@@ -396,6 +396,20 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                     getArg(toolCall, "message")
                 )
                 toolCall.startsWith("searchSpotify") -> deepLink.openSpotifySearch(getArg(toolCall, "query"))
+                                toolCall.startsWith("readScreen") -> {
+                    if (!com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
+                        "Спочатку увімкніть сервіс доступності (DynamicAI Automation) у налаштуваннях Android."
+                    } else {
+                        val text = com.dynamicai.launcher.accessibility.AppAutomationService.getScreenText()
+                        if (text.isBlank()) {
+                            "На екрані немає тексту."
+                        } else {
+                            // Обмежуємо до 1500 символів, щоб не переповнити контекст локальної LLM
+                            val truncated = if (text.length > 1500) text.substring(0, 1500) + "..." else text
+                            "Текст на екрані:\n$truncated"
+                        }
+                    }
+                }
                 toolCall.startsWith("getWildRiftAdvice") -> {
                     val me = getArg(toolCall, "myChampion")
                     val enemies = getArg(toolCall, "enemies")

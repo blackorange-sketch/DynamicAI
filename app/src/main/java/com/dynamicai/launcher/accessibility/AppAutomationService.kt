@@ -16,6 +16,7 @@ class AppAutomationService : AccessibilityService() {
         fun clickDescription(desc: String): Boolean = instance?.findAndClick(desc, true) ?: false
         fun clickFirstSearchResult(): Boolean = instance?.clickFirstSearchResult() ?: false
         fun clickPlayButton(): Boolean = instance?.clickPlayButton() ?: false
+        fun getScreenText(): String = instance?.readScreenText() ?: ""
     }
 
     override fun onServiceConnected() {
@@ -118,5 +119,27 @@ class AppAutomationService : AccessibilityService() {
             if (clickFirstClickableChild(child)) return true
         }
         return false
+    }
+
+    private fun readScreenText(): String {
+        val root = rootInActiveWindow ?: return ""
+        val sb = StringBuilder()
+        extractAllText(root, sb)
+        return sb.toString().trim()
+    }
+
+    private fun extractAllText(node: AccessibilityNodeInfo, sb: StringBuilder) {
+        val text = node.text?.toString()
+        if (!text.isNullOrBlank()) {
+            sb.append(text).append("\n")
+        }
+        val desc = node.contentDescription?.toString()
+        if (!desc.isNullOrBlank() && desc != text) {
+            sb.append(desc).append("\n")
+        }
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            extractAllText(child, sb)
+        }
     }
 }

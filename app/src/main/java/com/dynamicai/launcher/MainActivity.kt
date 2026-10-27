@@ -95,6 +95,17 @@ class MainActivity : ComponentActivity() {
             } catch (_: Throwable) {}
         }
         
+        // Запит дозволів на читання шпалер (потрібно для Nubia/MyOS/Xiaomi)
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            if (checkSelfPermission(android.Manifest.permission.READ_MEDIA_IMAGES) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.READ_MEDIA_IMAGES), 100)
+            }
+        } else {
+            if (checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE), 100)
+            }
+        }
+
         setContent {
             // WakeWord: запит дозволу мікрофона + старт сервісу, якщо увімкнено
             val permLauncher = rememberLauncherForActivityResult(

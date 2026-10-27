@@ -13,3 +13,4 @@ local.properties
 godot_project/assets/*.import
 .godot/
 *.bak
+*.bak*

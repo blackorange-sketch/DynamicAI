@@ -244,5 +244,9 @@
             android:name=".morning.MorningBriefingService"
             android:exported="false"
             android:foregroundServiceType="shortService" />
+    
+        <activity
+            android:name=".ui.ModuleManagerActivity"
+            android:exported="false" />
     </application>
 </manifest>

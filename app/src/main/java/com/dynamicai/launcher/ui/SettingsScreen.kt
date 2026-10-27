@@ -211,7 +211,9 @@ fun SettingsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { ctx.startActivity(Intent(ctx, ModuleManagerActivity::class.java)) }
+                    .clickable { val intent = Intent(ctx, ModuleManagerActivity::class.java)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                ctx.startActivity(intent) }
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {

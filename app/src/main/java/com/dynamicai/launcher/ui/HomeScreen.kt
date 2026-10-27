@@ -516,7 +516,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
 
     if (showSettings) {
-        SettingsScreen(
+        SettingsMainScreen(
                 vm = vm,
             settings = settings,
             onSettingsChange = { vm.updateSettings(it) },

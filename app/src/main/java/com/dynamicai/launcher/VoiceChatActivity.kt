@@ -34,6 +34,12 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.runtime.DisposableEffect
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +70,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     var recognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
+    val shouldListen = remember { mutableStateOf(true) }
 
     fun stopListening() {
         try {
@@ -73,6 +80,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     }
 
     fun startListening() {
+        if (!shouldListen.value) return
         if (!SpeechRecognizer.isRecognitionAvailable(ctx)) return
         recognizer?.destroy()
         recognizer = SpeechRecognizer.createSpeechRecognizer(ctx).apply {
@@ -124,17 +132,49 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
         recognizer?.startListening(intent)
     }
 
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    shouldListen.value = true
+                    startListening()
+                }
+                Lifecycle.Event.ON_PAUSE -> {
+                    shouldListen.value = false
+                    try {
+                        recognizer?.stopListening()
+                        recognizer?.cancel()
+                    } catch (_: Exception) {}
+                }
+                Lifecycle.Event.ON_DESTROY -> {
+                    shouldListen.value = false
+                    try { recognizer?.destroy() } catch (_: Exception) {}
+                    recognizer = null
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            shouldListen.value = false
+            try { recognizer?.destroy() } catch (_: Exception) {}
+            recognizer = null
+        }
+    }
+
     LaunchedEffect(Unit) { 
         vm.tts // прогрів
-        // Вітання Джарвіса при старті
-        val greeting = when ((0..2).random()) {
-            0 -> "Системи онлайн. Чим можу допомогти?"
-            1 -> "Слухаю вас."
-            else -> "Я готовий."
+        if (messages.isEmpty()) {
+            val greeting = when ((0..2).random()) {
+                0 -> "Системи онлайн. Чим можу допомогти?"
+                1 -> "Слухаю вас."
+                else -> "Я готовий."
+            }
+            messages = messages + ChatMessage("assistant", greeting)
+            vm.tts.speak(greeting)
         }
-        onMessage(ChatMessage("assistant", greeting))
-        vm.tts.speak(greeting)
-        startListening() 
     }
 
     Box(

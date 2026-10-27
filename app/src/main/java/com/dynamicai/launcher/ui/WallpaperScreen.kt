@@ -101,7 +101,7 @@ fun WallpaperScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = backgroundAlphaPercent / 100f))
+            .background(AppTheme.colors.background.copy(alpha = backgroundAlphaPercent / 100f))
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 12.dp)

@@ -43,7 +43,7 @@ fun MacroScreen(onClose: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF14141E), Color(0xFF050505))))
+            .background(Brush.verticalGradient(listOf(AppTheme.colors.backdropStart, AppTheme.colors.backdropEnd)))
     ) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
             Row(
@@ -53,7 +53,7 @@ fun MacroScreen(onClose: () -> Unit) {
             ) {
                 Text("⚡ Макроси", color = AppTheme.colors.textPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("+", color = Color(0xFF00E676), fontSize = 28.sp, fontWeight = FontWeight.Bold,
+                    Text("+", color = AppTheme.colors.successLight, fontSize = 28.sp, fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(8.dp).clickable {
                             editingMacro = null
                             showEditor = true
@@ -151,7 +151,7 @@ fun MacroEditorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF14141E),
+        containerColor = AppTheme.colors.backdropStart,
         title = { Text(if (macro == null) "Новий макрос" else "Редагувати", color = AppTheme.colors.textPrimary) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState()).heightIn(max = 500.dp)) {
@@ -160,7 +160,7 @@ fun MacroEditorDialog(
                     value = name,
                     onValueChange = { name = it },
                     textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
-                    cursorBrush = SolidColor(Color(0xFF00E676)),
+                    cursorBrush = SolidColor(AppTheme.colors.successLight),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                         .clip(RoundedCornerShape(12.dp)).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
                         .padding(12.dp),
@@ -177,7 +177,7 @@ fun MacroEditorDialog(
                     iconOptions.take(6).forEach { ic ->
                         Box(
                             modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp))
-                                .background(if (icon == ic) Color(0xFF00E676).copy(alpha = 0.3f) else AppTheme.colors.textPrimary.copy(alpha = 0.05f))
+                                .background(if (icon == ic) AppTheme.colors.successLight.copy(alpha = 0.3f) else AppTheme.colors.textPrimary.copy(alpha = 0.05f))
                                 .clickable { icon = ic },
                             contentAlignment = Alignment.Center
                         ) { Text(ic, fontSize = 20.sp) }
@@ -233,7 +233,7 @@ fun MacroEditorDialog(
                     value = newStep,
                     onValueChange = { newStep = it },
                     textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
-                    cursorBrush = SolidColor(Color(0xFF00E676)),
+                    cursorBrush = SolidColor(AppTheme.colors.successLight),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                         .clip(RoundedCornerShape(8.dp)).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
                         .padding(8.dp),
@@ -244,7 +244,7 @@ fun MacroEditorDialog(
                 )
                 if (newStep.isNotBlank()) {
                     TextButton(onClick = { steps.add(newStep); newStep = "" }) {
-                        Text("Додати цей крок", color = Color(0xFF00E676), fontSize = 12.sp)
+                        Text("Додати цей крок", color = AppTheme.colors.successLight, fontSize = 12.sp)
                     }
                 }
             }
@@ -254,7 +254,7 @@ fun MacroEditorDialog(
                 if (name.isNotBlank() && steps.isNotEmpty()) {
                     onSave(name, icon, colorHex, steps.toList())
                 }
-            }) { Text("Зберегти", color = Color(0xFF00E676)) }
+            }) { Text("Зберегти", color = AppTheme.colors.successLight) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
     )

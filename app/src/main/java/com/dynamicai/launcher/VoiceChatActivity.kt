@@ -352,157 +352,101 @@ fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
         label = "color"
     )
 
-    val rotGyro1 by infiniteTransition.animateFloat(
+    // Швидкості обертання для трьох кілець
+    val rot1 by infiniteTransition.animateFloat(
         initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Restart), label = "rot_g1"
+        animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing), RepeatMode.Restart), label = "rot1"
     )
-    val rotGyro2 by infiniteTransition.animateFloat(
+    val rot2 by infiniteTransition.animateFloat(
         initialValue = 360f, targetValue = 0f,
-        animationSpec = infiniteRepeatable(tween(7000, easing = LinearEasing), RepeatMode.Restart), label = "rot_g2"
+        animationSpec = infiniteRepeatable(tween(11000, easing = LinearEasing), RepeatMode.Restart), label = "rot2"
     )
+    val rot3 by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(15000, easing = LinearEasing), RepeatMode.Restart), label = "rot3"
+    )
+    
     val pulse by infiniteTransition.animateFloat(
-        initialValue = 0.9f, targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse"
-    )
-    val scanY by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(2500, easing = LinearEasing), RepeatMode.Restart), label = "scan"
+        initialValue = 0.9f, targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse"
     )
 
     Canvas(modifier = modifier) {
         val center = this.center
-        val baseRadius = size.minDimension * 0.28f
+        // Зменшуємо базовий радіус, щоб кільця точно влазили в екран
+        val baseRadius = size.minDimension * 0.22f
 
         // 1. Зовнішнє світіння (Halo)
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(primaryColor.copy(alpha = 0.15f), Color.Transparent),
                 center = center,
-                radius = baseRadius * 2.2f
+                radius = baseRadius * 2.5f
             ),
-            radius = baseRadius * 2.2f,
+            radius = baseRadius * 2.5f,
             center = center
         )
 
-        // 2. Внутрішнє світіння (Ядро) - БЕЗ чорного кольору
+        // 2. Ядро (Пульсуюче світло)
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    primaryColor.copy(alpha = 0.8f),
-                    primaryColor.copy(alpha = 0.2f),
+                    Color.White.copy(alpha = 0.9f),
+                    primaryColor.copy(alpha = 0.6f),
                     Color.Transparent
                 ),
                 center = center,
-                radius = baseRadius * 0.9f * pulse
+                radius = baseRadius * 0.8f * pulse
             ),
-            radius = baseRadius * 0.9f * pulse,
+            radius = baseRadius * 0.8f * pulse,
             center = center
         )
 
-        // 3. ЗАДНЯ ПІВКУЛЯ СІТКИ (Тьмяні лінії)
-        val latCount = 4
-        for (i in 1 until latCount) {
-            val ratio = (i.toFloat() / latCount) * 2f - 1f
-            val y = center.y + ratio * baseRadius
-            val circleR = baseRadius * sqrt((1 - ratio * ratio).toFloat())
-            // Задня дуга
-            drawArc(
-                color = primaryColor.copy(alpha = 0.15f),
-                startAngle = 180f, sweepAngle = 180f, useCenter = false,
-                topLeft = androidx.compose.ui.geometry.Offset(center.x - circleR, y - circleR * 0.25f),
-                size = androidx.compose.ui.geometry.Size(circleR * 2, circleR * 0.5f),
-                style = Stroke(width = 1.dp.toPx())
+        // 3. Перше кільце (горизонтальне)
+        rotate(rot1, center) {
+            drawOval(
+                color = primaryColor.copy(alpha = 0.8f),
+                topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 1.3f, center.y - baseRadius * 0.25f),
+                size = androidx.compose.ui.geometry.Size(baseRadius * 2.6f, baseRadius * 0.5f),
+                style = Stroke(width = 2.dp.toPx())
             )
         }
-        // Задні довготні лінії
-        for (i in 0 until 4) {
-            val angle = rotGyro1 + i * 45f
-            rotate(angle, center) {
-                drawOval(
-                    color = primaryColor.copy(alpha = 0.15f),
-                    topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 0.8f, center.y - baseRadius),
-                    size = androidx.compose.ui.geometry.Size(baseRadius * 1.6f, baseRadius * 2f),
-                    style = Stroke(width = 1.dp.toPx())
-                )
-            }
-        }
 
-        // 4. ПЕРЕДНЯ ПІВКУЛЯ СІТКИ (Яскраві лінії)
-        for (i in 1 until latCount) {
-            val ratio = (i.toFloat() / latCount) * 2f - 1f
-            val y = center.y + ratio * baseRadius
-            val circleR = baseRadius * sqrt((1 - ratio * ratio).toFloat())
-            // Передня дуга
-            drawArc(
-                color = primaryColor.copy(alpha = 0.7f),
-                startAngle = 0f, sweepAngle = 180f, useCenter = false,
-                topLeft = androidx.compose.ui.geometry.Offset(center.x - circleR, y - circleR * 0.25f),
-                size = androidx.compose.ui.geometry.Size(circleR * 2, circleR * 0.5f),
+        // 4. Друге кільце (нахилене 60 градусів)
+        rotate(rot2 + 60f, center) {
+            drawOval(
+                color = primaryColor.copy(alpha = 0.6f),
+                topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 1.2f, center.y - baseRadius * 0.35f),
+                size = androidx.compose.ui.geometry.Size(baseRadius * 2.4f, baseRadius * 0.7f),
                 style = Stroke(width = 1.5.dp.toPx())
             )
         }
-        // Передні довготні лінії
-        for (i in 0 until 4) {
-            val angle = rotGyro1 + i * 45f
-            rotate(angle, center) {
-                drawArc(
-                    color = primaryColor.copy(alpha = 0.7f),
-                    startAngle = 0f, sweepAngle = 180f, useCenter = false,
-                    topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 0.8f, center.y - baseRadius),
-                    size = androidx.compose.ui.geometry.Size(baseRadius * 1.6f, baseRadius * 2f),
-                    style = Stroke(width = 1.5.dp.toPx())
-                )
-            }
-        }
 
-        // 5. Гіроскопічні кільця (Об'ємні)
-        // Кільце 1
-        rotate(rotGyro2, center) {
+        // 5. Третє кільце (нахилене 120 градусів)
+        rotate(rot3 + 120f, center) {
             drawOval(
-                color = primaryColor.copy(alpha = 0.9f),
-                topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 1.2f, center.y - baseRadius * 0.3f),
-                size = androidx.compose.ui.geometry.Size(baseRadius * 2.4f, baseRadius * 0.6f),
-                style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+                color = primaryColor.copy(alpha = 0.4f),
+                topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 1.1f, center.y - baseRadius * 0.3f),
+                size = androidx.compose.ui.geometry.Size(baseRadius * 2.2f, baseRadius * 0.6f),
+                style = Stroke(width = 1.dp.toPx())
             )
         }
-        // Кільце 2 (нахилене)
-        rotate(45f, center) {
-            rotate(rotGyro1, center) {
-                drawOval(
-                    color = primaryColor.copy(alpha = 0.5f),
-                    topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 1.1f, center.y - baseRadius * 0.2f),
-                    size = androidx.compose.ui.geometry.Size(baseRadius * 2.2f, baseRadius * 0.4f),
-                    style = Stroke(width = 1.5.dp.toPx())
-                )
-            }
-        }
 
-        // 6. Скляний відблиск (Блік для ефекту 3D)
-        drawCircle(
-            brush = Brush.linearGradient(
-                colors = listOf(Color.White.copy(alpha = 0.4f), Color.Transparent),
-                start = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 0.5f, center.y - baseRadius * 0.5f),
-                end = androidx.compose.ui.geometry.Offset(center.x, center.y)
-            ),
-            radius = baseRadius * 0.6f,
-            center = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 0.3f, center.y - baseRadius * 0.3f)
+        // 6. Скляний блік (тонка дуга для об'єму)
+        drawArc(
+            color = Color.White.copy(alpha = 0.3f),
+            startAngle = 200f,
+            sweepAngle = 80f,
+            useCenter = false,
+            topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 0.9f, center.y - baseRadius * 0.9f),
+            size = androidx.compose.ui.geometry.Size(baseRadius * 1.8f, baseRadius * 1.8f),
+            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
         )
 
-        // 7. Скануючий промінь
-        val scanYPos = center.y - baseRadius + (baseRadius * 2 * scanY)
-        drawLine(
-            brush = Brush.horizontalGradient(
-                colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.6f), Color.Transparent)
-            ),
-            start = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 0.8f, scanYPos),
-            end = androidx.compose.ui.geometry.Offset(center.x + baseRadius * 0.8f, scanYPos),
-            strokeWidth = 2.dp.toPx()
-        )
-
-        // 8. Зовнішній пунктир
+        // 7. Зовнішнє пунктирне коло (рамка)
         drawCircle(
-            color = primaryColor.copy(alpha = 0.3f),
-            radius = baseRadius * 1.45f,
+            color = primaryColor.copy(alpha = 0.2f),
+            radius = baseRadius * 1.6f,
             center = center,
             style = Stroke(
                 width = 1.dp.toPx(),

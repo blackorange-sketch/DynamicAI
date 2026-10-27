@@ -80,6 +80,9 @@ fun SettingsScreen(
     versionName: String,
     onClose: () -> Unit,
     onTestLlm: suspend (String) -> String? = { null }
+    initialCategory: String? = null,
+    onBackToMenu: () -> Unit = {},
+    onOpenModuleManager: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier

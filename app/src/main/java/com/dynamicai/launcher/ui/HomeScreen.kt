@@ -121,6 +121,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     val placedWidgetsStorage = remember { com.dynamicai.launcher.widget.WidgetsStorage(ctx) }
     var placedWidgets by remember { mutableStateOf<List<com.dynamicai.launcher.widget.PlacedWidget>>(emptyList()) }
     var showAddWidgetDialog by remember { mutableStateOf(false) }
+    var showModuleManager by remember { mutableStateOf(false) }
     var currentSettingsCategory by remember { mutableStateOf<String?>(null) }
     var currentPage by remember { mutableStateOf(0) }
     val pageCount = remember(placedWidgets) {

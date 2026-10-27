@@ -635,7 +635,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 modifier = Modifier
                     .fillMaxSize()
                     .blur(
-                        radius = 60.dp,
+                        radius = settings.wallpaperBlurRadius.dp,
                         edgeTreatment = BlurredEdgeTreatment.Unbounded
                     )
                     .graphicsLayer {

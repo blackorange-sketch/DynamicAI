@@ -276,6 +276,14 @@ fun SettingsScreen(
                 values = listOf(0, 20, 40, 60, 80, 100),
                 onChange = { onSettingsChange(settings.copy(backgroundAlphaPercent = it)) }
             )
+
+                SizeSliderRow(
+                    label = "Розмиття фону",
+                    value = settings.wallpaperBlurRadius,
+                    suffix = " dp",
+                    values = listOf(0, 20, 40, 60, 80, 100),
+                    onChange = { onSettingsChange(settings.copy(wallpaperBlurRadius = it)) }
+                )
         }
         }
         }

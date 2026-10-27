@@ -1771,20 +1771,20 @@ private fun openGoogleSearch(ctx: android.content.Context, query: String) {
         if (st.defaultBrowser.isNotBlank()) {
             val i = android.content.Intent(viewIntent).setPackage(st.defaultBrowser)
             ctx.startActivity(i)
-            return@DynamicAITheme
+            return
         }
     } catch (_: Throwable) {}
     
     try {
         val i = android.content.Intent(viewIntent).setPackage("com.google.android.googlequicksearchbox")
         ctx.startActivity(i)
-        return@DynamicAITheme
+        return
     } catch (_: Throwable) {}
     
     try {
         val i = android.content.Intent(viewIntent).setPackage("com.android.chrome")
         ctx.startActivity(i)
-        return@DynamicAITheme
+        return
     } catch (_: Throwable) {}
     
     try {

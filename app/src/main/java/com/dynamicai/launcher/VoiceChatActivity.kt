@@ -230,10 +230,10 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                ActionChip("Пошук", Color(0xFF4285F4)) { ctx.startActivity(Intent(Intent.ACTION_WEB_SEARCH)) }
-                ActionChip("Переклад", Color(0xFFFF9800)) { }
-                ActionChip("AI", Color(0xFF2196F3)) { }
-                ActionChip("Wild Rift", Color(0xFF9C27B0)) { ctx.startActivity(Intent(ctx, WildRiftAdvisorActivity::class.java)) }
+                LiquidChip("Пошук", Color(0xFF4285F4)) { ctx.startActivity(Intent(Intent.ACTION_WEB_SEARCH)) }
+                LiquidChip("Переклад", Color(0xFFFF9800)) { }
+                LiquidChip("AI", Color(0xFF2196F3)) { }
+                LiquidChip("Wild Rift", Color(0xFF9C27B0)) { ctx.startActivity(Intent(ctx, WildRiftAdvisorActivity::class.java)) }
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -241,7 +241,7 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
 }
 
 @Composable
-fun ActionChip(label: String, color: Color, onClick: () -> Unit) {
+fun LiquidChip(label: String, color: Color, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))

@@ -255,32 +255,13 @@ fun SettingsScreen(
                 Text("Стиль інтерфейсу", color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Темна тема
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (settings.appTheme == "glass_dark") AppTheme.colors.accent.copy(alpha = 0.3f) else AppTheme.colors.surface)
-                            .border(1.dp, if (settings.appTheme == "glass_dark") AppTheme.colors.accent else Color.Transparent, RoundedCornerShape(12.dp))
-                            .clickable { onSettingsChange(settings.copy(appTheme = "glass_dark")) }
-                            .padding(12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Темна", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
-                    }
-                    // Світла тема
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (settings.appTheme == "glass_light") AppTheme.colors.accent.copy(alpha = 0.3f) else AppTheme.colors.surface)
-                            .border(1.dp, if (settings.appTheme == "glass_light") AppTheme.colors.accent else Color.Transparent, RoundedCornerShape(12.dp))
-                            .clickable { onSettingsChange(settings.copy(appTheme = "glass_light")) }
-                            .padding(12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Світла", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
-                    }
+                    ThemeChip("Темна", "glass_dark", settings.appTheme) { onSettingsChange(settings.copy(appTheme = it)) }
+                    ThemeChip("Світла", "glass_light", settings.appTheme) { onSettingsChange(settings.copy(appTheme = it)) }
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ThemeChip("AMOLED", "glass_amoled", settings.appTheme) { onSettingsChange(settings.copy(appTheme = it)) }
+                    ThemeChip("Океан", "glass_ocean", settings.appTheme) { onSettingsChange(settings.copy(appTheme = it)) }
                 }
             }
         }
@@ -776,3 +757,19 @@ fun SettingsScreen(
 
 // ===== Компоненти =====
 
+@Composable
+private fun ThemeChip(label: String, themeId: String, currentTheme: String, onSelect: (String) -> Unit) {
+    val selected = currentTheme == themeId
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) AppTheme.colors.accent.copy(alpha = 0.3f) else AppTheme.colors.surface)
+            .border(1.dp, if (selected) AppTheme.colors.accent else Color.Transparent, RoundedCornerShape(12.dp))
+            .clickable { onSelect(themeId) }
+            .padding(12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+    }
+}

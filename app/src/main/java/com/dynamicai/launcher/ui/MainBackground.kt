@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,14 +28,14 @@ fun MainBackground(settings: LauncherSettings) {
     }
     LaunchedEffect(settings.backgroundImageUri) {
         customBg = if (settings.backgroundImageUri.isNotBlank()) {
-            CustomBackgroundLoader.loadFromFile(settings.backgroundImageUri, 720)
+            CustomBackgroundLoader.loadFromFile(settings.backgroundImageUri, 1080)
         } else null
     }
 
     // Малюємо ТІЛЬКИ якщо є кастомне фото.
     // Якщо немає — нічого не малюємо, і системні шпалери просвічують крізь прозорий Activity.
     if (customBg != null) {
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF000000))) {
             Image(
                 bitmap = customBg!!,
                 contentDescription = null,

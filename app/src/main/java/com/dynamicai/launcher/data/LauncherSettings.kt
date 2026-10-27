@@ -25,7 +25,7 @@ data class LauncherSettings(
     val overlayAutoCollapseMs: Int = 0,      // 0 = вимкнено
     val overlayEdgePaddingDp: Int = 14,      // відступ риски від краю екрана
     val backgroundAlphaPercent: Int = 100,   // 0 = прозорий, 100 = чорний
-    val wallpaperBlurRadius: Int = 60,       // 0 = без розмиття, 100 = максимальне
+    val wallpaperBlurRadius: Int = 80,       // 0 = без розмиття, 100 = максимальне
     val backgroundImageUri: String = "",    // URI вибраного фото
     val wpPauseOnScreenOff: Boolean = true,
     val wpPauseOnLowBattery: Boolean = true,
@@ -71,7 +71,7 @@ class SettingsStorage(context: Context) {
         overlayAutoCollapseMs = prefs.getInt("overlayAutoCollapseMs", 0),
         overlayEdgePaddingDp = prefs.getInt("overlayEdgePaddingDp", 14),
         backgroundAlphaPercent = prefs.getInt("backgroundAlphaPercent", 100),
-            wallpaperBlurRadius = prefs.getInt("wallpaperBlurRadius", 60),
+            wallpaperBlurRadius = prefs.getInt("wallpaperBlurRadius", 80),
             backgroundImageUri = prefs.getString("backgroundImageUri", "") ?: "",
         wpPauseOnScreenOff = prefs.getBoolean("wpPauseOnScreenOff", true),
         wpPauseOnLowBattery = prefs.getBoolean("wpPauseOnLowBattery", true),

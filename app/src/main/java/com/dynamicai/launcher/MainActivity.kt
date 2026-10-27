@@ -153,12 +153,14 @@ class MainActivity : ComponentActivity() {
                 surface = dynamicBg
             )
             MaterialTheme(colorScheme = colorScheme) {
+                androidx.compose.material3.Surface(color = dynamicBg, modifier = Modifier.fillMaxSize()) {
                 DynamicAITheme(themeId = settings.appTheme) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         MainBackground(settings)
                         HomeScreen(vm = vm, hubEvent = hubEvent.value)
                     }
                 }
+                }  // Surface
             }
         }
     }

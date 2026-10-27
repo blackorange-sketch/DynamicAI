@@ -63,22 +63,18 @@ fun GlassCircleIcon(
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 24.dp,
+    cornerRadius: Dp = 20.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(
         modifier = modifier
-            .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(cornerRadius),
-                clip = false
-            )
             .clip(RoundedCornerShape(cornerRadius))
             .background(
+                // Темний фон, як у решті деталей лаунчера (наприклад, панель пошуку)
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF2A2A2A).copy(alpha = 0.75f),
-                        Color(0xFF121212).copy(alpha = 0.85f)
+                        Color(0xE61A1A1A), // ~90% непрозорості
+                        Color(0xCC0D0D0D)  // ~80% непрозорості
                     )
                 )
             )
@@ -86,7 +82,7 @@ fun GlassCard(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.3f),
+                        Color.White.copy(alpha = 0.25f), // Легка світла рамка
                         Color.White.copy(alpha = 0.05f)
                     )
                 ),

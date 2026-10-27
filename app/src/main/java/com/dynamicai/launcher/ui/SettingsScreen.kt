@@ -86,7 +86,7 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(Color.Black.copy(alpha = settings.backgroundAlphaPercent / 100f))
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 12.dp)

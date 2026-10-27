@@ -52,7 +52,14 @@ class MorningBriefingService : Service() {
 
             // Отримуємо дані
             val battery = getBatteryLevel()
-            val dateStr = SimpleDateFormat("EEEE, d MMMM", Locale("uk", "UA")).format(Date())
+            val cal = Calendar.getInstance()
+            val dayOfWeek = SimpleDateFormat("EEEE", Locale("uk", "UA")).format(Date())
+            val dayNum = cal.get(Calendar.DAY_OF_MONTH)
+            val monthNum = cal.get(Calendar.MONTH)
+            val monthName = SimpleDateFormat("MMMM", Locale("uk", "UA")).format(Date())
+            
+            val dayWords = UkrainianSpeechUtils.dayToWords(dayNum)
+            val dateStr = "$dayOfWeek, $dayWords $monthName"
             
             // Пробуємо отримати погоду через WeatherRepository
             var weatherText = ""
@@ -60,12 +67,14 @@ class MorningBriefingService : Service() {
                 val weatherRepo = com.dynamicai.launcher.data.WeatherRepository(applicationContext)
                 val cached = weatherRepo.loadCachedWeather()
                 if (cached != null) {
-                    weatherText = " Погода: ${cached.tempC}°, ${cached.description}."
+                    val tempWords = UkrainianSpeechUtils.temperatureToWords(cached.tempC)
+                    weatherText = " Погода: $tempWords, ${cached.description}."
                 }
             } catch (_: Exception) {}
 
-            // Формуємо брифінг
-            val briefing = "$greeting! Сьогодні $dateStr.$weatherText Заряд: $battery%. Чим можу допомогти?"
+            // Формуємо брифінг з числами у словах
+            val batteryWords = UkrainianSpeechUtils.batteryToWords(battery)
+            val briefing = "$greeting! Сьогодні $dateStr.$weatherText Рівень заряду: $batteryWords. Чим можу допомогти?"
 
             // Оновлюємо нотифікацію
             val notif = buildNotification(briefing)

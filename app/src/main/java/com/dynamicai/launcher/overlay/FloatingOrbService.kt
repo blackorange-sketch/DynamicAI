@@ -198,6 +198,10 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     private fun startListening() {
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            android.widget.Toast.makeText(this, "Потрібен дозвіл на мікрофон! Надайте його в налаштуваннях.", android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
         if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this)) return
         speechRecognizer?.destroy()
         speechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this).apply {

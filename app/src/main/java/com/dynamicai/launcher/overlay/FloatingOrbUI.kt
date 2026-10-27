@@ -4,6 +4,9 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.material3.ripple
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
@@ -106,7 +109,7 @@ fun FloatingOrb(
                     .size(width = 320.dp, height = 420.dp)
                     .clip(RoundedCornerShape(24.dp))
                     // ПРОЗОРИЙ ФОН (Liquid Glass)
-                    .background(Color(0xB30A0A0A))
+                    .background(Color(0xE60A0A0A))
                     .border(0.5.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(24.dp))
             ) {
                 Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
@@ -124,7 +127,7 @@ fun FloatingOrb(
                             Spacer(Modifier.width(8.dp))
                             Text("JARVIS", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         }
-                        Text("✕", color = Color.White.copy(alpha = 0.6f), fontSize = 18.sp, modifier = Modifier.clickable { onExpandChange(false) })
+                        Text("✕", color = Color.White.copy(alpha = 0.6f), fontSize = 18.sp, modifier = Modifier.clickable(indication = LocalIndication.current, interactionSource = remember { MutableInteractionSource() }) { onExpandChange(false) })
                     }
 
                     // Повідомлення
@@ -173,17 +176,31 @@ fun FloatingOrb(
                             }
                         )
                         Box(
-                            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color(0xFF64B5F6).copy(alpha = 0.3f)).clickable {
-                                if (query.isNotBlank()) {
-                                    onSendMessage(query)
-                                    query = ""
-                                }
-                            },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF64B5F6).copy(alpha = 0.3f))
+                                .clickable(
+                                    indication = LocalIndication.current,
+                                    interactionSource = remember { MutableInteractionSource() }
+                                ) {
+                                    if (query.isNotBlank()) {
+                                        onSendMessage(query)
+                                        query = ""
+                                    }
+                                },
                             contentAlignment = Alignment.Center
                         ) { Text("➤", color = Color(0xFF64B5F6), fontSize = 16.sp) }
                         
                         Box(
-                            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color(0xFF4CAF50).copy(alpha = 0.3f)).clickable { onMicClick() },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF4CAF50).copy(alpha = 0.3f))
+                                .clickable(
+                                    indication = LocalIndication.current,
+                                    interactionSource = remember { MutableInteractionSource() }
+                                ) { onMicClick() },
                             contentAlignment = Alignment.Center
                         ) { Text("🎤", fontSize = 16.sp) }
                     }

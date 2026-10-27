@@ -189,14 +189,30 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     val hour = getArg(toolCall, "hour").toIntOrNull() ?: 7
                     val minute = getArg(toolCall, "minute").toIntOrNull() ?: 0
                     val msg = getArg(toolCall, "message").ifEmpty { "Будильник" }
-                    val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
-                        putExtra(AlarmClock.EXTRA_HOUR, hour)
-                        putExtra(AlarmClock.EXTRA_MINUTES, minute)
-                        putExtra(AlarmClock.EXTRA_MESSAGE, msg)
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    
+                    // Спроба 1: Стандартний Intent з SKIP_UI
+                    try {
+                        val intent = Intent(AlarmClock.ACTION_SET_ALARM).apply {
+                            putExtra(AlarmClock.EXTRA_HOUR, hour)
+                            putExtra(AlarmClock.EXTRA_MINUTES, minute)
+                            putExtra(AlarmClock.EXTRA_MESSAGE, msg)
+                            putExtra(AlarmClock.EXTRA_SKIP_UI, true)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    } catch (_: Exception) {}
+                    
+                    // Спроба 2: Через Shizuku (надійніше на Nubia)
+                    if (shizuku.isShizukuAvailable() && shizuku.hasPermission()) {
+                        val cmd = "am start -a android.intent.action.SET_ALARM " +
+                                  "--ei android.intent.extra.alarm.HOUR $hour " +
+                                  "--ei android.intent.extra.alarm.MINUTES $minute " +
+                                  "--es android.intent.extra.alarm.MESSAGE \"$msg\" " +
+                                  "--ez android.intent.extra.alarm.SKIP_UI true"
+                        shizuku.execShell(cmd)
                     }
-                    context.startActivity(intent)
-                    "Будильник на $hour:${String.format("%02d", minute)} встановлено."
+                    
+                    "Будильник на ${String.format("%02d", hour)}:${String.format("%02d", minute)} встановлено."
                 }
                 toolCall.startsWith("addCalendarEvent") -> {
                     val title = getArg(toolCall, "title")

@@ -18,6 +18,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
     private val notesStorage = com.dynamicai.launcher.note.NotesStorage(context)
     private val shizuku = com.dynamicai.launcher.system.ShizukuManager(context)
     private val deepLink = DeepLinkEngine(context)
+    private val messengerCaller = MessengerCaller(context)
 
     private val toolsDescription = """
         Доступні інструменти:
@@ -410,6 +411,8 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                         }
                     }
                 }
+                                toolCall.startsWith("callInTelegram") -> messengerCaller.callInTelegram(getArg(toolCall, "contactName"))
+                toolCall.startsWith("callInInstagram") -> messengerCaller.callInInstagram(getArg(toolCall, "contactName"))
                 toolCall.startsWith("getWildRiftAdvice") -> {
                     val me = getArg(toolCall, "myChampion")
                     val enemies = getArg(toolCall, "enemies")

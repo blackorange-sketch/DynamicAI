@@ -17,6 +17,8 @@ class AppAutomationService : AccessibilityService() {
         fun clickFirstSearchResult(): Boolean = instance?.clickFirstSearchResult() ?: false
         fun clickPlayButton(): Boolean = instance?.clickPlayButton() ?: false
         fun getScreenText(): String = instance?.readScreenText() ?: ""
+        fun typeText(text: String): Boolean = instance?.inputText(text) ?: false
+        fun pressBack(): Boolean = instance?.goBack() ?: false
     }
 
     override fun onServiceConnected() {
@@ -141,5 +143,28 @@ class AppAutomationService : AccessibilityService() {
             val child = node.getChild(i) ?: continue
             extractAllText(child, sb)
         }
+    }
+
+    private fun inputText(text: String): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val editText = findFirstEditText(root) ?: return false
+        val arguments = android.os.Bundle().apply {
+            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+        }
+        return editText.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
+    }
+
+    private fun findFirstEditText(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        if (node.className?.contains("EditText") == true && node.isEditable) return node
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            val found = findFirstEditText(child)
+            if (found != null) return found
+        }
+        return null
+    }
+
+    private fun goBack(): Boolean {
+        return performGlobalAction(GLOBAL_ACTION_BACK)
     }
 }

@@ -1,8 +1,5 @@
 package com.dynamicai.launcher.ui
 
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.RowScope
 import com.dynamicai.launcher.ui.theme.AppTheme
 import android.content.Intent
@@ -113,19 +110,6 @@ fun SettingsScreen(
         }
 
         val ctx = LocalContext.current
-    val bgScope = androidx.compose.runtime.rememberCoroutineScope()
-    val bgPicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri != null) {
-            bgScope.launch {
-                val savedPath = CustomBackgroundLoader.saveFromUri(ctx, uri)
-                if (savedPath != null) {
-                    onSettingsChange(settings.copy(backgroundImageUri = savedPath))
-                }
-            }
-        }
-    }
             var showOverlayPermDialog by remember { mutableStateOf(false) }
         var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
         LaunchedEffect(Unit) { installedApps = AppRepository(ctx).loadCached() }
@@ -293,70 +277,12 @@ fun SettingsScreen(
                 onChange = { onSettingsChange(settings.copy(backgroundAlphaPercent = it)) }
             )
 
-            SizeSliderRow(
-                label = "Розмиття фону",
-                value = settings.wallpaperBlurRadius,
-                suffix = " dp",
-                values = listOf(0, 20, 40, 60, 80, 100),
-                onChange = { onSettingsChange(settings.copy(wallpaperBlurRadius = it)) }
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(AppTheme.colors.accent.copy(alpha = 0.2f))
-                        .clickable {
-                            bgPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                        }
-                        .padding(12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        if (settings.backgroundImageUri.isBlank()) "Обрати фото" else "Змінити фото",
-                        color = AppTheme.colors.textPrimary, fontSize = 14.sp
-                    )
-                }
-                if (settings.backgroundImageUri.isNotBlank()) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(AppTheme.colors.danger.copy(alpha = 0.2f))
-                            .clickable {
-                                bgScope.launch {
-                                    CustomBackgroundLoader.clear(ctx)
-                                    onSettingsChange(settings.copy(backgroundImageUri = ""))
-                                }
-                            }
-                            .padding(12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Видалити", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
-                    }
-                }
-            }
-                }
-                if (settings.backgroundImageUri.isNotBlank()) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(AppTheme.colors.danger.copy(alpha = 0.2f))
-                            .clickable {
-                                bgScope.launch {
-                                    CustomBackgroundLoader.clear(ctx)
-                                    onSettingsChange(settings.copy(backgroundImageUri = ""))
-                                }
-                            }
-                            .padding(12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Видалити", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
-                    }
-                }
-            }
+                SizeSliderRow(
+                    label = "Розмиття фону",
+                    value = settings.wallpaperBlurRadius,
+                    suffix = " dp",
+                    values = listOf(0, 20, 40, 60, 80, 100),
+                    onChange = { onSettingsChange(settings.copy(wallpaperBlurRadius = it)) }
                 )
         }
         }

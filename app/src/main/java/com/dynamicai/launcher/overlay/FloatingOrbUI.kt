@@ -28,13 +28,11 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.math.cos
-import kotlin.math.sin
 
 @Composable
 fun FloatingOrb(
     isExpanded: Boolean,
-    messages: List<Pair<String, String>>, // role to text
+    messages: List<Pair<String, String>>,
     isThinking: Boolean,
     onExpandChange: (Boolean) -> Unit,
     onDrag: (Float, Float) -> Unit,
@@ -47,10 +45,6 @@ fun FloatingOrb(
         initialValue = 0.9f, targetValue = 1.1f,
         animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse"
     )
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing), RepeatMode.Restart), label = "rot"
-    )
 
     var query by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -59,52 +53,63 @@ fun FloatingOrb(
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
     }
 
+    // Модифікатор для перетягування
+    val dragModifier = Modifier.pointerInput(Unit) {
+        detectDragGestures { change, dragAmount ->
+            change.consume()
+            onDrag(dragAmount.x, dragAmount.y)
+        }
+    }
+
     Box(
-        modifier = modifier
-            .pointerInput(isExpanded) {
-                if (!isExpanded) {
-                    detectDragGestures { change, dragAmount ->
-                        change.consume()
-                        onDrag(dragAmount.x, dragAmount.y)
-                    }
-                }
-            }
-            .clickable(enabled = !isExpanded) { onExpandChange(true) },
+        modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
         if (!isExpanded) {
-            // Маленька куля 48dp
-            Canvas(modifier = Modifier.size(48.dp)) {
-                val center = this.center
-                val baseRadius = size.minDimension * 0.4f
-                val primaryColor = Color(0xFF00E676)
+            // Маленька куля (Зона натискання 64dp, візуал 48dp)
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .then(dragModifier)
+                    .clickable { onExpandChange(true) },
+                contentAlignment = Alignment.Center
+            ) {
+                Canvas(modifier = Modifier.size(48.dp)) {
+                    val center = this.center
+                    val baseRadius = size.minDimension * 0.4f
+                    val primaryColor = Color(0xFF00E676)
 
-                drawCircle(
-                    brush = Brush.radialGradient(colors = listOf(primaryColor.copy(alpha = 0.4f), Color.Transparent), center = center, radius = baseRadius * 2f),
-                    radius = baseRadius * 2f, center = center
-                )
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(Color.White.copy(alpha = 0.9f), primaryColor.copy(alpha = 0.6f), Color.Transparent),
-                        center = Offset(center.x - baseRadius * 0.2f, center.y - baseRadius * 0.2f), radius = baseRadius * 0.7f * pulse
-                    ),
-                    radius = baseRadius * 0.7f * pulse, center = center
-                )
-                drawCircle(color = primaryColor.copy(alpha = 0.6f), radius = baseRadius * 1.2f, center = center, style = Stroke(width = 2.dp.toPx()))
+                    drawCircle(
+                        brush = Brush.radialGradient(colors = listOf(primaryColor.copy(alpha = 0.4f), Color.Transparent), center = center, radius = baseRadius * 2f),
+                        radius = baseRadius * 2f, center = center
+                    )
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(Color.White.copy(alpha = 0.9f), primaryColor.copy(alpha = 0.6f), Color.Transparent),
+                            center = Offset(center.x - baseRadius * 0.2f, center.y - baseRadius * 0.2f), radius = baseRadius * 0.7f * pulse
+                        ),
+                        radius = baseRadius * 0.7f * pulse, center = center
+                    )
+                    drawCircle(color = primaryColor.copy(alpha = 0.6f), radius = baseRadius * 1.2f, center = center, style = Stroke(width = 2.dp.toPx()))
+                }
             }
         } else {
-            // Розгорнутий міні-чат (Liquid Glass)
+            // Розгорнутий міні-чат
             Box(
                 modifier = Modifier
                     .size(width = 320.dp, height = 420.dp)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(Color(0xF00A0A0A))
-                    .border(0.5.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
+                    // ПРОЗОРИЙ ФОН (Liquid Glass)
+                    .background(Color(0xB30A0A0A))
+                    .border(0.5.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(24.dp))
             ) {
                 Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-                    // Header
+                    // Header (за нього можна тягнути)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(dragModifier) // Додаємо перетягування для шапки
+                            .padding(bottom = 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -115,8 +120,6 @@ fun FloatingOrb(
                         }
                         Text("✕", color = Color.White.copy(alpha = 0.6f), fontSize = 18.sp, modifier = Modifier.clickable { onExpandChange(false) })
                     }
-                    
-                    Spacer(Modifier.height(8.dp))
 
                     // Повідомлення
                     LazyColumn(state = listState, modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -127,7 +130,7 @@ fun FloatingOrb(
                                     modifier = Modifier
                                         .widthIn(max = 240.dp)
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(if (isUser) Color(0xFF2196F3).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f))
+                                        .background(if (isUser) Color(0xFF2196F3).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.1f))
                                         .padding(10.dp)
                                 ) {
                                     Text(text, color = Color.White, fontSize = 13.sp)
@@ -148,7 +151,7 @@ fun FloatingOrb(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(20.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
+                            .background(Color.White.copy(alpha = 0.1f))
                             .padding(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -164,7 +167,7 @@ fun FloatingOrb(
                             }
                         )
                         Box(
-                            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color(0xFF64B5F6).copy(alpha = 0.2f)).clickable {
+                            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color(0xFF64B5F6).copy(alpha = 0.3f)).clickable {
                                 if (query.isNotBlank()) {
                                     onSendMessage(query)
                                     query = ""
@@ -174,7 +177,7 @@ fun FloatingOrb(
                         ) { Text("➤", color = Color(0xFF64B5F6), fontSize = 16.sp) }
                         
                         Box(
-                            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color(0xFF4CAF50).copy(alpha = 0.2f)).clickable { onMicClick() },
+                            modifier = Modifier.size(36.dp).clip(CircleShape).background(Color(0xFF4CAF50).copy(alpha = 0.3f)).clickable { onMicClick() },
                             contentAlignment = Alignment.Center
                         ) { Text("🎤", fontSize = 16.sp) }
                     }

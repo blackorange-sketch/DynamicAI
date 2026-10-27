@@ -56,14 +56,13 @@ class MorningBriefingService : Service() {
             
             // Пробуємо отримати погоду через WeatherRepository
             var weatherText = ""
-            // TODO: підставимо поля після перевірки WeatherState
-            // try {
-            //     val weatherRepo = com.dynamicai.launcher.data.WeatherRepository(applicationContext)
-            //     val cached = weatherRepo.loadCachedWeather()
-            //     if (cached != null) {
-            //         weatherText = " Погода: ${cached...}."
-            //     }
-            // } catch (_: Exception) {}
+            try {
+                val weatherRepo = com.dynamicai.launcher.data.WeatherRepository(applicationContext)
+                val cached = weatherRepo.loadCachedWeather()
+                if (cached != null) {
+                    weatherText = " Погода: ${cached.tempC}°, ${cached.description}."
+                }
+            } catch (_: Exception) {}
 
             // Формуємо брифінг
             val briefing = "$greeting! Сьогодні $dateStr.$weatherText Заряд: $battery%. Чим можу допомогти?"

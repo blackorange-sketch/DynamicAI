@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -155,8 +156,8 @@ fun AlphabetSidebar(
                                 brush = if (isActive) {
                                     Brush.verticalGradient(
                                         listOf(
-                                            Color(0xFF64B5F6),
-                                            Color(0xFF2196F3)
+                                            AppTheme.colors.accent,
+                                            AppTheme.colors.accentDark
                                         )
                                     )
                                 } else {
@@ -168,7 +169,7 @@ fun AlphabetSidebar(
                     ) {
                         Text(
                             text = letter.toString(),
-                            color = if (isActive) Color.White else Color.White.copy(
+                            color = if (isActive) AppTheme.colors.textPrimary else AppTheme.colors.textPrimary.copy(
                                 alpha = (1f - distance * 0.12f).coerceIn(0.4f, 1f)
                             ),
                             maxLines = 1,

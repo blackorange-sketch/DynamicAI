@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -66,8 +67,8 @@ fun Dock(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xE61F1F1F),
-                        Color(0xCC0D0D0D)
+                        AppTheme.colors.glassBackground,
+                        AppTheme.colors.glassBackgroundAlt
                     )
                 )
             )
@@ -75,8 +76,8 @@ fun Dock(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.4f),
-                        Color.White.copy(alpha = 0.08f)
+                        AppTheme.colors.textSecondary,
+                        AppTheme.colors.glassBorder.copy(alpha = 0.5f)
                     )
                 ),
                 shape = RoundedCornerShape(26.dp)
@@ -94,8 +95,8 @@ fun Dock(
                 .background(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xFF64B5F6).copy(alpha = 0.4f),
-                            Color(0xFF2196F3).copy(alpha = 0.15f)
+                            AppTheme.colors.accent.copy(alpha = 0.4f),
+                            AppTheme.colors.accentDark.copy(alpha = 0.15f)
                         )
                     )
                 )
@@ -104,7 +105,7 @@ fun Dock(
             Icon(
                 Icons.Default.Search,
                 contentDescription = "Пошук",
-                tint = Color(0xFFB3E5FC),
+                tint = AppTheme.colors.accentLight,
                 modifier = Modifier.size((iconSizeDp * 0.5f).dp)
             )
         }
@@ -119,8 +120,8 @@ fun Dock(
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                Color(0xFF9C27B0).copy(alpha = 0.4f),
-                                Color(0xFF673AB7).copy(alpha = 0.15f)
+                                AppTheme.colors.purple.copy(alpha = 0.4f),
+                                AppTheme.colors.purple.copy(alpha = 0.15f)
                             )
                         )
                     )
@@ -129,7 +130,7 @@ fun Dock(
                 Icon(
                     Icons.Default.Menu,
                     contentDescription = "Нещодавні",
-                    tint = Color(0xFFCE93D8),
+                    tint = AppTheme.colors.purple.copy(alpha = 0.7f),
                     modifier = Modifier.size((iconSizeDp * 0.5f).dp)
                 )
             }
@@ -150,8 +151,8 @@ fun Dock(
                         .background(
                             brush = Brush.verticalGradient(
                                 colors = listOf(
-                                    Color.White.copy(alpha = 0.15f),
-                                    Color.White.copy(alpha = 0.05f)
+                                    AppTheme.colors.glassBorder,
+                                    AppTheme.colors.glassBorder.copy(alpha = 0.3f)
                                 )
                             )
                         )
@@ -178,8 +179,8 @@ fun Dock(
                             .background(
                                 brush = Brush.verticalGradient(
                                     colors = listOf(
-                                        Color.White.copy(alpha = 0.08f),
-                                        Color.White.copy(alpha = 0.02f)
+                                        AppTheme.colors.glassBorder.copy(alpha = 0.5f),
+                                        AppTheme.colors.textPrimary.copy(alpha = 0.02f)
                                     )
                                 )
                             )
@@ -187,8 +188,8 @@ fun Dock(
                                 width = 0.5.dp,
                                 brush = Brush.verticalGradient(
                                     colors = listOf(
-                                        Color.White.copy(alpha = 0.2f),
-                                        Color.White.copy(alpha = 0.04f)
+                                        AppTheme.colors.glassBorder,
+                                        AppTheme.colors.textPrimary.copy(alpha = 0.04f)
                                     )
                                 ),
                                 shape = RoundedCornerShape((iconSizeDp / 2 + 4).dp)

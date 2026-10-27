@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -142,8 +143,8 @@ fun AppDrawer(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0x1F1F1F).copy(alpha = bgAlpha),
-                            Color(0x0D0D0D).copy(alpha = bgAlpha)
+                            AppTheme.colors.glassBackground.copy(alpha = bgAlpha),
+                            AppTheme.colors.glassBackgroundAlt.copy(alpha = bgAlpha)
                         )
                     )
                 )
@@ -209,18 +210,18 @@ private fun CategoryChip(
 ) {
     Text(
         text = label,
-        color = if (selected) Color.White else Color.White.copy(alpha = 0.65f),
+        color = if (selected) AppTheme.colors.textPrimary else AppTheme.colors.textPrimary.copy(alpha = 0.65f),
         fontSize = 13.sp,
         modifier = Modifier
             .clip(RoundedCornerShape(18.dp))
             .background(
                 Brush.verticalGradient(
                     if (selected) listOf(
-                        Color(0xFF64B5F6).copy(alpha = 0.55f),
-                        Color(0xFF2196F3).copy(alpha = 0.25f)
+                        AppTheme.colors.accent.copy(alpha = 0.55f),
+                        AppTheme.colors.accentDark.copy(alpha = 0.25f)
                     ) else listOf(
-                        Color(0xE61F1F1F),
-                        Color(0xCC0D0D0D)
+                        AppTheme.colors.glassBackground,
+                        AppTheme.colors.glassBackgroundAlt
                     )
                 )
             )
@@ -228,11 +229,11 @@ private fun CategoryChip(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     if (selected) listOf(
-                        Color(0xFF64B5F6).copy(alpha = 0.7f),
-                        Color(0xFF64B5F6).copy(alpha = 0.2f)
+                        AppTheme.colors.accent.copy(alpha = 0.7f),
+                        AppTheme.colors.accent.copy(alpha = 0.2f)
                     ) else listOf(
-                        Color.White.copy(alpha = 0.2f),
-                        Color.White.copy(alpha = 0.05f)
+                        AppTheme.colors.glassBorder,
+                        AppTheme.colors.glassBorder.copy(alpha = 0.3f)
                     )
                 ),
                 shape = RoundedCornerShape(18.dp)
@@ -260,16 +261,16 @@ private fun AppGridItem(
         val glassBrush = remember {
             Brush.verticalGradient(
                 listOf(
-                    Color.White.copy(alpha = 0.10f),
-                    Color.White.copy(alpha = 0.02f)
+                    AppTheme.colors.textPrimary.copy(alpha = 0.10f),
+                    AppTheme.colors.textPrimary.copy(alpha = 0.02f)
                 )
             )
         }
         val glassBorderBrush = remember {
             Brush.verticalGradient(
                 listOf(
-                    Color.White.copy(alpha = 0.22f),
-                    Color.White.copy(alpha = 0.04f)
+                    AppTheme.colors.textPrimary.copy(alpha = 0.22f),
+                    AppTheme.colors.textPrimary.copy(alpha = 0.04f)
                 )
             )
         }
@@ -296,7 +297,7 @@ private fun AppGridItem(
             Spacer(Modifier.height(6.dp))
             Text(
                 text = app.label,
-                color = Color.White,
+                color = AppTheme.colors.textPrimary,
                 fontSize = fontSizeSp.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

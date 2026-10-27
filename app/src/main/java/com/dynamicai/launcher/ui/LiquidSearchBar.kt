@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -51,8 +52,8 @@ fun LiquidSearchBar(
             BasicTextField(
                 value = query,
                 onValueChange = onQueryChange,
-                textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
-                cursorBrush = SolidColor(Color.White),
+                textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
+                cursorBrush = SolidColor(AppTheme.colors.textPrimary),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() }),
@@ -68,7 +69,7 @@ fun LiquidSearchBar(
                     if (query.isEmpty()) {
                         Text(
                             "Пошук або команда…",
-                            color = Color.White.copy(alpha = 0.5f),
+                            color = AppTheme.colors.textSecondary,
                             fontSize = 16.sp
                         )
                     }
@@ -81,18 +82,18 @@ fun LiquidSearchBar(
             if (query.isNotEmpty()) {
                 GlassIconButton(
                     icon = Icons.Default.Send,
-                    tint = Color(0xFF64B5F6),
+                    tint = AppTheme.colors.accent,
                     onClick = onSearch
                 )
             }
             GlassIconButton(
                 icon = micIcon(),
-                tint = Color(0xFFFF8A80),
+                tint = AppTheme.colors.danger,
                 onClick = onVoice
             )
             GlassIconButton(
                 icon = Icons.Default.Close,
-                tint = Color.White,
+                tint = AppTheme.colors.textPrimary,
                 onClick = onClose
             )
         }
@@ -107,7 +108,7 @@ private fun micIcon(): ImageVector = ImageVector.Builder(
     viewportWidth = 24f,
     viewportHeight = 24f
 ).apply {
-    path(fill = SolidColor(Color.White)) {
+    path(fill = SolidColor(AppTheme.colors.textPrimary)) {
         moveTo(12f, 14f)
         curveTo(14.21f, 14f, 16f, 12.21f, 16f, 10f)
         verticalLineTo(4f)
@@ -144,8 +145,8 @@ private fun GlassIconButton(
             .background(
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.18f),
-                        Color.White.copy(alpha = 0.06f)
+                        AppTheme.colors.textPrimary.copy(alpha = 0.18f),
+                        AppTheme.colors.glassBorder.copy(alpha = 0.4f)
                     )
                 )
             )

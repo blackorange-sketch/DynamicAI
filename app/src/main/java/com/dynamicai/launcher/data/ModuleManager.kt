@@ -46,16 +46,62 @@ object ModuleManager {
     )
 
     fun isInstalled(context: Context, module: AppModule): Boolean {
+        // 1. Перевірка всередині APK (assets)
+        try {
+            // Для Wild Rift перевіряємо конкретний файл в assets
+            if (module.id == "wildrift") {
+                context.assets.open("wildrift/heroes.json").use { return true }
+            }
+            // Для інших модулів перевіряємо, чи є папка в assets
+            val assetList = context.assets.list(module.targetDirName)
+            if (!assetList.isNullOrEmpty()) {
+                return module.expectedFiles.all { expected ->
+                    assetList.contains(expected)
+                }
+            }
+        } catch (_: Exception) {
+            // Файлів в assets немає, йдемо далі
+        }
+
+        // 2. Перевірка в зовнішньому сховищі (filesDir)
         val dir = File(context.filesDir, module.targetDirName)
-        return dir.exists() && module.expectedFiles.all { File(dir, it).exists() }
+        if (dir.exists() && module.expectedFiles.all { File(dir, it).exists() }) {
+            return true
+        }
+
+        // 3. Специфічна перевірка для LLM (моделі лежать прямо в filesDir)
+        if (module.id == "llm") {
+            val libFile = File(context.filesDir, "llm_libs/liblitertlm_jni.so")
+            val modelExists = context.filesDir.listFiles()?.any { it.name.endsWith(".litertlm") } == true
+            if (libFile.exists() || modelExists) return true
+        }
+
+        return false
     }
 
     fun getModuleSizeMb(context: Context, module: AppModule): Long {
+        var totalSize = 0L
+        // 1. Розмір в assets (APK) - для Wild Rift
+        try {
+            val assetList = context.assets.list(module.targetDirName)
+            if (!assetList.isNullOrEmpty()) {
+                // Ми не можемо легко дізнатися розмір assets без відкриття,
+                // але для Wild Rift це не критично, тому ставимо 0
+            }
+        } catch (_: Exception) {}
+
+        // 2. Розмір в filesDir
         val dir = File(context.filesDir, module.targetDirName)
-        if (!dir.exists()) return 0
-        var size = 0L
-        dir.walkTopDown().forEach { if (it.isFile) size += it.length() }
-        return size / (1024 * 1024) // MB
+        if (dir.exists()) {
+            dir.walkTopDown().forEach { if (it.isFile) totalSize += it.length() }
+        }
+
+        // 3. Для LLM додаємо розмір моделей
+        if (module.id == "llm") {
+            context.filesDir.listFiles()?.filter { it.name.endsWith(".litertlm") }?.forEach { totalSize += it.length() }
+        }
+
+        return totalSize / (1024 * 1024)
     }
 
     suspend fun downloadAndInstall(context: Context, module: AppModule, onProgress: (Int) -> Unit = {}): Boolean = withContext(Dispatchers.IO) {

@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.overlay
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -80,7 +81,7 @@ fun FloatingOrb(
                 Canvas(modifier = Modifier.size(48.dp)) {
                     val center = this.center
                     val baseRadius = size.minDimension * 0.4f
-                    val primaryColor = Color(0xFF00E676)
+                    val primaryColor = AppTheme.colors.successLight
 
                     // Дуже делікатне світіння (ледь помітне)
                     drawCircle(
@@ -93,7 +94,7 @@ fun FloatingOrb(
                     // Ядро
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(Color.White.copy(alpha = 0.9f), primaryColor.copy(alpha = 0.6f), Color.Transparent),
+                            colors = listOf(AppTheme.colors.textPrimary.copy(alpha = 0.9f), primaryColor.copy(alpha = 0.6f), Color.Transparent),
                             center = Offset(center.x - baseRadius * 0.2f, center.y - baseRadius * 0.2f), radius = baseRadius * 0.7f * pulse
                         ),
                         radius = baseRadius * 0.7f * pulse, center = center
@@ -109,8 +110,8 @@ fun FloatingOrb(
                     .size(width = 320.dp, height = 420.dp)
                     .clip(RoundedCornerShape(24.dp))
                     // ПРОЗОРИЙ ФОН (Liquid Glass)
-                    .background(Color(0xE60A0A0A))
-                    .border(0.5.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(24.dp))
+                    .background(AppTheme.colors.glassBackground.copy(alpha = 0.9f))
+                    .border(0.5.dp, AppTheme.colors.glassBorder, RoundedCornerShape(24.dp))
             ) {
                 Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
                     // Header (за нього можна тягнути)
@@ -123,11 +124,11 @@ fun FloatingOrb(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (isThinking) Color(0xFF2196F3) else Color(0xFF4CAF50)))
+                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (isThinking) AppTheme.colors.accentDark else AppTheme.colors.success))
                             Spacer(Modifier.width(8.dp))
-                            Text("JARVIS", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                            Text("JARVIS", color = AppTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         }
-                        Text("✕", color = Color.White.copy(alpha = 0.6f), fontSize = 18.sp, modifier = Modifier.clickable(indication = LocalIndication.current, interactionSource = remember { MutableInteractionSource() }) { onExpandChange(false) })
+                        Text("✕", color = AppTheme.colors.textSecondary, fontSize = 18.sp, modifier = Modifier.clickable(indication = LocalIndication.current, interactionSource = remember { MutableInteractionSource() }) { onExpandChange(false) })
                     }
 
                     // Повідомлення
@@ -139,10 +140,10 @@ fun FloatingOrb(
                                     modifier = Modifier
                                         .widthIn(max = 240.dp)
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(if (isUser) Color(0xFF2196F3).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.1f))
+                                        .background(if (isUser) AppTheme.colors.accentDark.copy(alpha = 0.4f) else AppTheme.colors.glassBorder.copy(alpha = 0.7f))
                                         .padding(10.dp)
                                 ) {
-                                    Text(text, color = Color.White, fontSize = 13.sp)
+                                    Text(text, color = AppTheme.colors.textPrimary, fontSize = 13.sp)
                                 }
                             }
                         }
@@ -150,7 +151,7 @@ fun FloatingOrb(
 
                     // Індикатор "Думаю"
                     if (isThinking) {
-                        Text("🔍 Думаю...", color = Color(0xFF64B5F6), fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
+                        Text("🔍 Думаю...", color = AppTheme.colors.accent, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
                     }
 
                     Spacer(Modifier.height(8.dp))
@@ -160,7 +161,7 @@ fun FloatingOrb(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(20.dp))
-                            .background(Color.White.copy(alpha = 0.1f))
+                            .background(AppTheme.colors.glassBorder.copy(alpha = 0.7f))
                             .padding(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -168,10 +169,10 @@ fun FloatingOrb(
                             value = query,
                             onValueChange = { query = it },
                             modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                            textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
-                            cursorBrush = SolidColor(Color.White),
+                            textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
+                            cursorBrush = SolidColor(AppTheme.colors.textPrimary),
                             decorationBox = { inner ->
-                                if (query.isEmpty()) Text("Запитай...", color = Color.White.copy(alpha = 0.4f), fontSize = 14.sp)
+                                if (query.isEmpty()) Text("Запитай...", color = AppTheme.colors.textSecondary, fontSize = 14.sp)
                                 inner()
                             }
                         )
@@ -179,7 +180,7 @@ fun FloatingOrb(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF64B5F6).copy(alpha = 0.3f))
+                                .background(AppTheme.colors.accent.copy(alpha = 0.3f))
                                 .clickable(
                                     indication = LocalIndication.current,
                                     interactionSource = remember { MutableInteractionSource() }
@@ -190,13 +191,13 @@ fun FloatingOrb(
                                     }
                                 },
                             contentAlignment = Alignment.Center
-                        ) { Text("➤", color = Color(0xFF64B5F6), fontSize = 16.sp) }
+                        ) { Text("➤", color = AppTheme.colors.accent, fontSize = 16.sp) }
                         
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF4CAF50).copy(alpha = 0.3f))
+                                .background(AppTheme.colors.success.copy(alpha = 0.3f))
                                 .clickable(
                                     indication = LocalIndication.current,
                                     interactionSource = remember { MutableInteractionSource() }

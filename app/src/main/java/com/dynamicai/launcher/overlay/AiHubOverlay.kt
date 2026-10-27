@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.overlay
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
@@ -169,19 +170,19 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xEE1A1A1A))
+                        .background(AppTheme.colors.surface.copy(alpha = 0.93f))
                         .padding(16.dp)
                         .heightIn(max = 250.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
                     if (isLoading && aiResponse.isBlank()) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(color = Color(0xFF64B5F6), modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(color = AppTheme.colors.accent, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                             Spacer(Modifier.width(12.dp))
-                            Text("Думаю...", color = Color.White)
+                            Text("Думаю...", color = AppTheme.colors.textPrimary)
                         }
                     } else {
-                        Text(aiResponse, color = Color.White, fontSize = 15.sp)
+                        Text(aiResponse, color = AppTheme.colors.textPrimary, fontSize = 15.sp)
                     }
                 }
             }
@@ -201,7 +202,7 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                     }
                     try { ctx.startActivity(i) } catch (_: Throwable) {}
                 }
-                ActionChip("Переклад", Color(0xFFFF9800)) {
+                ActionChip("Переклад", AppTheme.colors.warning) {
                     Toast.makeText(ctx, "Переклад...", Toast.LENGTH_SHORT).show()
                     onClose()
                     com.dynamicai.launcher.ocr.RegionSelectorOverlay.show(
@@ -219,7 +220,7 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                         onCancel = { }
                     )
                 }
-                ActionChip("🎙️ Розмова", Color(0xFFE91E63)) {
+                ActionChip("🎙️ Розмова", AppTheme.colors.pink) {
                     try {
                         ctx.startActivity(android.content.Intent(ctx, com.dynamicai.launcher.VoiceChatActivity::class.java).apply {
                             addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -229,7 +230,7 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                     }
                     onClose()
                 }
-                ActionChip("🎮 Wild Rift", Color(0xFF9C27B0)) {
+                ActionChip("🎮 Wild Rift", AppTheme.colors.purple) {
                     try {
                         ctx.startActivity(android.content.Intent(ctx, com.dynamicai.launcher.WildRiftAdvisorActivity::class.java).apply {
                             addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -239,7 +240,7 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                     }
                     onClose()
                 }
-                                ActionChip("AI", Color(0xFF2196F3)) {
+                                ActionChip("AI", AppTheme.colors.accentDark) {
                     if (query.isNotBlank() && vm != null) {
                         isLoading = true
                         aiResponse = ""
@@ -270,10 +271,10 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(28.dp))
-                    .background(Color(0xEE1A1A1A))
+                    .background(AppTheme.colors.surface.copy(alpha = 0.93f))
                     .border(
                         width = 0.5.dp,
-                        brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.3f), Color.White.copy(alpha = 0.05f))),
+                        brush = Brush.verticalGradient(listOf(AppTheme.colors.textMuted, AppTheme.colors.textPrimary.copy(alpha = 0.05f))),
                         shape = RoundedCornerShape(28.dp)
                     )
                     .padding(horizontal = 20.dp, vertical = 6.dp),
@@ -282,8 +283,8 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                 BasicTextField(
                     value = query,
                     onValueChange = { query = it },
-                    textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
-                    cursorBrush = SolidColor(Color(0xFF64B5F6)),
+                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
+                    cursorBrush = SolidColor(AppTheme.colors.accent),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                     keyboardActions = KeyboardActions(onGo = {
@@ -300,7 +301,7 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                         .focusRequester(focusRequester),
                     decorationBox = { inner ->
                         if (query.isEmpty()) {
-                            Text("Запитай або скажи...", color = Color.White.copy(alpha = 0.5f), fontSize = 16.sp)
+                            Text("Запитай або скажи...", color = AppTheme.colors.textSecondary, fontSize = 16.sp)
                         }
                         inner()
                     }
@@ -312,7 +313,7 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color(0x33FF5252))
+                        .background(AppTheme.colors.danger.copy(alpha = 0.2f))
                         .clickable {
                             Toast.makeText(ctx, "Мікрофон...", Toast.LENGTH_SHORT).show()
                             onClose()
@@ -336,7 +337,7 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
 private fun ActionChip(label: String, color: Color, onClick: () -> Unit) {
     Text(
         text = label,
-        color = Color.White,
+        color = AppTheme.colors.textPrimary,
         fontSize = 13.sp,
         fontWeight = FontWeight.Medium,
         modifier = Modifier

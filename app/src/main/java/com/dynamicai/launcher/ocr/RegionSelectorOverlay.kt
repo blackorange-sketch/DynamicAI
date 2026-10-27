@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ocr
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import android.content.Context
 import android.graphics.PixelFormat
 import android.graphics.Rect
@@ -167,7 +168,7 @@ private fun RegionSelectorContent(
                     .height(with(density) { rect.height().toDp() })
                     .border(
                         width = 2.dp,
-                        color = Color(0xFF64B5F6),
+                        color = AppTheme.colors.accent,
                         shape = RoundedCornerShape(4.dp)
                     )
             )
@@ -180,12 +181,12 @@ private fun RegionSelectorContent(
                     .align(Alignment.TopCenter)
                     .padding(top = 80.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xEE1A1A1A))
+                    .background(AppTheme.colors.surface.copy(alpha = 0.93f))
                     .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
                 Text(
                     "Виділи область з текстом",
-                    color = Color.White,
+                    color = AppTheme.colors.textPrimary,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -203,13 +204,13 @@ private fun RegionSelectorContent(
         ) {
             Btn(
                 text = "Скасувати",
-                color = Color(0xFF616161),
+                color = AppTheme.colors.textMuted,
                 modifier = Modifier.weight(1f)
             ) { onCancel() }
 
             Btn(
                 text = "Перекласти",
-                color = if (isValid) Color(0xFF2196F3) else Color(0xFF37474F),
+                color = if (isValid) AppTheme.colors.accentDark else AppTheme.colors.textMuted,
                 modifier = Modifier.weight(1f),
                 enabled = isValid
             ) {
@@ -244,7 +245,7 @@ private fun Btn(
     ) {
         Text(
             text,
-            color = if (enabled) Color.White else Color.White.copy(alpha = 0.4f),
+            color = if (enabled) AppTheme.colors.textPrimary else AppTheme.colors.textSecondary,
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium
         )

@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ocr
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import android.content.Context
 import android.graphics.PixelFormat
 import android.util.Log
@@ -131,8 +132,8 @@ private fun TranslateContent(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xEE1A1A1A),
-                            Color(0xCC0D0D0D)
+                            AppTheme.colors.surface.copy(alpha = 0.93f),
+                            AppTheme.colors.glassBackgroundAlt.copy(alpha = 0.8f)
                         )
                     )
                 )
@@ -141,7 +142,7 @@ private fun TranslateContent(
         ) {
             Text(
                 "${blocks.size} блоків · $targetLang",
-                color = Color.White,
+                color = AppTheme.colors.textPrimary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.weight(1f)
@@ -151,10 +152,10 @@ private fun TranslateContent(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color(0x33FFFFFF))
+                    .background(AppTheme.colors.textPrimary.copy(alpha = 0.2f))
                     .clickable { onClose() }
             ) {
-                Text("X", color = Color.White, fontSize = 18.sp)
+                Text("X", color = AppTheme.colors.textPrimary, fontSize = 18.sp)
             }
         }
 
@@ -181,14 +182,14 @@ private fun BlockCard(block: TranslatedBlock, onCopy: (String) -> Unit) {
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xF01A1A1A),
-                        Color(0xE60D0D0D)
+                        AppTheme.colors.surface.copy(alpha = 0.94f),
+                        AppTheme.colors.glassBackgroundAlt.copy(alpha = 0.9f)
                     )
                 )
             )
             .border(
                 width = 0.5.dp,
-                color = Color.White.copy(alpha = 0.15f),
+                color = AppTheme.colors.glassBorder,
                 shape = RoundedCornerShape(14.dp)
             )
             .clickable { onCopy(block.translatedText) }
@@ -196,13 +197,13 @@ private fun BlockCard(block: TranslatedBlock, onCopy: (String) -> Unit) {
     ) {
         Text(
             block.originalText,
-            color = Color.White.copy(alpha = 0.55f),
+            color = AppTheme.colors.textPrimary.copy(alpha = 0.55f),
             fontSize = 12.sp
         )
         Spacer(Modifier.height(4.dp))
         Text(
             block.translatedText,
-            color = Color.White,
+            color = AppTheme.colors.textPrimary,
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium
         )

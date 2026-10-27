@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.overlay
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -59,7 +60,7 @@ fun DockOverlayContent(
                     .padding(end = 3.dp)
                     .size(width = 4.dp, height = handleLengthDp.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White.copy(alpha = handleAlphaPercent / 100f))
+                    .background(AppTheme.colors.textPrimary.copy(alpha = handleAlphaPercent / 100f))
                     .pointerInput(Unit) { detectTapGestures { expanded = true } }
             ) {}
         }
@@ -81,14 +82,14 @@ fun DockOverlayContent(
                 // Кнопка закриття (X) — тонке коло
                 CircleIconButton(
                     size = iconSizeDp,
-                    background = Color(0x33202020),
-                    border = Color.White.copy(alpha = 0.35f),
+                    background = AppTheme.colors.glassBackground.copy(alpha = 0.2f),
+                    border = AppTheme.colors.textPrimary.copy(alpha = 0.35f),
                     onTap = { expanded = false }
                 ) {
                     Icon(
                         Icons.Default.Close,
                         contentDescription = "Закрити",
-                        tint = Color.White,
+                        tint = AppTheme.colors.textPrimary,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -96,14 +97,14 @@ fun DockOverlayContent(
                 // Кнопка пошуку — акцентна
                 CircleIconButton(
                     size = iconSizeDp,
-                    background = Color(0xFF2196F3).copy(alpha = 0.25f),
-                    border = Color(0xFF64B5F6).copy(alpha = 0.6f),
+                    background = AppTheme.colors.accentDark.copy(alpha = 0.25f),
+                    border = AppTheme.colors.accent.copy(alpha = 0.6f),
                     onTap = onOpenSearch
                 ) {
                     Icon(
                         Icons.Default.Search,
                         contentDescription = "Пошук",
-                        tint = Color(0xFF64B5F6),
+                        tint = AppTheme.colors.accent,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -155,8 +156,8 @@ private fun AppCircleIcon(app: AppInfo, sizeDp: Int, onTap: () -> Unit) {
             .size(sizeDp.dp)
             .scale(scale)
             .clip(CircleShape)
-            .background(Color(0xFFEFEFEF))
-            .border(width = 1.5.dp, color = Color.White.copy(alpha = 0.9f), shape = CircleShape)
+            .background(AppTheme.colors.textPrimary)
+            .border(width = 1.5.dp, color = AppTheme.colors.textPrimary.copy(alpha = 0.9f), shape = CircleShape)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onPress = {

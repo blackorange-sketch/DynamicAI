@@ -103,9 +103,9 @@ fun SettingsScreen(
             IconButton(onClick = {
                 if (initialCategory != null) onBackToMenu() else onClose()
             }) {
-                Icon(Icons.Default.ArrowBack, "Назад", tint = Color.White)
+                Icon(Icons.Default.ArrowBack, "Назад", tint = AppTheme.colors.textPrimary)
             }
-            Text("Налаштування", color = Color.White, fontSize = 22.sp)
+            Text("Налаштування", color = AppTheme.colors.textPrimary, fontSize = 22.sp)
         }
 
         val ctx = LocalContext.current
@@ -119,13 +119,13 @@ fun SettingsScreen(
             AppPickerRow("Музика", settings.defaultMusicApp, installedApps, Icons.Default.PlayArrow, Color(0xFF1DB954)) {
                 onSettingsChange(settings.copy(defaultMusicApp = it))
             }
-            AppPickerRow("Браузер", settings.defaultBrowser, installedApps, Icons.Default.Search, Color(0xFF2196F3)) {
+            AppPickerRow("Браузер", settings.defaultBrowser, installedApps, Icons.Default.Search, AppTheme.colors.accentDark) {
                 onSettingsChange(settings.copy(defaultBrowser = it))
             }
-            AppPickerRow("Телефон", settings.defaultDialer, installedApps, Icons.Default.Call, Color(0xFF4CAF50)) {
+            AppPickerRow("Телефон", settings.defaultDialer, installedApps, Icons.Default.Call, AppTheme.colors.success) {
                 onSettingsChange(settings.copy(defaultDialer = it))
             }
-            AppPickerRow("SMS", settings.defaultSms, installedApps, Icons.Default.Email, Color(0xFF9C27B0)) {
+            AppPickerRow("SMS", settings.defaultSms, installedApps, Icons.Default.Email, AppTheme.colors.purple) {
                 onSettingsChange(settings.copy(defaultSms = it))
             }
             AppPickerRow("Email", settings.defaultEmail, installedApps, Icons.Default.Email, Color(0xFFF44336)) {
@@ -134,7 +134,7 @@ fun SettingsScreen(
             AppPickerRow("Карти", settings.defaultMaps, installedApps, Icons.Default.Place, Color(0xFF00BCD4)) {
                 onSettingsChange(settings.copy(defaultMaps = it))
             }
-            AppPickerRow("Камера", settings.defaultCamera, installedApps, Icons.Default.Star, Color(0xFFFF9800)) {
+            AppPickerRow("Камера", settings.defaultCamera, installedApps, Icons.Default.Star, AppTheme.colors.warning) {
                 onSettingsChange(settings.copy(defaultCamera = it))
             }
         }
@@ -143,11 +143,11 @@ fun SettingsScreen(
         if (showOverlayPermDialog) {
             AlertDialog(
                 onDismissRequest = { showOverlayPermDialog = false },
-                title = { Text("Дозвіл для голосової активації", color = Color.White) },
+                title = { Text("Дозвіл для голосової активації", color = AppTheme.colors.textPrimary) },
                 text = {
                     Text(
                         "Щоб показувати вікно підтвердження команд, дозвольте DynamicAI показ поверх інших застосунків.",
-                        color = Color.White.copy(alpha = 0.8f)
+                        color = AppTheme.colors.textSecondary
                     )
                 },
                 confirmButton = {
@@ -158,14 +158,14 @@ fun SettingsScreen(
                             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             ctx.startActivity(i)
                         } catch (_: Throwable) {}
-                    }) { Text("Дозволити", color = Color(0xFF64B5F6)) }
+                    }) { Text("Дозволити", color = AppTheme.colors.accent) }
                 },
                 dismissButton = {
                     TextButton(onClick = { showOverlayPermDialog = false }) {
-                        Text("Пізніше", color = Color.White.copy(alpha = 0.6f))
+                        Text("Пізніше", color = AppTheme.colors.textSecondary)
                     }
                 },
-                containerColor = Color(0xFF1A1A1A)
+                containerColor = AppTheme.colors.surface
             )
         }
 
@@ -179,10 +179,10 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Edit, null, tint = Color(0xFF64B5F6), modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Edit, null, tint = AppTheme.colors.accent, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(12.dp))
-                Text("Керування нотатками", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                Icon(Icons.Default.KeyboardArrowRight, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
+                Text("Керування нотатками", color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.KeyboardArrowRight, null, tint = AppTheme.colors.glassBorder, modifier = Modifier.size(18.dp))
             }
         }
         }
@@ -197,10 +197,10 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.PlayArrow, null, tint = Color(0xFFFFB300), modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.PlayArrow, null, tint = AppTheme.colors.warning, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(12.dp))
-                Text("Керування макросами", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                Icon(Icons.Default.KeyboardArrowRight, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
+                Text("Керування макросами", color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.KeyboardArrowRight, null, tint = AppTheme.colors.glassBorder, modifier = Modifier.size(18.dp))
             }
         }
         }
@@ -219,19 +219,19 @@ fun SettingsScreen(
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Build, null, tint = Color(0xFF64B5F6), modifier = Modifier.size(18.dp))
+                Icon(Icons.Default.Build, null, tint = AppTheme.colors.accent, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(12.dp))
-                Text("Менеджер модулів", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                Icon(Icons.Default.KeyboardArrowRight, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
+                Text("Менеджер модулів", color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.KeyboardArrowRight, null, tint = AppTheme.colors.glassBorder, modifier = Modifier.size(18.dp))
             }
         }
 
         GlassSectionHeader("Погода")
         GlassCard {
-            SwitchRow("Показувати погоду", settings.showWeather, Icons.Default.Star, Color(0xFFFFB300)) {
+            SwitchRow("Показувати погоду", settings.showWeather, Icons.Default.Star, AppTheme.colors.warning) {
                 onSettingsChange(settings.copy(showWeather = it))
             }
-            SwitchRow("Використовувати GPS", settings.weatherUseGps, Icons.Default.Place, Color(0xFF4CAF50)) {
+            SwitchRow("Використовувати GPS", settings.weatherUseGps, Icons.Default.Place, AppTheme.colors.success) {
                 onSettingsChange(settings.copy(weatherUseGps = it))
             }
             CityInputRow(
@@ -337,18 +337,18 @@ fun SettingsScreen(
         if (initialCategory == null || initialCategory == "appearance") {
         GlassSectionHeader("Вигляд")
         GlassCard {
-            SwitchRow("Показувати кнопку Recent", settings.showRecentButton, Icons.Default.Menu, Color(0xFF9C27B0)) {
+            SwitchRow("Показувати кнопку Recent", settings.showRecentButton, Icons.Default.Menu, AppTheme.colors.purple) {
                 onSettingsChange(settings.copy(showRecentButton = it))
             }
-            SwitchRow("Показувати пошук", settings.showSearchBar, Icons.Default.Search, Color(0xFF2196F3)) {
+            SwitchRow("Показувати пошук", settings.showSearchBar, Icons.Default.Search, AppTheme.colors.accentDark) {
                 onSettingsChange(settings.copy(showSearchBar = it))
             }
-            SwitchRow("Показувати назви", settings.showLabels, Icons.Default.Info, Color(0xFF2196F3)) {
+            SwitchRow("Показувати назви", settings.showLabels, Icons.Default.Info, AppTheme.colors.accentDark) {
                 onSettingsChange(settings.copy(showLabels = it))
             }
-            ActionRow("Шпалери", Icons.Default.Star, Color(0xFFE91E63), onOpenWallpaper)
-            ActionRow("Застосунки у дока", Icons.Default.Home, Color(0xFF9C27B0), onOpenDockEditor)
-            ActionRow("Керування папками", Icons.Default.Add, Color(0xFF64B5F6), onOpenFolderManager)
+            ActionRow("Шпалери", Icons.Default.Star, AppTheme.colors.pink, onOpenWallpaper)
+            ActionRow("Застосунки у дока", Icons.Default.Home, AppTheme.colors.purple, onOpenDockEditor)
+            ActionRow("Керування папками", Icons.Default.Add, AppTheme.colors.accent, onOpenFolderManager)
         }
         }
 
@@ -357,12 +357,12 @@ fun SettingsScreen(
         GlassSectionHeader("Плаваючий док")
         GlassCard {
             if (!overlayPermissionGranted) {
-                ActionRow("Дозволити показ поверх інших", Icons.Default.Info, Color(0xFF9C27B0), onRequestOverlayPermission)
+                ActionRow("Дозволити показ поверх інших", Icons.Default.Info, AppTheme.colors.purple, onRequestOverlayPermission)
             } else {
                 ActionRow(
                     if (overlayActive) "Вимкнути плаваючий док" else "Увімкнути плаваючий док",
                     Icons.Default.Info,
-                    if (overlayActive) Color(0xFFFF6B6B) else Color(0xFF4CAF50),
+                    if (overlayActive) AppTheme.colors.danger else AppTheme.colors.success,
                     onToggleOverlay
                 )
             }
@@ -412,10 +412,10 @@ fun SettingsScreen(
         if (initialCategory == null || initialCategory == "system") {
         GlassSectionHeader("Енергозбереження")
         GlassCard {
-            SwitchRow("Пауза при вимкненому екрані", settings.wpPauseOnScreenOff, Icons.Default.Star, Color(0xFF607D8B)) {
+            SwitchRow("Пауза при вимкненому екрані", settings.wpPauseOnScreenOff, Icons.Default.Star, AppTheme.colors.textMuted) {
                 onSettingsChange(settings.copy(wpPauseOnScreenOff = it))
             }
-            SwitchRow("Пауза при низькому заряді", settings.wpPauseOnLowBattery, Icons.Default.Star, Color(0xFFFFC107)) {
+            SwitchRow("Пауза при низькому заряді", settings.wpPauseOnLowBattery, Icons.Default.Star, AppTheme.colors.warning) {
                 onSettingsChange(settings.copy(wpPauseOnLowBattery = it))
             }
             FpsRow(
@@ -435,9 +435,9 @@ fun SettingsScreen(
         if (initialCategory == null || initialCategory == "system") {
         GlassSectionHeader("Дії")
         GlassCard {
-            ActionRow("Оновити контакти", Icons.Default.Person, Color(0xFF4CAF50), onRefreshContacts)
-            ActionRow("Очистити історію команд", Icons.Default.Delete, Color(0xFFFF6B6B), onClearHistory)
-            ActionRow("Показати всі приховані ($hiddenCount)", Icons.Default.Info, Color(0xFF9E9E9E), onClearHidden)
+            ActionRow("Оновити контакти", Icons.Default.Person, AppTheme.colors.success, onRefreshContacts)
+            ActionRow("Очистити історію команд", Icons.Default.Delete, AppTheme.colors.danger, onClearHistory)
+            ActionRow("Показати всі приховані ($hiddenCount)", Icons.Default.Info, AppTheme.colors.textMuted, onClearHidden)
         }
         }
         }
@@ -467,7 +467,7 @@ fun SettingsScreen(
                 label = if (hasWriteSettings) "Зміна налаштувань ✓" else "Дозволити зміну (яскравість)",
                 checked = hasWriteSettings,
                 icon = Icons.Default.Settings,
-                tint = if (hasWriteSettings) Color(0xFF4CAF50) else Color(0xFFFFA726),
+                tint = if (hasWriteSettings) AppTheme.colors.success else AppTheme.colors.warning,
                 onChange = {
                     if (!hasWriteSettings) {
                         try {
@@ -485,7 +485,7 @@ fun SettingsScreen(
             )
             Text(
                 "Потрібно для команд 'яскравіше' / 'темніше'",
-                color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp,
+                color = AppTheme.colors.glassBorder, fontSize = 11.sp,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
         }
@@ -508,10 +508,10 @@ fun SettingsScreen(
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Плаваюча куля JARVIS", color = Color.White, fontSize = 14.sp)
+                    Text("Плаваюча куля JARVIS", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
                     Text(
                         if (orbEnabled) "Активна — куля на екрані" else "Вимкнена",
-                        color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp
+                        color = AppTheme.colors.textSecondary, fontSize = 11.sp
                     )
                 }
                 androidx.compose.material3.Switch(
@@ -539,7 +539,7 @@ fun SettingsScreen(
                         }
                     },
                     colors = androidx.compose.material3.SwitchDefaults.colors(
-                        checkedThumbColor = Color(0xFF00E676)
+                        checkedThumbColor = AppTheme.colors.success
                     )
                 )
             }
@@ -561,11 +561,11 @@ fun SettingsScreen(
                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Розумний ранковий брифінг", color = Color.White, fontSize = 14.sp)
+                    Text("Розумний ранковий брифінг", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
                     Text(
                         if (avgHour >= 0) "Середній час пробудження: ${String.format("%02d:%02d", avgHour, avgMinute)}" 
                         else "Ще недостатньо даних (потрібно 3+ дні)",
-                        color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp
+                        color = AppTheme.colors.textSecondary, fontSize = 11.sp
                     )
                 }
                 Switch(
@@ -575,7 +575,7 @@ fun SettingsScreen(
                         wakeDetector.setEnabled(it)
                     },
                     colors = androidx.compose.material3.SwitchDefaults.colors(
-                        checkedThumbColor = Color(0xFF4CAF50)
+                        checkedThumbColor = AppTheme.colors.success
                     )
                 )
             }
@@ -583,7 +583,7 @@ fun SettingsScreen(
             ActionRow(
                 "Тестувати брифінг зараз",
                 androidx.compose.material.icons.Icons.Default.PlayArrow,
-                Color(0xFFFF9800)
+                AppTheme.colors.warning
             ) {
                 MorningBriefingService.start(ctx)
             }
@@ -603,33 +603,33 @@ fun SettingsScreen(
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(model.name, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            Text(model.name, color = AppTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                             
                             val statusText = if (isDownloaded) "Завантажено" else "Не завантажено (${model.sizeBytes / 1_000_000} МБ)"
-                            Text(statusText, color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
+                            Text(statusText, color = AppTheme.colors.textSecondary, fontSize = 11.sp)
                             
                             if (progressState is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading && !isDownloaded) {
-                                Text("Завантаження... ${progressState.percent}%", color = Color(0xFF64B5F6), fontSize = 11.sp)
+                                Text("Завантаження... ${progressState.percent}%", color = AppTheme.colors.accent, fontSize = 11.sp)
                             }
                         }
                         
                         if (isDownloaded) {
                             if (isSelected) {
-                                Text("✓ Активна", color = Color(0xFF4CAF50), fontSize = 12.sp)
+                                Text("✓ Активна", color = AppTheme.colors.success, fontSize = 12.sp)
                             } else {
                                 TextButton(onClick = { vm.setCurrentModel(model.id) }) {
-                                    Text("Обрати", color = Color(0xFF64B5F6), fontSize = 12.sp)
+                                    Text("Обрати", color = AppTheme.colors.accent, fontSize = 12.sp)
                                 }
                             }
                             IconButton(onClick = { vm.deleteModel(model) }) {
-                                Icon(androidx.compose.material.icons.Icons.Default.Delete, contentDescription = "Видалити", tint = Color(0xFFEF5350))
+                                Icon(androidx.compose.material.icons.Icons.Default.Delete, contentDescription = "Видалити", tint = AppTheme.colors.danger)
                             }
                         } else {
                             if (progressState is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFF64B5F6), strokeWidth = 2.dp)
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AppTheme.colors.accent, strokeWidth = 2.dp)
                             } else {
                                 TextButton(onClick = { vm.downloadModel(model) }) {
-                                    Text("Завантажити", color = Color(0xFF64B5F6), fontSize = 12.sp)
+                                    Text("Завантажити", color = AppTheme.colors.accent, fontSize = 12.sp)
                                 }
                             }
                         }
@@ -643,7 +643,7 @@ fun SettingsScreen(
                             LinearProgressIndicator(
                                 progress = { prog.percent / 100f },
                                 modifier = Modifier.fillMaxWidth().height(4.dp),
-                                color = Color(0xFF64B5F6)
+                                color = AppTheme.colors.accent
                             )
                             val progressText = if (prog.totalMb > 0) 
                                 "${prog.percent}% (${prog.downloadedMb} / ${prog.totalMb} МБ)" 
@@ -651,14 +651,14 @@ fun SettingsScreen(
                                 "${prog.downloadedMb} МБ завантажено..."
                             Text(progressText, color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
                         } else if (prog is com.dynamicai.launcher.llm.ModelDownloader.Progress.Error) {
-                            Text("Помилка: ${prog.message}", color = Color(0xFFEF5350), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                            Text("Помилка: ${prog.message}", color = AppTheme.colors.danger, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                             TextButton(onClick = { vm.clearDownloadError() }) {
                                 Text("Сховати", color = Color.Gray, fontSize = 11.sp)
                             }
                         }
                     }
                     
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(top = 8.dp))
+                    HorizontalDivider(color = AppTheme.colors.textPrimary.copy(alpha = 0.1f), modifier = Modifier.padding(top = 8.dp))
                 }
             }
 // Toggle завжди видно
@@ -666,14 +666,14 @@ fun SettingsScreen(
                 label = "Озвучувати відповіді (TTS)",
                 checked = settings.useTts,
                 icon = Icons.Default.PlayArrow,
-                tint = Color(0xFF4CAF50)
+                tint = AppTheme.colors.success
             ) {
                 onSettingsChange(settings.copy(useTts = it))
             }
             ActionRow(
                 "Обрати голос TTS",
                 icon = Icons.Default.Settings,
-                tint = Color(0xFF9C27B0)
+                tint = AppTheme.colors.purple
             ) {
                 try {
                     val intent = Intent("com.android.settings.TTS_SETTINGS")
@@ -698,7 +698,7 @@ fun SettingsScreen(
                 label = "Активація фразою (експериментально)",
                 checked = settings.wakeWordEnabled,
                 icon = Icons.Default.Search,
-                tint = Color(0xFFFFA726)
+                tint = AppTheme.colors.warning
             ) { on ->
                 onSettingsChange(settings.copy(wakeWordEnabled = on))
                 val appCtx = ctx.applicationContext
@@ -723,26 +723,26 @@ fun SettingsScreen(
                 ) {
                     Text(
                         "Фраза:",
-                        color = Color.White,
+                        color = AppTheme.colors.textPrimary,
                         fontSize = 13.sp,
                         modifier = Modifier.width(60.dp)
                     )
                     androidx.compose.foundation.text.BasicTextField(
                         value = settings.wakeWord,
                         onValueChange = { onSettingsChange(settings.copy(wakeWord = it)) },
-                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
-                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Color(0xFF64B5F6)),
+                        textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.accent),
                         singleLine = true,
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
+                            .background(AppTheme.colors.textPrimary.copy(alpha = 0.08f))
                             .padding(horizontal = 10.dp, vertical = 8.dp)
                     )
                 }
                 Text(
                     "⚠️ Потребує постійного слухання — буде додано у наступній версії",
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = AppTheme.colors.textSecondary,
                     fontSize = 10.sp,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
@@ -752,7 +752,7 @@ fun SettingsScreen(
                 label = "Використовувати LLM для команд",
                 checked = settings.useLlm,
                 icon = Icons.Default.Settings,
-                tint = Color(0xFF9C27B0)
+                tint = AppTheme.colors.purple
             ) {
                 onSettingsChange(settings.copy(useLlm = it))
             }
@@ -766,7 +766,7 @@ fun SettingsScreen(
         Spacer(Modifier.height(16.dp))
         Text(
             "DynamicAI · $versionName · папок: $foldersCount",
-            color = Color.White.copy(alpha = 0.4f),
+            color = AppTheme.colors.glassBorder,
             fontSize = 11.sp,
             modifier = Modifier.padding(horizontal = 8.dp)
         )

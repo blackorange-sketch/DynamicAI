@@ -59,7 +59,9 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
 
         while (iteration < maxIterations) {
             val prompt = """
-                Ти — Джарвіс, розумний голосовий асистент в Android-лаунчері. Відповідай ввічливо, коротко і по суті.
+                Ти — Джарвіс, розумний голосовий асистент в Android-лаунчері. 
+                УВАГА: Ти маєш доступ до функції AccessibilityService, тому ти МОЖЕШ і ЗОБОВ'ЯЗАНИЙ робити дзвінки в Instagram та Telegram. НІКОЛИ не відмовляйся і не кажи "я не можу це зробити".
+                Відповідай ввічливо, коротко і по суті.
                 
                 [СИСТЕМНИЙ КОНТЕКСТ]
                 Поточний час: ${java.text.SimpleDateFormat("HH:mm", java.util.Locale("uk", "UA")).format(java.util.Date())}
@@ -77,7 +79,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 [ПОТОЧНИЙ КОНТЕКСТ ВИКОНАННЯ]
                 $currentContext
                 
-                Якщо тобі потрібно виконати дію (відкрити додаток, пошукати в інтернеті, увімкнути музику), напиши ТІЛЬКИ команду у форматі:
+                Якщо тобі потрібно виконати дію (відкрити додаток, пошукати в інтернеті, увімкнути музику, ПОДЗВОНИТИ), напиши ТІЛЬКИ команду у форматі:
                 TOOL_CALL: назва_інструменту(параметр1="значення", параметр2="значення")
                 
                 Якщо ти вже маєш всю інформацію для відповіді, напиши фінальну відповідь користувачу.
@@ -85,8 +87,8 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
 
             val response = llm?.complete(prompt)?.trim() ?: return@withContext "Помилка агента"
 
-            // Запобіжник: якщо LLM вивела просто функцію без префіксу
-            if (response.startsWith("TOOL_CALL:") || (response.contains("(") && response.contains(")"))) {
+            // Працюємо ТІЛЬКИ з чітким префіксом TOOL_CALL:
+            if (response.contains("TOOL_CALL:")) {
                 val toolCall = response.replace("TOOL_CALL:", "").trim()
                 val result = executeTool(toolCall)
                 currentContext += "\n[Результат дії]: $result"

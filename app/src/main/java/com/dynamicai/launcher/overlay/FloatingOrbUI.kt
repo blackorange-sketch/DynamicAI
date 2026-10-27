@@ -79,10 +79,15 @@ fun FloatingOrb(
                     val baseRadius = size.minDimension * 0.4f
                     val primaryColor = Color(0xFF00E676)
 
+                    // Дуже делікатне світіння (ледь помітне)
                     drawCircle(
-                        brush = Brush.radialGradient(colors = listOf(primaryColor.copy(alpha = 0.4f), Color.Transparent), center = center, radius = baseRadius * 2f),
-                        radius = baseRadius * 2f, center = center
+                        brush = Brush.radialGradient(
+                            colors = listOf(primaryColor.copy(alpha = 0.15f), Color.Transparent),
+                            center = center, radius = baseRadius * 1.5f
+                        ),
+                        radius = baseRadius * 1.5f, center = center
                     )
+                    // Ядро
                     drawCircle(
                         brush = Brush.radialGradient(
                             colors = listOf(Color.White.copy(alpha = 0.9f), primaryColor.copy(alpha = 0.6f), Color.Transparent),
@@ -90,7 +95,8 @@ fun FloatingOrb(
                         ),
                         radius = baseRadius * 0.7f * pulse, center = center
                     )
-                    drawCircle(color = primaryColor.copy(alpha = 0.6f), radius = baseRadius * 1.2f, center = center, style = Stroke(width = 2.dp.toPx()))
+                    // Тонке кільце
+                    drawCircle(color = primaryColor.copy(alpha = 0.5f), radius = baseRadius * 1.1f, center = center, style = Stroke(width = 1.dp.toPx()))
                 }
             }
         } else {

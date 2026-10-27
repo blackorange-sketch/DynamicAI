@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import androidx.compose.foundation.layout.RowScope
 import com.dynamicai.launcher.ui.theme.AppTheme
 import android.content.Intent
 import android.net.Uri
@@ -758,7 +759,7 @@ fun SettingsScreen(
 // ===== Компоненти =====
 
 @Composable
-private fun ThemeChip(label: String, themeId: String, currentTheme: String, onSelect: (String) -> Unit) {
+private fun RowScope.ThemeChip(label: String, themeId: String, currentTheme: String, onSelect: (String) -> Unit) {
     val selected = currentTheme == themeId
     Box(
         modifier = Modifier

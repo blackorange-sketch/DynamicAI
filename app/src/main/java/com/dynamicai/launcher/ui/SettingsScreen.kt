@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -248,6 +249,41 @@ fun SettingsScreen(
         if (initialCategory == null || initialCategory == "appearance") {
         GlassSectionHeader("🎨 Зовнішній вигляд")
         if (initialCategory == null || initialCategory == "appearance") {
+        GlassCard {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Стиль інтерфейсу", color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Темна тема
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (settings.appTheme == "glass_dark") AppTheme.colors.accent.copy(alpha = 0.3f) else AppTheme.colors.surface)
+                            .border(1.dp, if (settings.appTheme == "glass_dark") AppTheme.colors.accent else Color.Transparent, RoundedCornerShape(12.dp))
+                            .clickable { onSettingsChange(settings.copy(appTheme = "glass_dark")) }
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Темна", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+                    }
+                    // Світла тема
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (settings.appTheme == "glass_light") AppTheme.colors.accent.copy(alpha = 0.3f) else AppTheme.colors.surface)
+                            .border(1.dp, if (settings.appTheme == "glass_light") AppTheme.colors.accent else Color.Transparent, RoundedCornerShape(12.dp))
+                            .clickable { onSettingsChange(settings.copy(appTheme = "glass_light")) }
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Світла", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+                    }
+                }
+            }
+        }
+        
         GlassSectionHeader("Фон лаунчера")
         GlassCard {
             SizeSliderRow(

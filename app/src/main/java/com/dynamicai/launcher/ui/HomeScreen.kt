@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.DynamicAITheme
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
@@ -91,6 +92,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     val history by vm.history.collectAsStateWithLifecycle()
     val suggestions by vm.suggestions.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
+    DynamicAITheme(themeId = settings.appTheme) {
     val hidden by vm.hidden.collectAsStateWithLifecycle()
     val folders by vm.folders.collectAsStateWithLifecycle()
     val weather by vm.weather.collectAsStateWithLifecycle()
@@ -1564,6 +1566,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         }
     }
 
+    }
 }
 @Composable
 fun AppContextMenu(

@@ -40,7 +40,8 @@ data class LauncherSettings(
     val defaultDialer: String = "",
     val defaultEmail: String = "",
     val defaultMaps: String = "",
-    val defaultCamera: String = ""
+    val defaultCamera: String = "",
+    val appTheme: String = "glass_dark" // "glass_dark" | "glass_light"
 )
 
 class SettingsStorage(context: Context) {
@@ -83,7 +84,8 @@ class SettingsStorage(context: Context) {
         defaultDialer = prefs.getString("defaultDialer", "") ?: "",
         defaultEmail = prefs.getString("defaultEmail", "") ?: "",
         defaultMaps = prefs.getString("defaultMaps", "") ?: "",
-        defaultCamera = prefs.getString("defaultCamera", "") ?: ""
+        defaultCamera = prefs.getString("defaultCamera", "") ?: "",
+            appTheme = prefs.getString("appTheme", "glass_dark") ?: "glass_dark"
     )
 
     fun save(s: LauncherSettings) {
@@ -125,6 +127,7 @@ class SettingsStorage(context: Context) {
             .putString("defaultEmail", s.defaultEmail)
             .putString("defaultMaps", s.defaultMaps)
             .putString("defaultCamera", s.defaultCamera)
+            .putString("appTheme", s.appTheme)
             .putLong("updatedAt", System.currentTimeMillis())
             .commit()
     }

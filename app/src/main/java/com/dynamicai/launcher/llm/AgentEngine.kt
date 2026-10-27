@@ -362,6 +362,22 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     val result = (min..max).random()
                     "Ваше випадкове число: $result"
                 }
+                                toolCall.startsWith("runMacro") -> {
+                    val name = getArg(toolCall, "name")
+                    val storage = com.dynamicai.launcher.macro.MacroStorage(context)
+                    val macro = storage.get().find { it.name.contains(name, ignoreCase = true) }
+                    if (macro == null) {
+                        "Макрос '$name' не знайдено."
+                    } else {
+                        // Запускаємо кроки макросу послідовно
+                        var lastResult = ""
+                        for (step in macro.steps) {
+                            lastResult = executeTool(step) // Рекурсивний виклик
+                            kotlinx.coroutines.delay(macro.delayMs)
+                        }
+                        "Макрос '${macro.name}' виконано. Останній результат: $lastResult"
+                    }
+                }
                 toolCall.startsWith("getWildRiftAdvice") -> {
                     val me = getArg(toolCall, "myChampion")
                     val enemies = getArg(toolCall, "enemies")

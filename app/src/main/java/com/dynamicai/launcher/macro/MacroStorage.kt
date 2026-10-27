@@ -70,4 +70,10 @@ class MacroStorage(context: Context) {
         }
         prefs.edit().putString("items", arr.toString()).apply()
     }
+
+    fun delete(id: String) {
+        val list = get().toMutableList()
+        list.removeAll { it.id == id }
+        save(list)
+    }
 }

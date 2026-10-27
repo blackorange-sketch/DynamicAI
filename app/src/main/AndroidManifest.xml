@@ -222,5 +222,12 @@
                 <action android:name="androidx.media3.session.MediaSessionService" />
             </intent-filter>
         </service>
+    
+        <service
+            android:name=".overlay.FloatingOrbService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Floating JARVIS assistant" />
+        </service>
     </application>
 </manifest>

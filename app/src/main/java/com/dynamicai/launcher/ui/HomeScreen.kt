@@ -458,16 +458,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
 
     if (showMacroManager) {
-        val macroStorage = remember { com.dynamicai.launcher.macro.MacroStorage(ctx) }
-        var macroList by remember { mutableStateOf<List<com.dynamicai.launcher.macro.Macro>>(emptyList()) }
-        LaunchedEffect(showMacroManager) { macroList = macroStorage.get() }
-        MacroScreen(
-            macros = macroList,
-            onSave = { m -> macroStorage.add(m); macroList = macroStorage.get() },
-            onDelete = { id -> macroStorage.remove(id); macroList = macroStorage.get() },
-            onRun = { m -> vm.executeCommand("макрос ${m.name}") },
-            onClose = { showMacroManager = false }
-        )
+        com.dynamicai.launcher.macro.MacroScreen(onClose = { showMacroManager = false })
         return
     }
 

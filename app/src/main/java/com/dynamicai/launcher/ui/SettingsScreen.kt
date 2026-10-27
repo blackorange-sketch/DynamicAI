@@ -404,6 +404,23 @@ fun SettingsScreen(
         BluetoothTestRow()
 
         GlassSectionHeader("🤖 ШІ та Асистент")
+                GlassSectionHeader("Плаваючий асистент")
+        GlassCard {
+            ActionRow("Увімкнути плаваючу кулю", androidx.compose.material.icons.Icons.Default.Star, Color(0xFF00E676)) {
+                if (Settings.canDrawOverlays(ctx)) {
+                    val intent = Intent(ctx, com.dynamicai.launcher.overlay.FloatingOrbService::class.java)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        ctx.startForegroundService(intent)
+                    } else {
+                        ctx.startService(intent)
+                    }
+                } else {
+                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}"))
+                    ctx.startActivity(intent)
+                }
+            }
+        }
+
         GlassSectionHeader("Локальна LLM")
         GlassCard {
             val downloadedModels = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)

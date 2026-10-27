@@ -54,7 +54,7 @@ import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.model.AppInfo
 
 @Composable
-private fun SizeSliderRow(
+internal fun SizeSliderRow(
     label: String,
     value: Int,
     suffix: String,
@@ -86,7 +86,7 @@ private fun SizeSliderRow(
 }
 
 @Composable
-private fun SwitchRow(
+internal fun SwitchRow(
     label: String,
     checked: Boolean,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
@@ -130,7 +130,7 @@ private fun SwitchRow(
 }
 
 @Composable
-private fun ActionRow(
+internal fun ActionRow(
     label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     tint: Color = Color(0xFF64B5F6),
@@ -171,7 +171,7 @@ private fun ActionRow(
 }
 
 @Composable
-private fun CityInputRow(cityName: String, onCityChange: (String) -> Unit) {
+internal fun CityInputRow(cityName: String, onCityChange: (String) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -201,7 +201,7 @@ private fun CityInputRow(cityName: String, onCityChange: (String) -> Unit) {
 }
 
 @Composable
-private fun UnitRow(current: String, onChange: (String) -> Unit) {
+internal fun UnitRow(current: String, onChange: (String) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -214,7 +214,7 @@ private fun UnitRow(current: String, onChange: (String) -> Unit) {
 }
 
 @Composable
-private fun PositionRow(current: String, onChange: (String) -> Unit) {
+internal fun PositionRow(current: String, onChange: (String) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -228,7 +228,7 @@ private fun PositionRow(current: String, onChange: (String) -> Unit) {
 }
 
 @Composable
-private fun FpsRow(current: Int, onChange: (Int) -> Unit) {
+internal fun FpsRow(current: Int, onChange: (Int) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -274,7 +274,7 @@ private fun GlassChip(label: String, selected: Boolean, onClick: () -> Unit) {
 
 
 @Composable
-private fun ShizukuTestRow() {
+internal fun ShizukuTestRow() {
     val ctx = LocalContext.current
         val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf("Перевірка…") }
@@ -330,7 +330,7 @@ private fun ShizukuTestRow() {
 
 
 @Composable
-private fun LlmTestRow(onTest: suspend (String) -> String?) {
+internal fun LlmTestRow(onTest: suspend (String) -> String?) {
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("Відкрий телеграм") }
     var answer by remember { mutableStateOf("") }
@@ -399,7 +399,7 @@ private fun LlmTestRow(onTest: suspend (String) -> String?) {
 
 
 @Composable
-private fun BluetoothTestRow() {
+internal fun BluetoothTestRow() {
     val ctx = LocalContext.current
         val scope = rememberCoroutineScope()
     val manager = remember { com.dynamicai.launcher.system.BluetoothManager(ctx) }
@@ -492,7 +492,7 @@ private fun BluetoothTestRow() {
 
 
 @Composable
-private fun TtsSlider(
+internal fun TtsSlider(
     label: String,
     value: Float,
     values: List<Float>,
@@ -606,7 +606,7 @@ private fun AppPickerDialog(
 }
 
 @Composable
-private fun AppPickerRow(
+internal fun AppPickerRow(
     label: String,
     currentPkg: String,
     apps: List<AppInfo>,

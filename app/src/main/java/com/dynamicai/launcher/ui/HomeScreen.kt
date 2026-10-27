@@ -525,10 +525,39 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         } else {
             Box(modifier = Modifier.fillMaxSize()) {
                 SettingsScreen(
-                vm = vm,
-            settings = settings,
-            onSettingsChange = { vm.updateSettings(it)
-                // Кнопка "Назад" поверх SettingsScreen
+                    vm = vm,
+                    settings = settings,
+                    onSettingsChange = { vm.updateSettings(it) },
+                    hiddenCount = hidden.size,
+                    foldersCount = folders.size,
+                    onClearHistory = { vm.clearHistory() },
+                    onRefreshContacts = { vm.loadContacts() },
+                    onClearHidden = { vm.clearHidden() },
+                    onDownloadLlm = { vm.downloadModel() },
+                    overlayActive = overlayActive,
+                    overlayPermissionGranted = overlayPermissionGranted,
+                    onToggleOverlay = {
+                        if (overlayActive) {
+                            com.dynamicai.launcher.overlay.FloatingDockService.stop(ctx)
+                            overlayActive = false
+                            ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
+                                .edit().putBoolean("overlayEnabled", false).commit()
+                        } else {
+                            com.dynamicai.launcher.overlay.FloatingDockService.start(ctx)
+                            overlayActive = true
+                            ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
+                                .edit().putBoolean("overlayEnabled", true).commit()
+                        }
+                    },
+                    onRequestOverlayPermission = { requestOverlayPermission() },
+                    onOpenWallpaper = { showWallpaper = true },
+                    onOpenDockEditor = { showDockEditor = true },
+                    onOpenFolderManager = { showFolderManager = true },
+                    llmDownloaded = vm.downloader.isDownloaded,
+                    llmReady = llmReady,
+                    versionName = BuildConfig.VERSION_NAME,
+                    onClose = { showSettings = false }
+                )
                 Box(
                     modifier = Modifier
                         .align(androidx.compose.ui.Alignment.TopStart)
@@ -545,7 +574,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         return
     }
 
-        val openNotesReq by vm.openNotesRequest.collectAsStateWithLifecycle()
+    val openNotesReq by vm.openNotesRequest.collectAsStateWithLifecycle()
     LaunchedEffect(openNotesReq) {
         if (openNotesReq) {
             showNotesScreen = true

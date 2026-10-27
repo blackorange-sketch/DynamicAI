@@ -39,6 +39,18 @@ object BackdropBlur {
     private fun loadBitmap(ctx: Context): Bitmap? {
         val wm = WallpaperManager.getInstance(ctx.applicationContext)
 
+        // Спосіб 0: getBitmap() — API 24+, найсучасніший
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 24) {
+                val b: android.graphics.Bitmap? = wm.getBitmap()
+                val desc: String = if (b != null) "${b.width}x${b.height}" else "NULL"
+                android.util.Log.d("BackdropBlur", "getBitmap() -> $desc")
+                if (b != null) return b
+            }
+        } catch (e: Throwable) {
+            android.util.Log.w("BackdropBlur", "getBitmap() failed: ${e.message}")
+        }
+
         // Спосіб 1: getWallpaperFile(FLAG_SYSTEM) — найнадійніший, API 5+
         try {
             val file = wm.getWallpaperFile(WallpaperManager.FLAG_SYSTEM)

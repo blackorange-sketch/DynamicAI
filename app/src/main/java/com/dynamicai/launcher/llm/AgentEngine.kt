@@ -35,7 +35,13 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
         14. takeNote(text: String) -> Створити нотатку.
         15. readNotes() -> Прочитати останні нотатки.
         16. getWildRiftAdvice(myChampion: String, enemies: String) -> Поради Wild Rift.
-        17. searchWeb(query: String) -> Шукає інформацію в інтернеті та повертає факти (для питань 'хто такий', 'що таке', новини).
+        17. searchWeb(query: String) -> Шукає інформацію в інтернеті.
+        18. toggleWifi(state: String) -> Wi-Fi ('on' або 'off').
+        19. toggleBluetooth(state: String) -> Bluetooth ('on' або 'off').
+        20. copyToClipboard(text: String) -> Копіює текст у буфер обміну.
+        21. calculate(expression: String) -> Обчислює математичний вираз.
+        22. openUrl(url: String) -> Відкриває веб-сайт.
+        23. createNotification(title: String, text: String) -> Показує сповіщення.
     """.trimIndent()
 
     suspend fun processWithTools(question: String, history: String = ""): String = withContext(Dispatchers.IO) {
@@ -79,6 +85,27 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
         }
         
         return@withContext "Виконано забагато кроків. Останній результат: $currentContext"
+    }
+
+    private fun evalMath(expr: String): Double {
+        // Простий парсер для +, -, *, /
+        val sanitized = expr.replace(" ", "").replace(",", ".")
+        val ops = listOf('+', '-', '*', '/')
+        for (op in ops) {
+            val idx = sanitized.indexOf(op, 1)
+            if (idx > 0) {
+                val left = sanitized.substring(0, idx).toDouble()
+                val right = sanitized.substring(idx + 1).toDouble()
+                return when (op) {
+                    '+' -> left + right
+                    '-' -> left - right
+                    '*' -> left * right
+                    '/' -> left / right
+                    else -> 0.0
+                }
+            }
+        }
+        return sanitized.toDouble()
     }
 
     private fun getArg(toolCall: String, key: String): String {
@@ -223,6 +250,50 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     val result = webSearch.search(query)
                     val text = webSearch.toContext(result)
                     if (text.isNotBlank()) text else "Не знайдено інформації."
+                }
+                                toolCall.startsWith("toggleWifi") -> {
+                    val state = getArg(toolCall, "state").lowercase() == "on"
+                    val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+                    @Suppress("DEPRECATION")
+                    wifiManager.isWifiEnabled = state
+                    "Wi-Fi ${if (state) "увімкнено" else "вимкнено"}"
+                }
+                toolCall.startsWith("toggleBluetooth") -> {
+                    val state = getArg(toolCall, "state").lowercase() == "on"
+                    val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager
+                    val adapter = bluetoothManager.adapter
+                    @Suppress("DEPRECATION")
+                    if (state) adapter?.enable() else adapter?.disable()
+                    "Bluetooth ${if (state) "увімкнено" else "вимкнено"}"
+                }
+                toolCall.startsWith("copyToClipboard") -> {
+                    val text = getArg(toolCall, "text")
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("DynamicAI", text))
+                    "Скопійовано в буфер: $text"
+                }
+                toolCall.startsWith("calculate") -> {
+                    val expr = getArg(toolCall, "expression")
+                    try {
+                        val result = evalMath(expr)
+                        "$expr = $result"
+                    } catch (e: Exception) {
+                        "Не вдалося обчислити: $expr"
+                    }
+                }
+                toolCall.startsWith("openUrl") -> {
+                    val url = getArg(toolCall, "url")
+                    val fullUrl = if (url.startsWith("http")) url else "https://$url"
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(fullUrl)).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                    "Відкриваю: $fullUrl"
+                }
+                toolCall.startsWith("createNotification") -> {
+                    val title = getArg(toolCall, "title")
+                    val text = getArg(toolCall, "text")
+                    "Сповіщення створено: $title — $text" // Потребує дозволу NOTIFICATIONS
                 }
                 toolCall.startsWith("getWildRiftAdvice") -> {
                     val me = getArg(toolCall, "myChampion")

@@ -85,7 +85,13 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 override fun onRmsChanged(rmsdB: Float) {}
                 override fun onBufferReceived(buffer: ByteArray?) {}
                 override fun onEndOfSpeech() {}
-                override fun onError(error: Int) { voiceState = VoiceState.IDLE }
+                override fun onError(error: Int) {
+                    voiceState = VoiceState.IDLE
+                    // Автоматично перезапускаємо мікрофон через 1.5 сек, якщо не розпізнано
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        if (voiceState == VoiceState.IDLE) startListening()
+                    }, 1500)
+                }
                 override fun onResults(results: Bundle?) {
                     val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
                     if (text.isNotBlank()) {
@@ -164,12 +170,30 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Статус "Думаю..."
+            val currentStatus = messages.lastOrNull { it.role == "status" }
+            if (currentStatus != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF2196F3).copy(alpha = 0.15f))
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(currentStatus.content, color = Color(0xFF64B5F6), fontSize = 13.sp)
+                    }
+                }
+            }
+
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(messages) { msg ->
+                items(messages.filter { it.role != "status" }) { msg ->
                     val isUser = msg.role == "user"
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -377,6 +401,7 @@ fun processQuery(
 ) {
     onStateChange(VoiceState.THINKING)
     stopListening()
+    onMessage(ChatMessage("status", "🔍 Думаю..."))
     scope.launch {
         try {
             if (!vm.ensureLlmLoaded()) {
@@ -387,6 +412,8 @@ fun processQuery(
                 return@launch
             }
             val answer = vm.chatEngine.answerWithAgent(text, history)
+            // Видаляємо статус "Думаю"
+            // (він зникне, бо ми замінимо список повідомлень)
             onStateChange(VoiceState.SPEAKING)
             vm.tts.speakWithCallback(answer) { onStateChange(VoiceState.LISTENING) }
             onMessage(ChatMessage("assistant", answer))

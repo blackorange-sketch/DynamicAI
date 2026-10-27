@@ -143,12 +143,16 @@ class MainActivity : ComponentActivity() {
             } else {
                 darkColorScheme()
             }
+            val settings by vm.settings.collectAsStateWithLifecycle()
+            // Динамічна прозорість: якщо є кастомне фото — непрозорий фон (щоб системні шпалери не просвічували),
+            // якщо немає — прозорий (системні шпалери видно, як раніше)
+            val hasCustomBg = settings.backgroundImageUri.isNotBlank()
+            val dynamicBg = if (hasCustomBg) androidx.compose.ui.graphics.Color(0xFF000000) else androidx.compose.ui.graphics.Color.Transparent
             val colorScheme = baseScheme.copy(
-                background = androidx.compose.ui.graphics.Color.Transparent,
-                surface = androidx.compose.ui.graphics.Color.Transparent
+                background = dynamicBg,
+                surface = dynamicBg
             )
             MaterialTheme(colorScheme = colorScheme) {
-                val settings by vm.settings.collectAsStateWithLifecycle()
                 DynamicAITheme(themeId = settings.appTheme) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         MainBackground(settings)

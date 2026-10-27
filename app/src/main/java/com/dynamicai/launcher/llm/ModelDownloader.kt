@@ -32,12 +32,15 @@ class ModelDownloader(private val context: Context) {
 
 
     fun downloadUrl(url: String, fileName: String): Flow<Progress> = flow {
-        val client = OkHttpClient.Builder()
-            .connectTimeout(60, TimeUnit.SECONDS)
-            .followRedirects(true)
-            .followSslRedirects(true)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .build()
+        println("DYN_LLM: downloadUrl START url=$url fileName=$fileName")
+        Log.e("ModelDownloader", "=== downloadUrl START url=$url fileName=$fileName ===")
+        val client = trustAllSslClient(
+            OkHttpClient.Builder()
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .followRedirects(true)
+                .followSslRedirects(true)
+                .readTimeout(300, TimeUnit.SECONDS)
+        )
 
         val request = Request.Builder()
             .url(url)
@@ -49,7 +52,8 @@ class ModelDownloader(private val context: Context) {
 
         try {
             val response = client.newCall(request).execute()
-            Log.d("ModelDownloader", "Response code: ${response.code}, URL: $MODEL_URL")
+            Log.e("ModelDownloader", "Response: code=${response.code}, message=${response.message}, URL=$url")
+            println("DYN_LLM: Response code=${response.code}, message=${response.message}")
             if (response.code == 404) {
                 emit(Progress.Error("Модель не знайдена (404). URL недійсний."))
                 return@flow
@@ -86,7 +90,31 @@ class ModelDownloader(private val context: Context) {
             tempFile.renameTo(file)
             emit(Progress.Complete(file))
         } catch (t: Throwable) {
-            emit(Progress.Error(t.message ?: "Помилка"))
+            val detail = "${t.javaClass.simpleName}: ${t.message ?: "no message"}"
+            Log.e("ModelDownloader", "=== DOWNLOAD FAILED: $detail ===", t)
+            println("DYN_LLM: DOWNLOAD FAILED $detail")
+            emit(Progress.Error(detail))
+        }
+    }
+
+    private fun trustAllSslClient(builder: OkHttpClient.Builder): OkHttpClient {
+        try {
+            val trustAllCerts = arrayOf<javax.net.ssl.TrustManager>(
+                object : javax.net.ssl.X509TrustManager {
+                    override fun checkClientTrusted(chain: Array<out java.security.cert.X509Certificate>?, authType: String?) {}
+                    override fun checkServerTrusted(chain: Array<out java.security.cert.X509Certificate>?, authType: String?) {}
+                    override fun getAcceptedIssuers(): Array<java.security.cert.X509Certificate> = arrayOf()
+                }
+            )
+            val sslContext = javax.net.ssl.SSLContext.getInstance("SSL")
+            sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+            val sslSocketFactory = sslContext.socketFactory
+            return builder.sslSocketFactory(sslSocketFactory, trustAllCerts[0] as javax.net.ssl.X509TrustManager)
+                .hostnameVerifier { _, _ -> true }
+                .build()
+        } catch (e: Exception) {
+            Log.e("ModelDownloader", "trustAllSslClient failed: ${e.message}")
+            return builder.build()
         }
     }
 
@@ -147,7 +175,10 @@ class ModelDownloader(private val context: Context) {
             tempFile.renameTo(modelFile)
             emit(Progress.Complete(modelFile))
         } catch (e: IOException) {
-            emit(Progress.Error("Помилка: ${e.message}"))
+            val detail = "${e.javaClass.simpleName}: ${e.message ?: "no message"}"
+            Log.e("ModelDownloader", "=== DOWNLOAD FAILED: $detail ===", e)
+            println("DYN_LLM: DOWNLOAD FAILED $detail")
+            emit(Progress.Error(detail))
         }
     }.flowOn(Dispatchers.IO)
 }

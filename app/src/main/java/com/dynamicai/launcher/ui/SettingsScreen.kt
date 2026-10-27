@@ -79,11 +79,10 @@ fun SettingsScreen(
     llmReady: Boolean,
     versionName: String,
     onClose: () -> Unit,
-    onTestLlm: suspend (String) -> String? = { null }
+    onTestLlm: suspend (String) -> String? = { null },
     initialCategory: String? = null,
     onBackToMenu: () -> Unit = {},
-    onOpenModuleManager: () -> Unit = {},
-) {
+    onOpenModuleManager: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxSize()

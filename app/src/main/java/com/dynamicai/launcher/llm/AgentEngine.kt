@@ -12,7 +12,7 @@ import com.dynamicai.launcher.data.WildRiftRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-class AgentEngine(private val context: Context, private val llm: LlmEngine) {
+class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
     private val appRepo = AppRepository(context)
     private val wildRiftRepo = WildRiftRepository(context)
     private val notesStorage = com.dynamicai.launcher.note.NotesStorage(context)
@@ -50,6 +50,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
     """.trimIndent()
 
     suspend fun processWithTools(question: String, history: String = ""): String = withContext(Dispatchers.IO) {
+        if (llm == null) return@withContext "Помилка: LLM не ініціалізована"
         var currentContext = "Запит користувача: $question"
         var iteration = 0
         val maxIterations = 4 // Максимум 4 кроки для складних задач
@@ -80,7 +81,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                 Якщо ти вже маєш всю інформацію для відповіді, напиши фінальну відповідь користувачу.
             """.trimIndent()
 
-            val response = llm.complete(prompt)?.trim() ?: return@withContext "Помилка агента"
+            val response = llm?.complete(prompt)?.trim() ?: return@withContext "Помилка агента"
 
             // Запобіжник: якщо LLM вивела просто функцію без префіксу
             if (response.startsWith("TOOL_CALL:") || (response.contains("(") && response.contains(")"))) {

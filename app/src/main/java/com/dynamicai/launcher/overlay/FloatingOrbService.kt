@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.IBinder
 import android.view.Gravity
 import android.view.WindowManager
+import kotlin.math.roundToInt
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle

@@ -20,49 +20,11 @@ class DeepLinkEngine(private val context: Context) {
         }
     }
 
-    private fun findContactNumber(name: String): String? {
+    private suspend fun findContactNumber(name: String): String? {
         return try {
-            // Використовуємо рефлексію, щоб знайти метод отримання контактів
-            val repoClass = contactRepo.javaClass
-            val methods = repoClass.methods.filter {
-                it.name.contains("contact", ignoreCase = true) ||
-                it.name.contains("load", ignoreCase = true) ||
-                it.name.contains("get", ignoreCase = true) ||
-                it.name.contains("all", ignoreCase = true)
-            }
-            
-            for (method in methods) {
-                try {
-                    if (method.parameterCount == 0) {
-                        val result = method.invoke(contactRepo)
-                        val contacts = when (result) {
-                            is List<*> -> result
-                            is kotlinx.coroutines.flow.Flow<*> -> {
-                                // Спробуємо отримати перше значення
-                                null // пропускаємо Flow (складно)
-                            }
-                            else -> null
-                        }
-                        if (contacts != null) {
-                            val contact = contacts.firstOrNull { c ->
-                                val nameField = c?.javaClass?.getMethod("getName")?.invoke(c)?.toString() ?: ""
-                                nameField.contains(name, ignoreCase = true)
-                            }
-                            if (contact != null) {
-                                val phone = try {
-                                    contact.javaClass.getMethod("getPhone").invoke(contact)?.toString()
-                                } catch (_: Exception) {
-                                    try {
-                                        contact.javaClass.getMethod("getNumber").invoke(contact)?.toString()
-                                    } catch (_: Exception) { null }
-                                }
-                                if (phone != null) return phone
-                            }
-                        }
-                    }
-                } catch (_: Exception) {}
-            }
-            null
+            val contacts = contactRepo.loadAll()
+            val contact = contacts.find { it.name.contains(name, ignoreCase = true) }
+            contact?.phones?.firstOrNull()
         } catch (e: Exception) {
             null
         }
@@ -75,7 +37,7 @@ class DeepLinkEngine(private val context: Context) {
         else "Не вдалося відкрити Telegram. Перевірте чи встановлено додаток."
     }
 
-    fun openWhatsAppChat(contactName: String): String {
+    suspend fun openWhatsAppChat(contactName: String): String {
         val number = findContactNumber(contactName)
         if (number == null) return "Контакт '$contactName' не знайдено в телефонній книзі."
         val cleanNumber = number.replace(Regex("[^0-9+]"), "")
@@ -84,7 +46,7 @@ class DeepLinkEngine(private val context: Context) {
         else "Не вдалося відкрити WhatsApp."
     }
 
-    fun openViberChat(contactName: String): String {
+    suspend fun openViberChat(contactName: String): String {
         val number = findContactNumber(contactName)
         if (number == null) return "Контакт '$contactName' не знайдено."
         val cleanNumber = number.replace(Regex("[^0-9+]"), "")
@@ -132,7 +94,7 @@ class DeepLinkEngine(private val context: Context) {
         else "Поштовий клієнт не знайдено."
     }
 
-    fun sendSms(contactName: String, message: String): String {
+    suspend fun sendSms(contactName: String, message: String): String {
         val number = findContactNumber(contactName) ?: return "Контакт '$contactName' не знайдено."
         val intent = Intent(Intent.ACTION_SENDTO).apply {
             data = Uri.parse("smsto:$number")

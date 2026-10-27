@@ -16,6 +16,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
     private val appRepo = AppRepository(context)
     private val wildRiftRepo = WildRiftRepository(context)
     private val notesStorage = com.dynamicai.launcher.note.NotesStorage(context)
+    private val shizuku = com.dynamicai.launcher.system.ShizukuManager(context)
 
     private val toolsDescription = """
         Доступні інструменти:

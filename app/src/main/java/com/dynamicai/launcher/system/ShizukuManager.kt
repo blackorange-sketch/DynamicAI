@@ -366,4 +366,29 @@ class ShizukuManager(private val context: Context) {
             false
         }
     }
+
+    /**
+     * Виконує shell-команду з правами Shizuku (ADB).
+     */
+    suspend fun execShell(command: String): String = withContext(Dispatchers.IO) {
+        if (!isShizukuAvailable() || !hasPermission()) {
+            Log.e(TAG, "Shizuku недоступний для execShell")
+            return@withContext "ERROR: No Shizuku permission"
+        }
+        try {
+            val process = Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
+            val output = process.inputStream.bufferedReader().readText().trim()
+            val error = process.errorStream.bufferedReader().readText().trim()
+            process.waitFor()
+            if (error.isNotEmpty()) {
+                Log.e(TAG, "Shell error: $error")
+                return@withContext "ERROR: $error"
+            }
+            Log.d(TAG, "Shell OK: $command -> $output")
+            return@withContext if (output.isEmpty()) "OK" else output
+        } catch (t: Throwable) {
+            Log.e(TAG, "execShell failed: ${t.message}", t)
+            return@withContext "ERROR: ${t.message}"
+        }
+    }
 }

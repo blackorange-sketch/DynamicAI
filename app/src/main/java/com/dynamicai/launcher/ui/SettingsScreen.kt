@@ -117,6 +117,7 @@ fun SettingsScreen(
         var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
         LaunchedEffect(Unit) { installedApps = AppRepository(ctx).loadCached() }
 
+        if (initialCategory == "system" || initialCategory == null) {
         GlassSectionHeader("Застосунки за замовчуванням")
         GlassCard {
             AppPickerRow("Музика", settings.defaultMusicApp, installedApps, Icons.Default.PlayArrow, Color(0xFF1DB954)) {
@@ -171,6 +172,8 @@ fun SettingsScreen(
             )
         }
 
+        }
+        if (initialCategory == "tools" || initialCategory == null) {
         GlassSectionHeader("Нотатки")
         GlassCard {
             Row(
@@ -187,6 +190,8 @@ fun SettingsScreen(
             }
         }
 
+        }
+        if (initialCategory == "tools" || initialCategory == null) {
         GlassSectionHeader("Макроси")
         GlassCard {
             Row(
@@ -204,7 +209,11 @@ fun SettingsScreen(
         }
 
         // ==== Погода ====
+        }
+        if (initialCategory == "tools" || initialCategory == null) {
         GlassSectionHeader("🧩 Віджети та Інструменти")
+        }
+        if (initialCategory == "tools" || initialCategory == null) {
         GlassSectionHeader("Погода")
         GlassCard {
             SwitchRow("Показувати погоду", settings.showWeather, Icons.Default.Star, Color(0xFFFFB300)) {
@@ -224,7 +233,11 @@ fun SettingsScreen(
         }
 
         // ==== Фон лаунчера ====
+        }
+        if (initialCategory == "appearance" || initialCategory == null) {
         GlassSectionHeader("🎨 Зовнішній вигляд")
+        }
+        if (initialCategory == "appearance" || initialCategory == null) {
         GlassSectionHeader("Фон лаунчера")
         GlassCard {
             SizeSliderRow(
@@ -237,6 +250,8 @@ fun SettingsScreen(
         }
 
         // ==== Розміри ====
+        }
+        if (initialCategory == "appearance" || initialCategory == null) {
         GlassSectionHeader("Розміри")
         GlassCard {
             SizeSliderRow(
@@ -270,6 +285,8 @@ fun SettingsScreen(
         }
 
         // ==== Вигляд ====
+        }
+        if (initialCategory == "appearance" || initialCategory == null) {
         GlassSectionHeader("Вигляд")
         GlassCard {
             SwitchRow("Показувати кнопку Recent", settings.showRecentButton, Icons.Default.Menu, Color(0xFF9C27B0)) {
@@ -287,6 +304,8 @@ fun SettingsScreen(
         }
 
         // ==== Плаваючий док ====
+        }
+        if (initialCategory == "appearance" || initialCategory == null) {
         GlassSectionHeader("Плаваючий док")
         GlassCard {
             if (!overlayPermissionGranted) {
@@ -341,6 +360,8 @@ fun SettingsScreen(
         }
 
         // ==== Енергозбереження ====
+        }
+        if (initialCategory == "system" || initialCategory == null) {
         GlassSectionHeader("Енергозбереження")
         GlassCard {
             SwitchRow("Пауза при вимкненому екрані", settings.wpPauseOnScreenOff, Icons.Default.Star, Color(0xFF607D8B)) {
@@ -357,9 +378,13 @@ fun SettingsScreen(
 
         // ==== Дії ====
         GlassSectionHeader("⚙️ Система")
+        }
+        if (initialCategory == "system" || initialCategory == null) {
         GlassSectionHeader("Shizuku")
         ShizukuTestRow()
 
+        }
+        if (initialCategory == "system" || initialCategory == null) {
         GlassSectionHeader("Дії")
         GlassCard {
             ActionRow("Оновити контакти", Icons.Default.Person, Color(0xFF4CAF50), onRefreshContacts)
@@ -368,6 +393,8 @@ fun SettingsScreen(
         }
 
         // ==== LLM ====
+        }
+        if (initialCategory == "system" || initialCategory == null) {
         GlassSectionHeader("Дозволи")
         GlassCard {
             val ctx = LocalContext.current
@@ -413,9 +440,13 @@ fun SettingsScreen(
             )
         }
 
+        }
+        if (initialCategory == "system" || initialCategory == null) {
         GlassSectionHeader("Bluetooth")
         BluetoothTestRow()
 
+        }
+        if (initialCategory == "ai" || initialCategory == null) {
         GlassSectionHeader("🤖 ШІ та Асистент")
                 GlassSectionHeader("🫧 Плаваючий асистент")
         GlassCard {
@@ -464,6 +495,8 @@ fun SettingsScreen(
             }
         }
 
+        }
+                if (initialCategory == "ai" || initialCategory == null) {
                 GlassSectionHeader("🌅 Ранковий брифінг")
         GlassCard {
             val wakeDetector = remember { WakeUpDetector(ctx) }
@@ -504,6 +537,8 @@ fun SettingsScreen(
             }
         }
 
+        }
+        if (initialCategory == "tools" || initialCategory == null) {
         GlassSectionHeader("🧩 Розширення")
         GlassCard {
             val context = androidx.compose.ui.platform.LocalContext.current
@@ -526,6 +561,8 @@ fun SettingsScreen(
             }
         }
 
+        }
+        if (initialCategory == "ai" || initialCategory == null) {
         GlassSectionHeader("Локальна LLM")
         GlassCard {
             val downloadedModels = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)
@@ -1317,5 +1354,6 @@ private fun AppPickerRow(
             onPick = { onPick(it); showDialog = false },
             onDismiss = { showDialog = false }
         )
+        }
     }
 }

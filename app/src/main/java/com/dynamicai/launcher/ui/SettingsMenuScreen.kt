@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -25,10 +27,22 @@ fun SettingsMenuScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Brush.verticalGradient(listOf(Color(0xFF14141E), Color(0xFF050505))))
-            .statusBarsPadding()
-            .padding(16.dp)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        // Фонові розмиті плями (Liquid Glass)
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(
+                brush = Brush.radialGradient(listOf(Color(0xFF2196F3).copy(alpha = 0.08f), Color.Transparent)),
+                radius = 600f,
+                center = Offset(size.width * 0.8f, size.height * 0.2f)
+            )
+            drawCircle(
+                brush = Brush.radialGradient(listOf(Color(0xFFE91E63).copy(alpha = 0.08f), Color.Transparent)),
+                radius = 600f,
+                center = Offset(size.width * 0.2f, size.height * 0.8f)
+            )
+        }
+
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -57,8 +71,9 @@ private fun CategoryCard(icon: String, title: String, subtitle: String, color: C
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
+            // Напівпрозорий фон + рамка для ефекту скла
             .background(Color.White.copy(alpha = 0.05f))
-            .border(0.5.dp, color.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+            .border(0.5.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
             .padding(20.dp),
         verticalAlignment = Alignment.CenterVertically

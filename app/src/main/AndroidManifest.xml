@@ -229,5 +229,20 @@
             android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Floating JARVIS assistant" />
         </service>
+    
+        <receiver
+            android:name=".morning.WakeUpReceiver"
+            android:exported="false"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.USER_PRESENT" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".morning.MorningBriefingService"
+            android:exported="false"
+            android:foregroundServiceType="shortService" />
     </application>
 </manifest>

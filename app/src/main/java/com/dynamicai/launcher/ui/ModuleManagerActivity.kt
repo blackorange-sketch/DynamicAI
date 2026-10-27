@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -50,7 +51,7 @@ fun ModuleManagerScreen(onClose: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF14141E), Color(0xFF050505))))
+            .background(Brush.verticalGradient(listOf(AppTheme.colors.backdropStart, AppTheme.colors.backdropEnd)))
     ) {
         Column(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)) {
             Row(
@@ -58,8 +59,8 @@ fun ModuleManagerScreen(onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("🧩 Модулі", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text("✕", color = Color.White.copy(alpha = 0.6f), fontSize = 24.sp, modifier = Modifier.padding(8.dp).clickable(onClick = onClose))
+                Text("🧩 Модулі", color = AppTheme.colors.textPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text("✕", color = AppTheme.colors.textSecondary, fontSize = 24.sp, modifier = Modifier.padding(8.dp).clickable(onClick = onClose))
             }
             Spacer(Modifier.height(16.dp))
 
@@ -73,24 +74,24 @@ fun ModuleManagerScreen(onClose: () -> Unit) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color.White.copy(alpha = 0.05f))
-                            .border(0.5.dp, if (isInstalled) Color(0xFF4CAF50).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+                            .background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
+                            .border(0.5.dp, if (isInstalled) AppTheme.colors.success.copy(alpha = 0.3f) else AppTheme.colors.glassBorder.copy(alpha = 0.7f), RoundedCornerShape(16.dp))
                             .padding(16.dp)
                     ) {
                         Column {
-                            Text(module.name, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                            Text(module.description, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                            Text(module.name, color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                            Text(module.description, color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                             Spacer(Modifier.height(8.dp))
 
                             if (isDownloading) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color(0xFF64B5F6), strokeWidth = 2.dp)
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = AppTheme.colors.accent, strokeWidth = 2.dp)
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Завантаження...", color = Color(0xFF64B5F6), fontSize = 12.sp)
+                                    Text("Завантаження...", color = AppTheme.colors.accent, fontSize = 12.sp)
                                 }
                             } else if (isInstalled) {
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Встановлено (${sizeMb} МБ)", color = Color(0xFF4CAF50), fontSize = 12.sp)
+                                    Text("Встановлено (${sizeMb} МБ)", color = AppTheme.colors.success, fontSize = 12.sp)
                                     Row {
                                         TextButton(onClick = { 
                                             scope.launch {
@@ -99,13 +100,13 @@ fun ModuleManagerScreen(onClose: () -> Unit) {
                                                 downloadingModule = null
                                                 refresh++
                                             }
-                                        }) { Text("Оновити", color = Color(0xFF64B5F6), fontSize = 12.sp) }
-                                        TextButton(onClick = { showDeleteDialog = module }) { Text("Видалити", color = Color(0xFFFF5252), fontSize = 12.sp) }
+                                        }) { Text("Оновити", color = AppTheme.colors.accent, fontSize = 12.sp) }
+                                        TextButton(onClick = { showDeleteDialog = module }) { Text("Видалити", color = AppTheme.colors.danger, fontSize = 12.sp) }
                                     }
                                 }
                             } else {
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Не встановлено", color = Color(0xFFFF9800), fontSize = 12.sp)
+                                    Text("Не встановлено", color = AppTheme.colors.warning, fontSize = 12.sp)
                                     TextButton(onClick = { 
                                         scope.launch {
                                             downloadingModule = module
@@ -113,7 +114,7 @@ fun ModuleManagerScreen(onClose: () -> Unit) {
                                             downloadingModule = null
                                             refresh++
                                         }
-                                    }) { Text("Завантажити", color = Color(0xFF64B5F6), fontSize = 12.sp) }
+                                    }) { Text("Завантажити", color = AppTheme.colors.accent, fontSize = 12.sp) }
                                 }
                             }
                         }
@@ -125,17 +126,17 @@ fun ModuleManagerScreen(onClose: () -> Unit) {
         if (showDeleteDialog != null) {
             AlertDialog(
                 onDismissRequest = { showDeleteDialog = null },
-                containerColor = Color(0xFF1A1A1A),
-                title = { Text("Видалити модуль?", color = Color.White) },
-                text = { Text("Ви впевнені? Це звільнить місце, але функція перестане працювати.", color = Color.White.copy(alpha = 0.7f)) },
+                containerColor = AppTheme.colors.surface,
+                title = { Text("Видалити модуль?", color = AppTheme.colors.textPrimary) },
+                text = { Text("Ви впевнені? Це звільнить місце, але функція перестане працювати.", color = AppTheme.colors.textPrimary.copy(alpha = 0.7f)) },
                 confirmButton = {
                     TextButton(onClick = {
                         ModuleManager.deleteModule(ctx, showDeleteDialog!!)
                         showDeleteDialog = null
                         refresh++
-                    }) { Text("Видалити", color = Color(0xFFFF5252)) }
+                    }) { Text("Видалити", color = AppTheme.colors.danger) }
                 },
-                dismissButton = { TextButton(onClick = { showDeleteDialog = null }) { Text("Скасувати", color = Color.White.copy(alpha = 0.6f)) } }
+                dismissButton = { TextButton(onClick = { showDeleteDialog = null }) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
             )
         }
     }

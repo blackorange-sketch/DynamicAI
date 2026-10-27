@@ -1,5 +1,6 @@
 package com.dynamicai.launcher
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.lifecycleScope
@@ -87,44 +88,44 @@ fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButtonBack(onClose)
             Spacer(Modifier.width(8.dp))
-            Text("🎮 Wild Rift — поради", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("🎮 Wild Rift — поради", color = AppTheme.colors.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
         
         Spacer(Modifier.height(8.dp))
         
         // Мій чемпіон
-        Text("Твій чемпіон", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
+        Text("Твій чемпіон", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .background(Color(0xFF1A1A1A))
-                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
+                .background(AppTheme.colors.surface)
+                .border(1.dp, AppTheme.colors.glassBorder, RoundedCornerShape(14.dp))
                 .clickable { showMyChampionPicker = true }
                 .padding(16.dp)
         ) {
             Text(
                 myChampion?.let { "${repo.localizedChampionName(it)} — ${it.displayRoles}" } ?: "Обрати…",
-                color = if (myChampion != null) Color.White else Color.White.copy(alpha = 0.4f),
+                color = if (myChampion != null) AppTheme.colors.textPrimary else AppTheme.colors.textSecondary,
                 fontSize = 15.sp
             )
         }
         
         // Вороги
-        Text("Ворожа команда (${enemies.size})", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
+        Text("Ворожа команда (${enemies.size})", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
         enemies.forEach { enemy ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF1A1A1A))
+                    .background(AppTheme.colors.surface)
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(enemy.id, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                Text(enemy.displayRoles, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                Text(enemy.id, color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Text(enemy.displayRoles, color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 Spacer(Modifier.width(8.dp))
-                Text("✕", color = Color(0xFFFF8A80), fontSize = 16.sp,
+                Text("✕", color = AppTheme.colors.danger, fontSize = 16.sp,
                     modifier = Modifier.clickable { enemies = enemies - enemy })
             }
         }
@@ -135,12 +136,12 @@ fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0x224CAF50))
-                    .border(1.dp, Color(0xFF4CAF50).copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .border(1.dp, AppTheme.colors.success.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                     .clickable { showEnemyPicker = true }
                     .padding(12.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("+ Додати ворога", color = Color(0xFF4CAF50), fontSize = 14.sp)
+                Text("+ Додати ворога", color = AppTheme.colors.success, fontSize = 14.sp)
             }
         }
         
@@ -151,8 +152,8 @@ fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 .clip(RoundedCornerShape(14.dp))
                 .background(
                     if (myChampion != null && enemies.isNotEmpty())
-                        Color(0xFF2196F3)
-                    else Color(0xFF37474F)
+                        AppTheme.colors.accentDark
+                    else AppTheme.colors.textMuted
                 )
                 .clickable(enabled = myChampion != null && enemies.isNotEmpty() && !isLoading) {
                     isLoading = true
@@ -176,15 +177,15 @@ fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             if (isLoading) {
-                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(color = AppTheme.colors.textPrimary, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
             } else {
-                Text("Отримати поради", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Отримати поради", color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
         }
         
         // Результат
         if (recommendedItems.isNotEmpty()) {
-            Text("Рекомендовані предмети", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
+            Text("Рекомендовані предмети", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -196,15 +197,15 @@ fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
         }
 
         if (advice.isNotBlank()) {
-            Text("Поради", color = Color.White.copy(alpha = 0.6f), fontSize = 13.sp)
+            Text("Поради", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xFF0D0D0D))
+                    .background(AppTheme.colors.background)
                     .padding(16.dp)
             ) {
-                Text(advice, color = Color.White, fontSize = 14.sp)
+                Text(advice, color = AppTheme.colors.textPrimary, fontSize = 14.sp)
             }
         }
     }
@@ -238,7 +239,7 @@ private fun IconButtonBack(onClick: () -> Unit) {
         modifier = Modifier.size(40.dp).clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Text("←", color = Color.White, fontSize = 24.sp)
+        Text("←", color = AppTheme.colors.textPrimary, fontSize = 24.sp)
     }
 }
 
@@ -258,22 +259,22 @@ private fun ChampionPickerDialog(
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, color = Color.White) },
+        title = { Text(title, color = AppTheme.colors.textPrimary) },
         text = {
             Column {
                 BasicTextField(
                     value = query,
                     onValueChange = { query = it },
-                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
-                    cursorBrush = SolidColor(Color(0xFF64B5F6)),
+                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
+                    cursorBrush = SolidColor(AppTheme.colors.accent),
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(AppTheme.colors.textPrimary.copy(alpha = 0.08f))
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                     decorationBox = { inner ->
-                        if (query.isEmpty()) Text("Пошук…", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                        if (query.isEmpty()) Text("Пошук…", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
                         inner()
                     }
                 )
@@ -287,17 +288,17 @@ private fun ChampionPickerDialog(
                                 .padding(vertical = 10.dp, horizontal = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(repo.localizedChampionName(champ), color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                            Text(champ.displayRoles, color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
+                            Text(repo.localizedChampionName(champ), color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                            Text(champ.displayRoles, color = AppTheme.colors.textSecondary, fontSize = 11.sp)
                         }
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Закрити", color = Color(0xFF64B5F6)) }
+            TextButton(onClick = onDismiss) { Text("Закрити", color = AppTheme.colors.accent) }
         },
-        containerColor = Color(0xFF1A1A1A)
+        containerColor = AppTheme.colors.surface
     )
 }
 
@@ -332,7 +333,7 @@ fun ItemIcon(itemId: String, size: Dp = 44.dp) {
             modifier = Modifier
                 .size(size)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF2A2A2A)),
+                .background(AppTheme.colors.surface),
             contentAlignment = Alignment.Center
         ) {
             Text("📦", fontSize = (size.value * 0.4f).sp)

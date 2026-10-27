@@ -1,5 +1,6 @@
 package com.dynamicai.launcher
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import android.content.Intent
 import android.os.Bundle
 import android.speech.RecognitionListener
@@ -198,12 +199,12 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
         // Делікатні скляні плями на фоні (Liquid Glass)
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                brush = Brush.radialGradient(listOf(Color(0xFF64B5F6).copy(alpha = 0.05f), Color.Transparent)),
+                brush = Brush.radialGradient(listOf(AppTheme.colors.accent.copy(alpha = 0.05f), Color.Transparent)),
                 radius = 800f,
                 center = androidx.compose.ui.geometry.Offset(size.width * 0.8f, size.height * 0.2f)
             )
             drawCircle(
-                brush = Brush.radialGradient(listOf(Color(0xFFE91E63).copy(alpha = 0.05f), Color.Transparent)),
+                brush = Brush.radialGradient(listOf(AppTheme.colors.pink.copy(alpha = 0.05f), Color.Transparent)),
                 radius = 800f,
                 center = androidx.compose.ui.geometry.Offset(size.width * 0.2f, size.height * 0.8f)
             )
@@ -227,8 +228,8 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Голосовий асистент", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Text("✕", color = Color.White.copy(alpha = 0.6f), fontSize = 22.sp, modifier = Modifier.padding(8.dp).clickable(onClick = onClose))
+                Text("Голосовий асистент", color = AppTheme.colors.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text("✕", color = AppTheme.colors.textSecondary, fontSize = 22.sp, modifier = Modifier.padding(8.dp).clickable(onClick = onClose))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -243,10 +244,10 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF2196F3).copy(alpha = 0.15f))
+                            .background(AppTheme.colors.accentDark.copy(alpha = 0.15f))
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Text(currentStatus.content, color = Color(0xFF64B5F6), fontSize = 13.sp)
+                        Text(currentStatus.content, color = AppTheme.colors.accent, fontSize = 13.sp)
                     }
                 }
             }
@@ -266,11 +267,11 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                             modifier = Modifier
                                 .widthIn(max = 280.dp)
                                 .clip(RoundedCornerShape(20.dp))
-                                .background(Color.White.copy(alpha = if (isUser) 0.15f else 0.08f))
-                                .border(0.5.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
+                                .background(AppTheme.colors.textPrimary.copy(alpha = if (isUser) 0.15f else 0.08f))
+                                .border(0.5.dp, AppTheme.colors.glassBorder.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
                                 .padding(14.dp)
                         ) {
-                            Text(msg.content, color = Color.White, fontSize = 15.sp)
+                            Text(msg.content, color = AppTheme.colors.textPrimary, fontSize = 15.sp)
                         }
                     }
                 }
@@ -282,8 +283,8 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(24.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
-                    .border(0.5.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
+                    .background(AppTheme.colors.textPrimary.copy(alpha = 0.08f))
+                    .border(0.5.dp, AppTheme.colors.glassBorder, RoundedCornerShape(24.dp))
                     .padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -291,15 +292,15 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-                    textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
-                    cursorBrush = SolidColor(Color.White),
+                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
+                    cursorBrush = SolidColor(AppTheme.colors.textPrimary),
                     decorationBox = { inner ->
-                        if (query.isEmpty()) Text("Запитай або скажи...", color = Color.White.copy(alpha = 0.4f), fontSize = 16.sp)
+                        if (query.isEmpty()) Text("Запитай або скажи...", color = AppTheme.colors.textSecondary, fontSize = 16.sp)
                         inner()
                     }
                 )
                 Box(
-                    modifier = Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF64B5F6).copy(alpha = 0.15f)).clickable { 
+                    modifier = Modifier.size(44.dp).clip(CircleShape).background(AppTheme.colors.accent.copy(alpha = 0.15f)).clickable { 
                         if (query.isNotBlank()) {
                             ChatHistoryManager.addMessage("user", query)
                             val historyStr = messages.dropLast(1).takeLast(10).joinToString("\n") { msg ->
@@ -315,10 +316,10 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                         }
                     },
                     contentAlignment = Alignment.Center
-                ) { Text("➤", color = Color(0xFF64B5F6), fontSize = 20.sp) }
+                ) { Text("➤", color = AppTheme.colors.accent, fontSize = 20.sp) }
                 
                 Box(
-                    modifier = Modifier.size(44.dp).clip(CircleShape).background(if (voiceState == VoiceState.LISTENING) Color(0xFF4CAF50).copy(alpha = 0.2f) else Color.Transparent).clickable { startListening() },
+                    modifier = Modifier.size(44.dp).clip(CircleShape).background(if (voiceState == VoiceState.LISTENING) AppTheme.colors.success.copy(alpha = 0.2f) else Color.Transparent).clickable { startListening() },
                     contentAlignment = Alignment.Center
                 ) { Text("🎤", fontSize = 20.sp) }
             }
@@ -330,9 +331,9 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 LiquidChip("Пошук", Color(0xFF4285F4)) { ctx.startActivity(Intent(Intent.ACTION_WEB_SEARCH)) }
-                LiquidChip("Переклад", Color(0xFFFF9800)) { }
-                LiquidChip("AI", Color(0xFF2196F3)) { }
-                LiquidChip("Wild Rift", Color(0xFF9C27B0)) { ctx.startActivity(Intent(ctx, WildRiftAdvisorActivity::class.java)) }
+                LiquidChip("Переклад", AppTheme.colors.warning) { }
+                LiquidChip("AI", AppTheme.colors.accentDark) { }
+                LiquidChip("Wild Rift", AppTheme.colors.purple) { ctx.startActivity(Intent(ctx, WildRiftAdvisorActivity::class.java)) }
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -346,9 +347,9 @@ fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
     val primaryColor by animateColorAsState(
         targetValue = when (voiceState) {
             VoiceState.LISTENING -> Color(0xFF00E676)
-            VoiceState.SPEAKING -> Color(0xFFFF4081)
+            VoiceState.SPEAKING -> AppTheme.colors.pink
             VoiceState.THINKING -> Color(0xFF00B0FF)
-            else -> Color(0xFF64B5F6)
+            else -> AppTheme.colors.accent
         },
         animationSpec = tween(1000),
         label = "color"
@@ -393,7 +394,7 @@ fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = 0.9f),
+                    AppTheme.colors.textPrimary.copy(alpha = 0.9f),
                     primaryColor.copy(alpha = 0.6f),
                     Color.Transparent
                 ),
@@ -436,7 +437,7 @@ fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
 
         // 6. Скляний блік (тонка дуга для об'єму)
         drawArc(
-            color = Color.White.copy(alpha = 0.3f),
+            color = AppTheme.colors.textMuted,
             startAngle = 200f,
             sweepAngle = 80f,
             useCenter = false,
@@ -468,7 +469,7 @@ fun LiquidChip(label: String, color: Color, onClick: () -> Unit) {
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
-        Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }
 }
 

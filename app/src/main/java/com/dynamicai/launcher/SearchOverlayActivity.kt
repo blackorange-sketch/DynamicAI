@@ -1,5 +1,6 @@
 package com.dynamicai.launcher
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -247,7 +248,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
             if (response != null) {
                 Text(
                     response!!,
-                    color = Color(0xFF64B5F6),
+                    color = AppTheme.colors.accent,
                     fontSize = 14.sp,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
                 )
@@ -260,7 +261,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp))
-                        .background(Color(0xF01A1A1A))
+                        .background(AppTheme.colors.surface.copy(alpha = 0.94f))
                         .padding(vertical = 6.dp)
                 ) {
                     LazyColumn(

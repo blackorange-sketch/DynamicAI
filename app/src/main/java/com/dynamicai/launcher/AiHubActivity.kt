@@ -1,5 +1,6 @@
 package com.dynamicai.launcher
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import android.content.Intent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposeRenderEffect
@@ -158,8 +159,8 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
             // Екран WebView
             Column(modifier = Modifier.fillMaxSize().padding(top = 40.dp)) {
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Пошук", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("Закрити", color = Color(0xFF64B5F6), modifier = Modifier.clickable { webViewUrl = null }, fontSize = 16.sp)
+                    Text("Пошук", color = AppTheme.colors.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Закрити", color = AppTheme.colors.accent, modifier = Modifier.clickable { webViewUrl = null }, fontSize = 16.sp)
                 }
                 AndroidView(
                     factory = { ctx ->
@@ -196,20 +197,20 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0x55101010))
-                            .border(0.5.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                            .background(AppTheme.colors.glassBackground.copy(alpha = 0.33f))
+                            .border(0.5.dp, AppTheme.colors.glassBorder, RoundedCornerShape(16.dp))
                             .padding(16.dp)
                             .heightIn(max = 250.dp)
                             .verticalScroll(rememberScrollState())
                     ) {
                         if (isLoading && aiResponse.isBlank()) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(color = Color(0xFF64B5F6), modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                CircularProgressIndicator(color = AppTheme.colors.accent, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                                 Spacer(Modifier.width(12.dp))
-                                Text("Думаю...", color = Color.White)
+                                Text("Думаю...", color = AppTheme.colors.textPrimary)
                             }
                         } else {
-                            Text(aiResponse, color = Color.White, fontSize = 15.sp)
+                            Text(aiResponse, color = AppTheme.colors.textPrimary, fontSize = 15.sp)
                         }
                     }
                 }
@@ -225,7 +226,7 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                             webViewUrl = "https://duckduckgo.com/?q=${android.net.Uri.encode(query)}"
                         }
                     }
-                    ActionChip("Переклад", Color(0xFFFF9800)) {
+                    ActionChip("Переклад", AppTheme.colors.warning) {
                         onClose()
                         com.dynamicai.launcher.ocr.RegionSelectorOverlay.show(
                             context = vm.getApplication(),
@@ -242,7 +243,7 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                             onCancel = { }
                         )
                     }
-                    ActionChip("🎙️ Розмова", Color(0xFFE91E63)) {
+                    ActionChip("🎙️ Розмова", AppTheme.colors.pink) {
                         try {
                             val app = vm.getApplication<android.app.Application>()
                             app.startActivity(android.content.Intent(app, com.dynamicai.launcher.VoiceChatActivity::class.java).apply {
@@ -253,7 +254,7 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                         }
                         onClose()
                     }
-                    ActionChip("🎮 Wild Rift", Color(0xFF9C27B0)) {
+                    ActionChip("🎮 Wild Rift", AppTheme.colors.purple) {
                         try {
                             val app = vm.getApplication<android.app.Application>()
                             app.startActivity(android.content.Intent(app, com.dynamicai.launcher.WildRiftAdvisorActivity::class.java).apply {
@@ -264,7 +265,7 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                         }
                         onClose()
                     }
-                    ActionChip("AI", Color(0xFF2196F3)) {
+                    ActionChip("AI", AppTheme.colors.accentDark) {
                         if (query.isNotBlank()) {
                             isLoading = true
                             aiResponse = ""
@@ -295,10 +296,10 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(28.dp))
-                        .background(Color(0x40101010))
+                        .background(AppTheme.colors.glassBackground.copy(alpha = 0.25f))
                         .border(
                             width = 0.5.dp,
-                            brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.45f), Color.White.copy(alpha = 0.08f))),
+                            brush = Brush.verticalGradient(listOf(AppTheme.colors.textPrimary.copy(alpha = 0.45f), AppTheme.colors.textPrimary.copy(alpha = 0.08f))),
                             shape = RoundedCornerShape(28.dp)
                         )
                         .padding(horizontal = 20.dp, vertical = 6.dp),
@@ -307,8 +308,8 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                     BasicTextField(
                         value = query,
                         onValueChange = { query = it },
-                        textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
-                        cursorBrush = SolidColor(Color(0xFF64B5F6)),
+                        textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
+                        cursorBrush = SolidColor(AppTheme.colors.accent),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                         keyboardActions = KeyboardActions(onGo = {
@@ -332,7 +333,7 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                             .focusRequester(focusRequester),
                         decorationBox = { inner ->
                             if (query.isEmpty()) {
-                                Text("Запитай або скажи...", color = Color.White.copy(alpha = 0.5f), fontSize = 16.sp)
+                                Text("Запитай або скажи...", color = AppTheme.colors.textSecondary, fontSize = 16.sp)
                             }
                             inner()
                         }
@@ -366,7 +367,7 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
 private fun ActionChip(label: String, color: Color, onClick: () -> Unit) {
     Text(
         text = label,
-        color = Color.White,
+        color = AppTheme.colors.textPrimary,
         fontSize = 13.sp,
         fontWeight = FontWeight.Medium,
         modifier = Modifier

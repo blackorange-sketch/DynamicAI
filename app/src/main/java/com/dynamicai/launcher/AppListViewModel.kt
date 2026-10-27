@@ -181,6 +181,12 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     /** Викликається лениво при першому реальному запиті LLM. */
     suspend fun ensureLlmLoaded(): Boolean {
         if (llm.isReady) return true
+        
+        // Спочатку завантажуємо нативну бібліотеку LLM
+        if (!com.dynamicai.launcher.ocr.NativeLibManager.ensureLlmLoaded(getApplication())) {
+            android.util.Log.e("LLM_DEBUG", "Failed to load LLM native lib")
+            return false
+        }
         android.util.Log.d("LLM_DEBUG", "Checking model file: ${downloader.modelFile.absolutePath}")
         android.util.Log.d("LLM_DEBUG", "Exists: ${downloader.modelFile.exists()}, Size: ${downloader.modelFile.length()} bytes")
         val model = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.find { it.id == currentModelId }

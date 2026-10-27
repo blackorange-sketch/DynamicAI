@@ -12,6 +12,7 @@ import java.util.zip.ZipInputStream
 object NativeLibManager {
     private const val TAG = "NativeLibManager"
     private const val URL = "https://github.com/blackorange-sketch/DynamicAI/releases/download/v1.0-native/native_libs.zip"
+    private const val LLM_URL = "https://github.com/blackorange-sketch/DynamicAI/releases/download/v1.0-llm/llm_libs.zip"
     
     @Volatile private var isLoaded = false
 
@@ -65,6 +66,46 @@ object NativeLibManager {
             return@withContext true
         } catch (e: Throwable) {
             Log.e(TAG, "Load failed: ${e.message}", e)
+            return@withContext false
+        }
+    }
+
+    suspend fun ensureLlmLoaded(context: Context): Boolean = withContext(Dispatchers.IO) {
+        val libDir = File(context.filesDir, "llm_libs")
+        libDir.mkdirs()
+        val libFile = File(libDir, "liblitertlm_jni.so")
+
+        if (!libFile.exists()) {
+            Log.d(TAG, "Downloading LLM lib...")
+            try {
+                val client = OkHttpClient.Builder().build()
+                val request = Request.Builder().url(LLM_URL).build()
+                val response = client.newCall(request).execute()
+                if (!response.isSuccessful) return@withContext false
+
+                response.body?.byteStream()?.let { input ->
+                    java.util.zip.ZipInputStream(input).use { zis ->
+                        var entry = zis.nextEntry
+                        while (entry != null) {
+                            val file = File(libDir, entry.name)
+                            file.parentFile?.mkdirs()
+                            file.outputStream().use { fos -> zis.copyTo(fos) }
+                            entry = zis.nextEntry
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "LLM download failed", e)
+                return@withContext false
+            }
+        }
+
+        try {
+            System.load(libFile.absolutePath)
+            Log.d(TAG, "LLM lib loaded")
+            return@withContext true
+        } catch (e: Throwable) {
+            Log.e(TAG, "LLM load failed", e)
             return@withContext false
         }
     }

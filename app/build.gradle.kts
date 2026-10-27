@@ -8,6 +8,7 @@ android {
         jniLibs {
             excludes += listOf(
                 "**/libtranslate_jni.so",
+                "**/liblitertlm_jni.so",
                 "**/libtesseract.so",
                 "**/libleptonica.so",
                 "**/libjpeg.so",

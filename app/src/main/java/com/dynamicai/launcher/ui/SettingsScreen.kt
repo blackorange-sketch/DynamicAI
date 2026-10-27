@@ -407,20 +407,50 @@ fun SettingsScreen(
         BluetoothTestRow()
 
         GlassSectionHeader("🤖 ШІ та Асистент")
-                GlassSectionHeader("Плаваючий асистент")
+                GlassSectionHeader("🫧 Плаваючий асистент")
         GlassCard {
-            ActionRow("Увімкнути плаваючу кулю", androidx.compose.material.icons.Icons.Default.Star, Color(0xFF00E676)) {
-                if (Settings.canDrawOverlays(ctx)) {
-                    val intent = Intent(ctx, com.dynamicai.launcher.overlay.FloatingOrbService::class.java)
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                        ctx.startForegroundService(intent)
-                    } else {
-                        ctx.startService(intent)
-                    }
-                } else {
-                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}"))
-                    ctx.startActivity(intent)
+            val prefs = remember { ctx.getSharedPreferences("floating_orb", android.content.Context.MODE_PRIVATE) }
+            var orbEnabled by remember { mutableStateOf(prefs.getBoolean("enabled", false)) }
+            
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Плаваюча куля JARVIS", color = Color.White, fontSize = 14.sp)
+                    Text(
+                        if (orbEnabled) "Активна — куля на екрані" else "Вимкнена",
+                        color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp
+                    )
                 }
+                androidx.compose.material3.Switch(
+                    checked = orbEnabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled) {
+                            if (!Settings.canDrawOverlays(ctx)) {
+                                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}"))
+                                ctx.startActivity(intent)
+                                return@Switch
+                            }
+                            val intent = Intent(ctx, com.dynamicai.launcher.overlay.FloatingOrbService::class.java)
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                ctx.startForegroundService(intent)
+                            } else {
+                                ctx.startService(intent)
+                            }
+                            orbEnabled = true
+                            prefs.edit().putBoolean("enabled", true).apply()
+                        } else {
+                            val intent = Intent(ctx, com.dynamicai.launcher.overlay.FloatingOrbService::class.java)
+                            ctx.stopService(intent)
+                            orbEnabled = false
+                            prefs.edit().putBoolean("enabled", false).apply()
+                        }
+                    },
+                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                        checkedThumbColor = Color(0xFF00E676)
+                    )
+                )
             }
         }
 

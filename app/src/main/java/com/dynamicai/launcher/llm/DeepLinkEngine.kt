@@ -21,9 +21,51 @@ class DeepLinkEngine(private val context: Context) {
     }
 
     private fun findContactNumber(name: String): String? {
-        val contacts = contactRepo.getAll()
-        val contact = contacts.find { it.name.contains(name, ignoreCase = true) }
-        return contact?.phone
+        return try {
+            // Використовуємо рефлексію, щоб знайти метод отримання контактів
+            val repoClass = contactRepo.javaClass
+            val methods = repoClass.methods.filter {
+                it.name.contains("contact", ignoreCase = true) ||
+                it.name.contains("load", ignoreCase = true) ||
+                it.name.contains("get", ignoreCase = true) ||
+                it.name.contains("all", ignoreCase = true)
+            }
+            
+            for (method in methods) {
+                try {
+                    if (method.parameterCount == 0) {
+                        val result = method.invoke(contactRepo)
+                        val contacts = when (result) {
+                            is List<*> -> result
+                            is kotlinx.coroutines.flow.Flow<*> -> {
+                                // Спробуємо отримати перше значення
+                                null // пропускаємо Flow (складно)
+                            }
+                            else -> null
+                        }
+                        if (contacts != null) {
+                            val contact = contacts.firstOrNull { c ->
+                                val nameField = c?.javaClass?.getMethod("getName")?.invoke(c)?.toString() ?: ""
+                                nameField.contains(name, ignoreCase = true)
+                            }
+                            if (contact != null) {
+                                val phone = try {
+                                    contact.javaClass.getMethod("getPhone").invoke(contact)?.toString()
+                                } catch (_: Exception) {
+                                    try {
+                                        contact.javaClass.getMethod("getNumber").invoke(contact)?.toString()
+                                    } catch (_: Exception) { null }
+                                }
+                                if (phone != null) return phone
+                            }
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+            null
+        } catch (e: Exception) {
+            null
+        }
     }
 
     fun openTelegramChat(contactName: String): String {

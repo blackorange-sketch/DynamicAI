@@ -2,6 +2,8 @@ package com.dynamicai.launcher
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -43,6 +45,13 @@ class WildRiftAdvisorActivity : ComponentActivity() {
     private val vm: AppListViewModel by viewModels()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Перевіряємо та завантажуємо ресурси Wild Rift
+        lifecycleScope.launch {
+            if (!com.dynamicai.launcher.data.AssetDownloader.downloadWildRiftAssets(this@WildRiftAdvisorActivity)) {
+                android.widget.Toast.makeText(this@WildRiftAdvisorActivity, "Помилка завантаження ресурсів Wild Rift", android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
         enableEdgeToEdge()
         setContent {
             WildRiftAdvisorScreen(vm, onClose = { finish() })

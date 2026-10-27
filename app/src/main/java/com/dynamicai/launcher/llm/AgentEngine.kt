@@ -348,6 +348,20 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     val now = java.text.SimpleDateFormat("HH:mm", java.util.Locale("uk", "UA")).format(java.util.Date())
                     "Час: $now | Заряд: $level% | Мережа: $netStatus"
                 }
+                                toolCall.startsWith("flipCoin") -> {
+                    val result = if (Math.random() > 0.5) "Орел" else "Решка"
+                    "Підкидаю монетку... Випало: $result!"
+                }
+                toolCall.startsWith("rollDice") -> {
+                    val result = (1..6).random()
+                    "Кидаю кубик... Випало: $result!"
+                }
+                toolCall.startsWith("randomNumber") -> {
+                    val min = getArg(toolCall, "min").toIntOrNull() ?: 1
+                    val max = getArg(toolCall, "max").toIntOrNull() ?: 100
+                    val result = (min..max).random()
+                    "Ваше випадкове число: $result"
+                }
                 toolCall.startsWith("getWildRiftAdvice") -> {
                     val me = getArg(toolCall, "myChampion")
                     val enemies = getArg(toolCall, "enemies")

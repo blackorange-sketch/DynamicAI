@@ -126,6 +126,14 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
 
     LaunchedEffect(Unit) { 
         vm.tts // прогрів
+        // Вітання Джарвіса при старті
+        val greeting = when ((0..2).random()) {
+            0 -> "Системи онлайн. Чим можу допомогти?"
+            1 -> "Слухаю вас."
+            else -> "Я готовий."
+        }
+        onMessage(ChatMessage("assistant", greeting))
+        vm.tts.speak(greeting)
         startListening() 
     }
 

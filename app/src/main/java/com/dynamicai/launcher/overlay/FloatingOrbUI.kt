@@ -78,10 +78,11 @@ fun FloatingOrb(
                     .clickable { onExpandChange(true) },
                 contentAlignment = Alignment.Center
             ) {
+                val primaryColor = AppTheme.colors.successLight
+                val _orbTextPrimary = AppTheme.colors.textPrimary
                 Canvas(modifier = Modifier.size(48.dp)) {
                     val center = this.center
                     val baseRadius = size.minDimension * 0.4f
-                    val primaryColor = AppTheme.colors.successLight
 
                     // Дуже делікатне світіння (ледь помітне)
                     drawCircle(
@@ -94,7 +95,7 @@ fun FloatingOrb(
                     // Ядро
                     drawCircle(
                         brush = Brush.radialGradient(
-                            colors = listOf(AppTheme.colors.textPrimary.copy(alpha = 0.9f), primaryColor.copy(alpha = 0.6f), Color.Transparent),
+                            colors = listOf(_orbTextPrimary.copy(alpha = 0.9f), primaryColor.copy(alpha = 0.6f), Color.Transparent),
                             center = Offset(center.x - baseRadius * 0.2f, center.y - baseRadius * 0.2f), radius = baseRadius * 0.7f * pulse
                         ),
                         radius = baseRadius * 0.7f * pulse, center = center

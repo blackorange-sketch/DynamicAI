@@ -197,14 +197,16 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
             .background(AppTheme.colors.backdropEnd)
     ) {
         // Делікатні скляні плями на фоні (Liquid Glass)
+        val _vcAccentGlow = AppTheme.colors.accent
+        val _vcPinkGlow = AppTheme.colors.pink
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                brush = Brush.radialGradient(listOf(AppTheme.colors.accent.copy(alpha = 0.05f), Color.Transparent)),
+                brush = Brush.radialGradient(listOf(_vcAccentGlow.copy(alpha = 0.05f), Color.Transparent)),
                 radius = 800f,
                 center = androidx.compose.ui.geometry.Offset(size.width * 0.8f, size.height * 0.2f)
             )
             drawCircle(
-                brush = Brush.radialGradient(listOf(AppTheme.colors.pink.copy(alpha = 0.05f), Color.Transparent)),
+                brush = Brush.radialGradient(listOf(_vcPinkGlow.copy(alpha = 0.05f), Color.Transparent)),
                 radius = 800f,
                 center = androidx.compose.ui.geometry.Offset(size.width * 0.2f, size.height * 0.8f)
             )
@@ -374,6 +376,8 @@ fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
         animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse"
     )
 
+    val _jarvisTextPrimary = AppTheme.colors.textPrimary
+    val _jarvisTextMuted = AppTheme.colors.textMuted
     Canvas(modifier = modifier) {
         val center = this.center
         // Зменшуємо базовий радіус, щоб кільця точно влазили в екран
@@ -394,7 +398,7 @@ fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    AppTheme.colors.textPrimary.copy(alpha = 0.9f),
+                    _jarvisTextPrimary.copy(alpha = 0.9f),
                     primaryColor.copy(alpha = 0.6f),
                     Color.Transparent
                 ),
@@ -437,7 +441,7 @@ fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
 
         // 6. Скляний блік (тонка дуга для об'єму)
         drawArc(
-            color = AppTheme.colors.textMuted,
+            color = _jarvisTextMuted,
             startAngle = 200f,
             sweepAngle = 80f,
             useCenter = false,

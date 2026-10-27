@@ -9,6 +9,10 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import android.widget.Toast
 import android.view.Gravity
 import android.view.WindowManager
 import kotlin.math.roundToInt
@@ -41,12 +45,22 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
     private var currentX = 0f
     private var currentY = 0f
+    
+    private val scope = CoroutineScope(Dispatchers.Main)
+    private var messages by mutableStateOf(listOf<Pair<String, String>>())
+    private var isThinking by mutableStateOf(false)
+    private lateinit var chatEngine: com.dynamicai.launcher.llm.ChatEngine
+    private lateinit var tts: com.dynamicai.launcher.voice.TtsManager
+    private var speechRecognizer: android.speech.SpeechRecognizer? = null
 
     override fun onCreate() {
         super.onCreate()
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.currentState = Lifecycle.State.CREATED
         startForegroundNotification()
+
+        chatEngine = com.dynamicai.launcher.AppListViewModel.getSharedChatEngine(applicationContext)
+        tts = com.dynamicai.launcher.voice.TtsManager(applicationContext)
 
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         createOverlay()
@@ -80,6 +94,8 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 var isExpanded by remember { mutableStateOf(false) }
                 FloatingOrb(
                     isExpanded = isExpanded,
+                    messages = messages,
+                    isThinking = isThinking,
                     onExpandChange = {
                         isExpanded = it
                         updateWindowSize(it)
@@ -90,7 +106,9 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         params.x = currentX.roundToInt()
                         params.y = currentY.roundToInt()
                         windowManager.updateViewLayout(composeView, params)
-                    }
+                    },
+                    onSendMessage = { text -> processQuery(text) },
+                    onMicClick = { startListening() }
                 )
             }
         }
@@ -122,11 +140,69 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         startForeground(1, notification)
     }
 
+
+    private fun processQuery(text: String) {
+        messages = messages + ("user" to text)
+        isThinking = true
+        scope.launch {
+            try {
+                if (!com.dynamicai.launcher.AppListViewModel.getSharedLlm(applicationContext).isReady) {
+                    val err = "Модель ШІ не завантажена."
+                    messages = messages + ("assistant" to err)
+                    isThinking = false
+                    tts.speak(err)
+                    return@launch
+                }
+                val history = messages.takeLast(10).joinToString("\n") { 
+                    if (it.first == "user") "Користувач: ${it.second}" else "Асистент: ${it.second}" 
+                }
+                val answer = chatEngine.answerWithAgent(text, history)
+                messages = messages + ("assistant" to answer)
+                isThinking = false
+                tts.speak(answer)
+            } catch (e: Exception) {
+                messages = messages + ("assistant" to "Помилка: ${e.message}")
+                isThinking = false
+            }
+        }
+    }
+
+    private fun startListening() {
+        if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this)) return
+        speechRecognizer?.destroy()
+        speechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this).apply {
+            setRecognitionListener(object : android.speech.RecognitionListener {
+                override fun onReadyForSpeech(params: android.os.Bundle?) {}
+                override fun onBeginningOfSpeech() {
+                    if (tts.isReady) tts.stop()
+                }
+                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onBufferReceived(buffer: ByteArray?) {}
+                override fun onEndOfSpeech() {}
+                override fun onError(error: Int) { isThinking = false }
+                override fun onResults(results: android.os.Bundle?) {
+                    val text = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
+                    if (text.isNotBlank()) processQuery(text)
+                }
+                override fun onPartialResults(partialResults: android.os.Bundle?) {}
+                override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
+            })
+        }
+        val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
+        }
+        speechRecognizer?.startListening(intent)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        speechRecognizer?.destroy()
+        tts.shutdown()
         composeView?.let { windowManager.removeView(it) }
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
     }
+
 
     override fun onBind(intent: Intent?): IBinder? = null
 }

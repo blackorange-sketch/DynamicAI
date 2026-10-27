@@ -97,10 +97,14 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 override fun onEndOfSpeech() {}
                 override fun onError(error: Int) {
                     voiceState = VoiceState.IDLE
-                    // Автоматично перезапускаємо мікрофон через 1.5 сек, якщо не розпізнано
-                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                        if (voiceState == VoiceState.IDLE) startListening()
-                    }, 1500)
+                    // Перезапускаємо мікрофон ТІЛЬКИ якщо екран активний
+                    if (shouldListen.value) {
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            if (shouldListen.value && voiceState == VoiceState.IDLE) {
+                                try { startListening() } catch (_: Exception) {}
+                            }
+                        }, 1500)
+                    }
                 }
                 override fun onResults(results: Bundle?) {
                     val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""

@@ -17,10 +17,10 @@ object ModelRepository {
     val AVAILABLE_MODELS = listOf(
         LlmModel(
             id = "gemma-4-E2B",
-            name = "Gemma 4 E2B (Швидка)",
-            url = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
-            sizeBytes = 1_800_000_000L,
-            fileName = "gemma-4-E2B-it.litertlm"
+            name = "Gemma 4 E2B (Швидка, GPU)",
+            url = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-gpu.litertlm",
+            sizeBytes = 2_008_000_000L,
+            fileName = "gemma-4-E2B-it-gpu.litertlm"
         ),
         LlmModel(
             id = "qwen3.5-4b-int4",

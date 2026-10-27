@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -37,8 +38,8 @@ fun GlassCircleIcon(
             .background(
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.12f),
-                        Color.White.copy(alpha = 0.03f)
+                        AppTheme.colors.textPrimary.copy(alpha = 0.12f),
+                        AppTheme.colors.textPrimary.copy(alpha = 0.03f)
                     )
                 )
             )
@@ -46,8 +47,8 @@ fun GlassCircleIcon(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.35f),
-                        Color.White.copy(alpha = 0.1f)
+                        AppTheme.colors.textPrimary.copy(alpha = 0.35f),
+                        AppTheme.colors.glassBorder.copy(alpha = 0.7f)
                     )
                 ),
                 shape = CircleShape
@@ -73,8 +74,8 @@ fun GlassCard(
                 // Темний фон, як у решті деталей лаунчера (наприклад, панель пошуку)
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xE61A1A1A), // ~90% непрозорості
-                        Color(0xCC0D0D0D)  // ~80% непрозорості
+                        AppTheme.colors.glassBackground, // ~90% непрозорості
+                        AppTheme.colors.glassBackgroundAlt  // ~80% непрозорості
                     )
                 )
             )
@@ -82,8 +83,8 @@ fun GlassCard(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.25f), // Легка світла рамка
-                        Color.White.copy(alpha = 0.05f)
+                        AppTheme.colors.glassBorder, // Легка світла рамка
+                        AppTheme.colors.glassBorder.copy(alpha = 0.3f)
                     )
                 ),
                 shape = RoundedCornerShape(cornerRadius)
@@ -110,11 +111,11 @@ fun GlassButton(
             .background(
                 brush = Brush.verticalGradient(
                     if (accent) listOf(
-                        Color(0xFF64B5F6).copy(alpha = 0.35f),
-                        Color(0xFF2196F3).copy(alpha = 0.15f)
+                        AppTheme.colors.accent.copy(alpha = 0.35f),
+                        AppTheme.colors.accentDark.copy(alpha = 0.15f)
                     ) else listOf(
-                        Color.White.copy(alpha = 0.12f),
-                        Color.White.copy(alpha = 0.04f)
+                        AppTheme.colors.textPrimary.copy(alpha = 0.12f),
+                        AppTheme.colors.textPrimary.copy(alpha = 0.04f)
                     )
                 )
             )
@@ -122,11 +123,11 @@ fun GlassButton(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     if (accent) listOf(
-                        Color(0xFF64B5F6).copy(alpha = 0.6f),
-                        Color(0xFF64B5F6).copy(alpha = 0.2f)
+                        AppTheme.colors.accent.copy(alpha = 0.6f),
+                        AppTheme.colors.accent.copy(alpha = 0.2f)
                     ) else listOf(
-                        Color.White.copy(alpha = 0.3f),
-                        Color.White.copy(alpha = 0.08f)
+                        AppTheme.colors.glassBorder,
+                        AppTheme.colors.glassBorder.copy(alpha = 0.5f)
                     )
                 ),
                 shape = RoundedCornerShape(16.dp)
@@ -136,7 +137,7 @@ fun GlassButton(
     ) {
         Text(
             label,
-            color = if (accent) Color(0xFFB3E5FC) else Color.White,
+            color = if (accent) AppTheme.colors.accentLight else AppTheme.colors.textPrimary,
             fontSize = 15.sp
         )
     }
@@ -149,7 +150,7 @@ fun GlassButton(
 fun GlassSectionHeader(text: String) {
     Text(
         text.uppercase(),
-        color = Color(0xFF64B5F6),
+        color = AppTheme.colors.accent,
         fontSize = 11.sp,
         letterSpacing = 1.5.sp,
         modifier = Modifier.padding(start = 8.dp, top = 20.dp, bottom = 8.dp)

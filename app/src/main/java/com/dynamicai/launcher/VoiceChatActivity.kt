@@ -27,6 +27,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
@@ -110,43 +115,35 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.radialGradient(colors = listOf(Color(0xFF14141E), Color(0xFF050505)), radius = 1200f))
+            .background(Color(0xFF050505)) // Майже чорний фон
     ) {
+        // Делікатні скляні плями на фоні (Liquid Glass)
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                brush = Brush.radialGradient(listOf(Color(0xFF64B5F6).copy(alpha = 0.1f), Color.Transparent)),
-                radius = 400f,
-                center = androidx.compose.ui.geometry.Offset(size.width * 0.2f, size.height * 0.3f)
+                brush = Brush.radialGradient(listOf(Color(0xFF64B5F6).copy(alpha = 0.05f), Color.Transparent)),
+                radius = 800f,
+                center = androidx.compose.ui.geometry.Offset(size.width * 0.8f, size.height * 0.2f)
             )
             drawCircle(
-                brush = Brush.radialGradient(listOf(Color(0xFFE91E63).copy(alpha = 0.1f), Color.Transparent)),
-                radius = 400f,
-                center = androidx.compose.ui.geometry.Offset(size.width * 0.8f, size.height * 0.7f)
+                brush = Brush.radialGradient(listOf(Color(0xFFE91E63).copy(alpha = 0.05f), Color.Transparent)),
+                radius = 800f,
+                center = androidx.compose.ui.geometry.Offset(size.width * 0.2f, size.height * 0.8f)
             )
         }
 
-        // Фонова куля
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.BottomCenter
-        ) {
-            val bgOrbColor = when (voiceState) {
-                VoiceState.LISTENING -> Color(0xFF4CAF50)
-                VoiceState.SPEAKING -> Color(0xFFE91E63)
-                VoiceState.THINKING -> Color(0xFF2196F3)
-                else -> Color.Gray
-            }
-            Box(
-                modifier = Modifier
-                    .padding(bottom = 100.dp)
-                    .size(300.dp)
-                    .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }
-                    .clip(CircleShape)
-                    .background(Brush.radialGradient(listOf(bgOrbColor.copy(alpha = 0.15f), Color.Transparent)))
-            )
-        }
+        // JARVIS Орб на задньому плані
+        JarvisOrb(
+            voiceState = voiceState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.6f)
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 40.dp)
+        )
 
         Column(
+            modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)
+        ) {
             modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)
         ) {
             Row(
@@ -282,3 +279,123 @@ fun processQuery(
 
 data class ChatMessage(val role: String, val content: String)
 enum class VoiceState { IDLE, LISTENING, THINKING, SPEAKING }
+
+
+@Composable
+fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "jarvis")
+    
+    // Анімація обертання для різних кілець
+    val rotationOuter by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing), RepeatMode.Restart), label = "rot_outer"
+    )
+    val rotationInner by infiniteTransition.animateFloat(
+        initialValue = 360f, targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(5000, easing = LinearEasing), RepeatMode.Restart), label = "rot_inner"
+    )
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0.9f, targetValue = 1.1f,
+        animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse"
+    )
+
+    val primaryColor = when (voiceState) {
+        VoiceState.LISTENING -> Color(0xFF00E676) // Зелений
+        VoiceState.SPEAKING -> Color(0xFFFF4081)  // Рожево-червоний
+        VoiceState.THINKING -> Color(0xFF00B0FF)  // Блакитний
+        else -> Color(0xFF64B5F6)                 // Стандартний синій
+    }
+
+    androidx.compose.foundation.Canvas(modifier = modifier) {
+        val center = this.center
+        val maxRadius = size.minDimension / 2f
+        val baseRadius = maxRadius * 0.5f
+
+        // 1. Ядро (світиться)
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(primaryColor.copy(alpha = 0.8f), primaryColor.copy(alpha = 0.0f)),
+                center = center,
+                radius = baseRadius * pulse
+            ),
+            radius = baseRadius * pulse,
+            center = center
+        )
+
+        // 2. Внутрішнє кільце
+        drawCircle(
+            color = primaryColor.copy(alpha = 0.4f),
+            radius = baseRadius * 0.7f,
+            center = center,
+            style = Stroke(width = 2.dp.toPx())
+        )
+
+        // 3. Середнє кільце з пунктиром (радар)
+        drawCircle(
+            color = primaryColor.copy(alpha = 0.6f),
+            radius = baseRadius * 1.1f,
+            center = center,
+            style = Stroke(
+                width = 3.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 15f), 0f)
+            )
+        )
+
+        // 4. Зовнішнє тонке кільце
+        drawCircle(
+            color = primaryColor.copy(alpha = 0.2f),
+            radius = baseRadius * 1.3f,
+            center = center,
+            style = Stroke(width = 1.dp.toPx())
+        )
+
+        // 5. Дуги, що обертаються (внутрішня)
+        rotate(rotationInner, center) {
+            drawArc(
+                color = primaryColor,
+                startAngle = 0f,
+                sweepAngle = 90f,
+                useCenter = false,
+                topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 0.9f, center.y - baseRadius * 0.9f),
+                size = androidx.compose.ui.geometry.Size(baseRadius * 1.8f, baseRadius * 1.8f),
+                style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
+            )
+            drawArc(
+                color = primaryColor.copy(alpha = 0.5f),
+                startAngle = 180f,
+                sweepAngle = 45f,
+                useCenter = false,
+                topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 0.9f, center.y - baseRadius * 0.9f),
+                size = androidx.compose.ui.geometry.Size(baseRadius * 1.8f, baseRadius * 1.8f),
+                style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round)
+            )
+        }
+
+        // 6. Дуги, що обертаються (зовнішня)
+        rotate(rotationOuter, center) {
+            drawArc(
+                color = primaryColor.copy(alpha = 0.8f),
+                startAngle = 45f,
+                sweepAngle = 120f,
+                useCenter = false,
+                topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 1.2f, center.y - baseRadius * 1.2f),
+                size = androidx.compose.ui.geometry.Size(baseRadius * 2.4f, baseRadius * 2.4f),
+                style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+            )
+        }
+
+        // 7. Маленькі точки по колу
+        val dotCount = 12
+        val dotRadius = baseRadius * 1.3f
+        for (i in 0 until dotCount) {
+            val angle = Math.toRadians((i * (360 / dotCount)).toDouble())
+            val dotX = center.x + (dotRadius * Math.cos(angle)).toFloat()
+            val dotY = center.y + (dotRadius * Math.sin(angle)).toFloat()
+            drawCircle(
+                color = primaryColor.copy(alpha = 0.5f),
+                radius = 2.dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(dotX, dotY)
+            )
+        }
+    }
+}

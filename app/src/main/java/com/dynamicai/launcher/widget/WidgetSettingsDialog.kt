@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.widget
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -37,13 +38,13 @@ fun WidgetSettingsDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(WidgetRegistry.iconFor(widget.type), fontSize = 22.sp)
                 Spacer(Modifier.width(10.dp))
-                Text(WidgetRegistry.labelFor(widget.type), color = Color.White, fontSize = 17.sp)
+                Text(WidgetRegistry.labelFor(widget.type), color = AppTheme.colors.textPrimary, fontSize = 17.sp)
             }
         },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 // Розмір
-                Text("Розмір", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                Text("Розмір", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("small" to "S", "medium" to "M", "large" to "L", "full" to "F").forEach { (id, label) ->
@@ -54,18 +55,18 @@ fun WidgetSettingsDialog(
                                 .height(56.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(
-                                    if (widget.size == id) Color(0x3364B5F6)
-                                    else Color.White.copy(alpha = 0.06f)
+                                    if (widget.size == id) AppTheme.colors.accent.copy(alpha = 0.2f)
+                                    else AppTheme.colors.textPrimary.copy(alpha = 0.06f)
                                 )
                                 .border(
                                     1.dp,
-                                    if (widget.size == id) Color(0xFF64B5F6)
-                                    else Color.White.copy(alpha = 0.15f),
+                                    if (widget.size == id) AppTheme.colors.accent
+                                    else AppTheme.colors.glassBorder,
                                     RoundedCornerShape(12.dp)
                                 )
                                 .clickable { onSizeChange(id) }
                         ) {
-                            Text(label, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            Text(label, color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -73,7 +74,7 @@ fun WidgetSettingsDialog(
                 Spacer(Modifier.height(16.dp))
 
                 // Сторінка
-                Text("Сторінка", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                Text("Сторінка", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (p in 0 until newPageCount) {
@@ -83,13 +84,13 @@ fun WidgetSettingsDialog(
                                 .size(44.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(
-                                    if (selectedPage == p) Color(0x3364B5F6)
-                                    else Color.White.copy(alpha = 0.06f)
+                                    if (selectedPage == p) AppTheme.colors.accent.copy(alpha = 0.2f)
+                                    else AppTheme.colors.textPrimary.copy(alpha = 0.06f)
                                 )
                                 .border(
                                     1.dp,
-                                    if (selectedPage == p) Color(0xFF64B5F6)
-                                    else Color.White.copy(alpha = 0.15f),
+                                    if (selectedPage == p) AppTheme.colors.accent
+                                    else AppTheme.colors.glassBorder,
                                     RoundedCornerShape(12.dp)
                                 )
                                 .clickable {
@@ -97,7 +98,7 @@ fun WidgetSettingsDialog(
                                     if (p != widget.page) onMove(p)
                                 }
                         ) {
-                            Text("${p + 1}", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                            Text("${p + 1}", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                         }
                     }
                     Box(
@@ -105,15 +106,15 @@ fun WidgetSettingsDialog(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0x224CAF50))
-                            .border(1.dp, Color(0xFF4CAF50).copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                            .background(AppTheme.colors.success.copy(alpha = 0.13f))
+                            .border(1.dp, AppTheme.colors.success.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                             .clickable {
                                 selectedPage = newPageCount
                                 onMove(newPageCount)
                                 newPageCount += 1
                             }
                     ) {
-                        Text("+", color = Color(0xFF4CAF50), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text("+", color = AppTheme.colors.success, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -123,14 +124,14 @@ fun WidgetSettingsDialog(
                 onDelete()
                 onDismiss()
             }) {
-                Text("Видалити", color = Color(0xFFFF8A80), fontWeight = FontWeight.Medium)
+                Text("Видалити", color = AppTheme.colors.danger, fontWeight = FontWeight.Medium)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Закрити", color = Color.White.copy(alpha = 0.6f))
+                Text("Закрити", color = AppTheme.colors.textSecondary)
             }
         },
-        containerColor = Color(0xFF1A1A1A)
+        containerColor = AppTheme.colors.surface
     )
 }

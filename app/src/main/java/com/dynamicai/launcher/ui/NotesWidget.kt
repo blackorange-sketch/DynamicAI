@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -51,14 +52,14 @@ fun NotesWidget(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xCC1F1F1F),
-                        Color(0xAA0D0D0D)
+                        AppTheme.colors.glassBackground.copy(alpha = 0.8f),
+                        AppTheme.colors.glassBackgroundAlt.copy(alpha = 0.67f)
                     )
                 )
             )
             .border(
                 width = 0.5.dp,
-                color = Color.White.copy(alpha = 0.15f),
+                color = AppTheme.colors.glassBorder,
                 shape = RoundedCornerShape(22.dp)
             )
             .padding(horizontal = 14.dp, vertical = 12.dp)
@@ -70,14 +71,14 @@ fun NotesWidget(
         ) {
             Text(
                 "📝 Нотатки",
-                color = Color.White,
+                color = AppTheme.colors.textPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f)
             )
             Text(
                 if (notes.isEmpty()) "" else "${notes.count { !it.done }}/${notes.size}",
-                color = Color.White.copy(alpha = 0.5f),
+                color = AppTheme.colors.textSecondary,
                 fontSize = 12.sp
             )
             Spacer(Modifier.width(12.dp))
@@ -85,13 +86,13 @@ fun NotesWidget(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .clip(CircleShape)
-                    .background(Color(0x33FFFFFF))
+                    .background(AppTheme.colors.textPrimary.copy(alpha = 0.2f))
                     .pointerInput(Unit) {
                         detectTapGestures { showAddDialog = true }
                     }
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
-                Text("+", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("+", color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -105,7 +106,7 @@ fun NotesWidget(
             ) {
                 Text(
                     "Немає нотаток. Тап + щоб додати",
-                    color = Color.White.copy(alpha = 0.45f),
+                    color = AppTheme.colors.textPrimary.copy(alpha = 0.45f),
                     fontSize = 13.sp
                 )
             }
@@ -130,7 +131,7 @@ fun NotesWidget(
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "і ще $remaining…",
-                    color = Color.White.copy(alpha = 0.4f),
+                    color = AppTheme.colors.textSecondary,
                     fontSize = 12.sp,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -145,7 +146,7 @@ fun NotesWidget(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .background(Color(0x22FFFFFF))
+                .background(AppTheme.colors.textPrimary.copy(alpha = 0.13f))
                 .pointerInput(Unit) {
                     detectTapGestures { onOpenAll() }
                 }
@@ -153,7 +154,7 @@ fun NotesWidget(
         ) {
             Text(
                 "Всі нотатки →",
-                color = Color(0xFF64B5F6),
+                color = AppTheme.colors.accent,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -163,22 +164,22 @@ fun NotesWidget(
     if (showAddDialog) {
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
-            title = { Text("Нова нотатка", color = Color.White) },
+            title = { Text("Нова нотатка", color = AppTheme.colors.textPrimary) },
             text = {
                 BasicTextField(
                     value = newText,
                     onValueChange = { newText = it },
-                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
-                    cursorBrush = SolidColor(Color(0xFF64B5F6)),
+                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
+                    cursorBrush = SolidColor(AppTheme.colors.accent),
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(min = 60.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(AppTheme.colors.textPrimary.copy(alpha = 0.08f))
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                     decorationBox = { inner ->
                         if (newText.isEmpty()) {
-                            Text("Що запам'ятати?", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                            Text("Що запам'ятати?", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
                         }
                         inner()
                     }
@@ -191,14 +192,14 @@ fun NotesWidget(
                         newText = ""
                     }
                     showAddDialog = false
-                }) { Text("Додати", color = Color(0xFF64B5F6)) }
+                }) { Text("Додати", color = AppTheme.colors.accent) }
             },
             dismissButton = {
                 TextButton(onClick = { showAddDialog = false }) {
-                    Text("Скасувати", color = Color.White.copy(alpha = 0.6f))
+                    Text("Скасувати", color = AppTheme.colors.textSecondary)
                 }
             },
-            containerColor = Color(0xFF1A1A1A)
+            containerColor = AppTheme.colors.surface
         )
     }
 }
@@ -213,7 +214,7 @@ private fun NoteWidgetRow(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .background(Color.White.copy(alpha = 0.04f))
+            .background(AppTheme.colors.textPrimary.copy(alpha = 0.04f))
             .pointerInput(note.id) {
                 detectTapGestures(
                     onTap = { onToggle() },
@@ -229,23 +230,23 @@ private fun NoteWidgetRow(
                 .size(18.dp)
                 .clip(CircleShape)
                 .background(
-                    if (note.done) Color(0xFF4CAF50).copy(alpha = 0.6f)
-                    else Color.White.copy(alpha = 0.12f)
+                    if (note.done) AppTheme.colors.success.copy(alpha = 0.6f)
+                    else AppTheme.colors.textPrimary.copy(alpha = 0.12f)
                 )
                 .border(
                     1.dp,
-                    if (note.done) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.3f),
+                    if (note.done) AppTheme.colors.success else AppTheme.colors.textMuted,
                     CircleShape
                 )
         ) {
             if (note.done) {
-                Text("✓", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("✓", color = AppTheme.colors.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
         Spacer(Modifier.width(10.dp))
         Text(
             note.text,
-            color = if (note.done) Color.White.copy(alpha = 0.5f) else Color.White,
+            color = if (note.done) AppTheme.colors.textSecondary else AppTheme.colors.textPrimary,
             fontSize = 13.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

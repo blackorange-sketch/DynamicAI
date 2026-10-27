@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import android.content.Intent
 import android.provider.AlarmClock
 import android.provider.CalendarContract
@@ -60,8 +61,8 @@ fun HomeWidget(
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xF01F1F1F),
-                        Color(0xE00D0D0D)
+                        AppTheme.colors.surface.copy(alpha = 0.94f),
+                        AppTheme.colors.glassBackgroundAlt.copy(alpha = 0.88f)
                     )
                 )
             )
@@ -69,8 +70,8 @@ fun HomeWidget(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.35f),
-                        Color.White.copy(alpha = 0.08f)
+                        AppTheme.colors.textPrimary.copy(alpha = 0.35f),
+                        AppTheme.colors.textPrimary.copy(alpha = 0.08f)
                     )
                 ),
                 shape = RoundedCornerShape(24.dp)
@@ -90,7 +91,7 @@ fun HomeWidget(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 now.format(timeFmt),
-                color = Color.White,
+                color = AppTheme.colors.textPrimary,
                 fontSize = 34.sp,
                 fontWeight = FontWeight.Light,
                 modifier = Modifier.pointerInput(Unit) {
@@ -113,7 +114,7 @@ fun HomeWidget(
             )
             Text(
                 dateText,
-                color = Color.White.copy(alpha = 0.6f),
+                color = AppTheme.colors.textSecondary,
                 fontSize = 12.sp,
                 modifier = Modifier.pointerInput(Unit) {
                     detectTapGestures {
@@ -149,10 +150,10 @@ private fun WeatherCompact(state: WeatherState, onTap: (() -> Unit)?) {
     ) {
         when (state) {
             is WeatherState.Loading -> {
-                Text("—", color = Color.White.copy(alpha = 0.5f), fontSize = 22.sp)
+                Text("—", color = AppTheme.colors.textSecondary, fontSize = 22.sp)
             }
             is WeatherState.Error -> {
-                Text("—", color = Color.White.copy(alpha = 0.5f), fontSize = 22.sp)
+                Text("—", color = AppTheme.colors.textSecondary, fontSize = 22.sp)
             }
             is WeatherState.Data -> {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -160,14 +161,14 @@ private fun WeatherCompact(state: WeatherState, onTap: (() -> Unit)?) {
                     Spacer(Modifier.width(6.dp))
                     Text(
                         "${state.tempC}°${state.unit}",
-                        color = Color.White,
+                        color = AppTheme.colors.textPrimary,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Light
                     )
                 }
                 Text(
                     state.description,
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = AppTheme.colors.textSecondary,
                     fontSize = 11.sp
                 )
             }

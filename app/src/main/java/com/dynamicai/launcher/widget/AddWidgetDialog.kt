@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.widget
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,11 +31,11 @@ fun AddWidgetDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Color(0xFF1A1A1A),
-        title = { Text("Додати віджет", color = Color.White) },
+        containerColor = AppTheme.colors.surface,
+        title = { Text("Додати віджет", color = AppTheme.colors.textPrimary) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                Text("Тип", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                Text("Тип", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(6.dp))
                 WidgetRegistry.available.forEach { type ->
                     Row(
@@ -43,13 +44,13 @@ fun AddWidgetDialog(
                             .padding(vertical = 4.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(
-                                if (selectedType == type.id) Color(0x3364B5F6)
-                                else Color.White.copy(alpha = 0.05f)
+                                if (selectedType == type.id) AppTheme.colors.accent.copy(alpha = 0.2f)
+                                else AppTheme.colors.textPrimary.copy(alpha = 0.05f)
                             )
                             .border(
                                 1.dp,
-                                if (selectedType == type.id) Color(0xFF64B5F6)
-                                else Color.White.copy(alpha = 0.1f),
+                                if (selectedType == type.id) AppTheme.colors.accent
+                                else AppTheme.colors.glassBorder.copy(alpha = 0.7f),
                                 RoundedCornerShape(12.dp)
                             )
                             .clickable { selectedType = type.id }
@@ -58,12 +59,12 @@ fun AddWidgetDialog(
                     ) {
                         Text(type.icon, fontSize = 20.sp)
                         Spacer(Modifier.width(10.dp))
-                        Text(type.label, color = Color.White, fontSize = 14.sp)
+                        Text(type.label, color = AppTheme.colors.textPrimary, fontSize = 14.sp)
                     }
                 }
 
                 Spacer(Modifier.height(16.dp))
-                Text("Сторінка", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                Text("Сторінка", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(6.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (p in 0 until pagesAvailable) {
@@ -73,18 +74,18 @@ fun AddWidgetDialog(
                                 .size(44.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(
-                                    if (selectedPage == p) Color(0x3364B5F6)
-                                    else Color.White.copy(alpha = 0.05f)
+                                    if (selectedPage == p) AppTheme.colors.accent.copy(alpha = 0.2f)
+                                    else AppTheme.colors.textPrimary.copy(alpha = 0.05f)
                                 )
                                 .border(
                                     1.dp,
-                                    if (selectedPage == p) Color(0xFF64B5F6)
-                                    else Color.White.copy(alpha = 0.1f),
+                                    if (selectedPage == p) AppTheme.colors.accent
+                                    else AppTheme.colors.glassBorder.copy(alpha = 0.7f),
                                     RoundedCornerShape(12.dp)
                                 )
                                 .clickable { selectedPage = p }
                         ) {
-                            Text("${p + 1}", color = Color.White, fontSize = 14.sp)
+                            Text("${p + 1}", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
                         }
                     }
                     // Кнопка "+" для нової сторінки
@@ -93,26 +94,26 @@ fun AddWidgetDialog(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.05f))
-                            .border(1.dp, Color(0xFF4CAF50).copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                            .background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
+                            .border(1.dp, AppTheme.colors.success.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                             .clickable {
                                 pagesAvailable++
                                 selectedPage = pagesAvailable - 1
                             }
                     ) {
-                        Text("+", color = Color(0xFF4CAF50), fontSize = 20.sp)
+                        Text("+", color = AppTheme.colors.success, fontSize = 20.sp)
                     }
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = { onAdd(selectedType, selectedPage) }) {
-                Text("Додати", color = Color(0xFF64B5F6))
+                Text("Додати", color = AppTheme.colors.accent)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Скасувати", color = Color.White.copy(alpha = 0.6f))
+                Text("Скасувати", color = AppTheme.colors.textSecondary)
             }
         }
     )

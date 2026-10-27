@@ -101,6 +101,7 @@ fun LiquidSearchBar(
 }
 
 
+@Composable
 private fun micIcon(): ImageVector = ImageVector.Builder(
     name = "Mic",
     defaultWidth = 24.dp,

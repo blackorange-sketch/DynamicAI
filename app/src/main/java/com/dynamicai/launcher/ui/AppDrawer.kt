@@ -258,19 +258,20 @@ private fun AppGridItem(
             .pressable(onTap = onTap, onLongPress = onLongClick)
             .padding(vertical = 6.dp)
     ) {
-        val glassBrush = remember {
+        val colors = AppTheme.colors
+        val glassBrush = remember(colors) {
             Brush.verticalGradient(
                 listOf(
-                    AppTheme.colors.textPrimary.copy(alpha = 0.10f),
-                    AppTheme.colors.textPrimary.copy(alpha = 0.02f)
+                    colors.textPrimary.copy(alpha = 0.10f),
+                    colors.textPrimary.copy(alpha = 0.02f)
                 )
             )
         }
-        val glassBorderBrush = remember {
+        val glassBorderBrush = remember(colors) {
             Brush.verticalGradient(
                 listOf(
-                    AppTheme.colors.textPrimary.copy(alpha = 0.22f),
-                    AppTheme.colors.textPrimary.copy(alpha = 0.04f)
+                    colors.textPrimary.copy(alpha = 0.22f),
+                    colors.textPrimary.copy(alpha = 0.04f)
                 )
             )
         }

@@ -1,5 +1,7 @@
 package com.dynamicai.launcher.morning
 
+import com.dynamicai.launcher.overlay.ChatHistoryManager
+
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
@@ -54,13 +56,14 @@ class MorningBriefingService : Service() {
             
             // Пробуємо отримати погоду через WeatherRepository
             var weatherText = ""
-            try {
-                val weatherRepo = com.dynamicai.launcher.data.WeatherRepository(applicationContext)
-                val cached = weatherRepo.loadCachedWeather()
-                if (cached != null) {
-                    weatherText = " Погода: ${cached.temperature}°, ${cached.condition}."
-                }
-            } catch (_: Exception) {}
+            // TODO: підставимо поля після перевірки WeatherState
+            // try {
+            //     val weatherRepo = com.dynamicai.launcher.data.WeatherRepository(applicationContext)
+            //     val cached = weatherRepo.loadCachedWeather()
+            //     if (cached != null) {
+            //         weatherText = " Погода: ${cached...}."
+            //     }
+            // } catch (_: Exception) {}
 
             // Формуємо брифінг
             val briefing = "$greeting! Сьогодні $dateStr.$weatherText Заряд: $battery%. Чим можу допомогти?"

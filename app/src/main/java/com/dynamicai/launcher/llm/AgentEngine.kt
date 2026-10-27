@@ -17,6 +17,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
     private val wildRiftRepo = WildRiftRepository(context)
     private val notesStorage = com.dynamicai.launcher.note.NotesStorage(context)
     private val shizuku = com.dynamicai.launcher.system.ShizukuManager(context)
+    private val deepLink = DeepLinkEngine(context)
 
     private val toolsDescription = """
         Доступні інструменти:
@@ -379,6 +380,22 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                         "Макрос '${macro.name}' виконано. Останній результат: $lastResult"
                     }
                 }
+                                toolCall.startsWith("openTelegramChat") -> deepLink.openTelegramChat(getArg(toolCall, "contactName"))
+                toolCall.startsWith("openWhatsAppChat") -> deepLink.openWhatsAppChat(getArg(toolCall, "contactName"))
+                toolCall.startsWith("openViberChat") -> deepLink.openViberChat(getArg(toolCall, "contactName"))
+                toolCall.startsWith("searchYouTube") -> deepLink.openYouTubeSearch(getArg(toolCall, "query"))
+                toolCall.startsWith("openInstagramProfile") -> deepLink.openInstagramProfile(getArg(toolCall, "username"))
+                toolCall.startsWith("navigateGoogleMaps") -> deepLink.openMaps(getArg(toolCall, "destination"))
+                toolCall.startsWith("sendEmail") -> deepLink.sendEmail(
+                    getArg(toolCall, "to"),
+                    getArg(toolCall, "subject"),
+                    getArg(toolCall, "body")
+                )
+                toolCall.startsWith("sendSmsToContact") -> deepLink.sendSms(
+                    getArg(toolCall, "contactName"),
+                    getArg(toolCall, "message")
+                )
+                toolCall.startsWith("searchSpotify") -> deepLink.openSpotifySearch(getArg(toolCall, "query"))
                 toolCall.startsWith("getWildRiftAdvice") -> {
                     val me = getArg(toolCall, "myChampion")
                     val enemies = getArg(toolCall, "enemies")

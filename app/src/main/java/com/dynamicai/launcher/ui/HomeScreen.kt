@@ -112,7 +112,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     )
 
     val ctx = LocalContext.current
-    val homeWallpaper = remember { BackdropBlur.get(ctx, 720) }
+    val homeWallpaper = remember {
+        BackdropBlur.get(ctx, 720).also {
+            if (it == null) android.util.Log.w("HomeScreen", "homeWallpaper is NULL — WallpaperManager не зміг прочитати шпалери")
+            else android.util.Log.d("HomeScreen", "homeWallpaper loaded: ${it.width}x${it.height}")
+        }
+    }
     val statusBarCtrl = remember { com.dynamicai.launcher.system.StatusBarController(ctx.applicationContext) }
     val keyboard = LocalSoftwareKeyboardController.current
     val haptic = LocalHapticFeedback.current
@@ -626,7 +631,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 }
             }
     ) {
-        // Шар 1: розмиті шпалери (liquid glass)
+        // Шар 1: розмиті шпалери (liquid glass) — завжди повністю видимі
         if (homeWallpaper != null) {
             Image(
                 bitmap = homeWallpaper,
@@ -638,11 +643,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         radius = settings.wallpaperBlurRadius.dp,
                         edgeTreatment = BlurredEdgeTreatment.Unbounded
                     )
-                    .graphicsLayer {
-                        // Приглушуємо розмиті шпалери відповідно до налаштування
-                        alpha = 1f - (settings.backgroundAlphaPercent / 100f)
-                    }
             )
+        } else {
+            // Fallback: якщо WallpaperManager не зміг прочитати шпалери
+            Box(modifier = Modifier.fillMaxSize().background(AppTheme.colors.background))
         }
 
         // Затемнення фону коли список/пошук/drawer активний

@@ -4,6 +4,18 @@ plugins {
 }
 
 android {
+    packaging {
+        jniLibs {
+            excludes += listOf(
+                "**/libtranslate_jni.so",
+                "**/libtesseract.so",
+                "**/libleptonica.so",
+                "**/libjpeg.so",
+                "**/libpngx.so"
+            )
+        }
+    }
+
     namespace = "com.dynamicai.launcher"
     compileSdk = 37
 

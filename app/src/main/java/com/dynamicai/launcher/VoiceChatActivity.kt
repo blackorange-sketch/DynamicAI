@@ -23,6 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import com.dynamicai.launcher.overlay.ChatMessage
+import com.dynamicai.launcher.overlay.ChatHistoryManager
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,7 +67,7 @@ class VoiceChatActivity : ComponentActivity() {
 @Composable
 fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     val ctx = LocalContext.current
-    var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
+    val messages = ChatHistoryManager.history
     var voiceState by remember { mutableStateOf(VoiceState.LISTENING) }
     var query by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
@@ -110,14 +112,14 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 override fun onResults(results: Bundle?) {
                     val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
                     if (text.isNotBlank()) {
-                        messages = messages + ChatMessage("user", text)
+                        ChatHistoryManager.addMessage("user", text)
                         val historyStr = messages.dropLast(1).takeLast(10).joinToString("\n") { msg ->
                             if (msg.role == "user") "Користувач: ${msg.content}" else "Асистент: ${msg.content}"
                         }
                         processQuery(
                             text, historyStr, vm, scope,
                             { voiceState = it },
-                            { messages = messages + it },
+                            { ChatHistoryManager.addMessage(it.role, it.content) },
                             { stopListening() }
                         )
                     } else {
@@ -177,7 +179,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 1 -> "Слухаю вас."
                 else -> "Я готовий."
             }
-            messages = messages + ChatMessage("assistant", greeting)
+            ChatHistoryManager.addMessage("assistant", greeting)
             
             // Говоримо привітання і ТІЛЬКИ ПОТІМ вмикаємо мікрофон
             vm.tts.speakWithCallback(greeting) {
@@ -299,14 +301,14 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 Box(
                     modifier = Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF64B5F6).copy(alpha = 0.15f)).clickable { 
                         if (query.isNotBlank()) {
-                            messages = messages + ChatMessage("user", query)
+                            ChatHistoryManager.addMessage("user", query)
                             val historyStr = messages.dropLast(1).takeLast(10).joinToString("\n") { msg ->
                                 if (msg.role == "user") "Користувач: ${msg.content}" else "Асистент: ${msg.content}"
                             }
                             processQuery(
                                 query, historyStr, vm, scope,
                                 { voiceState = it },
-                                { messages = messages + it },
+                                { ChatHistoryManager.addMessage(it.role, it.content) },
                                 { stopListening() }
                             )
                             query = ""
@@ -499,5 +501,4 @@ fun processQuery(
     }
 }
 
-data class ChatMessage(val role: String, val content: String)
 enum class VoiceState { IDLE, LISTENING, THINKING, SPEAKING }

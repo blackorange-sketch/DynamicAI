@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import android.widget.Toast
 import android.view.Gravity
+import android.util.DisplayMetrics
 import android.view.WindowManager
 import kotlin.math.roundToInt
 import androidx.compose.runtime.*
@@ -47,7 +48,6 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private var currentY = 0f
     
     private val scope = CoroutineScope(Dispatchers.Main)
-    private var messages by mutableStateOf(listOf<Pair<String, String>>())
     private var isThinking by mutableStateOf(false)
     private lateinit var chatEngine: com.dynamicai.launcher.llm.ChatEngine
     private lateinit var tts: com.dynamicai.launcher.voice.TtsManager
@@ -74,6 +74,14 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels
+        val screenHeight = displayMetrics.heightPixels
+
+        // Початкова позиція (правий нижній кут)
+        currentX = screenWidth - 150f
+        currentY = screenHeight - 400f
+
         params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -81,9 +89,9 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.BOTTOM or Gravity.END
-            x = 50
-            y = 200
+            gravity = Gravity.TOP or Gravity.START
+            x = currentX.toInt()
+            y = currentY.toInt()
         }
 
         composeView = ComposeView(this).apply {
@@ -94,15 +102,24 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 var isExpanded by remember { mutableStateOf(false) }
                 FloatingOrb(
                     isExpanded = isExpanded,
-                    messages = messages,
+                    messages = ChatHistoryManager.history.map { it.role to it.content },
                     isThinking = isThinking,
                     onExpandChange = {
                         isExpanded = it
                         updateWindowSize(it)
                     },
                     onDrag = { dx, dy ->
-                        currentX -= dx
+                        val displayMetrics = resources.displayMetrics
+                        val screenWidth = displayMetrics.widthPixels
+                        val screenHeight = displayMetrics.heightPixels
+                        
+                        currentX += dx
                         currentY += dy
+                        
+                        // Обмеження, щоб не вилітало за екран
+                        currentX = currentX.coerceIn(0f, screenWidth - 150f)
+                        currentY = currentY.coerceIn(0f, screenHeight - 150f)
+                        
                         params.x = currentX.roundToInt()
                         params.y = currentY.roundToInt()
                         windowManager.updateViewLayout(composeView, params)
@@ -117,7 +134,20 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     private fun updateWindowSize(expanded: Boolean) {
-        params.width = if (expanded) WindowManager.LayoutParams.WRAP_CONTENT else WindowManager.LayoutParams.WRAP_CONTENT
+        if (expanded) {
+            // При розгортанні центруємо вікно
+            params.gravity = Gravity.CENTER
+            params.x = 0
+            params.y = 0
+            // Робимо вікно фокусованим, щоб працювала клавіатура
+            params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+        } else {
+            // При згортанні повертаємо на місце
+            params.gravity = Gravity.TOP or Gravity.START
+            params.x = currentX.roundToInt()
+            params.y = currentY.roundToInt()
+            params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+        }
         windowManager.updateViewLayout(composeView, params)
     }
 
@@ -142,26 +172,26 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
 
     private fun processQuery(text: String) {
-        messages = messages + ("user" to text)
+        ChatHistoryManager.addMessage("user", text)
         isThinking = true
         scope.launch {
             try {
                 if (!com.dynamicai.launcher.AppListViewModel.getSharedLlm(applicationContext).isReady) {
                     val err = "Модель ШІ не завантажена."
-                    messages = messages + ("assistant" to err)
+                    ChatHistoryManager.addMessage("assistant", err)
                     isThinking = false
                     tts.speak(err)
                     return@launch
                 }
-                val history = messages.takeLast(10).joinToString("\n") { 
-                    if (it.first == "user") "Користувач: ${it.second}" else "Асистент: ${it.second}" 
+                val history = ChatHistoryManager.history.takeLast(10).joinToString("\n") { 
+                    if (it.role == "user") "Користувач: ${it.content}" else "Асистент: ${it.content}" 
                 }
                 val answer = chatEngine.answerWithAgent(text, history)
-                messages = messages + ("assistant" to answer)
+                ChatHistoryManager.addMessage("assistant", answer)
                 isThinking = false
                 tts.speak(answer)
             } catch (e: Exception) {
-                messages = messages + ("assistant" to "Помилка: ${e.message}")
+                ChatHistoryManager.addMessage("assistant", "Помилка: ${e.message}")
                 isThinking = false
             }
         }

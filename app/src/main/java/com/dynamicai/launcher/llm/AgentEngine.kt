@@ -35,6 +35,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
         14. takeNote(text: String) -> Створити нотатку.
         15. readNotes() -> Прочитати останні нотатки.
         16. getWildRiftAdvice(myChampion: String, enemies: String) -> Поради Wild Rift.
+        17. searchWeb(query: String) -> Шукає інформацію в інтернеті та повертає факти (для питань 'хто такий', 'що таке', новини).
     """.trimIndent()
 
     suspend fun processWithTools(question: String): String = withContext(Dispatchers.IO) {
@@ -51,7 +52,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                 [ПОТОЧНИЙ КОНТЕКСТ]
                 $currentContext
                 
-                Якщо тобі потрібно виконати дію, напиши ТІЛЬКИ команду у форматі:
+                Якщо тобі потрібно виконати дію (відкрити додаток, пошукати в інтернеті, увімкнути музику), напиши ТІЛЬКИ команду у форматі:
                 TOOL_CALL: назва_інструменту(параметр1="значення", параметр2="значення")
                 
                 Якщо ти вже маєш всю інформацію для відповіді, напиши фінальну відповідь користувачу.
@@ -59,8 +60,9 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
 
             val response = llm.complete(prompt)?.trim() ?: return@withContext "Помилка агента"
 
-            if (response.startsWith("TOOL_CALL:")) {
-                val toolCall = response.substringAfter("TOOL_CALL:").trim()
+            // Запобіжник: якщо LLM вивела просто функцію без префіксу
+            if (response.startsWith("TOOL_CALL:") || (response.contains("(") && response.contains(")"))) {
+                val toolCall = response.replace("TOOL_CALL:", "").trim()
                 val result = executeTool(toolCall)
                 currentContext += "\n[Результат дії]: $result"
                 iteration++
@@ -208,6 +210,13 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                 toolCall.startsWith("readNotes") -> {
                     val notes = notesStorage.get()
                     if (notes.isEmpty()) "Нотаток немає." else "Останні нотатки: ${notes.take(3).joinToString(", ") { it.text }}"
+                }
+                toolCall.startsWith("searchWeb") -> {
+                    val query = getArg(toolCall, "query")
+                    val webSearch = com.dynamicai.launcher.llm.WebSearchRepository()
+                    val result = webSearch.search(query)
+                    val text = webSearch.toContext(result)
+                    if (text.isNotBlank()) text else "Не знайдено інформації."
                 }
                 toolCall.startsWith("getWildRiftAdvice") -> {
                     val me = getArg(toolCall, "myChampion")

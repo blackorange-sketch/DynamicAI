@@ -3,6 +3,7 @@ package com.dynamicai.launcher.ui
 import android.app.WallpaperManager
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -14,22 +15,88 @@ object BackdropBlur {
 
     fun get(ctx: Context, targetWidth: Int): ImageBitmap? {
         if (cached != null && cachedWidth >= targetWidth) return cached
-        return try {
-            val wm = WallpaperManager.getInstance(ctx.applicationContext)
-            val drawable = wm.drawable ?: return null
-            val srcW = drawable.intrinsicWidth.coerceAtLeast(1)
-            val srcH = drawable.intrinsicHeight.coerceAtLeast(1)
-            // Зменшуємо у 4 рази — швидко + blur сам згладить
-            val w = (srcW / 4).coerceAtLeast(200)
-            val h = (srcH / 4).coerceAtLeast(200)
-            val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-            val c = Canvas(bmp)
-            drawable.setBounds(0, 0, w, h)
-            drawable.draw(c)
-            cached = bmp.asImageBitmap()
-            cachedWidth = targetWidth
-            cached
-        } catch (_: Throwable) { null }
+
+        val bitmap = loadBitmap(ctx) ?: run {
+            android.util.Log.w("BackdropBlur", "ALL METHODS FAILED — wallpaper is null")
+            return null
+        }
+
+        // Зменшуємо до 720px для продуктивності
+        val scale = if (bitmap.width > 720) 720f / bitmap.width else 1f
+        val scaled = if (scale < 1f) {
+            Bitmap.createScaledBitmap(
+                bitmap,
+                (bitmap.width * scale).toInt(),
+                (bitmap.height * scale).toInt(),
+                true
+            )
+        } else bitmap
+
+        cached = scaled.asImageBitmap()
+        cachedWidth = targetWidth
+        return cached
+    }
+
+    private fun loadBitmap(ctx: Context): Bitmap? {
+        val wm = WallpaperManager.getInstance(ctx.applicationContext)
+
+        // Спосіб 1: getBitmap() — API 24+
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 24) {
+                val b = wm.getBitmap()
+                android.util.Log.d("BackdropBlur", "getBitmap() -> ${b?.let { "${it.width}x${it.height}" } ?: "NULL"}")
+                if (b != null) return b
+            }
+        } catch (e: Throwable) {
+            android.util.Log.w("BackdropBlur", "getBitmap() failed: ${e.message}")
+        }
+
+        // Спосіб 2: getWallpaperFile(FLAG_SYSTEM) + decodeFileDescriptor
+        try {
+            val file = wm.getWallpaperFile(WallpaperManager.FLAG_SYSTEM)
+            if (file != null) {
+                val b = BitmapFactory.decodeFileDescriptor(file.fileDescriptor)
+                android.util.Log.d("BackdropBlur", "getWallpaperFile(SYSTEM) -> ${b?.let { "${it.width}x${it.height}" } ?: "NULL"}")
+                if (b != null) return b
+            } else {
+                android.util.Log.d("BackdropBlur", "getWallpaperFile(SYSTEM) -> null file")
+            }
+        } catch (e: Throwable) {
+            android.util.Log.w("BackdropBlur", "getWallpaperFile(SYSTEM) failed: ${e.message}")
+        }
+
+        // Спосіб 3: getWallpaperFile(FLAG_LOCK) — іноді системні шпалери встановлені як lock
+        try {
+            val file = wm.getWallpaperFile(WallpaperManager.FLAG_LOCK)
+            if (file != null) {
+                val b = BitmapFactory.decodeFileDescriptor(file.fileDescriptor)
+                android.util.Log.d("BackdropBlur", "getWallpaperFile(LOCK) -> ${b?.let { "${it.width}x${it.height}" } ?: "NULL"}")
+                if (b != null) return b
+            }
+        } catch (e: Throwable) {
+            android.util.Log.w("BackdropBlur", "getWallpaperFile(LOCK) failed: ${e.message}")
+        }
+
+        // Спосіб 4: getDrawable() — старий API
+        try {
+            val drawable = wm.getDrawable()
+            if (drawable != null && drawable.intrinsicWidth > 0) {
+                val w = (drawable.intrinsicWidth / 4).coerceAtLeast(200)
+                val h = (drawable.intrinsicHeight / 4).coerceAtLeast(200)
+                val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                val c = Canvas(bmp)
+                drawable.setBounds(0, 0, w, h)
+                drawable.draw(c)
+                android.util.Log.d("BackdropBlur", "getDrawable() -> ${w}x$h")
+                return bmp
+            } else {
+                android.util.Log.d("BackdropBlur", "getDrawable() -> null or 0x0")
+            }
+        } catch (e: Throwable) {
+            android.util.Log.w("BackdropBlur", "getDrawable() failed: ${e.message}")
+        }
+
+        return null
     }
 
     fun clear() {

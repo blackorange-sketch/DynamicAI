@@ -645,8 +645,19 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     )
             )
         } else {
-            // Fallback: якщо WallpaperManager не зміг прочитати шпалери
-            Box(modifier = Modifier.fillMaxSize().background(AppTheme.colors.background))
+            // Fallback: темний градієнт замість чорного екрану
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(
+                                AppTheme.colors.backdropStart,
+                                AppTheme.colors.backdropEnd
+                            )
+                        )
+                    )
+            )
         }
 
         // Затемнення фону коли список/пошук/drawer активний

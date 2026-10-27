@@ -293,13 +293,13 @@ fun SettingsScreen(
                 onChange = { onSettingsChange(settings.copy(backgroundAlphaPercent = it)) }
             )
 
-                SizeSliderRow(
-                    label = "Розмиття фону",
-                    value = settings.wallpaperBlurRadius,
-                    suffix = " dp",
-                    values = listOf(0, 20, 40, 60, 80, 100),
-                    onChange = { onSettingsChange(settings.copy(wallpaperBlurRadius = it)) }
-
+            SizeSliderRow(
+                label = "Розмиття фону",
+                value = settings.wallpaperBlurRadius,
+                suffix = " dp",
+                values = listOf(0, 20, 40, 60, 80, 100),
+                onChange = { onSettingsChange(settings.copy(wallpaperBlurRadius = it)) }
+            )
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -319,6 +319,25 @@ fun SettingsScreen(
                         if (settings.backgroundImageUri.isBlank()) "Обрати фото" else "Змінити фото",
                         color = AppTheme.colors.textPrimary, fontSize = 14.sp
                     )
+                }
+                if (settings.backgroundImageUri.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(AppTheme.colors.danger.copy(alpha = 0.2f))
+                            .clickable {
+                                bgScope.launch {
+                                    CustomBackgroundLoader.clear(ctx)
+                                    onSettingsChange(settings.copy(backgroundImageUri = ""))
+                                }
+                            }
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Видалити", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+                    }
+                }
+            }
                 }
                 if (settings.backgroundImageUri.isNotBlank()) {
                     Box(

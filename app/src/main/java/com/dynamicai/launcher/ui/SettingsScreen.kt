@@ -207,6 +207,21 @@ fun SettingsScreen(
         if (initialCategory == null || initialCategory == "tools") {
         GlassSectionHeader("🧩 Віджети та Інструменти")
         if (initialCategory == null || initialCategory == "tools") {
+        GlassCard {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { ctx.startActivity(Intent(ctx, ModuleManagerActivity::class.java)) }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Build, null, tint = Color(0xFF64B5F6), modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(12.dp))
+                Text("Менеджер модулів", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.KeyboardArrowRight, null, tint = Color.White.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
+            }
+        }
+
         GlassSectionHeader("Погода")
         GlassCard {
             SwitchRow("Показувати погоду", settings.showWeather, Icons.Default.Star, Color(0xFFFFB300)) {

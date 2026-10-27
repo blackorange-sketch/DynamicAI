@@ -520,7 +520,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         if (currentSettingsCategory == null) {
             SettingsMenuScreen(
                 onCategorySelected = { currentSettingsCategory = it },
-                onClose = { showSettings = false }
+                onClose = { showSettings = false },
+                backgroundAlpha = settings.backgroundAlphaPercent / 100f
             )
         } else {
             Box(modifier = Modifier.fillMaxSize()) {

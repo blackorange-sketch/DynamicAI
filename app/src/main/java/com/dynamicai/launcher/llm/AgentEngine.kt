@@ -42,6 +42,10 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
         21. calculate(expression: String) -> Обчислює математичний вираз.
         22. openUrl(url: String) -> Відкриває веб-сайт.
         23. createNotification(title: String, text: String) -> Показує сповіщення.
+        24. getTime() -> Дізнатися поточний час та дату.
+        25. getBattery() -> Дізнатися рівень заряду батареї.
+        26. setVolume(level: Int) -> Встановити гучність (0-100).
+        27. getDeviceInfo() -> Загальна інформація про пристрій (мережа, заряд, час).
     """.trimIndent()
 
     suspend fun processWithTools(question: String, history: String = ""): String = withContext(Dispatchers.IO) {
@@ -52,6 +56,11 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
         while (iteration < maxIterations) {
             val prompt = """
                 Ти — Джарвіс, розумний голосовий асистент в Android-лаунчері. Відповідай ввічливо, коротко і по суті.
+                
+                [СИСТЕМНИЙ КОНТЕКСТ]
+                Поточний час: ${java.text.SimpleDateFormat("HH:mm", java.util.Locale("uk", "UA")).format(java.util.Date())}
+                Дата: ${java.text.SimpleDateFormat("d MMMM", java.util.Locale("uk", "UA")).format(java.util.Date())}
+                Заряд батареї: ${(context.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager).getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)}%
                 
                 [ІСТОРІЯ ДІАЛОГУ]
                 ${if (history.isNotBlank()) history else "Це початок розмови."}
@@ -294,6 +303,33 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
                     val title = getArg(toolCall, "title")
                     val text = getArg(toolCall, "text")
                     "Сповіщення створено: $title — $text" // Потребує дозволу NOTIFICATIONS
+                }
+                                toolCall.startsWith("getTime") -> {
+                    val now = java.text.SimpleDateFormat("HH:mm, EEEE, d MMMM", java.util.Locale("uk", "UA")).format(java.util.Date())
+                    "Зараз $now"
+                }
+                toolCall.startsWith("getBattery") -> {
+                    val bm = context.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
+                    val level = bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+                    "Заряд батареї: $level%"
+                }
+                toolCall.startsWith("setVolume") -> {
+                    val level = getArg(toolCall, "level").toIntOrNull() ?: 50
+                    val am = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+                    val max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+                    val target = (max * (level / 100f)).toInt()
+                    am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, target, 0)
+                    "Гучність встановлено на $level%"
+                }
+                toolCall.startsWith("getDeviceInfo") -> {
+                    val bm = context.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
+                    val level = bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+                    val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+                    val isWifi = cm.activeNetworkInfo?.type == android.net.ConnectivityManager.TYPE_WIFI
+                    val isMobile = cm.activeNetworkInfo?.type == android.net.ConnectivityManager.TYPE_MOBILE
+                    val netStatus = if (isWifi) "Wi-Fi" else if (isMobile) "Мобільна мережа" else "Немає інтернету"
+                    val now = java.text.SimpleDateFormat("HH:mm", java.util.Locale("uk", "UA")).format(java.util.Date())
+                    "Час: $now | Заряд: $level% | Мережа: $netStatus"
                 }
                 toolCall.startsWith("getWildRiftAdvice") -> {
                     val me = getArg(toolCall, "myChampion")

@@ -21,7 +21,6 @@ object BackdropBlur {
             return null
         }
 
-        // Зменшуємо до 720px для продуктивності
         val scale = if (bitmap.width > 720) 720f / bitmap.width else 1f
         val scaled = if (scale < 1f) {
             Bitmap.createScaledBitmap(
@@ -40,23 +39,13 @@ object BackdropBlur {
     private fun loadBitmap(ctx: Context): Bitmap? {
         val wm = WallpaperManager.getInstance(ctx.applicationContext)
 
-        // Спосіб 1: getBitmap() — API 24+
-        try {
-            if (android.os.Build.VERSION.SDK_INT >= 24) {
-                val b = wm.getBitmap()
-                android.util.Log.d("BackdropBlur", "getBitmap() -> ${b?.let { "${it.width}x${it.height}" } ?: "NULL"}")
-                if (b != null) return b
-            }
-        } catch (e: Throwable) {
-            android.util.Log.w("BackdropBlur", "getBitmap() failed: ${e.message}")
-        }
-
-        // Спосіб 2: getWallpaperFile(FLAG_SYSTEM) + decodeFileDescriptor
+        // Спосіб 1: getWallpaperFile(FLAG_SYSTEM) — найнадійніший, API 5+
         try {
             val file = wm.getWallpaperFile(WallpaperManager.FLAG_SYSTEM)
             if (file != null) {
                 val b = BitmapFactory.decodeFileDescriptor(file.fileDescriptor)
-                android.util.Log.d("BackdropBlur", "getWallpaperFile(SYSTEM) -> ${b?.let { "${it.width}x${it.height}" } ?: "NULL"}")
+                val desc = if (b != null) "${b.width}x${b.height}" else "NULL"
+                android.util.Log.d("BackdropBlur", "getWallpaperFile(SYSTEM) -> $desc")
                 if (b != null) return b
             } else {
                 android.util.Log.d("BackdropBlur", "getWallpaperFile(SYSTEM) -> null file")
@@ -65,19 +54,22 @@ object BackdropBlur {
             android.util.Log.w("BackdropBlur", "getWallpaperFile(SYSTEM) failed: ${e.message}")
         }
 
-        // Спосіб 3: getWallpaperFile(FLAG_LOCK) — іноді системні шпалери встановлені як lock
+        // Спосіб 2: getWallpaperFile(FLAG_LOCK)
         try {
             val file = wm.getWallpaperFile(WallpaperManager.FLAG_LOCK)
             if (file != null) {
                 val b = BitmapFactory.decodeFileDescriptor(file.fileDescriptor)
-                android.util.Log.d("BackdropBlur", "getWallpaperFile(LOCK) -> ${b?.let { "${it.width}x${it.height}" } ?: "NULL"}")
+                val desc = if (b != null) "${b.width}x${b.height}" else "NULL"
+                android.util.Log.d("BackdropBlur", "getWallpaperFile(LOCK) -> $desc")
                 if (b != null) return b
+            } else {
+                android.util.Log.d("BackdropBlur", "getWallpaperFile(LOCK) -> null file")
             }
         } catch (e: Throwable) {
             android.util.Log.w("BackdropBlur", "getWallpaperFile(LOCK) failed: ${e.message}")
         }
 
-        // Спосіб 4: getDrawable() — старий API
+        // Спосіб 3: getDrawable() — старий API 5+
         try {
             val drawable = wm.getDrawable()
             if (drawable != null && drawable.intrinsicWidth > 0) {

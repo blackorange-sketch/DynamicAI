@@ -112,12 +112,28 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     )
 
     val ctx = LocalContext.current
-    val homeWallpaper = remember {
+    // Пріоритет: 1) вибране користувачем фото, 2) системні шпалери, 3) градієнт
+    val customBg = remember(settings.backgroundImageUri) {
+        // Місце під асинхронне завантаження
+        null
+    }
+    var loadedCustomBg by remember(settings.backgroundImageUri) {
+        androidx.compose.runtime.mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    }
+    androidx.compose.runtime.LaunchedEffect(settings.backgroundImageUri) {
+        loadedCustomBg = if (settings.backgroundImageUri.isNotBlank()) {
+            CustomBackgroundLoader.loadFromFile(settings.backgroundImageUri, 720)
+        } else null
+    }
+
+    val systemWallpaper = remember {
         BackdropBlur.get(ctx, 720).also {
-            if (it == null) android.util.Log.w("HomeScreen", "homeWallpaper is NULL — WallpaperManager не зміг прочитати шпалери")
-            else android.util.Log.d("HomeScreen", "homeWallpaper loaded: ${it.width}x${it.height}")
+            if (it == null) android.util.Log.w("HomeScreen", "systemWallpaper is NULL — WallpaperManager не зміг прочитати")
+            else android.util.Log.d("HomeScreen", "systemWallpaper loaded: ${it.width}x${it.height}")
         }
     }
+
+    val homeWallpaper = loadedCustomBg ?: systemWallpaper
     val statusBarCtrl = remember { com.dynamicai.launcher.system.StatusBarController(ctx.applicationContext) }
     val keyboard = LocalSoftwareKeyboardController.current
     val haptic = LocalHapticFeedback.current

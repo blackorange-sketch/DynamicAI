@@ -26,6 +26,7 @@ data class LauncherSettings(
     val overlayEdgePaddingDp: Int = 14,      // відступ риски від краю екрана
     val backgroundAlphaPercent: Int = 100,   // 0 = прозорий, 100 = чорний
     val wallpaperBlurRadius: Int = 60,       // 0 = без розмиття, 100 = максимальне
+    val backgroundImageUri: String = "",    // URI вибраного фото
     val wpPauseOnScreenOff: Boolean = true,
     val wpPauseOnLowBattery: Boolean = true,
     val wpFps: Int = 30,
@@ -71,6 +72,7 @@ class SettingsStorage(context: Context) {
         overlayEdgePaddingDp = prefs.getInt("overlayEdgePaddingDp", 14),
         backgroundAlphaPercent = prefs.getInt("backgroundAlphaPercent", 100),
             wallpaperBlurRadius = prefs.getInt("wallpaperBlurRadius", 60),
+            backgroundImageUri = prefs.getString("backgroundImageUri", "") ?: "",
         wpPauseOnScreenOff = prefs.getBoolean("wpPauseOnScreenOff", true),
         wpPauseOnLowBattery = prefs.getBoolean("wpPauseOnLowBattery", true),
         wpFps = prefs.getInt("wpFps", 30),
@@ -114,6 +116,7 @@ class SettingsStorage(context: Context) {
             .putInt("overlayEdgePaddingDp", s.overlayEdgePaddingDp)
             .putInt("backgroundAlphaPercent", s.backgroundAlphaPercent)
             .putInt("wallpaperBlurRadius", s.wallpaperBlurRadius)
+            .putString("backgroundImageUri", s.backgroundImageUri)
             .putBoolean("wpPauseOnScreenOff", s.wpPauseOnScreenOff)
             .putBoolean("wpPauseOnLowBattery", s.wpPauseOnLowBattery)
             .putInt("wpFps", s.wpFps)

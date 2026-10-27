@@ -121,8 +121,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     val placedWidgetsStorage = remember { com.dynamicai.launcher.widget.WidgetsStorage(ctx) }
     var placedWidgets by remember { mutableStateOf<List<com.dynamicai.launcher.widget.PlacedWidget>>(emptyList()) }
     var showAddWidgetDialog by remember { mutableStateOf(false) }
-    var currentSettingsCategory by remember { mutableStateOf<String?>(null) }
-    var showModuleManager by remember { mutableStateOf(false) }
     var currentPage by remember { mutableStateOf(0) }
     val pageCount = remember(placedWidgets) {
         (placedWidgets.maxOfOrNull { it.page } ?: 0) + 1
@@ -459,11 +457,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         return
     }
 
-    if (showModuleManager) {
-        com.dynamicai.launcher.ui.ModuleManagerScreen(onClose = { showModuleManager = false })
-        return
-    }
-
     if (showMacroManager) {
         com.dynamicai.launcher.macro.MacroScreen(onClose = { showMacroManager = false })
         return
@@ -523,54 +516,43 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
 
     if (showSettings) {
-            if (currentSettingsCategory == null) {
-                SettingsMenuScreen(
-                    onCategorySelected = { currentSettingsCategory = it },
-                    onClose = { showSettings = false }
-                )
-            } else {
-                SettingsScreen(
-                    initialCategory = currentSettingsCategory,
-                    onBackToMenu = { currentSettingsCategory = null },
-                    vm = vm,
-                    settings = settings,
-                    onSettingsChange = { vm.updateSettings(it) },
-                    hiddenCount = hidden.size,
-                    foldersCount = folders.size,
-                    onClearHistory = { vm.clearHistory() },
-                    onRefreshContacts = { vm.loadContacts() },
-                    onClearHidden = { vm.clearHidden() },
-                    onDownloadLlm = { vm.downloadModel() },
-                    overlayActive = overlayActive,
-                    overlayPermissionGranted = overlayPermissionGranted,
-                    onToggleOverlay = {
-                        if (overlayActive) {
-                            com.dynamicai.launcher.overlay.FloatingDockService.stop(ctx)
-                            overlayActive = false
-                            ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
-                                .edit().putBoolean("overlayEnabled", false).commit()
-                        } else {
-                            com.dynamicai.launcher.overlay.FloatingDockService.start(ctx)
-                            overlayActive = true
-                            ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
-                                .edit().putBoolean("overlayEnabled", true).commit()
-                        }
-                    },
-                    onRequestOverlayPermission = { requestOverlayPermission() },
-                    onOpenWallpaper = { showWallpaper = true },
-                    onOpenDockEditor = { showDockEditor = true },
-                    onOpenFolderManager = { showFolderManager = true },
-                    onOpenMacroManager = { showMacroManager = true },
-                    onOpenNotes = { showNotesScreen = true },
-                    llmDownloaded = vm.downloader.isDownloaded,
-                    llmReady = llmReady,
-                    versionName = BuildConfig.VERSION_NAME,
-                    onClose = { showSettings = false },
-                    onTestLlm = { prompt -> vm.testLlm(prompt) },
-                    onOpenModuleManager = { showModuleManager = true }
-                )
-            }
-        }
+        SettingsScreen(
+                vm = vm,
+            settings = settings,
+            onSettingsChange = { vm.updateSettings(it) },
+            hiddenCount = hidden.size,
+            foldersCount = folders.size,
+            onClearHistory = { vm.clearHistory() },
+            onRefreshContacts = { vm.loadContacts() },
+            onClearHidden = { vm.clearHidden() },
+            onDownloadLlm = { vm.downloadModel() },
+            overlayActive = overlayActive,
+            overlayPermissionGranted = overlayPermissionGranted,
+            onToggleOverlay = {
+                if (overlayActive) {
+                    com.dynamicai.launcher.overlay.FloatingDockService.stop(ctx)
+                    overlayActive = false
+                    ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
+                        .edit().putBoolean("overlayEnabled", false).commit()
+                } else {
+                    com.dynamicai.launcher.overlay.FloatingDockService.start(ctx)
+                    overlayActive = true
+                    ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
+                        .edit().putBoolean("overlayEnabled", true).commit()
+                }
+            },
+            onRequestOverlayPermission = { requestOverlayPermission() },
+            llmDownloaded = vm.downloader.isDownloaded,
+            llmReady = llmReady,
+            versionName = BuildConfig.VERSION_NAME,
+            onOpenWallpaper = { showWallpaper = true },
+            onOpenDockEditor = { showDockEditor = true },
+            onOpenFolderManager = { showFolderManager = true },
+            onOpenMacroManager = { showMacroManager = true },
+            onOpenNotes = { showNotesScreen = true },
+            onClose = { showSettings = false },
+            onTestLlm = { prompt -> vm.testLlm(prompt) }
+        )
         return
     }
 

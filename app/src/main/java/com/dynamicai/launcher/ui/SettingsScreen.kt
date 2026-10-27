@@ -80,9 +80,6 @@ fun SettingsScreen(
     versionName: String,
     onClose: () -> Unit,
     onTestLlm: suspend (String) -> String? = { null }
-    onOpenModuleManager: () -> Unit = {},
-    initialCategory: String? = null,
-    onBackToMenu: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -92,17 +89,6 @@ fun SettingsScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 12.dp)
     ) {
-        // Кнопка "Назад" (тільки якщо ми в категорії)
-        if (initialCategory != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("← Назад до категорій", color = Color(0xFF64B5F6), fontSize = 16.sp,
-                    modifier = Modifier.clickable { onBackToMenu() })
-            }
-        }
-
         // Header — glass
         Row(
             modifier = Modifier
@@ -120,18 +106,6 @@ fun SettingsScreen(
             var showOverlayPermDialog by remember { mutableStateOf(false) }
         var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
         LaunchedEffect(Unit) { installedApps = AppRepository(ctx).loadCached() }
-
-        GlassSectionHeader("🧩 Модулі (Розширення)")
-        GlassCard {
-            ActionRow(
-                "Керування модулями",
-                androidx.compose.material.icons.Icons.Default.Settings,
-                Color(0xFF9C27B0)
-            ) {
-                // Відкриваємо екран менеджера модулів
-                onOpenModuleManager()
-            }
-        }
 
         GlassSectionHeader("Застосунки за замовчуванням")
         GlassCard {
@@ -517,6 +491,27 @@ fun SettingsScreen(
                 Color(0xFFFF9800)
             ) {
                 MorningBriefingService.start(ctx)
+            }
+        }
+
+        GlassSectionHeader("🧩 Розширення")
+        GlassCard {
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable {
+                    val intent = android.content.Intent(
+                        androidx.compose.ui.platform.LocalContext.current,
+                        com.dynamicai.launcher.ui.ModuleManagerActivity::class.java
+                    )
+                    androidx.compose.ui.platform.LocalContext.current.startActivity(intent)
+                }.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("📦", fontSize = 24.sp)
+                Spacer(Modifier.width(16.dp))
+                Column {
+                    Text("Менеджер модулів", color = Color.White, fontSize = 16.sp)
+                    Text("Завантаження та оновлення Wild Rift, OCR, LLM", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                }
             }
         }
 

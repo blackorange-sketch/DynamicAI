@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -55,7 +56,7 @@ private fun FolderCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF151515))
+            .background(AppTheme.colors.surface)
             .pointerInput(folder.id) {
                 detectTapGestures(
                     onTap = { onTap() },
@@ -67,7 +68,7 @@ private fun FolderCard(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 folder.name,
-                color = Color.White,
+                color = AppTheme.colors.textPrimary,
                 fontSize = 15.sp,
                 modifier = Modifier.weight(1f)
             )
@@ -92,7 +93,7 @@ private fun FolderCard(
                     modifier = Modifier
                         .size(iconSizeDp.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF2A2A2A)),
+                        .background(AppTheme.colors.surface),
                     contentAlignment = Alignment.Center
                 ) {
                     Text("+${apps.size - 4}", color = Color.Gray, fontSize = 12.sp)

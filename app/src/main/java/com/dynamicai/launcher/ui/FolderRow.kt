@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -49,20 +50,20 @@ fun FolderRow(
                 modifier = Modifier
                     .size(28.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF2A2A2A)),
+                    .background(AppTheme.colors.surface),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.Add,
                     contentDescription = null,
-                    tint = Color(0xFF64B5F6),
+                    tint = AppTheme.colors.accent,
                     modifier = Modifier.size(18.dp)
                 )
             }
             Spacer(Modifier.width(10.dp))
             Text(
                 folder.name,
-                color = Color.White,
+                color = AppTheme.colors.textPrimary,
                 fontSize = 16.sp
             )
             Spacer(Modifier.weight(1f))

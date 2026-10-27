@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -72,10 +73,10 @@ fun FolderTabs(
                     .fillMaxWidth()
                     .heightIn(max = 360.dp)
                     .clip(RoundedCornerShape(18.dp))
-                    .background(Color(0xCC0F0F0F))
+                    .background(AppTheme.colors.glassBackgroundAlt)
                     .border(
                         width = 0.5.dp,
-                        color = Color.White.copy(alpha = 0.08f),
+                        color = AppTheme.colors.textPrimary.copy(alpha = 0.08f),
                         shape = RoundedCornerShape(18.dp)
                     )
                     .padding(vertical = 6.dp),
@@ -99,8 +100,8 @@ fun FolderTabs(
                                 .background(
                                     brush = Brush.verticalGradient(
                                         listOf(
-                                            Color.White.copy(alpha = 0.10f),
-                                            Color.White.copy(alpha = 0.03f)
+                                            AppTheme.colors.textPrimary.copy(alpha = 0.10f),
+                                            AppTheme.colors.textPrimary.copy(alpha = 0.03f)
                                         )
                                     )
                                 )
@@ -108,8 +109,8 @@ fun FolderTabs(
                                     width = 0.5.dp,
                                     brush = Brush.verticalGradient(
                                         listOf(
-                                            Color.White.copy(alpha = 0.22f),
-                                            Color.White.copy(alpha = 0.05f)
+                                            AppTheme.colors.textPrimary.copy(alpha = 0.22f),
+                                            AppTheme.colors.textPrimary.copy(alpha = 0.05f)
                                         )
                                     ),
                                     shape = RoundedCornerShape((iconSizeDp / 2 + 6).dp)
@@ -125,7 +126,7 @@ fun FolderTabs(
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = app.label,
-                            color = Color.White,
+                            color = AppTheme.colors.textPrimary,
                             fontSize = (fontSizeSp - 3).coerceAtLeast(10).sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -169,18 +170,18 @@ private fun FolderTab(
 ) {
     Text(
         text = label,
-        color = if (selected) Color.White else Color.White.copy(alpha = 0.6f),
+        color = if (selected) AppTheme.colors.textPrimary else AppTheme.colors.textSecondary,
         fontSize = 14.sp,
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
             .background(
                 brush = Brush.verticalGradient(
                     if (selected) listOf(
-                        Color(0xFF64B5F6).copy(alpha = 0.6f),
-                        Color(0xFF2196F3).copy(alpha = 0.3f)
+                        AppTheme.colors.accent.copy(alpha = 0.6f),
+                        AppTheme.colors.accentDark.copy(alpha = 0.3f)
                     ) else listOf(
-                        Color(0xE61F1F1F),
-                        Color(0xCC0D0D0D)
+                        AppTheme.colors.glassBackground,
+                        AppTheme.colors.glassBackgroundAlt
                     )
                 )
             )
@@ -188,11 +189,11 @@ private fun FolderTab(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     if (selected) listOf(
-                        Color(0xFF64B5F6).copy(alpha = 0.7f),
-                        Color(0xFF64B5F6).copy(alpha = 0.2f)
+                        AppTheme.colors.accent.copy(alpha = 0.7f),
+                        AppTheme.colors.accent.copy(alpha = 0.2f)
                     ) else listOf(
-                        Color.White.copy(alpha = 0.25f),
-                        Color.White.copy(alpha = 0.05f)
+                        AppTheme.colors.glassBorder,
+                        AppTheme.colors.textPrimary.copy(alpha = 0.05f)
                     )
                 ),
                 shape = RoundedCornerShape(20.dp)

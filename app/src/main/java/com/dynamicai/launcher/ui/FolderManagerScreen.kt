@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -57,11 +58,11 @@ fun FolderManagerScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onClose) {
-                Icon(Icons.Default.ArrowBack, "Назад", tint = Color.White)
+                Icon(Icons.Default.ArrowBack, "Назад", tint = AppTheme.colors.textPrimary)
             }
-            Text("Папки", color = Color.White, fontSize = 22.sp, modifier = Modifier.weight(1f))
+            Text("Папки", color = AppTheme.colors.textPrimary, fontSize = 22.sp, modifier = Modifier.weight(1f))
             IconButton(onClick = { showCreateDialog = true }) {
-                Icon(Icons.Default.Add, "Нова папка", tint = Color(0xFF64B5F6))
+                Icon(Icons.Default.Add, "Нова папка", tint = AppTheme.colors.accent)
             }
         }
 
@@ -72,7 +73,7 @@ fun FolderManagerScreen(
             ) {
                 Text(
                     "Немає папок. Створи першу — тап на 📁 вгорі",
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = AppTheme.colors.textSecondary,
                     fontSize = 14.sp
                 )
             }
@@ -103,19 +104,19 @@ fun FolderManagerScreen(
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false; newFolderName = "" },
-            title = { Text("Нова папка", color = Color.White) },
+            title = { Text("Нова папка", color = AppTheme.colors.textPrimary) },
             text = {
                 androidx.compose.foundation.text.BasicTextField(
                     value = newFolderName,
                     onValueChange = { newFolderName = it },
-                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp),
-                    cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                    textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.textPrimary),
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 8.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(AppTheme.colors.textPrimary.copy(alpha = 0.08f))
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     decorationBox = { inner ->
                         if (newFolderName.isEmpty()) {
@@ -134,14 +135,14 @@ fun FolderManagerScreen(
                             newFolderName = ""
                         }
                     }
-                ) { Text("Створити", color = Color(0xFF64B5F6)) }
+                ) { Text("Створити", color = AppTheme.colors.accent) }
             },
             dismissButton = {
                 TextButton(onClick = { showCreateDialog = false; newFolderName = "" }) {
-                    Text("Скасувати", color = Color.White)
+                    Text("Скасувати", color = AppTheme.colors.textPrimary)
                 }
             },
-            containerColor = Color(0xFF1A1A1A)
+            containerColor = AppTheme.colors.surface
         )
     }
 
@@ -150,7 +151,7 @@ fun FolderManagerScreen(
         val availableApps = apps.filter { it.packageName !in folder.packageNames }
         AlertDialog(
             onDismissRequest = { addingToFolder = null },
-            title = { Text("Додати до «${folder.name}»", color = Color.White) },
+            title = { Text("Додати до «${folder.name}»", color = AppTheme.colors.textPrimary) },
             text = {
                 if (availableApps.isEmpty()) {
                     Text("Немає застосунків для додавання", color = Color.Gray, fontSize = 14.sp)
@@ -178,7 +179,7 @@ fun FolderManagerScreen(
                                     tint = Color.Unspecified
                                 )
                                 Spacer(Modifier.width(14.dp))
-                                Text(app.label, color = Color.White, fontSize = 15.sp)
+                                Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 15.sp)
                             }
                         }
                     }
@@ -187,10 +188,10 @@ fun FolderManagerScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { addingToFolder = null }) {
-                    Text("Скасувати", color = Color.White)
+                    Text("Скасувати", color = AppTheme.colors.textPrimary)
                 }
             },
-            containerColor = Color(0xFF1A1A1A)
+            containerColor = AppTheme.colors.surface
         )
     }
 }
@@ -212,8 +213,8 @@ private fun FolderCard(
             .background(
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color(0xF02A2A2A),
-                        Color(0xE01A1A1A)
+                        AppTheme.colors.surface.copy(alpha = 0.94f),
+                        AppTheme.colors.surface.copy(alpha = 0.88f)
                     )
                 )
             )
@@ -221,8 +222,8 @@ private fun FolderCard(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.35f),
-                        Color.White.copy(alpha = 0.08f)
+                        AppTheme.colors.textPrimary.copy(alpha = 0.35f),
+                        AppTheme.colors.textPrimary.copy(alpha = 0.08f)
                     )
                 ),
                 shape = RoundedCornerShape(20.dp)
@@ -241,19 +242,19 @@ private fun FolderCard(
             Icon(
                 Icons.Default.Add,
                 contentDescription = null,
-                tint = Color(0xFF64B5F6),
+                tint = AppTheme.colors.accent,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(folder.name, color = Color.White, fontSize = 16.sp)
+                Text(folder.name, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
                 Text(
                     "${folder.packageNames.size} застосунків",
-                    color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp
+                    color = AppTheme.colors.textSecondary, fontSize = 11.sp
                 )
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, "Видалити", tint = Color(0xFFFF6B6B), modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Delete, "Видалити", tint = AppTheme.colors.danger, modifier = Modifier.size(20.dp))
             }
         }
 
@@ -268,7 +269,7 @@ private fun FolderCard(
                 if (apps.isEmpty()) {
                     Text(
                         "Порожня папка",
-                        color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp,
+                        color = AppTheme.colors.textSecondary, fontSize = 13.sp,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                     )
                 } else {
@@ -286,9 +287,9 @@ private fun FolderCard(
                                 tint = Color.Unspecified
                             )
                             Spacer(Modifier.width(12.dp))
-                            Text(app.label, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                            Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
                             IconButton(onClick = { onRemoveApp(app.packageName) }) {
-                                Icon(Icons.Default.Delete, "Прибрати", tint = Color(0xFFFF6B6B), modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Delete, "Прибрати", tint = AppTheme.colors.danger, modifier = Modifier.size(18.dp))
                             }
                         }
                     }
@@ -300,16 +301,16 @@ private fun FolderCard(
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp, vertical = 6.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.06f))
+                        .background(AppTheme.colors.textPrimary.copy(alpha = 0.06f))
                         .pointerInput(Unit) {
                             detectTapGestures { onAddApp() }
                         }
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Add, "Додати", tint = Color(0xFF64B5F6), modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.Add, "Додати", tint = AppTheme.colors.accent, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Додати застосунок", color = Color(0xFF64B5F6), fontSize = 13.sp)
+                    Text("Додати застосунок", color = AppTheme.colors.accent, fontSize = 13.sp)
                 }
             }
         }

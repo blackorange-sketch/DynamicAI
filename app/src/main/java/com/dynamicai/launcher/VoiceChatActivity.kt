@@ -26,7 +26,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -37,15 +36,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import kotlin.math.cos
-import kotlin.math.sin
 
 class VoiceChatActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        // Ініціалізуємо контролер для ReVanced
-        
         setContent {
             val vm: AppListViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
             VoiceAssistantScreen(vm = vm, onClose = { finish() })
@@ -58,7 +53,6 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
     val ctx = LocalContext.current
     var messages by remember { mutableStateOf(listOf<ChatMessage>()) }
     var voiceState by remember { mutableStateOf(VoiceState.LISTENING) }
-    var partialText by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
@@ -82,18 +76,14 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 override fun onError(error: Int) { voiceState = VoiceState.IDLE }
                 override fun onResults(results: Bundle?) {
                     val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
-                    partialText = ""
                     if (text.isNotBlank()) {
                         messages = messages + ChatMessage("user", text)
-                        processQuery(text, vm, scope, { newState -> voiceState = newState }, { newMsg -> messages = messages + newMsg }, { recognizer?.stopListening(); recognizer?.cancel() })
+                        processQuery(text, vm, scope, { voiceState = it }, { messages = messages + it }) { recognizer?.stopListening(); recognizer?.cancel() }
                     } else {
                         voiceState = VoiceState.IDLE
                     }
                 }
-                override fun onPartialResults(partialResults: Bundle?) {
-                    val t = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
-                    partialText = t
-                }
+                override fun onPartialResults(partialResults: Bundle?) {}
                 override fun onEvent(eventType: Int, params: Bundle?) {}
             })
         }
@@ -107,51 +97,58 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
     }
 
     LaunchedEffect(Unit) { 
-        // "Прогріваємо" TTS-двигун заздалегідь, щоб перша відповідь була без затримки
-        vm.tts
+        vm.tts // прогрів
         startListening() 
     }
 
-    // Плавна анімація "дихання" для скляної кулі
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 1.2f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ), label = "pulse"
+        initialValue = 0.8f, targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(tween(2000, easing = LinearOutSlowInEasing), RepeatMode.Reverse), label = "pulse"
     )
 
-    // Градієнтний фон у стилі Liquid Glass
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.radialGradient(
-                    colors = listOf(Color(0xFF14141E), Color(0xFF050505)),
-                    radius = 1200f
-                )
-            )
+            .background(Brush.radialGradient(colors = listOf(Color(0xFF14141E), Color(0xFF050505)), radius = 1200f))
     ) {
-        // Розмиті кольорові плями на фоні
         Canvas(modifier = Modifier.fillMaxSize()) {
             drawCircle(
-                brush = Brush.radialGradient(listOf(Color(0xFF64B5F6).copy(alpha = 0.15f), Color.Transparent)),
+                brush = Brush.radialGradient(listOf(Color(0xFF64B5F6).copy(alpha = 0.1f), Color.Transparent)),
                 radius = 400f,
                 center = androidx.compose.ui.geometry.Offset(size.width * 0.2f, size.height * 0.3f)
             )
             drawCircle(
-                brush = Brush.radialGradient(listOf(Color(0xFFE91E63).copy(alpha = 0.15f), Color.Transparent)),
+                brush = Brush.radialGradient(listOf(Color(0xFFE91E63).copy(alpha = 0.1f), Color.Transparent)),
                 radius = 400f,
                 center = androidx.compose.ui.geometry.Offset(size.width * 0.8f, size.height * 0.7f)
+            )
+        }
+
+        // Фонова куля
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            val bgOrbColor = when (voiceState) {
+                VoiceState.LISTENING -> Color(0xFF4CAF50)
+                VoiceState.SPEAKING -> Color(0xFFE91E63)
+                VoiceState.THINKING -> Color(0xFF2196F3)
+                else -> Color.Gray
+            }
+            Box(
+                modifier = Modifier
+                    .padding(bottom = 100.dp)
+                    .size(300.dp)
+                    .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }
+                    .clip(CircleShape)
+                    .background(Brush.radialGradient(listOf(bgOrbColor.copy(alpha = 0.15f), Color.Transparent)))
             )
         }
 
         Column(
             modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)
         ) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -161,33 +158,8 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 Text("✕", color = Color.White.copy(alpha = 0.6f), fontSize = 22.sp, modifier = Modifier.padding(8.dp).clickable(onClick = onClose))
             }
 
-            // Велика фонова куля (водяний знак)
-            val bgOrbColor = when (voiceState) {
-                VoiceState.LISTENING -> Color(0xFF4CAF50)
-                VoiceState.SPEAKING -> Color(0xFFE91E63)
-                VoiceState.THINKING -> Color(0xFF2196F3)
-                else -> Color.Gray
-            }
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = androidx.compose.ui.Alignment.BottomCenter
-            ) {
-                Box(
-                    modifier = Modifier
-                        .padding(bottom = 80.dp)
-                        .size(300.dp)
-                        .graphicsLayer { scaleX = pulseScale; scaleY = pulseScale }
-                        .clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(
-                            androidx.compose.ui.graphics.Brush.radialGradient(
-                                listOf(bgOrbColor.copy(alpha = 0.15f), Color.Transparent)
-                            )
-                        )
-                )
-            }
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Чат
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f),
@@ -215,9 +187,6 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            
-
-            // Поле вводу (Liquid Glass)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -238,28 +207,33 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
                         inner()
                     }
                 )
-                IconButtonLike("➤", Color(0xFF64B5F6)) {
-                    if (query.isNotBlank()) {
-                        messages = messages + ChatMessage("user", query)
-                        processQuery(query, vm, scope, { newState -> voiceState = newState }, { newMsg -> messages = messages + newMsg }, { recognizer?.stopListening(); recognizer?.cancel() })
-                        query = ""
-                    }
-                }
-                IconButtonLike("🎤", if (voiceState == VoiceState.LISTENING) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.6f)) { startListening() }
+                Box(
+                    modifier = Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF64B5F6).copy(alpha = 0.15f)).clickable { 
+                        if (query.isNotBlank()) {
+                            messages = messages + ChatMessage("user", query)
+                            processQuery(query, vm, scope, { voiceState = it }, { messages = messages + it }) { recognizer?.stopListening(); recognizer?.cancel() }
+                            query = ""
+                        }
+                    },
+                    contentAlignment = Alignment.Center
+                ) { Text("➤", color = Color(0xFF64B5F6), fontSize = 20.sp) }
+                
+                Box(
+                    modifier = Modifier.size(44.dp).clip(CircleShape).background(if (voiceState == VoiceState.LISTENING) Color(0xFF4CAF50).copy(alpha = 0.2f) else Color.Transparent).clickable { startListening() },
+                    contentAlignment = Alignment.Center
+                ) { Text("🎤", fontSize = 20.sp) }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Нижні кнопки (як в AiHub, але в стилі Glass)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                LiquidChip("Пошук", Color(0xFF4285F4)) { ctx.startActivity(Intent(Intent.ACTION_WEB_SEARCH)) }
-                LiquidChip("Переклад", Color(0xFFFF9800)) { /* Логіка */ }
-                LiquidChip("AI", Color(0xFF2196F3)) { /* Логіка */ }
-                LiquidChip("Wild Rift", Color(0xFF9C27B0)) { ctx.startActivity(Intent(ctx, WildRiftAdvisorActivity::class.java)) }
+                ActionChip("Пошук", Color(0xFF4285F4)) { ctx.startActivity(Intent(Intent.ACTION_WEB_SEARCH)) }
+                ActionChip("Переклад", Color(0xFFFF9800)) { }
+                ActionChip("AI", Color(0xFF2196F3)) { }
+                ActionChip("Wild Rift", Color(0xFF9C27B0)) { ctx.startActivity(Intent(ctx, WildRiftAdvisorActivity::class.java)) }
             }
             Spacer(modifier = Modifier.height(8.dp))
         }
@@ -267,17 +241,7 @@ fun VoiceAssistantScreen(vm: AppListViewModel, onClose: () -> Unit) {
 }
 
 @Composable
-fun IconButtonLike(icon: String, tint: Color, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier.size(48.dp).clip(CircleShape).background(tint.copy(alpha = 0.15f)).clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(icon, color = tint, fontSize = 20.sp)
-    }
-}
-
-@Composable
-fun LiquidChip(label: String, color: Color, onClick: () -> Unit) {
+fun ActionChip(label: String, color: Color, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
@@ -291,38 +255,23 @@ fun LiquidChip(label: String, color: Color, onClick: () -> Unit) {
 }
 
 fun processQuery(
-    text: String, 
-    vm: AppListViewModel, 
-    scope: kotlinx.coroutines.CoroutineScope, 
-    onStateChange: (VoiceState) -> Unit,
-    onMessage: (ChatMessage) -> Unit,
-    stopListening: () -> Unit
+    text: String, vm: AppListViewModel, scope: kotlinx.coroutines.CoroutineScope,
+    onStateChange: (VoiceState) -> Unit, onMessage: (ChatMessage) -> Unit, stopListening: () -> Unit
 ) {
     onStateChange(VoiceState.THINKING)
-    stopListening() // Зупиняємо мікрофон, щоб звільнити аудіо-фокус
-    
+    stopListening()
     scope.launch {
         try {
             if (!vm.ensureLlmLoaded()) {
-                val err = "Модель ШІ не завантажена. Завантажте її в налаштуваннях."
+                val err = "Модель ШІ не завантажена."
                 onMessage(ChatMessage("assistant", err))
                 onStateChange(VoiceState.SPEAKING)
                 vm.tts.speakWithCallback(err) { onStateChange(VoiceState.LISTENING) }
                 return@launch
             }
-            
             val answer = vm.chatEngine.answerWithAgent(text)
             onStateChange(VoiceState.SPEAKING)
-            
-            android.util.Log.d("VoiceChat", "Trying to speak: $answer")
-            
-            // 1. Спочатку запускаємо TTS (щоб він почав синтез якомога швидше)
-            vm.tts.speakWithCallback(answer) { 
-                android.util.Log.d("VoiceChat", "TTS onDone callback triggered")
-                onStateChange(VoiceState.LISTENING) 
-            }
-            
-            // 2. Потім показуємо текст на екрані (це займе 1-2 мілісекунди)
+            vm.tts.speakWithCallback(answer) { onStateChange(VoiceState.LISTENING) }
             onMessage(ChatMessage("assistant", answer))
         } catch (e: Exception) {
             onMessage(ChatMessage("assistant", "Помилка: ${e.message}"))

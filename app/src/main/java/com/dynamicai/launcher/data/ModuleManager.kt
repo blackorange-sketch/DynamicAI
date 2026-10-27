@@ -118,12 +118,19 @@ object ModuleManager {
                 ZipInputStream(input).use { zis ->
                     var entry = zis.nextEntry
                     while (entry != null) {
-                        val file = File(targetDir, entry.name)
-                        if (entry.isDirectory) file.mkdirs()
-                        else {
-                            file.parentFile?.mkdirs()
-                            file.outputStream().use { fos -> zis.copyTo(fos) }
+                        // Зрізаємо префікс targetDirName/, щоб уникнути подвійної вкладеності (wildrift/wildrift/)
+                        val relativeName = entry.name.removePrefix("${module.targetDirName}/")
+                        
+                        if (relativeName.isNotEmpty()) {
+                            val file = File(targetDir, relativeName)
+                            if (entry.isDirectory) {
+                                file.mkdirs()
+                            } else {
+                                file.parentFile?.mkdirs()
+                                file.outputStream().use { fos -> zis.copyTo(fos) }
+                            }
                         }
+                        zis.closeEntry()
                         entry = zis.nextEntry
                     }
                 }

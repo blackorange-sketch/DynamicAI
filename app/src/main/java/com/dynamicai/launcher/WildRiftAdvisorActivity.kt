@@ -78,7 +78,7 @@ fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.95f))
+            .background(AppTheme.colors.background.copy(alpha = 0.95f))
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),

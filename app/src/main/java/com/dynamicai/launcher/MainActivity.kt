@@ -1,5 +1,11 @@
 package com.dynamicai.launcher
 
+import com.dynamicai.launcher.ui.MainBackground
+import com.dynamicai.launcher.ui.theme.DynamicAITheme
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -142,7 +148,13 @@ class MainActivity : ComponentActivity() {
                 surface = androidx.compose.ui.graphics.Color.Transparent
             )
             MaterialTheme(colorScheme = colorScheme) {
-                HomeScreen(vm = vm, hubEvent = hubEvent.value)
+                val settings by vm.settings.collectAsStateWithLifecycle()
+                DynamicAITheme(themeId = settings.appTheme) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        MainBackground(settings)
+                        HomeScreen(vm = vm, hubEvent = hubEvent.value)
+                    }
+                }
             }
         }
     }

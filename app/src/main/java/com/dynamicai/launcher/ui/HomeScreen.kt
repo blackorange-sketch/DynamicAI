@@ -1,7 +1,5 @@
 package com.dynamicai.launcher.ui
 
-import androidx.compose.ui.draw.BlurredEdgeTreatment
-import androidx.compose.ui.draw.blur
 import com.dynamicai.launcher.ui.theme.AppTheme
 import com.dynamicai.launcher.ui.theme.DynamicAITheme
 import android.Manifest
@@ -23,7 +21,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.Image
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Animatable
@@ -112,28 +109,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     )
 
     val ctx = LocalContext.current
-    // Пріоритет: 1) вибране користувачем фото, 2) системні шпалери, 3) градієнт
-    val customBg = remember(settings.backgroundImageUri) {
-        // Місце під асинхронне завантаження
-        null
-    }
-    var loadedCustomBg by remember(settings.backgroundImageUri) {
-        androidx.compose.runtime.mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
-    }
-    androidx.compose.runtime.LaunchedEffect(settings.backgroundImageUri) {
-        loadedCustomBg = if (settings.backgroundImageUri.isNotBlank()) {
-            CustomBackgroundLoader.loadFromFile(settings.backgroundImageUri, 720)
-        } else null
-    }
-
-    val systemWallpaper = remember {
-        BackdropBlur.get(ctx, 720).also {
-            if (it == null) android.util.Log.w("HomeScreen", "systemWallpaper is NULL — WallpaperManager не зміг прочитати")
-            else android.util.Log.d("HomeScreen", "systemWallpaper loaded: ${it.width}x${it.height}")
-        }
-    }
-
-    val homeWallpaper = loadedCustomBg ?: systemWallpaper
     val statusBarCtrl = remember { com.dynamicai.launcher.system.StatusBarController(ctx.applicationContext) }
     val keyboard = LocalSoftwareKeyboardController.current
     val haptic = LocalHapticFeedback.current
@@ -647,34 +622,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 }
             }
     ) {
-        // Шар 1: розмиті шпалери (liquid glass) — завжди повністю видимі
-        if (homeWallpaper != null) {
-            Image(
-                bitmap = homeWallpaper,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .blur(
-                        radius = settings.wallpaperBlurRadius.dp,
-                        edgeTreatment = BlurredEdgeTreatment.Unbounded
-                    )
-            )
-        } else {
-            // Fallback: темний градієнт замість чорного екрану
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        androidx.compose.ui.graphics.Brush.verticalGradient(
-                            listOf(
-                                AppTheme.colors.backdropStart,
-                                AppTheme.colors.backdropEnd
-                            )
-                        )
-                    )
-            )
-        }
 
         // Затемнення фону коли список/пошук/drawer активний
         androidx.compose.animation.AnimatedVisibility(

@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -66,8 +67,8 @@ internal fun SizeSliderRow(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(label, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            Text("$value$suffix", color = Color(0xFF64B5F6), fontSize = 13.sp)
+            Text(label, color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Text("$value$suffix", color = AppTheme.colors.accent, fontSize = 13.sp)
         }
         Slider(
             value = values.indexOf(value).coerceAtLeast(0).toFloat(),
@@ -78,8 +79,8 @@ internal fun SizeSliderRow(
             valueRange = 0f..(values.size - 1).toFloat(),
             steps = (values.size - 2).coerceAtLeast(0),
             colors = SliderDefaults.colors(
-                thumbColor = Color(0xFF64B5F6),
-                activeTrackColor = Color(0xFF64B5F6)
+                thumbColor = AppTheme.colors.accent,
+                activeTrackColor = AppTheme.colors.accent
             )
         )
     }
@@ -90,7 +91,7 @@ internal fun SwitchRow(
     label: String,
     checked: Boolean,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
-    tint: Color = Color(0xFF64B5F6),
+    tint: Color = AppTheme.colors.accent,
     onChange: (Boolean) -> Unit
 ) {
     Row(
@@ -112,18 +113,18 @@ internal fun SwitchRow(
             }
             Spacer(Modifier.width(12.dp))
         }
-        Text(label, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text(label, color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
         Switch(
             checked = checked,
             onCheckedChange = onChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = Color(0xFF64B5F6)
+                checkedThumbColor = AppTheme.colors.textPrimary,
+                checkedTrackColor = AppTheme.colors.accent
             )
         )
     }
     HorizontalDivider(
-        color = Color.White.copy(alpha = 0.06f),
+        color = AppTheme.colors.glassBorder.copy(alpha = 0.4f),
         thickness = 0.5.dp,
         modifier = Modifier.padding(start = 16.dp)
     )
@@ -133,7 +134,7 @@ internal fun SwitchRow(
 internal fun ActionRow(
     label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
-    tint: Color = Color(0xFF64B5F6),
+    tint: Color = AppTheme.colors.accent,
     onClick: () -> Unit
 ) {
     Row(
@@ -155,16 +156,16 @@ internal fun ActionRow(
             }
             Spacer(Modifier.width(12.dp))
         }
-        Text(label, color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text(label, color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
         Icon(
             Icons.Default.KeyboardArrowRight,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.3f),
+            tint = AppTheme.colors.textSecondary,
             modifier = Modifier.size(18.dp)
         )
     }
     HorizontalDivider(
-        color = Color.White.copy(alpha = 0.06f),
+        color = AppTheme.colors.glassBorder.copy(alpha = 0.4f),
         thickness = 0.5.dp,
         modifier = Modifier.padding(start = 16.dp)
     )
@@ -178,21 +179,21 @@ internal fun CityInputRow(cityName: String, onCityChange: (String) -> Unit) {
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("Місто (вручну)", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text("Місто (вручну)", color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
         BasicTextField(
             value = cityName,
             onValueChange = onCityChange,
-            textStyle = TextStyle(color = Color.White, fontSize = 13.sp),
-            cursorBrush = SolidColor(Color(0xFF64B5F6)),
+            textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 13.sp),
+            cursorBrush = SolidColor(AppTheme.colors.accent),
             singleLine = true,
             modifier = Modifier
                 .width(150.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(Color.White.copy(alpha = 0.08f))
+                .background(AppTheme.colors.glassBorder.copy(alpha = 0.5f))
                 .padding(horizontal = 10.dp, vertical = 6.dp),
             decorationBox = { inner ->
                 if (cityName.isEmpty()) {
-                    Text("напр. Київ", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                    Text("напр. Київ", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
                 }
                 inner()
             }
@@ -221,7 +222,7 @@ internal fun PositionRow(current: String, onChange: (String) -> Unit) {
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text("Сторона:", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text("Сторона:", color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
         GlassChip("Зліва", current == "left") { onChange("left") }
         GlassChip("Справа", current == "right") { onChange("right") }
     }
@@ -235,7 +236,7 @@ internal fun FpsRow(current: Int, onChange: (Int) -> Unit) {
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text("FPS:", color = Color.White, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text("FPS:", color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
         listOf(15, 24, 30, 60).forEach { fps ->
             GlassChip("$fps", current == fps) { onChange(fps) }
         }
@@ -250,11 +251,11 @@ private fun GlassChip(label: String, selected: Boolean, onClick: () -> Unit) {
             .background(
                 brush = Brush.verticalGradient(
                     if (selected) listOf(
-                        Color(0xFF64B5F6).copy(alpha = 0.6f),
-                        Color(0xFF2196F3).copy(alpha = 0.3f)
+                        AppTheme.colors.accent.copy(alpha = 0.6f),
+                        AppTheme.colors.accentDark.copy(alpha = 0.3f)
                     ) else listOf(
-                        Color.White.copy(alpha = 0.1f),
-                        Color.White.copy(alpha = 0.02f)
+                        AppTheme.colors.glassBorder,
+                        AppTheme.colors.glassBorder.copy(alpha = 0.15f)
                     )
                 )
             )
@@ -264,7 +265,7 @@ private fun GlassChip(label: String, selected: Boolean, onClick: () -> Unit) {
     ) {
         Text(
             label,
-            color = Color.White,
+            color = AppTheme.colors.textPrimary,
             fontSize = 13.sp
         )
     }
@@ -296,11 +297,11 @@ internal fun ShizukuTestRow() {
     Column(
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Text(status, color = Color.White, fontSize = 13.sp)
+        Text(status, color = AppTheme.colors.textPrimary, fontSize = 13.sp)
         if (tasks.isNotBlank()) {
             Text(
                 tasks,
-                color = Color(0xFF64B5F6),
+                color = AppTheme.colors.accent,
                 fontSize = 11.sp,
                 modifier = Modifier.padding(top = 4.dp)
             )
@@ -339,7 +340,7 @@ internal fun LlmTestRow(onTest: suspend (String) -> String?) {
     val ctx = LocalContext.current
     
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        Text("Тест LLM", color = Color(0xFF64B5F6), fontSize = 13.sp)
+        Text("Тест LLM", color = AppTheme.colors.accent, fontSize = 13.sp)
 
         // Діагностика
         val diag = remember { mutableStateOf("") }
@@ -351,13 +352,13 @@ internal fun LlmTestRow(onTest: suspend (String) -> String?) {
         BasicTextField(
             value = query,
             onValueChange = { query = it },
-            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
-            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+            textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.textPrimary),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
                 .clip(RoundedCornerShape(10.dp))
-                .background(Color.White.copy(alpha = 0.08f))
+                .background(AppTheme.colors.glassBorder.copy(alpha = 0.5f))
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             decorationBox = { inner ->
                 if (query.isEmpty()) {
@@ -385,12 +386,12 @@ internal fun LlmTestRow(onTest: suspend (String) -> String?) {
             Spacer(Modifier.height(6.dp))
             Text(
                 answer,
-                color = Color(0xFF81C784),
+                color = AppTheme.colors.successLight,
                 fontSize = 12.sp,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color.Black.copy(alpha = 0.3f))
+                    .background(AppTheme.colors.surface.copy(alpha = 0.5f))
                     .padding(8.dp)
             )
         }
@@ -443,7 +444,7 @@ internal fun BluetoothTestRow() {
         if (!hasPermission) {
             Text(
                 "❌ Потрібен дозвіл Bluetooth",
-                color = Color(0xFFFF6B6B), fontSize = 12.sp
+                color = AppTheme.colors.danger, fontSize = 12.sp
             )
             Spacer(Modifier.height(6.dp))
             GlassChip("Дати дозвіл", false) {
@@ -452,19 +453,19 @@ internal fun BluetoothTestRow() {
         } else {
             Text(
                 diagnostic.ifBlank { "Перевірка…" },
-                color = Color(0xFF81C784), fontSize = 11.sp
+                color = AppTheme.colors.successLight, fontSize = 11.sp
             )
 
             BasicTextField(
                 value = nameInput,
                 onValueChange = { nameInput = it },
-                textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
-                cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.textPrimary),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
+                    .background(AppTheme.colors.glassBorder.copy(alpha = 0.5f))
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 decorationBox = { inner ->
                     if (nameInput.isEmpty()) {
@@ -503,8 +504,8 @@ internal fun TtsSlider(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(label, color = Color.White, fontSize = 13.sp, modifier = Modifier.weight(1f))
-            Text("%.2fx".format(value), color = Color(0xFF64B5F6), fontSize = 12.sp)
+            Text(label, color = AppTheme.colors.textPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Text("%.2fx".format(value), color = AppTheme.colors.accent, fontSize = 12.sp)
         }
         Slider(
             value = values.indexOf(value).coerceAtLeast(0).toFloat(),
@@ -515,8 +516,8 @@ internal fun TtsSlider(
             valueRange = 0f..(values.size - 1).toFloat(),
             steps = (values.size - 2).coerceAtLeast(0),
             colors = SliderDefaults.colors(
-                thumbColor = Color(0xFF64B5F6),
-                activeTrackColor = Color(0xFF64B5F6)
+                thumbColor = AppTheme.colors.accent,
+                activeTrackColor = AppTheme.colors.accent
             )
         )
     }
@@ -538,23 +539,23 @@ private fun AppPickerDialog(
     }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Обрати: $title", color = Color.White) },
+        title = { Text("Обрати: $title", color = AppTheme.colors.textPrimary) },
         text = {
             Column {
                 BasicTextField(
                     value = query,
                     onValueChange = { query = it },
-                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
-                    cursorBrush = SolidColor(Color(0xFF64B5F6)),
+                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
+                    cursorBrush = SolidColor(AppTheme.colors.accent),
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(AppTheme.colors.glassBorder.copy(alpha = 0.5f))
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                     decorationBox = { inner ->
                         if (query.isEmpty()) {
-                            Text("Пошук…", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                            Text("Пошук…", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
                         }
                         inner()
                     }
@@ -571,7 +572,7 @@ private fun AppPickerDialog(
                         ) {
                             Text(
                                 "Системний (за замовчуванням)",
-                                color = if (currentPkg.isBlank()) Color(0xFF64B5F6) else Color.White,
+                                color = if (currentPkg.isBlank()) AppTheme.colors.accent else AppTheme.colors.textPrimary,
                                 fontSize = 14.sp
                             )
                         }
@@ -586,12 +587,12 @@ private fun AppPickerDialog(
                         ) {
                             Text(
                                 app.label,
-                                color = if (currentPkg == app.packageName) Color(0xFF64B5F6) else Color.White,
+                                color = if (currentPkg == app.packageName) AppTheme.colors.accent else AppTheme.colors.textPrimary,
                                 fontSize = 14.sp,
                                 modifier = Modifier.weight(1f)
                             )
                             if (app.isSystem) {
-                                Text("сист.", color = Color.White.copy(alpha = 0.3f), fontSize = 10.sp)
+                                Text("сист.", color = AppTheme.colors.textSecondary, fontSize = 10.sp)
                             }
                         }
                     }
@@ -599,9 +600,9 @@ private fun AppPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Закрити", color = Color(0xFF64B5F6)) }
+            TextButton(onClick = onDismiss) { Text("Закрити", color = AppTheme.colors.accent) }
         },
-        containerColor = Color(0xFF1A1A1A),
+        containerColor = AppTheme.colors.surface,
     )
 }
 
@@ -636,18 +637,18 @@ internal fun AppPickerRow(
         }
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = Color.White, fontSize = 14.sp)
-            Text(currentLabel, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+            Text(label, color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+            Text(currentLabel, color = AppTheme.colors.textSecondary, fontSize = 12.sp)
         }
         Icon(
             Icons.Default.KeyboardArrowRight,
             contentDescription = null,
-            tint = Color.White.copy(alpha = 0.3f),
+            tint = AppTheme.colors.textSecondary,
             modifier = Modifier.size(18.dp)
         )
     }
     HorizontalDivider(
-        color = Color.White.copy(alpha = 0.06f),
+        color = AppTheme.colors.glassBorder.copy(alpha = 0.4f),
         thickness = 0.5.dp,
         modifier = Modifier.padding(start = 16.dp)
     )

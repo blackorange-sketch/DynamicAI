@@ -556,19 +556,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     llmDownloaded = vm.downloader.isDownloaded,
                     llmReady = llmReady,
                     versionName = BuildConfig.VERSION_NAME,
+                    initialCategory = currentSettingsCategory,
+                    onBackToMenu = { currentSettingsCategory = null },
                     onClose = { showSettings = false }
                 )
-                Box(
-                    modifier = Modifier
-                        .align(androidx.compose.ui.Alignment.TopStart)
-                        .padding(16.dp)
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                        .background(Color.Black.copy(alpha = 0.6f))
-                        .clickable { currentSettingsCategory = null }
-                        .padding(8.dp)
-                ) {
-                    Text("← Назад", color = Color.White, fontSize = 14.sp)
-                }
             }
         }
         return

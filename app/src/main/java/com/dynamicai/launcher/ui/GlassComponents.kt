@@ -63,7 +63,7 @@ fun GlassCircleIcon(
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 20.dp,
+    cornerRadius: Dp = 24.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(
@@ -71,23 +71,25 @@ fun GlassCard(
             .clip(RoundedCornerShape(cornerRadius))
             .background(
                 brush = Brush.verticalGradient(
-                    listOf(
-                        Color(0xE61F1F1F),
-                        Color(0xCC0D0D0D)
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.10f),
+                        Color.White.copy(alpha = 0.04f),
+                        Color.Black.copy(alpha = 0.15f)
                     )
                 )
             )
             .border(
                 width = 1.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.4f),
-                        Color.White.copy(alpha = 0.08f)
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.45f),
+                        Color.White.copy(alpha = 0.12f),
+                        Color.White.copy(alpha = 0.02f)
                     )
                 ),
                 shape = RoundedCornerShape(cornerRadius)
             )
-            .padding(vertical = 4.dp),
+            .padding(vertical = 6.dp),
         content = content
     )
 }

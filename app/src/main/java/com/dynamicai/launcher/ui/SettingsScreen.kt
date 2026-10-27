@@ -79,7 +79,9 @@ fun SettingsScreen(
     llmReady: Boolean,
     versionName: String,
     onClose: () -> Unit,
-    onTestLlm: suspend (String) -> String? = { null }
+    onTestLlm: suspend (String) -> String? = { null },
+    initialCategory: String? = null,
+    onBackToMenu: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -96,7 +98,9 @@ fun SettingsScreen(
                 .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onClose) {
+            IconButton(onClick = {
+                if (initialCategory != null) onBackToMenu() else onClose()
+            }) {
                 Icon(Icons.Default.ArrowBack, "Назад", tint = Color.White)
             }
             Text("Налаштування", color = Color.White, fontSize = 22.sp)

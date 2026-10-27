@@ -194,7 +194,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF050505))
+            .background(AppTheme.colors.backdropEnd)
     ) {
         // Делікатні скляні плями на фоні (Liquid Glass)
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -346,9 +346,9 @@ fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
     
     val primaryColor by animateColorAsState(
         targetValue = when (voiceState) {
-            VoiceState.LISTENING -> Color(0xFF00E676)
+            VoiceState.LISTENING -> AppTheme.colors.successLight
             VoiceState.SPEAKING -> AppTheme.colors.pink
-            VoiceState.THINKING -> Color(0xFF00B0FF)
+            VoiceState.THINKING -> AppTheme.colors.accentLight
             else -> AppTheme.colors.accent
         },
         animationSpec = tween(1000),

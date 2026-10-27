@@ -345,7 +345,7 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                         modifier = Modifier
                             .size(40.dp)
                             .clip(CircleShape)
-                            .background(Color(0x33FF5252))
+                            .background(AppTheme.colors.danger.copy(alpha = 0.2f))
                             .clickable {
                                 val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)

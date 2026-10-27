@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -39,7 +40,7 @@ fun DockEditorScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.95f))
+            .background(AppTheme.colors.background.copy(alpha = 0.95f))
             .statusBarsPadding()
     ) {
         // Заголовок
@@ -48,9 +49,9 @@ fun DockEditorScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onClose) {
-                Icon(Icons.Default.ArrowBack, "Назад", tint = Color.White)
+                Icon(Icons.Default.ArrowBack, "Назад", tint = AppTheme.colors.textPrimary)
             }
-            Text("Док (${dockPkgs.size})", color = Color.White, fontSize = 22.sp)
+            Text("Док (${dockPkgs.size})", color = AppTheme.colors.textPrimary, fontSize = 22.sp)
         }
 
         // Поле пошуку
@@ -64,8 +65,8 @@ fun DockEditorScreen(
         BasicTextField(
             value = query,
             onValueChange = { query = it },
-            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 18.sp),
-            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+            textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 18.sp),
+            cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.textPrimary),
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
@@ -105,7 +106,7 @@ fun DockEditorScreen(
                     Spacer(Modifier.width(16.dp))
                     Text(
                         app.label,
-                        color = if (inDock) Color(0xFF64B5F6) else Color.White,
+                        color = if (inDock) AppTheme.colors.accent else AppTheme.colors.textPrimary,
                         fontSize = 16.sp,
                         modifier = Modifier.weight(1f)
                     )
@@ -113,7 +114,7 @@ fun DockEditorScreen(
                         Icon(
                             Icons.Default.Check,
                             contentDescription = "У доку",
-                            tint = Color(0xFF64B5F6),
+                            tint = AppTheme.colors.accent,
                             modifier = Modifier.size(24.dp)
                         )
                     } else {

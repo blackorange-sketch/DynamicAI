@@ -135,7 +135,7 @@ fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0x224CAF50))
+                    .background(AppTheme.colors.success.copy(alpha = 0.13f))
                     .border(1.dp, AppTheme.colors.success.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
                     .clickable { showEnemyPicker = true }
                     .padding(12.dp),

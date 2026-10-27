@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import com.dynamicai.launcher.ui.theme.DynamicAITheme
 import android.Manifest
 import android.app.Activity
@@ -740,8 +741,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                         .size(if (p == currentPage) 8.dp else 6.dp)
                                         .clip(androidx.compose.foundation.shape.CircleShape)
                                         .background(
-                                            if (p == currentPage) Color.White
-                                            else Color.White.copy(alpha = 0.35f)
+                                            if (p == currentPage) AppTheme.colors.textPrimary
+                                            else AppTheme.colors.textPrimary.copy(alpha = 0.35f)
                                         )
                                 )
                             }
@@ -788,7 +789,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             if (response.isNotBlank()) {
                 Text(
                     text = response,
-                    color = Color(0xFF64B5F6),
+                    color = AppTheme.colors.accent,
                     fontSize = 14.sp,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                 )
@@ -921,9 +922,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         ) {
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.size(120.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.15f))
+                modifier = Modifier.size(120.dp).clip(CircleShape).background(AppTheme.colors.textPrimary.copy(alpha = 0.15f))
             ) {
-                Text(activeLetter?.toString() ?: "", color = Color.White, fontSize = 64.sp)
+                Text(activeLetter?.toString() ?: "", color = AppTheme.colors.textPrimary, fontSize = 64.sp)
             }
         }
 
@@ -1046,12 +1047,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         downloadProgress?.let { p ->
             AlertDialog(
                 onDismissRequest = {},
-                title = { Text("Завантаження моделі", color = Color.White) },
+                title = { Text("Завантаження моделі", color = AppTheme.colors.textPrimary) },
                 text = {
                     Column {
                         when (p) {
                             is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading -> {
-                                Text("${p.downloadedMb} / ${p.totalMb} MB", color = Color.White)
+                                Text("${p.downloadedMb} / ${p.totalMb} MB", color = AppTheme.colors.textPrimary)
                                 Spacer(Modifier.height(8.dp))
                                 LinearProgressIndicator(
                                     progress = { p.percent / 100f },
@@ -1061,13 +1062,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                 Text("${p.percent}%", color = Color.Gray, fontSize = 12.sp)
                             }
                             is com.dynamicai.launcher.llm.ModelDownloader.Progress.Error ->
-                                Text("Помилка: ${p.message}", color = Color(0xFFFF6B6B))
+                                Text("Помилка: ${p.message}", color = AppTheme.colors.danger)
                             else -> {}
                         }
                     }
                 },
                 confirmButton = {},
-                containerColor = Color(0xFF1A1A1A)
+                containerColor = AppTheme.colors.surface
             )
         }
 
@@ -1098,7 +1099,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         showCreateFolder?.let { app ->
             AlertDialog(
                 onDismissRequest = { showCreateFolder = null; createFolderName = "" },
-                title = { Text("Нова папка", color = Color.White) },
+                title = { Text("Нова папка", color = AppTheme.colors.textPrimary) },
                 text = {
                     Column {
                         Text("Застосунок: ${app.label}", color = Color.Gray, fontSize = 13.sp)
@@ -1106,8 +1107,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         androidx.compose.foundation.text.BasicTextField(
                             value = createFolderName,
                             onValueChange = { createFolderName = it },
-                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp),
-                            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                            textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.textPrimary),
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             decorationBox = { inner ->
@@ -1126,14 +1127,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         }
                         showCreateFolder = null
                         createFolderName = ""
-                    }) { Text("Створити", color = Color(0xFF64B5F6)) }
+                    }) { Text("Створити", color = AppTheme.colors.accent) }
                 },
                 dismissButton = {
                     TextButton(onClick = { showCreateFolder = null; createFolderName = "" }) {
-                        Text("Скасувати", color = Color.White)
+                        Text("Скасувати", color = AppTheme.colors.textPrimary)
                     }
                 },
-                containerColor = Color(0xFF1A1A1A)
+                containerColor = AppTheme.colors.surface
             )
         }
 
@@ -1141,7 +1142,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         addToFolderPicker?.let { app ->
             AlertDialog(
                 onDismissRequest = { addToFolderPicker = null },
-                title = { Text("Додати ${app.label} до…", color = Color.White) },
+                title = { Text("Додати ${app.label} до…", color = AppTheme.colors.textPrimary) },
                 text = {
                     Column {
                         if (folders.isEmpty()) {
@@ -1150,7 +1151,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             folders.forEach { f ->
                                 Text(
                                     f.name,
-                                    color = Color.White,
+                                    color = AppTheme.colors.textPrimary,
                                     fontSize = 16.sp,
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -1169,10 +1170,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { addToFolderPicker = null }) {
-                        Text("Скасувати", color = Color.White)
+                        Text("Скасувати", color = AppTheme.colors.textPrimary)
                     }
                 },
-                containerColor = Color(0xFF1A1A1A)
+                containerColor = AppTheme.colors.surface
             )
         }
 
@@ -1180,12 +1181,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         folderMenuApp?.let { app ->
             AlertDialog(
                 onDismissRequest = { folderMenuApp = null; folderMenuFolder = null },
-                title = { Text(app.label, color = Color.White, fontSize = 18.sp) },
+                title = { Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
                 text = {
                     Column {
                         Text(
                             "Прибрати з папки",
-                            color = Color.White,
+                            color = AppTheme.colors.textPrimary,
                             fontSize = 15.sp,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1202,7 +1203,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         )
                         Text(
                             "Запустити",
-                            color = Color.White,
+                            color = AppTheme.colors.textPrimary,
                             fontSize = 15.sp,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1220,10 +1221,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { folderMenuApp = null; folderMenuFolder = null }) {
-                        Text("Скасувати", color = Color.White)
+                        Text("Скасувати", color = AppTheme.colors.textPrimary)
                     }
                 },
-                containerColor = Color(0xFF1A1A1A)
+                containerColor = AppTheme.colors.surface
             )
         }
 
@@ -1231,12 +1232,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         folderHeaderMenu?.let { folder ->
             AlertDialog(
                 onDismissRequest = { folderHeaderMenu = null },
-                title = { Text(folder.name, color = Color.White, fontSize = 18.sp) },
+                title = { Text(folder.name, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
                 text = {
                     Column {
                         Text(
                             "Видалити папку (застосунки залишаться)",
-                            color = Color(0xFFFF6B6B),
+                            color = AppTheme.colors.danger,
                             fontSize = 15.sp,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1253,10 +1254,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 confirmButton = {},
                 dismissButton = {
                     TextButton(onClick = { folderHeaderMenu = null }) {
-                        Text("Скасувати", color = Color.White)
+                        Text("Скасувати", color = AppTheme.colors.textPrimary)
                     }
                 },
-                containerColor = Color(0xFF1A1A1A)
+                containerColor = AppTheme.colors.surface
             )
         }
 
@@ -1264,7 +1265,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         if (showMainMenu) {
             AlertDialog(
                 onDismissRequest = { showMainMenu = false },
-                title = { Text("Меню", color = Color.White, fontSize = 18.sp) },
+                title = { Text("Меню", color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
                 text = {
                     Column {
                         MenuItem("Створити папку") {
@@ -1299,9 +1300,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 },
                 confirmButton = {},
                 dismissButton = {
-                    TextButton(onClick = { showMainMenu = false }) { Text("Скасувати", color = Color.White) }
+                    TextButton(onClick = { showMainMenu = false }) { Text("Скасувати", color = AppTheme.colors.textPrimary) }
                 },
-                containerColor = Color(0xFF1A1A1A)
+                containerColor = AppTheme.colors.surface
             )
         }
 
@@ -1309,14 +1310,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         if (showNewFolderDialog) {
             AlertDialog(
                 onDismissRequest = { showNewFolderDialog = false },
-                title = { Text("Нова папка", color = Color.White) },
+                title = { Text("Нова папка", color = AppTheme.colors.textPrimary) },
                 text = {
                     Column(modifier = Modifier.fillMaxWidth()) {
                         androidx.compose.foundation.text.BasicTextField(
                             value = newFolderName,
                             onValueChange = { newFolderName = it },
-                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 16.sp),
-                            cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                            textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.textPrimary),
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             decorationBox = { inner ->
@@ -1364,7 +1365,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                         tint = Color.Unspecified
                                     )
                                     Spacer(Modifier.width(12.dp))
-                                    Text(app.label, color = Color.White, fontSize = 15.sp)
+                                    Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 15.sp)
                                 }
                             }
                         }
@@ -1379,14 +1380,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             showNewFolderDialog = false
                         },
                         enabled = newFolderName.isNotBlank() && newFolderSelection.isNotEmpty()
-                    ) { Text("Створити", color = Color(0xFF64B5F6)) }
+                    ) { Text("Створити", color = AppTheme.colors.accent) }
                 },
                 dismissButton = {
                     TextButton(onClick = { showNewFolderDialog = false }) {
-                        Text("Скасувати", color = Color.White)
+                        Text("Скасувати", color = AppTheme.colors.textPrimary)
                     }
                 },
-                containerColor = Color(0xFF1A1A1A)
+                containerColor = AppTheme.colors.surface
             )
         }
 
@@ -1395,7 +1396,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             val folderApps = apps.filter { it.packageName in folder.packageNames }
             AlertDialog(
                 onDismissRequest = { openFolder = null },
-                title = { Text(folder.name, color = Color.White, fontSize = 18.sp) },
+                title = { Text(folder.name, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
                 text = {
                     androidx.compose.foundation.lazy.LazyColumn(
                         modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)
@@ -1420,7 +1421,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                     tint = Color.Unspecified
                                 )
                                 Spacer(Modifier.width(16.dp))
-                                Text(app.label, color = Color.White, fontSize = 16.sp)
+                                Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
                             }
                         }
                     }
@@ -1438,23 +1439,23 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         Text(
                             if ("folder:${folder.id}" in dockPkgs) "Прибрати з дока"
                             else "Додати в док",
-                            color = Color(0xFF64B5F6)
+                            color = AppTheme.colors.accent
                         )
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { openFolder = null }) {
-                        Text("Закрити", color = Color.White)
+                        Text("Закрити", color = AppTheme.colors.textPrimary)
                     }
                 },
-                containerColor = Color(0xFF1A1A1A)
+                containerColor = AppTheme.colors.surface
             )
         }
 
         pendingChoice?.let { candidates ->
             AlertDialog(
                 onDismissRequest = { vm.dismissChoice() },
-                title = { Text("Обери застосунок", color = Color.White) },
+                title = { Text("Обери застосунок", color = AppTheme.colors.textPrimary) },
                 text = {
                     Column {
                         candidates.forEach { app ->
@@ -1472,14 +1473,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                     tint = Color.Unspecified
                                 )
                                 Spacer(Modifier.width(12.dp))
-                                Text(app.label, color = Color.White, fontSize = 16.sp)
+                                Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
                             }
                         }
                     }
                 },
                 confirmButton = {},
-                dismissButton = { TextButton(onClick = { vm.dismissChoice() }) { Text("Скасувати", color = Color.White) } },
-                containerColor = Color(0xFF1A1A1A)
+                dismissButton = { TextButton(onClick = { vm.dismissChoice() }) { Text("Скасувати", color = AppTheme.colors.textPrimary) } },
+                containerColor = AppTheme.colors.surface
             )
         }
 
@@ -1487,7 +1488,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             val inFolder = vm.folderOf(app.packageName)
             AlertDialog(
                 onDismissRequest = { menuApp = null },
-                title = { Text(app.label, color = Color.White, fontSize = 18.sp) },
+                title = { Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
                 text = {
                     Column {
                         if (inFolder == null) {
@@ -1559,9 +1560,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 },
                 confirmButton = {},
                 dismissButton = {
-                    TextButton(onClick = { menuApp = null }) { Text("Скасувати", color = Color.White) }
+                    TextButton(onClick = { menuApp = null }) { Text("Скасувати", color = AppTheme.colors.textPrimary) }
                 },
-                containerColor = Color(0xFF1A1A1A)
+                containerColor = AppTheme.colors.surface
             )
         }
     }
@@ -1579,7 +1580,7 @@ fun AppContextMenu(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(app.label, color = Color.White, fontSize = 18.sp) },
+        title = { Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
         text = {
             Column {
                 MenuItem(if (inDock) "Прибрати з дока" else "Додати в док", onToggleDock)
@@ -1588,8 +1589,8 @@ fun AppContextMenu(
             }
         },
         confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Скасувати", color = Color.White) } },
-        containerColor = Color(0xFF1A1A1A)
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Скасувати", color = AppTheme.colors.textPrimary) } },
+        containerColor = AppTheme.colors.surface
     )
 }
 
@@ -1597,7 +1598,7 @@ fun AppContextMenu(
 private fun MenuItem(label: String, onClick: () -> Unit) {
     Text(
         label,
-        color = Color.White,
+        color = AppTheme.colors.textPrimary,
         fontSize = 15.sp,
         modifier = Modifier
             .fillMaxWidth()
@@ -1616,8 +1617,8 @@ fun SuggestionActionRow(s: Suggestion.Action, onClick: () -> Unit) {
             .background(
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.08f),
-                        Color.White.copy(alpha = 0.02f)
+                        AppTheme.colors.textPrimary.copy(alpha = 0.08f),
+                        AppTheme.colors.textPrimary.copy(alpha = 0.02f)
                     )
                 )
             )
@@ -1625,10 +1626,10 @@ fun SuggestionActionRow(s: Suggestion.Action, onClick: () -> Unit) {
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        GlassCircleIcon(Icons.Default.Star, Color(0xFF64B5F6))
+        GlassCircleIcon(Icons.Default.Star, AppTheme.colors.accent)
         Spacer(Modifier.width(14.dp))
         Column {
-            Text(s.label, color = Color.White, fontSize = 16.sp)
+            Text(s.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
             s.subtitle?.let { Text(it, color = Color.Gray, fontSize = 12.sp) }
         }
     }
@@ -1644,8 +1645,8 @@ fun SuggestionSettingRow(s: Suggestion.Setting, onClick: () -> Unit) {
             .background(
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.08f),
-                        Color.White.copy(alpha = 0.02f)
+                        AppTheme.colors.textPrimary.copy(alpha = 0.08f),
+                        AppTheme.colors.textPrimary.copy(alpha = 0.02f)
                     )
                 )
             )
@@ -1653,9 +1654,9 @@ fun SuggestionSettingRow(s: Suggestion.Setting, onClick: () -> Unit) {
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        GlassCircleIcon(Icons.Default.Settings, Color(0xFFB0BEC5))
+        GlassCircleIcon(Icons.Default.Settings, AppTheme.colors.textMuted)
         Spacer(Modifier.width(14.dp))
-        Text(s.label, color = Color.White, fontSize = 16.sp)
+        Text(s.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
     }
 }
 
@@ -1669,8 +1670,8 @@ fun SuggestionContactRow(s: Suggestion.Contact, onClick: () -> Unit) {
             .background(
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.08f),
-                        Color.White.copy(alpha = 0.02f)
+                        AppTheme.colors.textPrimary.copy(alpha = 0.08f),
+                        AppTheme.colors.textPrimary.copy(alpha = 0.02f)
                     )
                 )
             )
@@ -1678,10 +1679,10 @@ fun SuggestionContactRow(s: Suggestion.Contact, onClick: () -> Unit) {
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        GlassCircleIcon(Icons.Default.Person, Color(0xFF81C784))
+        GlassCircleIcon(Icons.Default.Person, AppTheme.colors.successLight)
         Spacer(Modifier.width(14.dp))
         Column {
-            Text(s.name, color = Color.White, fontSize = 16.sp)
+            Text(s.name, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
             Text(s.subtitle, color = Color.Gray, fontSize = 12.sp)
         }
     }
@@ -1705,8 +1706,8 @@ fun AppRow(
             .background(
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.06f),
-                        Color.White.copy(alpha = 0.015f)
+                        AppTheme.colors.textPrimary.copy(alpha = 0.06f),
+                        AppTheme.colors.textPrimary.copy(alpha = 0.015f)
                     )
                 )
             )
@@ -1725,8 +1726,8 @@ fun AppRow(
                 .background(
                     brush = Brush.verticalGradient(
                         listOf(
-                            Color.White.copy(alpha = 0.08f),
-                            Color.White.copy(alpha = 0.02f)
+                            AppTheme.colors.textPrimary.copy(alpha = 0.08f),
+                            AppTheme.colors.textPrimary.copy(alpha = 0.02f)
                         )
                     )
                 )
@@ -1734,8 +1735,8 @@ fun AppRow(
                     width = 0.5.dp,
                     brush = Brush.verticalGradient(
                         listOf(
-                            Color.White.copy(alpha = 0.2f),
-                            Color.White.copy(alpha = 0.04f)
+                            AppTheme.colors.textPrimary.copy(alpha = 0.2f),
+                            AppTheme.colors.textPrimary.copy(alpha = 0.04f)
                         )
                     ),
                     shape = RoundedCornerShape((iconSizeDp / 2 + 5).dp)
@@ -1752,7 +1753,7 @@ fun AppRow(
             Spacer(Modifier.width(14.dp))
             Text(
                 app.label,
-                color = if (inDock) Color(0xFF64B5F6) else Color.White,
+                color = if (inDock) AppTheme.colors.accent else AppTheme.colors.textPrimary,
                 fontSize = fontSizeSp.sp
             )
         }

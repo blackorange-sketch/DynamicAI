@@ -440,7 +440,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             backgroundAlphaPercent = settings.backgroundAlphaPercent,
             onClose = { showWeatherDetail = false }
         )
-        return
+        return@DynamicAITheme
     }
 
     if (showAddWidgetDialog) {
@@ -457,12 +457,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
     if (showNotesScreen) {
         NotesScreen(onClose = { showNotesScreen = false })
-        return
+        return@DynamicAITheme
     }
 
     if (showMacroManager) {
         com.dynamicai.launcher.macro.MacroScreen(onClose = { showMacroManager = false })
-        return
+        return@DynamicAITheme
     }
 
     if (showFolderManager) {
@@ -475,7 +475,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             onCreateFolder = { vm.createFolder(it, emptyList()) },
             onClose = { showFolderManager = false }
         )
-        return
+        return@DynamicAITheme
     }
 
     if (showRecent) {
@@ -495,7 +495,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             onDismiss = { showRecent = false },
             visible = true
         )
-        return
+        return@DynamicAITheme
     }
 
     if (showDockEditor) {
@@ -506,7 +506,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             onToggle = { vm.toggleDock(it) },
             onClose = { showDockEditor = false }
         )
-        return
+        return@DynamicAITheme
     }
 
     if (showWallpaper) {
@@ -515,7 +515,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             onSettingsChange = { vm.updateSettings(it) },
             onClose = { showWallpaper = false }
         )
-        return
+        return@DynamicAITheme
     }
 
     if (showSettings) {
@@ -565,7 +565,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 )
             }
         }
-        return
+        return@DynamicAITheme
     }
 
     val openNotesReq by vm.openNotesRequest.collectAsStateWithLifecycle()
@@ -1771,20 +1771,20 @@ private fun openGoogleSearch(ctx: android.content.Context, query: String) {
         if (st.defaultBrowser.isNotBlank()) {
             val i = android.content.Intent(viewIntent).setPackage(st.defaultBrowser)
             ctx.startActivity(i)
-            return
+            return@DynamicAITheme
         }
     } catch (_: Throwable) {}
     
     try {
         val i = android.content.Intent(viewIntent).setPackage("com.google.android.googlequicksearchbox")
         ctx.startActivity(i)
-        return
+        return@DynamicAITheme
     } catch (_: Throwable) {}
     
     try {
         val i = android.content.Intent(viewIntent).setPackage("com.android.chrome")
         ctx.startActivity(i)
-        return
+        return@DynamicAITheme
     } catch (_: Throwable) {}
     
     try {

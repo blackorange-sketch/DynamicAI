@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState

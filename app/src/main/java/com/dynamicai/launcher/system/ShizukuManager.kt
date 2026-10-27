@@ -375,20 +375,55 @@ class ShizukuManager(private val context: Context) {
             Log.e(TAG, "Shizuku недоступний для execShell")
             return@withContext "ERROR: No Shizuku permission"
         }
+        
+        // Спроба 1: Офіційний Shell API (якщо є)
         try {
-            val process = Shizuku.newProcess(arrayOf("sh", "-c", command), null, null)
-            val output = process.inputStream.bufferedReader().readText().trim()
-            val error = process.errorStream.bufferedReader().readText().trim()
-            process.waitFor()
+            val shellClass = Class.forName("rikka.shizuku.Shell")
+            val newProcessMethod = shellClass.getMethod("newProcess", Array<String>::class.java, Array<String>::class.java, String::class.java)
+            val process = newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null)
+            return@withContext readProcessOutput(process)
+        } catch (_: Throwable) {
+            // Shell API недоступний, йдемо далі
+        }
+        
+        // Спроба 2: Рефлексія для Shizuku.newProcess
+        try {
+            val newProcessMethod = Shizuku::class.java.getDeclaredMethod(
+                "newProcess", 
+                Array<String>::class.java, 
+                Array<String>::class.java, 
+                String::class.java
+            )
+            newProcessMethod.isAccessible = true
+            val process = newProcessMethod.invoke(null, arrayOf("sh", "-c", command), null, null)
+            return@withContext readProcessOutput(process)
+        } catch (t: Throwable) {
+            Log.e(TAG, "execShell failed (reflection): ${t.message}", t)
+            return@withContext "ERROR: ${t.message}"
+        }
+    }
+    
+    private fun readProcessOutput(process: Any): String {
+        return try {
+            val processClass = process.javaClass
+            val inputStream = processClass.getMethod("getInputStream").invoke(process) as java.io.InputStream
+            val errorStream = processClass.getMethod("getErrorStream").invoke(process) as java.io.InputStream
+            val waitFor = processClass.getMethod("waitFor")
+            
+            val output = inputStream.bufferedReader().readText().trim()
+            val error = errorStream.bufferedReader().readText().trim()
+            waitFor.invoke(process)
+            
             if (error.isNotEmpty()) {
                 Log.e(TAG, "Shell error: $error")
-                return@withContext "ERROR: $error"
+                "ERROR: $error"
+            } else {
+                Log.d(TAG, "Shell OK: $output")
+                if (output.isEmpty()) "OK" else output
             }
-            Log.d(TAG, "Shell OK: $command -> $output")
-            return@withContext if (output.isEmpty()) "OK" else output
         } catch (t: Throwable) {
-            Log.e(TAG, "execShell failed: ${t.message}", t)
-            return@withContext "ERROR: ${t.message}"
+            Log.e(TAG, "readProcessOutput failed: ${t.message}", t)
+            "ERROR: ${t.message}"
         }
     }
 }

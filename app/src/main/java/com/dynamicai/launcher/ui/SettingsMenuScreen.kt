@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,7 +26,7 @@ fun SettingsMenuScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = backgroundAlpha))
+            .background(AppTheme.colors.backdropStart.copy(alpha = backgroundAlpha))
     ) {
         // Фонові розмиті плями (Liquid Glass)
         
@@ -36,19 +37,19 @@ fun SettingsMenuScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Налаштування", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text("✕", color = Color.White.copy(alpha = 0.6f), fontSize = 24.sp,
+                Text("Налаштування", color = AppTheme.colors.textPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text("✕", color = AppTheme.colors.textSecondary, fontSize = 24.sp,
                     modifier = Modifier.padding(8.dp).clickable(onClick = onClose))
             }
             Spacer(Modifier.height(24.dp))
 
-            CategoryCard("🤖", "ШІ та Голос", "LLM, TTS, Ранковий брифінг", Color(0xFF2196F3)) { onCategorySelected("ai") }
+            CategoryCard("🤖", "ШІ та Голос", "LLM, TTS, Ранковий брифінг", AppTheme.colors.accentDark) { onCategorySelected("ai") }
             Spacer(Modifier.height(12.dp))
-            CategoryCard("🎨", "Вигляд", "Фон, Док, Розміри, Стиль", Color(0xFFE91E63)) { onCategorySelected("appearance") }
+            CategoryCard("🎨", "Вигляд", "Фон, Док, Розміри, Стиль", AppTheme.colors.pink) { onCategorySelected("appearance") }
             Spacer(Modifier.height(12.dp))
-            CategoryCard("🧩", "Модулі та Інструменти", "Wild Rift, OCR, Погода, Нотатки", Color(0xFF9C27B0)) { onCategorySelected("tools") }
+            CategoryCard("🧩", "Модулі та Інструменти", "Wild Rift, OCR, Погода, Нотатки", AppTheme.colors.purple) { onCategorySelected("tools") }
             Spacer(Modifier.height(12.dp))
-            CategoryCard("⚙️", "Система", "Shizuku, Дозволи, Bluetooth, Док", Color(0xFF4CAF50)) { onCategorySelected("system") }
+            CategoryCard("⚙️", "Система", "Shizuku, Дозволи, Bluetooth, Док", AppTheme.colors.success) { onCategorySelected("system") }
         }
     }
 }
@@ -62,8 +63,8 @@ private fun CategoryCard(icon: String, title: String, subtitle: String, color: C
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xE61A1A1A),
-                        Color(0xCC0D0D0D)
+                        AppTheme.colors.glassBackground,
+                        AppTheme.colors.glassBackgroundAlt
                     )
                 )
             )
@@ -71,8 +72,8 @@ private fun CategoryCard(icon: String, title: String, subtitle: String, color: C
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.25f),
-                        Color.White.copy(alpha = 0.05f)
+                        AppTheme.colors.glassBorder,
+                        AppTheme.colors.glassBorder.copy(alpha = 0.3f)
                     )
                 ),
                 shape = RoundedCornerShape(20.dp)
@@ -87,9 +88,9 @@ private fun CategoryCard(icon: String, title: String, subtitle: String, color: C
         ) { Text(icon, fontSize = 24.sp) }
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+            Text(title, color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, color = AppTheme.colors.textSecondary, fontSize = 12.sp)
         }
-        Text("›", color = Color.White.copy(alpha = 0.4f), fontSize = 24.sp)
+        Text("›", color = AppTheme.colors.textPrimary.copy(alpha = 0.4f), fontSize = 24.sp)
     }
 }

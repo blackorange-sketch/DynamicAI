@@ -330,7 +330,7 @@ class ChatEngine(
     }
 
 
-    suspend fun answerWithAgent(question: String): String {
+    suspend fun answerWithAgent(question: String, history: String = ""): String {
         if (!llm.isReady) return "LLM не активна"
         return try {
             // Використовуємо наш власний AgentEngine, який вже написаний і працює

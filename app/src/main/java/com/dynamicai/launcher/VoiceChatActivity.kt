@@ -90,8 +90,11 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                     val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
                     if (text.isNotBlank()) {
                         messages = messages + ChatMessage("user", text)
+                        val historyStr = messages.dropLast(1).takeLast(10).joinToString("\n") { msg ->
+                            if (msg.role == "user") "Користувач: ${msg.content}" else "Асистент: ${msg.content}"
+                        }
                         processQuery(
-                            text, vm, scope,
+                            text, historyStr, vm, scope,
                             { voiceState = it },
                             { messages = messages + it },
                             { stopListening() }
@@ -212,8 +215,11 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                     modifier = Modifier.size(44.dp).clip(CircleShape).background(Color(0xFF64B5F6).copy(alpha = 0.15f)).clickable { 
                         if (query.isNotBlank()) {
                             messages = messages + ChatMessage("user", query)
+                            val historyStr = messages.dropLast(1).takeLast(10).joinToString("\n") { msg ->
+                                if (msg.role == "user") "Користувач: ${msg.content}" else "Асистент: ${msg.content}"
+                            }
                             processQuery(
-                                query, vm, scope,
+                                query, historyStr, vm, scope,
                                 { voiceState = it },
                                 { messages = messages + it },
                                 { stopListening() }
@@ -366,7 +372,7 @@ fun LiquidChip(label: String, color: Color, onClick: () -> Unit) {
 }
 
 fun processQuery(
-    text: String, vm: AppListViewModel, scope: kotlinx.coroutines.CoroutineScope,
+    text: String, history: String, vm: AppListViewModel, scope: kotlinx.coroutines.CoroutineScope,
     onStateChange: (VoiceState) -> Unit, onMessage: (ChatMessage) -> Unit, stopListening: () -> Unit
 ) {
     onStateChange(VoiceState.THINKING)
@@ -380,7 +386,7 @@ fun processQuery(
                 vm.tts.speakWithCallback(err) { onStateChange(VoiceState.LISTENING) }
                 return@launch
             }
-            val answer = vm.chatEngine.answerWithAgent(text)
+            val answer = vm.chatEngine.answerWithAgent(text, history)
             onStateChange(VoiceState.SPEAKING)
             vm.tts.speakWithCallback(answer) { onStateChange(VoiceState.LISTENING) }
             onMessage(ChatMessage("assistant", answer))

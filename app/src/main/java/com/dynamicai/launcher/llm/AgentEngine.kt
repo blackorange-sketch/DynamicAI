@@ -38,18 +38,24 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine) {
         17. searchWeb(query: String) -> Шукає інформацію в інтернеті та повертає факти (для питань 'хто такий', 'що таке', новини).
     """.trimIndent()
 
-    suspend fun processWithTools(question: String): String = withContext(Dispatchers.IO) {
+    suspend fun processWithTools(question: String, history: String = ""): String = withContext(Dispatchers.IO) {
         var currentContext = "Запит користувача: $question"
         var iteration = 0
         val maxIterations = 4 // Максимум 4 кроки для складних задач
 
         while (iteration < maxIterations) {
             val prompt = """
-                Ти — агент-асистент. Проаналізуй поточний контекст і виріши, що робити далі.
+                Ти — Джарвіс, розумний голосовий асистент в Android-лаунчері. Відповідай ввічливо, коротко і по суті.
+                
+                [ІСТОРІЯ ДІАЛОГУ]
+                ${if (history.isNotBlank()) history else "Це початок розмови."}
+                
+                [ПОТОЧНИЙ ЗАПИТ]
+                $question
                 
                 $toolsDescription
                 
-                [ПОТОЧНИЙ КОНТЕКСТ]
+                [ПОТОЧНИЙ КОНТЕКСТ ВИКОНАННЯ]
                 $currentContext
                 
                 Якщо тобі потрібно виконати дію (відкрити додаток, пошукати в інтернеті, увімкнути музику), напиши ТІЛЬКИ команду у форматі:

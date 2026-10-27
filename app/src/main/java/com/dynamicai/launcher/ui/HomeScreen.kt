@@ -1,5 +1,7 @@
 package com.dynamicai.launcher.ui
 
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.blur
 import com.dynamicai.launcher.ui.theme.AppTheme
 import com.dynamicai.launcher.ui.theme.DynamicAITheme
 import android.Manifest
@@ -110,6 +112,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     )
 
     val ctx = LocalContext.current
+    val homeWallpaper = remember { BackdropBlur.get(ctx, 720) }
     val statusBarCtrl = remember { com.dynamicai.launcher.system.StatusBarController(ctx.applicationContext) }
     val keyboard = LocalSoftwareKeyboardController.current
     val haptic = LocalHapticFeedback.current
@@ -623,6 +626,25 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 }
             }
     ) {
+        // Шар 1: розмиті шпалери (liquid glass)
+        if (homeWallpaper != null) {
+            Image(
+                bitmap = homeWallpaper,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(
+                        radius = 60.dp,
+                        edgeTreatment = BlurredEdgeTreatment.Unbounded
+                    )
+                    .graphicsLayer {
+                        // Приглушуємо розмиті шпалери відповідно до налаштування
+                        alpha = 1f - (settings.backgroundAlphaPercent / 100f)
+                    }
+            )
+        }
+
         // Затемнення фону коли список/пошук/drawer активний
         androidx.compose.animation.AnimatedVisibility(
             visible = listVisible || searchMode || query.isNotBlank(),

@@ -76,6 +76,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Фонове завантаження нативних бібліотек (OCR, LLM)
+        androidx.lifecycle.lifecycleScope.launch(androidx.lifecycle.LifecycleOwner::class.java) {
+            // Це заглушка, реальний виклик у Application або ViewModel
+        }
         enableEdgeToEdge()
         handleAssistIntent(intent)
         handleHubIntent(intent)

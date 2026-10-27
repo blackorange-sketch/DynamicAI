@@ -80,6 +80,7 @@ fun SettingsScreen(
     versionName: String,
     onClose: () -> Unit,
     onTestLlm: suspend (String) -> String? = { null }
+    onOpenModuleManager: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -106,6 +107,18 @@ fun SettingsScreen(
             var showOverlayPermDialog by remember { mutableStateOf(false) }
         var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
         LaunchedEffect(Unit) { installedApps = AppRepository(ctx).loadCached() }
+
+        GlassSectionHeader("🧩 Модулі (Розширення)")
+        GlassCard {
+            ActionRow(
+                "Керування модулями",
+                androidx.compose.material.icons.Icons.Default.Settings,
+                Color(0xFF9C27B0)
+            ) {
+                // Відкриваємо екран менеджера модулів
+                onOpenModuleManager()
+            }
+        }
 
         GlassSectionHeader("Застосунки за замовчуванням")
         GlassCard {

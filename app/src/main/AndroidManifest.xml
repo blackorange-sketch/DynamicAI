@@ -55,17 +55,16 @@
     <uses-permission android:name="android.permission.INTERNET" />
     
     <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL" />
-    
-        <!-- QNN FastRPC для зв'язку з Hexagon DSP -->
-    <uses-native-library android:name="libcdsprpc.so" android:required="false"/>
-    <uses-native-library android:name="libadsprpc.so" android:required="false"/>
-<application
+    <application
         android:name=".DynamicApp"
         android:allowBackup="true"
         android:label="@string/app_name"
         android:icon="@android:drawable/sym_def_app_icon"
         android:theme="@style/Theme.DynamicAI"
         android:supportsRtl="true">
+        <!-- QNN FastRPC для зв'язку з Hexagon DSP -->
+        <uses-native-library android:name="libcdsprpc.so" android:required="false"/>
+        <uses-native-library android:name="libadsprpc.so" android:required="false"/>
         <!-- Дозволяємо використання системних нативних бібліотек (OpenCL для GPU) -->
         <uses-native-library android:name="libvndksupport.so" android:required="false" />
         <uses-native-library android:name="libOpenCL.so" android:required="false" />

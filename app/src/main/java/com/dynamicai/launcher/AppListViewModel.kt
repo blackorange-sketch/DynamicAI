@@ -825,14 +825,13 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 if (downloadingModelId == modelId && _downloadProgress.value is ModelDownloader.Progress.Downloading) {
                     android.util.Log.w("MNN_DL", "⏰ Watchdog: Service silent for 30s, resetting state")
                     downloadingModelId = null
-                    _downloadProgress.value = ModelDownloader.Progress.Idle
+                    _downloadProgress.value = null
                 }
             }
         } catch (t: Throwable) {
             android.util.Log.e("MNN_DL", "startForegroundService failed: ${t.javaClass.simpleName}: ${t.message}", t)
             downloadingModelId = null
-            _downloadProgress.value = ModelDownloader.Progress.Idle
-            _downloadError.value = "Service start failed: ${t.message}"
+            _downloadProgress.value = null
         }
     }
 

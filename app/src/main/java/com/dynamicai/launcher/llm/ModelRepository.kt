@@ -180,15 +180,27 @@ object ModelRepository {
                     )
 
     fun getDownloadedModels(context: Context): List<LlmModel> {
-        return AVAILABLE_MODELS.filter { File(context.filesDir, it.fileName).exists() }
+        return AVAILABLE_MODELS.filter { model ->
+            if (model.id.startsWith("mnn-")) {
+                val dir = File(File(context.filesDir, "mnn_models"), model.fileName)
+                dir.isDirectory && File(dir, "llm.mnn").exists() && File(dir, "llm.mnn.weight").exists()
+            } else {
+                File(context.filesDir, model.fileName).exists()
+            }
+        }
     }
 
     fun getModelFile(context: Context, model: LlmModel): File {
-        return File(context.filesDir, model.fileName)
+        return if (model.id.startsWith("mnn-")) {
+            File(File(context.filesDir, "mnn_models"), model.fileName)
+        } else {
+            File(context.filesDir, model.fileName)
+        }
     }
 
     suspend fun deleteModel(context: Context, model: LlmModel): Boolean = withContext(Dispatchers.IO) {
         val file = getModelFile(context, model)
-        if (file.exists()) file.delete() else false
+        if (!file.exists()) return@withContext false
+        if (file.isDirectory) file.deleteRecursively() else file.delete()
     }
 }

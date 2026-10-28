@@ -334,11 +334,8 @@ class ChatEngine(
     suspend fun simpleAnswer(question: String): String {
         if (!llm.isReady) return "LLM не активна"
         return try {
-            val prompt = buildString {
-                append("Ти — корисний AI-асистент у лаунчері Android. Відповідай українською мовою, коротко (1-3 речення).\n\n")
-                append("Питання користувача: ").append(question).append("\n\n")
-                append("Дай точну і коротку відповідь українською.")
-            }
+            // Передаємо ТІЛЬКИ питання. MNN сам загорне його у свій шаблон <|im_start|>user...
+            val prompt = "Відповідай українською мовою, коротко. $question"
             val response = llm.complete(prompt)
             Log.d(TAG, "simpleAnswer: prompt len=${prompt.length}, response=${response?.take(100)}")
             response?.trim() ?: "LLM не відповіла"

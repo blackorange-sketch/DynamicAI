@@ -701,7 +701,7 @@ fun SettingsScreen(
                 Triple("mnn-qwen3-1.7b", "Qwen3 1.7B", "1.7 GB"),
                 Triple("mnn-qwen2.5-1.5b", "Qwen2.5 1.5B", "1.5 GB")
             )
-            val mnnProgress = vm.downloadProgress.value
+            val mnnProgress by vm.downloadProgress.collectAsStateWithLifecycle()
             val downloadTrigger by vm.downloadTrigger.collectAsStateWithLifecycle()
             val downloadedMnn = remember(downloadTrigger) { com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
 
@@ -747,7 +747,7 @@ fun SettingsScreen(
         }
         GlassCard {
             val downloadedModels = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)
-            val progressState = vm.downloadProgress.value
+            val progressState by vm.downloadProgress.collectAsStateWithLifecycle()
 
             val filteredModels = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.filter { m ->
             when (modelFilter) {

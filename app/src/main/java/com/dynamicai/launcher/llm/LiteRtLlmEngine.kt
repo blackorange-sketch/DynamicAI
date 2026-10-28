@@ -115,7 +115,18 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         lastUsedAt = System.currentTimeMillis()
         val e = engine ?: return@withContext null
         try {
-            e.createConversation().use { conversation ->
+            // Створюємо SamplerConfig з низькою температурою
+            val samplerConfig = com.google.ai.edge.litertlm.SamplerConfig(
+                seed = 0,
+                temperature = 0.2, // Прибирає галюцинації
+                topK = 40,
+                topP = 0.9
+            )
+            val conversationConfig = com.google.ai.edge.litertlm.ConversationConfig(
+                samplerConfig = samplerConfig
+            )
+            
+            e.createConversation(conversationConfig).use { conversation ->
                 // Спробувати знайти метод sendMessageAsync через reflection
                 val asyncMethod = conversation.javaClass.methods.firstOrNull {
                     it.name == "sendMessageAsync" && it.parameterTypes.size == 2
@@ -151,7 +162,13 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         lastUsedAt = System.currentTimeMillis()
         val e = engine ?: return@withContext null
         return@withContext try {
-            e.createConversation().use { conversation ->
+            val samplerConfig = com.google.ai.edge.litertlm.SamplerConfig(
+                seed = 0, temperature = 0.2, topK = 40, topP = 0.9
+            )
+            val conversationConfig = com.google.ai.edge.litertlm.ConversationConfig(
+                samplerConfig = samplerConfig
+            )
+            e.createConversation(conversationConfig).use { conversation ->
                 // LiteRT-LM сам застосовує chat template з metadata моделі
                 val message = conversation.sendMessage(prompt)
                 if (message == null) {

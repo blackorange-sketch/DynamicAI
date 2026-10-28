@@ -6,6 +6,7 @@ package com.dynamicai.launcher.llm
  *  - MediaPipeLlmEngine — Gemma 4 E2B (наступний крок)
  */
 interface LlmEngine {
+    val isMnn: Boolean get() = false
     val isReady: Boolean
     suspend fun complete(prompt: String): String?
     suspend fun streamComplete(prompt: String, onToken: (String) -> Unit): String? {

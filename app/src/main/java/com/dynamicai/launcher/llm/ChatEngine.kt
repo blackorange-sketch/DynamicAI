@@ -335,7 +335,7 @@ class ChatEngine(
         if (!llm.isReady) return "LLM не активна"
         return try {
             val settings = com.dynamicai.launcher.data.SettingsStorage(context).load()
-            val isMnn = llm is com.dynamicai.launcher.llm.MnnLlmEngine
+            val isMnn = llm.isMnn
             
             // Вибираємо шаблон залежно від рушія
             val template = if (isMnn) settings.mnnPrompt else settings.litertPrompt

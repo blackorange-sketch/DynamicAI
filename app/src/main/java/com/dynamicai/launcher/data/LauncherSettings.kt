@@ -10,7 +10,7 @@ data class LauncherSettings(
     val showSearchBar: Boolean = true,
     val showRecentButton: Boolean = true,
     val useLlm: Boolean = true,
-    val mnnPrompt: String = "Відповідай українською мовою, коротко (1-3 речення).\n\n{{question}}",
+    val mnnPrompt: String = "\n{{question}}\nВідповідай українською мовою, коротко.",
     val litertPrompt: String = "<start_of_turn>user\n{{question}}<end_of_turn>\n<start_of_turn>model\n",
     val useTts: Boolean = true,
     val ttsSpeed: Float = 1.0f,

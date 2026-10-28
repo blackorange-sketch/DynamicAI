@@ -17,6 +17,7 @@ import java.io.File
  * Модель — це ПАПКА з файлами: llm.mnn, llm.mnn.json, llm.mnn.weight, llm_config.json, config.json, tokenizer.txt.
  */
 class MnnLlmEngine(private val context: Context) : LlmEngine {
+    override val isMnn: Boolean get() = true
 
     companion object {
         private const val TAG = "MnnLlmEngine"

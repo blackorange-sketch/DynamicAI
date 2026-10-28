@@ -663,50 +663,49 @@ fun SettingsScreen(
         }
 
 
-        // === MNN Test Card ===
+        // === MNN Models ===
+        val mnnModels = listOf(
+            Triple("mnn-qwen2.5-1.5b", "MNN Qwen 2.5 1.5B", "qwen2.5-1.5b"),
+            Triple("mnn-qwen3-0.6b", "MNN Qwen3 0.6B (Крихітна)", "qwen3-0.6b"),
+            Triple("mnn-qwen3-1.7b", "MNN Qwen3 1.7B (Швидка)", "qwen3-1.7b")
+        )
+        val mnnProgress = vm.downloadProgress.value
+        val mnnDownloading = mnnProgress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading
+        val mnnIsReady by vm.llmReady.collectAsStateWithLifecycle()
+
         GlassCard {
-            val mnnProgress = vm.downloadProgress.value
-            val mnnDownloading = mnnProgress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading
-            val mnnIsCurrent = vm.currentModelId == "mnn-qwen2.5-1.5b"
-            val mnnIsReady by vm.llmReady.collectAsStateWithLifecycle()
-
-            val mnnStatus = when {
-                mnnDownloading -> "Завантаження... ${(mnnProgress as com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading).percent}%"
-                mnnIsCurrent && mnnIsReady -> "✅ Активна (MNN)"
-                mnnIsCurrent -> "Активація..."
-                else -> "Натисніть для завантаження (~830 MB)"
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = !mnnDownloading) { vm.downloadMnnModel() }
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("🧪", fontSize = 20.sp)
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        "Тест MNN Qwen 2.5 1.5B",
-                        color = AppTheme.colors.textPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        mnnStatus,
-                        color = if (mnnDownloading) AppTheme.colors.accent else AppTheme.colors.textSecondary,
-                        fontSize = 11.sp
-                    )
-                }
-                if (mnnDownloading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = AppTheme.colors.accent,
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text("→", color = AppTheme.colors.accent, fontSize = 20.sp)
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("🧪 MNN Models", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                mnnModels.forEach { (id, name, _) ->
+                    val isCurrent = vm.currentModelId == id
+                    val status = when {
+                        mnnDownloading && isCurrent -> "Завантаження... ${(mnnProgress as com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading).percent}%"
+                        isCurrent && mnnIsReady -> "✅ Активна"
+                        isCurrent -> "Активація..."
+                        else -> "Натисніть для завантаження"
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !mnnDownloading) { vm.downloadMnnModelById(id) }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(name, color = AppTheme.colors.textPrimary, fontSize = 13.sp)
+                            Text(status, color = if (mnnDownloading && isCurrent) AppTheme.colors.accent else AppTheme.colors.textSecondary, fontSize = 10.sp)
+                        }
+                        if (mnnDownloading && isCurrent) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = AppTheme.colors.accent,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("→", color = AppTheme.colors.accent, fontSize = 18.sp)
+                        }
+                    }
                 }
             }
         }

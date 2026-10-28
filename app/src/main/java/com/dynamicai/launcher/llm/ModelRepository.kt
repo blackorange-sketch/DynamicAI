@@ -94,6 +94,27 @@ object ModelRepository {
             sizeBytes = 1_700_000_000L,
             fileName = "SmolLM2-1_7B-Instruct_dynamic_wi8_afp32.litertlm"
         ),
+        LlmModel(
+            id = "mnn-qwen2.5-1.5b",
+            name = "MNN Qwen 2.5 1.5B",
+            url = "https://huggingface.co/taobao-mnn/Qwen2.5-1.5B-Instruct-MNN/resolve/main/llm.mnn.weight",
+            sizeBytes = 1_500_000_000L,
+            fileName = "qwen2.5-1.5b"
+        ),
+        LlmModel(
+            id = "mnn-qwen3-0.6b",
+            name = "MNN Qwen3 0.6B (Крихітна)",
+            url = "https://huggingface.co/taobao-mnn/Qwen3-0.6B-MNN/resolve/main/llm.mnn.weight",
+            sizeBytes = 400_000_000L,
+            fileName = "qwen3-0.6b"
+        ),
+        LlmModel(
+            id = "mnn-qwen3-1.7b",
+            name = "MNN Qwen3 1.7B (Швидка)",
+            url = "https://huggingface.co/taobao-mnn/Qwen3-1.7B-MNN/resolve/main/llm.mnn.weight",
+            sizeBytes = 1_700_000_000L,
+            fileName = "qwen3-1.7b"
+        )
 
                     )
 

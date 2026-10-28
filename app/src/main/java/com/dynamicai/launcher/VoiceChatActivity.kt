@@ -500,7 +500,13 @@ fun processQuery(
                 vm.tts.speakWithCallback(err) { onStateChange(VoiceState.LISTENING) }
                 return@launch
             }
-            val answer = vm.chatEngine.answerWithAgent(text, history)
+            // Для MNN-моделей використовуємо простий чат (без агента)
+            // для LiteRT (Gemma) — з агентними інструментами
+            val answer = if (vm.currentModelId.startsWith("mnn-")) {
+                vm.chatEngine.simpleAnswer(text)
+            } else {
+                vm.chatEngine.answerWithAgent(text, history)
+            }
             // Видаляємо статус "Думаю"
             // (він зникне, бо ми замінимо список повідомлень)
             stopListening() // Примусово вимикаємо мікрофон, щоб не зчитав TTS

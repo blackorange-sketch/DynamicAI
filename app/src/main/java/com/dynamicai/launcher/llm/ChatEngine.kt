@@ -330,6 +330,24 @@ class ChatEngine(
     }
 
 
+    /** Простий чат без агента та інструментів — для маленьких моделей (MNN Qwen 1.5B/0.6B). */
+    suspend fun simpleAnswer(question: String): String {
+        if (!llm.isReady) return "LLM не активна"
+        return try {
+            val prompt = buildString {
+                append("Ти — корисний AI-асистент у лаунчері Android. Відповідай українською мовою, коротко (1-3 речення).\n\n")
+                append("Питання користувача: ").append(question).append("\n\n")
+                append("Дай точну і коротку відповідь українською.")
+            }
+            val response = llm.complete(prompt)
+            Log.d(TAG, "simpleAnswer: prompt len=${prompt.length}, response=${response?.take(100)}")
+            response?.trim() ?: "LLM не відповіла"
+        } catch (t: Throwable) {
+            Log.e(TAG, "simpleAnswer failed", t)
+            "Помилка: ${t.message}"
+        }
+    }
+
     suspend fun answerWithAgent(question: String, history: String = ""): String {
         if (!llm.isReady) return "LLM не активна"
         return try {

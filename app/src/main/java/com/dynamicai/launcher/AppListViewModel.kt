@@ -725,6 +725,76 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Завантажує будь-яку MNN-модель за ID (mnn-*) і активує її. */
+    fun downloadMnnModelById(modelId: String) {
+        viewModelScope.launch {
+            val folderName = when (modelId) {
+                "mnn-qwen2.5-1.5b" -> "qwen2.5-1.5b"
+                "mnn-qwen3-0.6b" -> "qwen3-0.6b"
+                "mnn-qwen3-1.7b" -> "qwen3-1.7b"
+                "mnn-gemma-2-2b" -> "gemma-2-2b"
+                else -> modelId.removePrefix("mnn-")
+            }
+            val repoName = when (modelId) {
+                "mnn-qwen2.5-1.5b" -> "Qwen2.5-1.5B-Instruct-MNN"
+                "mnn-qwen3-0.6b" -> "Qwen3-0.6B-MNN"
+                "mnn-qwen3-1.7b" -> "Qwen3-1.7B-MNN"
+                "mnn-gemma-2-2b" -> "gemma-2-2b-it-MNN"
+                else -> return@launch
+            }
+            val ok = downloadMnnModelByIdSuspending(repoName, folderName)
+            if (ok) {
+                android.util.Log.e("MNN_DL", "All files OK for $modelId, activating")
+                setCurrentModel(modelId)
+            } else {
+                android.util.Log.e("MNN_DL", "Download failed for $modelId")
+            }
+        }
+    }
+
+    private suspend fun downloadMnnModelByIdSuspending(repoName: String, folderName: String): Boolean =
+        withContext(Dispatchers.IO) {
+            val baseDir = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")
+            val targetDir = java.io.File(baseDir, folderName)
+            if (!targetDir.exists()) targetDir.mkdirs()
+
+            val files = linkedMapOf(
+                "config.json" to 50L,
+                "llm_config.json" to 50L,
+                "llm.mnn" to 100_000L,
+                "llm.mnn.json" to 100_000L,
+                "tokenizer.txt" to 100_000L,
+                "llm.mnn.weight" to 100_000_000L
+            )
+            val baseUrl = "https://huggingface.co/taobao-mnn/$repoName/resolve/main"
+
+            for ((file, minSize) in files) {
+                val target = java.io.File(targetDir, file)
+                if (target.exists() && target.length() >= minSize) {
+                    android.util.Log.e("MNN_DL", "Skip $file (${target.length()} bytes)")
+                    continue
+                }
+                val url = "$baseUrl/$file"
+                android.util.Log.e("MNN_DL", "Downloading $file from $url")
+                var ok = false
+                downloader.downloadUrl(url, "mnn_models/$folderName/$file").collect { progress ->
+                    when (progress) {
+                        is ModelDownloader.Progress.Complete -> {
+                            ok = true
+                            android.util.Log.e("MNN_DL", "✅ $file done")
+                        }
+                        is ModelDownloader.Progress.Error ->
+                            android.util.Log.e("MNN_DL", "❌ $file: ${progress.message}")
+                        is ModelDownloader.Progress.Downloading ->
+                            if (progress.percent % 20 == 0)
+                                android.util.Log.e("MNN_DL", "⏳ $file: ${progress.percent}%")
+                    }
+                }
+                if (!ok) return@withContext false
+            }
+            true
+        }
+
     /** Завантажує MNN-модель Qwen 2.5 1.5B і після успіху активує її. */
     fun downloadMnnModel() {
         viewModelScope.launch {

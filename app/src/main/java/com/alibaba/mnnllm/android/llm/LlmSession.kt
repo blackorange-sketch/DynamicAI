@@ -51,12 +51,20 @@ class LlmSession(
     fun load(): Boolean {
         if (nativePtr != 0L) return true
         return try {
-            val mergedConfig = """{"backend_type":"$backendType","thread_num":4,"precision":"low","memory":"low","max_new_tokens":$maxNewTokens}"""
+            val mergedConfig = """{"backend_type":"$backendType","thread_num":4,"precision":"normal","memory":"normal","max_new_tokens":$maxNewTokens}"""
             val configJson = """{"is_r1":false,"mmap_dir":"","keep_history":$keepHistory}"""
             Log.e(TAG, "initNative: configPath=${configDir.absolutePath}")
             Log.e(TAG, "mergedConfig=$mergedConfig")
             Log.e(TAG, "configJson=$configJson")
-            nativePtr = initNative(configDir.absolutePath, null, mergedConfig, configJson)
+            // Нативна частина конкатенує configPath + "tokenizer.txt" без слеша,
+            // тому треба передати шлях із завершальним "/"
+            val configPathWithSlash = if (configDir.absolutePath.endsWith("/")) {
+                configDir.absolutePath
+            } else {
+                configDir.absolutePath + "/"
+            }
+            Log.e(TAG, "initNative: configPath=$configPathWithSlash")
+            nativePtr = initNative(configPathWithSlash, null, mergedConfig, configJson)
             Log.e(TAG, "initNative → nativePtr=$nativePtr")
             nativePtr != 0L
         } catch (t: Throwable) {

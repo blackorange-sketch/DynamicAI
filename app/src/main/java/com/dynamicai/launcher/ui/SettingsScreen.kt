@@ -664,13 +664,22 @@ fun SettingsScreen(
 
         // === MNN Test Card ===
         GlassCard {
+            val mnnProgress = vm.downloadProgress.value
+            val mnnDownloading = mnnProgress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading
+            val mnnIsCurrent = vm.currentModelId == "mnn-qwen2.5-1.5b"
+            val mnnIsReady = vm.llmReady
+
+            val mnnStatus = when {
+                mnnDownloading -> "Завантаження... ${(mnnProgress as com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading).percent}%"
+                mnnIsCurrent && mnnIsReady -> "✅ Активна (MNN)"
+                mnnIsCurrent -> "Активація..."
+                else -> "Натисніть для завантаження (~830 MB)"
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable {
-                        vm.downloadMnnModel()
-                        vm.setCurrentModel("mnn-qwen2.5-1.5b")
-                    }
+                    .clickable(enabled = !mnnDownloading) { vm.downloadMnnModel() }
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -684,12 +693,20 @@ fun SettingsScreen(
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        if (vm.currentModelId == "mnn-qwen2.5-1.5b") "Активна (MNN)" else "Натисніть для тесту",
-                        color = AppTheme.colors.textSecondary,
+                        mnnStatus,
+                        color = if (mnnDownloading) AppTheme.colors.accent else AppTheme.colors.textSecondary,
                         fontSize = 11.sp
                     )
                 }
-                Text("→", color = AppTheme.colors.accent, fontSize = 20.sp)
+                if (mnnDownloading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        color = AppTheme.colors.accent,
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("→", color = AppTheme.colors.accent, fontSize = 20.sp)
+                }
             }
         }
 

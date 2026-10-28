@@ -723,40 +723,64 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Завантажує MNN-модель Qwen 2.5 1.5B (6 файлів) у filesDir/mnn_models/qwen2.5-1.5b/ */
+    /** Завантажує MNN-модель Qwen 2.5 1.5B і після успіху активує її. */
     fun downloadMnnModel() {
         viewModelScope.launch {
-            val baseDir = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")
-            val targetDir = java.io.File(baseDir, "qwen2.5-1.5b")
-            if (!targetDir.exists()) targetDir.mkdirs()
-
-            val files = listOf(
-                "config.json", "llm_config.json", "llm.mnn", "llm.mnn.json", "llm.mnn.weight", "tokenizer.txt"
-            )
-            val baseUrl = "https://huggingface.co/taobao-mnn/Qwen2.5-1.5B-Instruct-MNN/resolve/main"
-
-            for (file in files) {
-                val target = java.io.File(targetDir, file)
-                if (target.exists() && target.length() > 0) {
-                    android.util.Log.e("MNN_DL", "Skip $file (exists, ${target.length()} bytes)")
-                    continue
-                }
-                val url = "$baseUrl/$file"
-                android.util.Log.e("MNN_DL", "Downloading $file from $url")
-                downloader.downloadUrl(url, "mnn_models/qwen2.5-1.5b/$file")
-                    .collect { progress ->
-                        when (progress) {
-                            is ModelDownloader.Progress.Complete ->
-                                android.util.Log.e("MNN_DL", "✅ $file done")
-                            is ModelDownloader.Progress.Error ->
-                                android.util.Log.e("MNN_DL", "❌ $file: ${progress.message}")
-                            is ModelDownloader.Progress.Downloading ->
-                                android.util.Log.e("MNN_DL", "⏳ $file: ${progress.percent}%")
-                        }
-                    }
+            val ok = downloadMnnModelSuspending()
+            if (ok) {
+                android.util.Log.e("MNN_DL", "All files OK, activating mnn-qwen2.5-1.5b")
+                setCurrentModel("mnn-qwen2.5-1.5b")
+            } else {
+                android.util.Log.e("MNN_DL", "Download failed, NOT activating")
             }
-            android.util.Log.e("MNN_DL", "🎉 All files in ${targetDir.absolutePath}")
         }
+    }
+
+    private suspend fun downloadMnnModelSuspending(): Boolean = withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val baseDir = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")
+        val targetDir = java.io.File(baseDir, "qwen2.5-1.5b")
+        if (!targetDir.exists()) targetDir.mkdirs()
+
+        // Мінімальні очікувані розміри (щоб перекачати обірвані файли)
+        val files = linkedMapOf(
+            "config.json" to 100L,
+            "llm_config.json" to 100L,
+            "llm.mnn" to 500_000L,
+            "llm.mnn.json" to 1_000_000L,
+            "tokenizer.txt" to 1_000_000L,
+            "llm.mnn.weight" to 800_000_000L   // останній — найбільший
+        )
+        val baseUrl = "https://huggingface.co/taobao-mnn/Qwen2.5-1.5B-Instruct-MNN/resolve/main"
+
+        for ((file, minSize) in files) {
+            val target = java.io.File(targetDir, file)
+            if (target.exists() && target.length() >= minSize) {
+                android.util.Log.e("MNN_DL", "Skip $file (${target.length()} bytes)")
+                continue
+            }
+            val url = "$baseUrl/$file"
+            android.util.Log.e("MNN_DL", "Downloading $file")
+            var ok = false
+            downloader.downloadUrl(url, "mnn_models/qwen2.5-1.5b/$file").collect { progress ->
+                when (progress) {
+                    is ModelDownloader.Progress.Complete -> {
+                        ok = true
+                        android.util.Log.e("MNN_DL", "✅ $file done (${target.length()} bytes)")
+                    }
+                    is ModelDownloader.Progress.Error ->
+                        android.util.Log.e("MNN_DL", "❌ $file: ${progress.message}")
+                    is ModelDownloader.Progress.Downloading ->
+                        if (progress.percent % 10 == 0)
+                            android.util.Log.e("MNN_DL", "⏳ $file: ${progress.percent}%")
+                }
+            }
+            if (!ok) {
+                android.util.Log.e("MNN_DL", "❌ Failed: $file")
+                return@withContext false
+            }
+        }
+        android.util.Log.e("MNN_DL", "🎉 All files OK in ${targetDir.absolutePath}")
+        true
     }
 
     fun downloadModel(model: com.dynamicai.launcher.llm.LlmModel) {

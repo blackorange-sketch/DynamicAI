@@ -81,6 +81,11 @@ fun SettingsScreen(
     onOpenDockEditor: () -> Unit,
     onOpenFolderManager: () -> Unit,
     onOpenMacroManager: () -> Unit = {},
+    var modelFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("all") }
+    val downloadTrigger by vm.downloadTrigger.collectAsStateWithLifecycle()
+    val downloadedMnn = remember(downloadTrigger) { com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
+    val mnnProgress = vm.downloadProgress.value
+
     onOpenNotes: () -> Unit = {},
     llmDownloaded: Boolean,
     llmReady: Boolean,
@@ -707,7 +712,6 @@ fun SettingsScreen(
 
             if (modelFilter == "all" || modelFilter == "mnn") {
             // MNN Models UI
-            var modelFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("all") }
             val downloadTrigger by vm.downloadTrigger.collectAsStateWithLifecycle()
             val downloadedMnn = remember(downloadTrigger) { com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
             val mnnProgress = vm.downloadProgress.value

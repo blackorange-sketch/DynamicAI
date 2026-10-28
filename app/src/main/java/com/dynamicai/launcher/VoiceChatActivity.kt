@@ -1,5 +1,6 @@
 package com.dynamicai.launcher
 
+import android.content.Context
 import com.dynamicai.launcher.ui.theme.AppTheme
 import android.content.Intent
 import android.os.Bundle
@@ -60,7 +61,7 @@ class VoiceChatActivity : ComponentActivity() {
         enableEdgeToEdge()
         // Вмикаємо апаратне придушення відлуння (AEC)
         try {
-            val am = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+            val am = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
             am.mode = android.media.AudioManager.MODE_IN_COMMUNICATION
         } catch (_: Throwable) {}
 

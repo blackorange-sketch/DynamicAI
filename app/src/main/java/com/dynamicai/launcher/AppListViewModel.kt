@@ -735,7 +735,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
-        try { app.unregisterReceiver(downloadReceiver) } catch (_: Throwable) {}
+        try { getApplication<android.app.Application>().unregisterReceiver(downloadReceiver) } catch (_: Throwable) {}
         llm.close()
         tts.shutdown()
         super.onCleared()

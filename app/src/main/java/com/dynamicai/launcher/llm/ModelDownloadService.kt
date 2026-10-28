@@ -88,8 +88,6 @@ class ModelDownloadService : Service() {
                 "llm.mnn.weight" to 100_000_000L
             )
             val optionalFiles = listOf("llm.mnn.json")
-            val baseUrl = "https://huggingface.co/tabao-mnn/$repoName/resolve/main".replace\("tabao", "taobao")
-            // правильний URL:
             val correctUrl = "https://huggingface.co/taobao-mnn/$repoName/resolve/main"
 
             val downloader = ModelDownloader(applicationContext)

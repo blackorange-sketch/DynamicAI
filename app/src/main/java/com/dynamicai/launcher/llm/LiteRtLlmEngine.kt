@@ -64,7 +64,28 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         // Спроби різних API
         val attempts = mutableListOf<Pair<String, () -> Boolean>>()
 
-        // Спроба 1: GPU (через системний OpenCL, з дозволами в маніфесті)
+        // Спроба 1: NPU (Hexagon HTP через QNN)
+        attempts.add("Backend.NPU()" to {
+            try {
+                val config = EngineConfig(
+                    modelPath = modelFile.absolutePath,
+                    backend = Backend.NPU(nativeLibraryDir = context.applicationInfo.nativeLibraryDir),
+                    cacheDir = context.cacheDir.path
+                )
+                val e = Engine(config)
+                e.initialize()
+                engine = e
+                _isReady = true
+                lastUsedAt = System.currentTimeMillis()
+                Log.e(TAG, "✅ NPU backend OK")
+                true
+            } catch (t: Throwable) {
+                Log.e(TAG, "❌ NPU backend failed: ${t.message}")
+                false
+            }
+        })
+
+        // Спроба 2: GPU (через системний OpenCL, з дозволами в маніфесті)
         attempts.add("Backend.GPU()" to {
             val config = EngineConfig(
                 modelPath = modelFile.absolutePath,

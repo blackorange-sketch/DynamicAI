@@ -334,8 +334,13 @@ class ChatEngine(
     suspend fun simpleAnswer(question: String): String {
         if (!llm.isReady) return "LLM не активна"
         return try {
-            // Передаємо ТІЛЬКИ питання. MNN сам загорне його у свій шаблон <|im_start|>user...
-            val prompt = "Відповідай українською мовою, коротко. $question"
+            val settings = SettingsStorage(context).load()
+            val isMnn = currentModelId.startsWith("mnn-")
+            
+            // Вибираємо шаблон залежно від рушія
+            val template = if (isMnn) settings.mnnPrompt else settings.litertPrompt
+            val prompt = template.replace("{{question}}", question)
+            
             val response = llm.complete(prompt)
             Log.d(TAG, "simpleAnswer: prompt len=${prompt.length}, response=${response?.take(100)}")
             response?.trim() ?: "LLM не відповіла"

@@ -778,7 +778,6 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Завантажує будь-яку MNN-модель за ID (mnn-*) і активує її. */
     fun downloadMnnModelById(modelId: String) {
-        android.util.Log.e("MNN_DL", "🔥 ENTRY downloadMnnModelById: $modelId")
         val folderName = when (modelId) {
             "mnn-qwen3.5-0.8b" -> "qwen3.5-0.8b"
             "mnn-qwen3.5-2b" -> "qwen3.5-2b"
@@ -789,7 +788,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             "mnn-qwen3-0.6b" -> "qwen3-0.6b"
             "mnn-qwen3-1.7b" -> "qwen3-1.7b"
             "mnn-qwen2.5-1.5b" -> "qwen2.5-1.5b"
-            else -> modelId.removePrefix("mnn-")
+            else -> return
         }
         val repoName = when (modelId) {
             "mnn-qwen3.5-0.8b" -> "Qwen3.5-0.8B-MNN"
@@ -804,42 +803,50 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             else -> return
         }
 
-        // Перевірка дозволу на сповіщення (Android 13+)
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            val granted = androidx.core.content.ContextCompat.checkSelfPermission(
-                getApplication(),
-                android.Manifest.permission.POST_NOTIFICATIONS
-            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-            if (!granted) {
-                android.util.Log.w("MNN_DL", "POST_NOTIFICATIONS not granted")
-            }
-        }
-
         downloadingModelId = modelId
         _downloadProgress.value = ModelDownloader.Progress.Downloading(0, 0, 0)
 
-        try {
-            val intent = android.content.Intent(getApplication(), ModelDownloadService::class.java).apply {
-                action = ModelDownloadService.ACTION_START
-                putExtra(ModelDownloadService.EXTRA_MODEL_ID, modelId)
-                putExtra(ModelDownloadService.EXTRA_REPO_NAME, repoName)
-                putExtra(ModelDownloadService.EXTRA_FOLDER_NAME, folderName)
-            }
-            androidx.core.content.ContextCompat.startForegroundService(getApplication(), intent)
-            android.util.Log.e("MNN_DL", "Started foreground service for $modelId")
-            // Watchdog: якщо Service не емітить прогрес >30с — вважаємо що впав
-            viewModelScope.launch {
-                kotlinx.coroutines.delay(30_000)
-                if (downloadingModelId == modelId && _downloadProgress.value is ModelDownloader.Progress.Downloading) {
-                    android.util.Log.w("MNN_DL", "⏰ Watchdog: Service silent for 30s, resetting state")
-                    downloadingModelId = null
-                    _downloadProgress.value = null
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val baseDir = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")
+                val targetDir = java.io.File(baseDir, folderName)
+                if (!targetDir.exists()) targetDir.mkdirs()
+
+                targetDir.listFiles()?.forEach { f ->
+                    if (f.name.endsWith(".opencl.weight") || f.name == "mnn_cachefile.bin") f.delete()
                 }
+
+                val files = linkedMapOf(
+                    "config.json" to 50L,
+                    "llm_config.json" to 50L,
+                    "llm.mnn" to 100_000L,
+                    "tokenizer.txt" to 100_000L,
+                    "llm.mnn.weight" to 100_000_000L
+                )
+                val correctUrl = "https://huggingface.co/taobao-mnn/\$repoName/resolve/main"
+                val downloader = ModelDownloader(getApplication())
+
+                for ((file, minSize) in files) {
+                    if (downloadingModelId != modelId) return@launch
+                    val target = java.io.File(targetDir, file)
+                    if (target.exists() && target.length() >= minSize) continue
+
+                    val url = "\$correctUrl/\$file"
+                    downloader.downloadUrl(url, file).collect { progress ->
+                        if (progress is ModelDownloader.Progress.Downloading) {
+                            _downloadProgress.value = progress
+                        } else if (progress is ModelDownloader.Progress.Error) {
+                            throw Exception(progress.message)
+                        }
+                    }
+                }
+                _downloadProgress.value = null
+                downloadingModelId = null
+                downloadTrigger.emit(System.currentTimeMillis())
+            } catch (e: Exception) {
+                _downloadProgress.value = ModelDownloader.Progress.Error(e.message ?: "Помилка")
+                downloadingModelId = null
             }
-        } catch (t: Throwable) {
-            android.util.Log.e("MNN_DL", "startForegroundService failed: ${t.javaClass.simpleName}: ${t.message}", t)
-            downloadingModelId = null
-            _downloadProgress.value = null
         }
     }
 

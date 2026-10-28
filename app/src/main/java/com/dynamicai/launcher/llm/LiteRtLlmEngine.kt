@@ -131,7 +131,7 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
                     return@withContext fullText.toString()
                 } else {
                     // Fallback: без стрімінгу
-                    val message = conversation.sendMessage("<start_of_turn>user\n$prompt<end_of_turn>\n<start_of_turn>model\n")
+                    val message = conversation.sendMessage(prompt)
                     val result = extractText(message) ?: message?.toString() ?: ""
                     if (result.isNotBlank()) onToken(result)
                     return@withContext result
@@ -150,9 +150,8 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         val e = engine ?: return@withContext null
         return@withContext try {
             e.createConversation().use { conversation ->
-                // Додаємо правильний чат-шаблон Gemma
-                val formattedPrompt = "<start_of_turn>user\n$prompt<end_of_turn>\n<start_of_turn>model\n"
-                val message = conversation.sendMessage(formattedPrompt)
+                // LiteRT-LM сам застосовує chat template з metadata моделі
+                val message = conversation.sendMessage(prompt)
                 if (message == null) {
                     lastError = "sendMessage → null"
                     return@withContext null

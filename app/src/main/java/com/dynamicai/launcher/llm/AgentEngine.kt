@@ -57,6 +57,9 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         var iteration = 0
         val maxIterations = 4 // Максимум 4 кроки для складних задач
 
+        // Захист від зациклення: запам'ятовуємо вже виконані виклики
+        val executedToolCalls = mutableSetOf<String>()
+
         while (iteration < maxIterations) {
             val prompt = """
                 Ти — Джарвіс, розумний голосовий асистент в Android-лаунчері. 
@@ -90,6 +93,16 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
             // Працюємо ТІЛЬКИ з чітким префіксом TOOL_CALL:
             if (response.contains("TOOL_CALL:")) {
                 val toolCall = response.replace("TOOL_CALL:", "").trim()
+                // Захист від зациклення
+                val _normalized = toolCall.lowercase().replace(Regex("\\s+"), "")
+                if (_normalized in executedToolCalls) {
+                    val _lastResult = currentContext.lines()
+                        .lastOrNull { it.startsWith("[Результат дії]:") }
+                        ?.removePrefix("[Результат дії]:")
+                        ?.trim() ?: "Дію виконано"
+                    return@withContext _lastResult
+                }
+                executedToolCalls.add(_normalized)
                 val result = executeTool(toolCall)
                 currentContext += "\n[Результат дії]: $result"
                 iteration++

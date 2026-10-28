@@ -64,42 +64,21 @@ object ModelRepository {
             sizeBytes = 614_000_000L,
             fileName = "Qwen3-0.6B.litertlm"
         ),
-        LlmModel(
-            id = "gemma3-1b-it",
-            name = "Gemma3 1B IT",
-            url = "https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/Gemma3-1B-IT_q4_ekv1280_mt6991.litertlm",
-            sizeBytes = 1_100_000_000L,
-            fileName = "Gemma3-1B-IT_q4_ekv1280_mt6991.litertlm"
-        ),
-        LlmModel(
-            id = "phi-4-mini",
-            name = "Phi-4 Mini Instruct",
-            url = "https://huggingface.co/litert-community/Phi-4-mini-instruct/resolve/main/Phi-4-mini-instruct.litertlm",
-            sizeBytes = 2_300_000_000L,
-            fileName = "Phi-4-mini-instruct.litertlm"
-        ),
-        LlmModel(
+                        LlmModel(
             id = "qwen2.5-1.5b",
             name = "Qwen2.5 1.5B Instruct",
             url = "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm",
             sizeBytes = 1_600_000_000L,
             fileName = "Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm"
+        ),        LlmModel(
+            id = "smollm2-1.7b",
+            name = "SmolLM2 1.7B (Швидка)",
+            url = "https://huggingface.co/litert-community/SmolLM2-1.7B-Instruct/resolve/main/SmolLM2-1_7B-Instruct_dynamic_wi8_afp32.litertlm",
+            sizeBytes = 1_700_000_000L,
+            fileName = "SmolLM2-1_7B-Instruct_dynamic_wi8_afp32.litertlm"
         ),
-        LlmModel(
-            id = "smollm-135m",
-            name = "SmolLM 135M (Найлегша)",
-            url = "https://huggingface.co/litert-community/SmolLM-135M-Instruct/resolve/main/SmolLM-135M-Instruct.litertlm",
-            sizeBytes = 135_000_000L,
-            fileName = "SmolLM-135M-Instruct.litertlm"
-        ),
-        LlmModel(
-            id = "tinyllama-1.1b",
-            name = "TinyLlama 1.1B Chat",
-            url = "https://huggingface.co/litert-community/TinyLlama-1.1B-Chat-v1.0/resolve/main/TinyLlama-1.1B-Chat-v1.0.litertlm",
-            sizeBytes = 700_000_000L,
-            fileName = "TinyLlama-1.1B-Chat-v1.0.litertlm"
-        )
-    )
+
+                    )
 
     fun getDownloadedModels(context: Context): List<LlmModel> {
         return AVAILABLE_MODELS.filter { File(context.filesDir, it.fileName).exists() }

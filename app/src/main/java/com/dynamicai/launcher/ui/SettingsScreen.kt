@@ -129,11 +129,10 @@ fun SettingsScreen(
     }
             var showOverlayPermDialog by remember { mutableStateOf(false) }
         var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
+        var modelFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("all") }
         LaunchedEffect(Unit) { installedApps = AppRepository(ctx).loadCached() }
 
         if (initialCategory == null || initialCategory == "tools") {
-    var modelFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("all") }
-
         GlassSectionHeader("Застосунки за замовчуванням")
         GlassCard {
             AppPickerRow("Музика", settings.defaultMusicApp, installedApps, Icons.Default.PlayArrow, Color(0xFF1DB954)) {

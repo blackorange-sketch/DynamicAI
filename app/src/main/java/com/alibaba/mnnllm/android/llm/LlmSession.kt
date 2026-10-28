@@ -3,10 +3,6 @@ package com.alibaba.mnnllm.android.llm
 import android.util.Log
 import java.io.File
 
-/**
- * Мінімальна версія LlmSession — JNI-обгортка для libmnnllmapp.so.
- * Клас має бути САМЕ у пакеті com.alibaba.mnnllm.android.llm з САМЕ такою назвою.
- */
 class LlmSession(
     private val modelId: String,
     private val configDir: File,
@@ -17,46 +13,14 @@ class LlmSession(
         private const val TAG = "MnnLlmSession"
 
         init {
+            Log.e(TAG, "🔵 init block STARTED")
             try {
                 System.loadLibrary("c++_shared")
                 Log.e(TAG, "✅ c++_shared loaded")
-
-                try {
-                    System.loadLibrary("MNNOpenCV")
-                    Log.e(TAG, "✅ MNNOpenCV loaded")
-                } catch (t: Throwable) {
-                    Log.e(TAG, "⚠️ MNNOpenCV: ${t.message}")
-                }
-
-                try {
-                    System.loadLibrary("MNNAudio")
-                    Log.e(TAG, "✅ MNNAudio loaded")
-                } catch (t: Throwable) {
-                    Log.e(TAG, "⚠️ MNNAudio: ${t.message}")
-                }
-
                 System.loadLibrary("MNN")
                 Log.e(TAG, "✅ MNN loaded")
-
-                System.loadLibrary("MNN_Express")
-                Log.e(TAG, "✅ MNN_Express loaded")
-
-                System.loadLibrary("MNN_CL")
-                Log.e(TAG, "✅ MNN_CL loaded")
-
-                try {
-                    System.loadLibrary("MNN_Vulkan")
-                    Log.e(TAG, "✅ MNN_Vulkan loaded")
-                } catch (t: Throwable) {
-                    Log.e(TAG, "⚠️ MNN_Vulkan: ${t.message}")
-                }
-
-                System.loadLibrary("llm")
-                Log.e(TAG, "✅ llm loaded")
-
                 System.loadLibrary("mnnllmapp")
                 Log.e(TAG, "✅ mnnllmapp loaded")
-
                 Log.e(TAG, "✅ ALL MNN libraries loaded")
             } catch (t: Throwable) {
                 Log.e(TAG, "❌ Failed to load MNN libs: ${t.message}", t)
@@ -89,11 +53,9 @@ class LlmSession(
         return try {
             val mergedConfig = """{"backend_type":"$backendType","thread_num":4,"precision":"low","memory":"low","max_new_tokens":$maxNewTokens}"""
             val configJson = """{"is_r1":false,"mmap_dir":"","keep_history":$keepHistory}"""
-
             Log.e(TAG, "initNative: configPath=${configDir.absolutePath}")
             Log.e(TAG, "mergedConfig=$mergedConfig")
             Log.e(TAG, "configJson=$configJson")
-
             nativePtr = initNative(configDir.absolutePath, null, mergedConfig, configJson)
             Log.e(TAG, "initNative → nativePtr=$nativePtr")
             nativePtr != 0L
@@ -104,10 +66,7 @@ class LlmSession(
     }
 
     fun generate(prompt: String, listener: GenerateProgressListener): String? {
-        if (nativePtr == 0L) {
-            Log.e(TAG, "generate: nativePtr is 0, call load() first")
-            return null
-        }
+        if (nativePtr == 0L) return null
         return try {
             val result = submitNative(nativePtr, prompt, keepHistory, listener)
             Log.e(TAG, "submitNative result keys=${result.keys}")

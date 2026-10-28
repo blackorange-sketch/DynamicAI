@@ -27,7 +27,7 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
          * з llm_config.json. Просто додаємо /no_think для Qwen3 thinking mode.
          */
         private fun formatPrompt(prompt: String, modelId: String): String {
-            return if (modelId.contains("qwen3", ignoreCase = true)) {
+            return if (modelId.contains("qwen3-", ignoreCase = true)) {
                 // /no_think для вимкнення thinking mode Qwen3
                 "$prompt\n/no_think"
             } else {

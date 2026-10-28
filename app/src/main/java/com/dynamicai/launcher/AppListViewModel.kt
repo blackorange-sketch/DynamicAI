@@ -31,6 +31,8 @@ import com.dynamicai.launcher.suggestion.ContactRepository
 import com.dynamicai.launcher.suggestion.ContactAction
 import com.dynamicai.launcher.suggestion.Suggestion
 import com.dynamicai.launcher.suggestion.SuggestionProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

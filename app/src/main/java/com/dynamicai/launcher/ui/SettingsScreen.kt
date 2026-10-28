@@ -667,7 +667,7 @@ fun SettingsScreen(
             val mnnProgress = vm.downloadProgress.value
             val mnnDownloading = mnnProgress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading
             val mnnIsCurrent = vm.currentModelId == "mnn-qwen2.5-1.5b"
-            val mnnIsReady = vm.llmReady
+            val mnnIsReady by vm.llmReady.collectAsStateWithLifecycle()
 
             val mnnStatus = when {
                 mnnDownloading -> "Завантаження... ${(mnnProgress as com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading).percent}%"

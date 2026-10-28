@@ -167,7 +167,11 @@ object ModelRepository {
         return AVAILABLE_MODELS.filter { model ->
             if (model.id.startsWith("mnn-")) {
                 val dir = File(File(context.filesDir, "mnn_models"), model.fileName)
-                dir.isDirectory && File(dir, "llm.mnn").exists() && File(dir, "llm.mnn.weight").exists()
+                val hasDir = dir.isDirectory
+                val hasLlm = File(dir, "llm.mnn").exists()
+                val hasWeight = File(dir, "llm.mnn.weight").exists()
+                android.util.Log.e("MNN_SCAN", "Model ${model.id} (${model.fileName}): dir=$hasDir, llm=$hasLlm, weight=$hasWeight")
+                hasDir && hasLlm && hasWeight
             } else {
                 File(context.filesDir, model.fileName).exists()
             }

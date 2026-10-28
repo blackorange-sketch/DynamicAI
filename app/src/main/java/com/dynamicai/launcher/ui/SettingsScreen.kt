@@ -264,7 +264,6 @@ fun SettingsScreen(
         // ==== Фон лаунчера ====
         if (initialCategory == null || initialCategory == "appearance") {
         GlassSectionHeader("🎨 Зовнішній вигляд")
-        if (initialCategory == null || initialCategory == "appearance") {
         GlassCard {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Стиль інтерфейсу", color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)

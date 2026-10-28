@@ -63,7 +63,15 @@ class ModelDownloadService : Service() {
                 val folderName = intent.getStringExtra(EXTRA_FOLDER_NAME) ?: return START_NOT_STICKY
 
                 cancelRequested = false
-                startForeground(NOTIFICATION_ID, buildNotification("Підготовка...", 0, 0, 0, true))
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    startForeground(
+                        NOTIFICATION_ID,
+                        buildNotification("Підготовка...", 0, 0, 0, true),
+                        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                    )
+                } else {
+                    startForeground(NOTIFICATION_ID, buildNotification("Підготовка...", 0, 0, 0, true))
+                }
 
                 scope.launch { doDownload(modelId, repoName, folderName) }
                 return START_NOT_STICKY
@@ -213,7 +221,7 @@ class ModelDownloadService : Service() {
             .setProgress(100, percent.coerceIn(0, 100), indeterminate)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(openApp)
             .addAction(android.R.drawable.ic_delete, "Скасувати", cancelIntent)
             .build()
@@ -225,7 +233,9 @@ class ModelDownloadService : Service() {
         try {
             NotificationManagerCompat.from(this)
                 .notify(NOTIFICATION_ID, buildNotification(title, percent, downloadedMb, totalMb, indeterminate))
-        } catch (_: SecurityException) {}
+        } catch (e: Exception) {
+            Log.e(TAG, "notify failed: ${e.javaClass.simpleName}: ${e.message}", e)
+        }
     }
 
     private fun createChannel() {

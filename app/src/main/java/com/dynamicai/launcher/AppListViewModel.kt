@@ -819,10 +819,20 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             }
             androidx.core.content.ContextCompat.startForegroundService(getApplication(), intent)
             android.util.Log.e("MNN_DL", "Started foreground service for $modelId")
+            // Watchdog: якщо Service не емітить прогрес >30с — вважаємо що впав
+            viewModelScope.launch {
+                kotlinx.coroutines.delay(30_000)
+                if (downloadingModelId == modelId && _downloadProgress.value is ModelDownloader.Progress.Downloading) {
+                    android.util.Log.w("MNN_DL", "⏰ Watchdog: Service silent for 30s, resetting state")
+                    downloadingModelId = null
+                    _downloadProgress.value = ModelDownloader.Progress.Idle
+                }
+            }
         } catch (t: Throwable) {
-            android.util.Log.e("MNN_DL", "startForegroundService failed: ${t.message}", t)
+            android.util.Log.e("MNN_DL", "startForegroundService failed: ${t.javaClass.simpleName}: ${t.message}", t)
             downloadingModelId = null
-            _downloadProgress.value = ModelDownloader.Progress.Error("Service start failed: ${t.message}")
+            _downloadProgress.value = ModelDownloader.Progress.Idle
+            _downloadError.value = "Service start failed: ${t.message}"
         }
     }
 

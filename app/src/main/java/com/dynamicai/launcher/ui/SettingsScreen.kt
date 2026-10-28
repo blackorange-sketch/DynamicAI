@@ -773,7 +773,7 @@ fun SettingsScreen(
                             val statusText = if (isDownloaded) "Завантажено" else "Не завантажено (${model.sizeBytes / 1_000_000} МБ)"
                             Text(statusText, color = AppTheme.colors.textSecondary, fontSize = 11.sp)
                             
-                            if (progressState is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading && !isDownloaded) {
+                            if (vm.downloadingModelId == model.id && progressState is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading && !isDownloaded) {
                                 Text("Завантаження... ${progressState.percent}%", color = AppTheme.colors.accent, fontSize = 11.sp)
                             }
                         }

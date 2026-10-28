@@ -1044,33 +1044,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             )
         }
 
-        downloadProgress?.let { p ->
-            AlertDialog(
-                onDismissRequest = {},
-                title = { Text("Завантаження моделі", color = AppTheme.colors.textPrimary) },
-                text = {
-                    Column {
-                        when (p) {
-                            is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading -> {
-                                Text("${p.downloadedMb} / ${p.totalMb} MB", color = AppTheme.colors.textPrimary)
-                                Spacer(Modifier.height(8.dp))
-                                LinearProgressIndicator(
-                                    progress = { p.percent / 100f },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text("${p.percent}%", color = Color.Gray, fontSize = 12.sp)
-                            }
-                            is com.dynamicai.launcher.llm.ModelDownloader.Progress.Error ->
-                                Text("Помилка: ${p.message}", color = AppTheme.colors.danger)
-                            else -> {}
-                        }
-                    }
-                },
-                confirmButton = {},
-                containerColor = AppTheme.colors.surface
-            )
-        }
+        
 
         val drawerApps = remember(apps, hidden) {
             // Показуємо всі apps крім прихованих (ті що в папках теж видно)

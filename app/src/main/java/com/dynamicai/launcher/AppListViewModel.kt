@@ -758,14 +758,16 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             val targetDir = java.io.File(baseDir, folderName)
             if (!targetDir.exists()) targetDir.mkdirs()
 
+            // Обов'язкові файли (є у всіх MNN-моделей)
             val files = linkedMapOf(
                 "config.json" to 50L,
                 "llm_config.json" to 50L,
                 "llm.mnn" to 100_000L,
-                "llm.mnn.json" to 100_000L,
                 "tokenizer.txt" to 100_000L,
                 "llm.mnn.weight" to 100_000_000L
             )
+            // Опційні — якщо 404, пропускаємо
+            val optionalFiles = listOf("llm.mnn.json")
             val baseUrl = "https://huggingface.co/taobao-mnn/$repoName/resolve/main"
 
             for ((file, minSize) in files) {
@@ -791,6 +793,31 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
                 if (!ok) return@withContext false
+            }
+
+            // Опційні файли — не критичні
+            for (file in optionalFiles) {
+                val target = java.io.File(targetDir, file)
+                if (target.exists() && target.length() > 1000) {
+                    android.util.Log.e("MNN_DL", "Skip optional $file")
+                    continue
+                }
+                val url = "$baseUrl/$file"
+                android.util.Log.e("MNN_DL", "Downloading optional $file")
+                var ok = false
+                downloader.downloadUrl(url, "mnn_models/$folderName/$file").collect { progress ->
+                    when (progress) {
+                        is ModelDownloader.Progress.Complete -> {
+                            ok = true
+                            android.util.Log.e("MNN_DL", "✅ optional $file done")
+                        }
+                        is ModelDownloader.Progress.Error -> {
+                            android.util.Log.w("MNN_DL", "⚠️ optional $file: ${progress.message} (пропускаємо)")
+                            // 404 — нормально, пропускаємо
+                        }
+                        is ModelDownloader.Progress.Downloading -> {}
+                    }
+                }
             }
             true
         }

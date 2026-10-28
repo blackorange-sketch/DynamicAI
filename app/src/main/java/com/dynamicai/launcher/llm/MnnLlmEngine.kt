@@ -24,12 +24,12 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
         /** Універсальний chat template для Qwen/Gemma/LFM */
         private fun formatPrompt(prompt: String, modelId: String): String {
             return when {
-                // Qwen3 (thinking mode) — вимикаємо через /no_think
+                // Qwen3 (thinking mode) — /no_think в кінці user message
                 modelId.contains("qwen3-", ignoreCase = true) ->
-                    "<|im_start|>system\n/no_think<|im_end|>\n<|im_start|>user\n$prompt<|im_end|>\n<|im_start|>assistant\n"
-                // Qwen3.5 — теж thinking, але з іншим тегом
+                    "<|im_start|>user\n$prompt /no_think<|im_end|>\n<|im_start|>assistant\n"
+                // Qwen3.5 — теж thinking
                 modelId.contains("qwen3.5", ignoreCase = true) ->
-                    "<|im_start|>system\n/no_think<|im_end|>\n<|im_start|>user\n$prompt<|im_end|>\n<|im_start|>assistant\n"
+                    "<|im_start|>user\n$prompt /no_think<|im_end|>\n<|im_start|>assistant\n"
                 // Qwen2.5 — без thinking
                 modelId.contains("qwen2.5", ignoreCase = true) ->
                     "<|im_start|>user\n$prompt<|im_end|>\n<|im_start|>assistant\n"

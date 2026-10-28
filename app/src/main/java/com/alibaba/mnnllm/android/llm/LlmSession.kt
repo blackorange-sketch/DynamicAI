@@ -51,8 +51,8 @@ class LlmSession(
     fun load(): Boolean {
         if (nativePtr != 0L) return true
         return try {
-            val mergedConfig = """{"backend_type":"$backendType","thread_num":4,"precision":"normal","memory":"normal","max_new_tokens":$maxNewTokens,"use_mmap":true}"""
-            val configJson = """{"is_r1":false,"mmap_dir":"${configDir.absolutePath}/","keep_history":$keepHistory,"use_mmap":true}"""
+            val mergedConfig = """{"backend_type":"$backendType","thread_num":4,"precision":"low","memory":"low","max_new_tokens":$maxNewTokens,"use_mmap":true}"""
+            val configJson = """{"is_r1":false,"mmap_dir":"${configDir.absolutePath}","keep_history":$keepHistory,"use_mmap":true}"""
             Log.e(TAG, "initNative: configPath=${configDir.absolutePath}")
             Log.e(TAG, "mergedConfig=$mergedConfig")
             Log.e(TAG, "configJson=$configJson")

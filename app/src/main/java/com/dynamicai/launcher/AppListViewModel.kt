@@ -752,6 +752,22 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 "mnn-qwen2.5-1.5b" -> "Qwen2.5-1.5B-Instruct-MNN"
                 else -> return@launch
             }
+            // Перевірка RAM перед завантаженням
+            val am = getApplication<android.app.Application>().getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            val memInfo = android.app.ActivityManager.MemoryInfo()
+            am.getMemoryInfo(memInfo)
+            val availMb = memInfo.availMem / 1024 / 1024
+            val model = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.find { it.id == modelId }
+            val modelMb = (model?.sizeBytes ?: 0L) / 1024 / 1024
+            val neededMb = modelMb * 2  // модель + кеш OpenCL (приблизно x2 з precision=low)
+
+            android.util.Log.e("MNN_RAM", "avail=${availMb}MB, model=${modelMb}MB, needed~${neededMb}MB")
+
+            if (neededMb > availMb) {
+                android.util.Log.e("MNN_RAM", "❌ Недостатньо RAM: треба ~${neededMb}MB, є ${availMb}MB")
+                return@launch
+            }
+
             val ok = downloadMnnModelByIdSuspending(repoName, folderName)
             if (ok) {
                 android.util.Log.e("MNN_DL", "All files OK for $modelId, activating")
@@ -762,11 +778,25 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private fun cleanupOpenClWeights(targetDir: java.io.File) {
+        try {
+            targetDir.listFiles()?.forEach { f ->
+                if (f.name.endsWith(".opencl.weight") || f.name == "mnn_cachefile.bin") {
+                    val deleted = f.delete()
+                    android.util.Log.e("MNN_CLEANUP", "${if (deleted) "🗑️" else "❌"} ${f.name} (${f.length()} bytes)")
+                }
+            }
+        } catch (t: Throwable) {
+            android.util.Log.w("MNN_CLEANUP", "cleanup failed: ${t.message}")
+        }
+    }
+
     private suspend fun downloadMnnModelByIdSuspending(repoName: String, folderName: String): Boolean =
         withContext(Dispatchers.IO) {
             val baseDir = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")
             val targetDir = java.io.File(baseDir, folderName)
             if (!targetDir.exists()) targetDir.mkdirs()
+            cleanupOpenClWeights(targetDir)
 
             // Обов'язкові файли (є у всіх MNN-моделей)
             val files = linkedMapOf(

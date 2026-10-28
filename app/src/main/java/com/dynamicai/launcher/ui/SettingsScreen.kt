@@ -705,6 +705,7 @@ fun SettingsScreen(
                 }
             }
 
+            if (modelFilter == "all" || modelFilter == "mnn") {
             // MNN Models UI
             val downloadTrigger by vm.downloadTrigger.collectAsStateWithLifecycle()
             val downloadedMnn = remember(downloadTrigger) { com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
@@ -760,7 +761,49 @@ fun SettingsScreen(
                 }
             }
 
-// Toggle завжди видно
+            }
+
+
+            if (modelFilter == "all" || modelFilter == "litert") {
+                val litertModels = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.filter { !it.id.startsWith("mnn-") }
+                
+                litertModels.forEach { model ->
+                    val isCurrent = vm.currentModelId == model.id
+                    val isDownloaded = downloadedMnn.any { it.id == model.id }
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(model.name, color = AppTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                            Text("Підтримка: ${model.supportedBackends.joinToString(", ")}", color = AppTheme.colors.textMuted, fontSize = 10.sp)
+                            val statusText = if (isDownloaded) "Завантажено" else "Не завантажено (${model.sizeBytes / 1_000_000} МБ)"
+                            Text(statusText, color = AppTheme.colors.textSecondary, fontSize = 11.sp)
+                        }
+
+                        if (isDownloaded) {
+                            if (isCurrent) {
+                                Text("✓ Активна", color = AppTheme.colors.success, fontSize = 12.sp)
+                            } else {
+                                TextButton(onClick = { vm.setCurrentModel(model.id) }) {
+                                    Text("Обрати", color = AppTheme.colors.accent, fontSize = 12.sp)
+                                }
+                            }
+                            IconButton(onClick = { vm.deleteModel(model) }) {
+                                Icon(androidx.compose.material.icons.Icons.Default.Delete, contentDescription = "Видалити", tint = AppTheme.colors.danger)
+                            }
+                        } else {
+                            TextButton(onClick = { vm.downloadModel(model) }) {
+                                Text("Завантажити", color = AppTheme.colors.accent, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Toggle завжди видно
+
             SwitchRow(
                 label = "Озвучувати відповіді (TTS)",
                 checked = settings.useTts,

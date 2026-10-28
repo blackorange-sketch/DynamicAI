@@ -279,21 +279,23 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
             System.gc()
             Thread.sleep(150)
 
-            // Логуємо RAM
-            val rt = Runtime.getRuntime()
-            val totalMb = rt.totalMemory() / 1024 / 1024
-            val freeMb = rt.freeMemory() / 1024 / 1024
-            val usedMb = totalMb - freeMb
-            val maxMb = rt.maxMemory() / 1024 / 1024
+            // Логуємо РЕАЛЬНУ фізичну RAM через ActivityManager
+            val am = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            val memInfo = android.app.ActivityManager.MemoryInfo()
+            am.getMemoryInfo(memInfo)
+            val availMb = memInfo.availMem / 1024 / 1024
+            val totalMb = memInfo.totalMem / 1024 / 1024
+            val thresholdMb = memInfo.threshold / 1024 / 1024
             val modelMb = newModelFile.length() / 1024 / 1024
-            val freeInMax = maxMb - usedMb
+            val realFreeMb = availMb - thresholdMb  // скільки реально можна використати
 
-            Log.e(TAG, "📊 RAM: used=${usedMb}MB / max=${maxMb}MB, free_in_max=${freeInMax}MB, model=${modelMb}MB")
+            Log.e(TAG, "📊 Фізична RAM: avail=${availMb}MB, total=${totalMb}MB, threshold=${thresholdMb}MB, model=${modelMb}MB")
+            Log.e(TAG, "📊 Реально доступно: ${realFreeMb}MB")
 
-            if (modelMb > freeInMax) {
-                Log.w(TAG, "⚠️ Модель (${modelMb}MB) більша за доступну RAM (${freeInMax}MB) — можливий OOM")
+            if (modelMb > realFreeMb) {
+                Log.w(TAG, "⚠️ Модель (${modelMb}MB) може не влізти — доступно лише ${realFreeMb}MB")
             } else {
-                Log.e(TAG, "✅ RAM достатньо: треба ${modelMb}MB, є ${freeInMax}MB")
+                Log.e(TAG, "✅ RAM достатньо: треба ${modelMb}MB, є ${realFreeMb}MB")
             }
         } catch (t: Throwable) {
             Log.w(TAG, "freeOldEngineBeforeLoad failed: ${t.message}")

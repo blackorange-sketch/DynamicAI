@@ -249,6 +249,29 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private var pendingText: String = ""
 
     private val runtimePrefs = app.getSharedPreferences("dynamicai_runtime", android.content.Context.MODE_PRIVATE)
+    private val downloadReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+            val action = intent?.action ?: return
+            val modelId = intent.getStringExtra(ModelDownloadService.EXTRA_MODEL_ID)
+            when (action) {
+                ModelDownloadService.BROADCAST_COMPLETE -> {
+                    android.util.Log.e("MNN_DL", "✅ Service reported complete: $modelId")
+                    if (modelId != null) {
+                        downloadingModelId = null
+                        _downloadProgress.value = null
+                        setCurrentModel(modelId)
+                    }
+                }
+                ModelDownloadService.BROADCAST_ERROR -> {
+                    val error = intent.getStringExtra("error") ?: "Unknown"
+                    android.util.Log.e("MNN_DL", "❌ Service reported error: $error")
+                    downloadingModelId = null
+                    _downloadProgress.value = ModelDownloader.Progress.Error(error)
+                }
+            }
+        }
+    }
+
     private val pkgChangeListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "apps_changed_at") {
             android.util.Log.e("AppListVM", "package changed, refreshing")
@@ -257,6 +280,19 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     init {
+        try {
+            val filter = android.content.IntentFilter().apply {
+                addAction(ModelDownloadService.BROADCAST_COMPLETE)
+                addAction(ModelDownloadService.BROADCAST_ERROR)
+            }
+            if (android.os.Build.VERSION.SDK_INT >= 33) {
+                app.registerReceiver(downloadReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                app.registerReceiver(downloadReceiver, filter)
+            }
+        } catch (t: Throwable) {
+            android.util.Log.w("MNN_DL", "registerReceiver failed: ${t.message}")
+        }
         runtimePrefs.registerOnSharedPreferenceChangeListener(pkgChangeListener)
         android.util.Log.d("APPINIT", "init start, RSS before everything")
         viewModelScope.launch {
@@ -699,6 +735,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
+        try { app.unregisterReceiver(downloadReceiver) } catch (_: Throwable) {}
         llm.close()
         tts.shutdown()
         super.onCleared()
@@ -727,54 +764,58 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Завантажує будь-яку MNN-модель за ID (mnn-*) і активує її. */
     fun downloadMnnModelById(modelId: String) {
-        viewModelScope.launch {
-            val folderName = when (modelId) {
-                "mnn-qwen3.5-0.8b" -> "qwen3.5-0.8b"
-                "mnn-qwen3.5-2b" -> "qwen3.5-2b"
-                "mnn-qwen3.5-4b" -> "qwen3.5-4b"
-                "mnn-gemma-4-e2b" -> "gemma-4-e2b"
-                "mnn-gemma-4-e4b" -> "gemma-4-e4b"
-                "mnn-lfm2.5-1.2b" -> "lfm2.5-1.2b"
-                "mnn-qwen3-0.6b" -> "qwen3-0.6b"
-                "mnn-qwen3-1.7b" -> "qwen3-1.7b"
-                "mnn-qwen2.5-1.5b" -> "qwen2.5-1.5b"
-                else -> modelId.removePrefix("mnn-")
-            }
-            val repoName = when (modelId) {
-                "mnn-qwen3.5-0.8b" -> "Qwen3.5-0.8B-MNN"
-                "mnn-qwen3.5-2b" -> "Qwen3.5-2B-MNN"
-                "mnn-qwen3.5-4b" -> "Qwen3.5-4B-MNN"
-                "mnn-gemma-4-e2b" -> "gemma-4-E2B-it-MNN"
-                "mnn-gemma-4-e4b" -> "gemma-4-E4B-it-MNN"
-                "mnn-lfm2.5-1.2b" -> "LFM2.5-1.2B-Instruct-MNN"
-                "mnn-qwen3-0.6b" -> "Qwen3-0.6B-MNN"
-                "mnn-qwen3-1.7b" -> "Qwen3-1.7B-MNN"
-                "mnn-qwen2.5-1.5b" -> "Qwen2.5-1.5B-Instruct-MNN"
-                else -> return@launch
-            }
-            // Перевірка RAM перед завантаженням
-            val am = getApplication<android.app.Application>().getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-            val memInfo = android.app.ActivityManager.MemoryInfo()
-            am.getMemoryInfo(memInfo)
-            val availMb = memInfo.availMem / 1024 / 1024
-            val model = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.find { it.id == modelId }
-            val modelMb = (model?.sizeBytes ?: 0L) / 1024 / 1024
-            val neededMb = modelMb * 2  // модель + кеш OpenCL (приблизно x2 з precision=low)
+        val folderName = when (modelId) {
+            "mnn-qwen3.5-0.8b" -> "qwen3.5-0.8b"
+            "mnn-qwen3.5-2b" -> "qwen3.5-2b"
+            "mnn-qwen3.5-4b" -> "qwen3.5-4b"
+            "mnn-gemma-4-e2b" -> "gemma-4-e2b"
+            "mnn-gemma-4-e4b" -> "gemma-4-e4b"
+            "mnn-lfm2.5-1.2b" -> "lfm2.5-1.2b"
+            "mnn-qwen3-0.6b" -> "qwen3-0.6b"
+            "mnn-qwen3-1.7b" -> "qwen3-1.7b"
+            "mnn-qwen2.5-1.5b" -> "qwen2.5-1.5b"
+            else -> modelId.removePrefix("mnn-")
+        }
+        val repoName = when (modelId) {
+            "mnn-qwen3.5-0.8b" -> "Qwen3.5-0.8B-MNN"
+            "mnn-qwen3.5-2b" -> "Qwen3.5-2B-MNN"
+            "mnn-qwen3.5-4b" -> "Qwen3.5-4B-MNN"
+            "mnn-gemma-4-e2b" -> "gemma-4-E2B-it-MNN"
+            "mnn-gemma-4-e4b" -> "gemma-4-E4B-it-MNN"
+            "mnn-lfm2.5-1.2b" -> "LFM2.5-1.2B-Instruct-MNN"
+            "mnn-qwen3-0.6b" -> "Qwen3-0.6B-MNN"
+            "mnn-qwen3-1.7b" -> "Qwen3-1.7B-MNN"
+            "mnn-qwen2.5-1.5b" -> "Qwen2.5-1.5B-Instruct-MNN"
+            else -> return
+        }
 
-            android.util.Log.e("MNN_RAM", "avail=${availMb}MB, model=${modelMb}MB, needed~${neededMb}MB")
-
-            if (neededMb > availMb) {
-                android.util.Log.e("MNN_RAM", "❌ Недостатньо RAM: треба ~${neededMb}MB, є ${availMb}MB")
-                return@launch
+        // Перевірка дозволу на сповіщення (Android 13+)
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+                getApplication(),
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                android.util.Log.w("MNN_DL", "POST_NOTIFICATIONS not granted")
             }
+        }
 
-            val ok = downloadMnnModelByIdSuspending(repoName, folderName)
-            if (ok) {
-                android.util.Log.e("MNN_DL", "All files OK for $modelId, activating")
-                setCurrentModel(modelId)
-            } else {
-                android.util.Log.e("MNN_DL", "Download failed for $modelId")
+        downloadingModelId = modelId
+        _downloadProgress.value = ModelDownloader.Progress.Downloading(0, 0, 0)
+
+        try {
+            val intent = android.content.Intent(getApplication(), ModelDownloadService::class.java).apply {
+                action = ModelDownloadService.ACTION_START
+                putExtra(ModelDownloadService.EXTRA_MODEL_ID, modelId)
+                putExtra(ModelDownloadService.EXTRA_REPO_NAME, repoName)
+                putExtra(ModelDownloadService.EXTRA_FOLDER_NAME, folderName)
             }
+            androidx.core.content.ContextCompat.startForegroundService(getApplication(), intent)
+            android.util.Log.e("MNN_DL", "Started foreground service for $modelId")
+        } catch (t: Throwable) {
+            android.util.Log.e("MNN_DL", "startForegroundService failed: ${t.message}", t)
+            downloadingModelId = null
+            _downloadProgress.value = ModelDownloader.Progress.Error("Service start failed: ${t.message}")
         }
     }
 

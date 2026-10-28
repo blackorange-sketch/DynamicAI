@@ -713,7 +713,7 @@ fun SettingsScreen(
                     val isCurrent = vm.currentModelId == id
                     val isDownloaded = downloadedMnn.any { it.id == id }
                     val status = when {
-                        mnnDownloading && isCurrent -> "Завантаження... ${(mnnProgress as com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading).percent}%"
+                        mnnDownloading && isCurrent -> "🔄 Завантаження (прогрес у шторці)"
                         isCurrent && mnnIsReady -> "✅ Активна"
                         isCurrent -> "Активація..."
                         isDownloaded -> "✅ Завантажено • Обрати"
@@ -739,11 +739,7 @@ fun SettingsScreen(
                             Text(status, color = if (mnnDownloading && isCurrent) AppTheme.colors.accent else AppTheme.colors.textSecondary, fontSize = 10.sp)
                         }
                         if (mnnDownloading && isCurrent) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                color = AppTheme.colors.accent,
-                                strokeWidth = 2.dp
-                            )
+                            Text("⏳", fontSize = 18.sp)
                         } else {
                             Text("→", color = AppTheme.colors.accent, fontSize = 18.sp)
                         }

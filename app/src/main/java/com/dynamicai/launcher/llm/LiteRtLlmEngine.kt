@@ -33,31 +33,35 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
 
         // Reflection — досліджуємо API
         val info = StringBuilder()
-        try {
-            val backendClass = Class.forName("com.google.ai.edge.litertlm.Backend")
-            info.append("=== Backend ===\n")
-            info.append("Fields: ")
-            info.append(backendClass.declaredFields.map { it.name }.joinToString())
-            info.append("\n")
-            info.append("Methods: ")
-            info.append(backendClass.declaredMethods.map { it.name }.joinToString())
-            info.append("\n")
-            info.append("All (public) methods: ")
-            info.append(backendClass.methods.map { it.name }.distinct().joinToString())
-            info.append("\n")
-
-            val configClass = Class.forName("com.google.ai.edge.litertlm.EngineConfig")
-            info.append("=== EngineConfig ===\n")
-            info.append("Fields: ")
-            info.append(configClass.declaredFields.map { it.name }.joinToString())
-            info.append("\n")
-            info.append("Methods: ")
-            info.append(configClass.declaredMethods.map { it.name }.joinToString())
-            info.append("\n")
-        } catch (t: Throwable) {
-            info.append("Reflection failed: ${t.message}\n")
+        val classesToProbe = listOf(
+            "com.google.ai.edge.litertlm.Backend",
+            "com.google.ai.edge.litertlm.EngineConfig",
+            "com.google.ai.edge.litertlm.Engine",
+            "com.google.ai.edge.litertlm.Conversation",
+            "com.google.ai.edge.litertlm.SamplerConfig",
+            "com.google.ai.edge.litertlm.Sampler",
+            "com.google.ai.edge.litertlm.GenerationConfig",
+            "com.google.ai.edge.litertlm.SessionConfig"
+        )
+        for (className in classesToProbe) {
+            try {
+                val clazz = Class.forName(className)
+                info.append("=== $className ===\n")
+                info.append("Fields: ")
+                info.append(clazz.declaredFields.map { it.name }.joinToString())
+                info.append("\n")
+                info.append("Methods: ")
+                info.append(clazz.declaredMethods.map { it.name }.joinToString())
+                info.append("\n")
+                info.append("Constructors: ")
+                info.append(clazz.declaredConstructors.map { c -> c.parameterTypes.joinToString(",") { it.simpleName } }.joinToString(" | "))
+                info.append("\n\n")
+            } catch (t: Throwable) {
+                info.append("=== $className ===\n")
+                info.append("NOT FOUND: ${t.message}\n\n")
+            }
         }
-        Log.d(TAG, info.toString())
+        Log.e(TAG, info.toString())
 
         // Спроби різних API
         val attempts = mutableListOf<Pair<String, () -> Boolean>>()

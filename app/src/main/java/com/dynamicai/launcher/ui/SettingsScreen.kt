@@ -749,6 +749,18 @@ fun SettingsScreen(
                                     Text("$size • Натисніть для завантаження", color = AppTheme.colors.textSecondary, fontSize = 11.sp)
                                 }
                             }
+                            if (isDownloaded) {
+                                IconButton(onClick = {
+                                    val model = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.find { it.id == id }
+                                    if (model != null) vm.deleteModel(model)
+                                }) {
+                                    Icon(
+                                        androidx.compose.material.icons.Icons.Default.Delete,
+                                        contentDescription = "Видалити",
+                                        tint = AppTheme.colors.danger
+                                    )
+                                }
+                            }
                         }
                     }
                 }

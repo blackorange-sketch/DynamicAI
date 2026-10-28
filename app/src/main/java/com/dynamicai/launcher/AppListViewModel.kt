@@ -816,11 +816,14 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                     if (f.name.endsWith(".opencl.weight") || f.name == "mnn_cachefile.bin") f.delete()
                 }
 
+                val isGemma = modelId.contains("gemma", ignoreCase = true)
+                val tokenizerName = if (isGemma) "tokenizer.mtok" else "tokenizer.txt"
+                
                 val files = linkedMapOf(
                     "config.json" to 50L,
                     "llm_config.json" to 50L,
                     "llm.mnn" to 100_000L,
-                    "tokenizer.txt" to 100_000L,
+                    tokenizerName to 100_000L,
                     "llm.mnn.weight" to 100_000_000L
                 )
                 val correctUrl = "https://huggingface.co/taobao-mnn/$repoName/resolve/main"

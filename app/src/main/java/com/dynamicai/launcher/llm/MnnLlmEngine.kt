@@ -28,7 +28,7 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
         private fun formatPrompt(prompt: String, modelId: String): String {
             return if (modelId.contains("qwen3", ignoreCase = true)) {
                 // /no_think для вимкнення thinking mode Qwen3
-                "$prompt /no_think"
+                "$prompt\n/no_think"
             } else {
                 prompt
             }

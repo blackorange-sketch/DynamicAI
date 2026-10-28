@@ -82,6 +82,18 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
             Log.e(TAG, "listFiles failed: ${t.message}")
         }
 
+        // Видаляємо застарілі OpenCL кеші, які роздувають пам'ять до гігабайтів
+        try {
+            modelDir.listFiles()?.forEach { f ->
+                if (f.name.endsWith(".opencl.weight") || f.name == "mnn_cachefile.bin") {
+                    val deleted = f.delete()
+                    Log.e("MNN_CLEANUP", "🗑️ ${if (deleted) "Deleted" else "Failed to delete"} ${f.name} (${f.length()} bytes)")
+                }
+            }
+        } catch (t: Throwable) {
+            Log.e("MNN_CLEANUP", "Cleanup failed: ${t.message}")
+        }
+
         // Звільняємо попередній engine
         try { session?.release() } catch (_: Throwable) {}
         session = null

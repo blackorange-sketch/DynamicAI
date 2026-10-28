@@ -170,8 +170,9 @@ object ModelRepository {
                 val hasDir = dir.isDirectory
                 val hasLlm = File(dir, "llm.mnn").exists()
                 val hasWeight = File(dir, "llm.mnn.weight").exists()
-                android.util.Log.e("MNN_SCAN", "Model ${model.id} (${model.fileName}): dir=$hasDir, llm=$hasLlm, weight=$hasWeight")
-                hasDir && hasLlm && hasWeight
+                val hasTokenizer = File(dir, "tokenizer.txt").exists() || File(dir, "tokenizer.mtok").exists()
+                android.util.Log.e("MNN_SCAN", "Model ${model.id} (${model.fileName}): dir=$hasDir, llm=$hasLlm, weight=$hasWeight, tok=$hasTokenizer")
+                hasDir && hasLlm && hasWeight && hasTokenizer
             } else {
                 File(context.filesDir, model.fileName).exists()
             }

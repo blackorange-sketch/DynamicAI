@@ -748,6 +748,14 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setCurrentModel(modelId: String) {
+        // SANITY CHECK: не дозволяємо активувати модель, якої немає на диску
+        val isDownloaded = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(getApplication()).any { it.id == modelId }
+        if (!isDownloaded) {
+            android.util.Log.e("LLM_DEBUG", "BLOCKED setCurrentModel: $modelId is not downloaded")
+            _downloadProgress.value = com.dynamicai.launcher.llm.ModelDownloader.Progress.Error("Спочатку завантажте модель!")
+            return
+        }
+
         currentModelId = modelId
         prefs.edit().putString("current_model_id", modelId).apply()
         

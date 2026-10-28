@@ -763,7 +763,7 @@ fun SettingsScreen(
                 else -> true
             }
         }
-        filteredModels.forEach { model ->
+        filteredModels.filterNot { it.id.startsWith("mnn-") }.forEach { model ->
                 val isDownloaded = downloadedModels.any { it.id == model.id }
                 val isSelected = model.id == vm.currentModelId
                 

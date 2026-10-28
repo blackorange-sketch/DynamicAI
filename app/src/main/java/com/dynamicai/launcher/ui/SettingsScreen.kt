@@ -790,10 +790,13 @@ fun SettingsScreen(
                                 Icon(androidx.compose.material.icons.Icons.Default.Delete, contentDescription = "Видалити", tint = AppTheme.colors.danger)
                             }
                         } else {
-                            if (progressState is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading) {
+                            if (vm.downloadingModelId == model.id && progressState is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AppTheme.colors.accent, strokeWidth = 2.dp)
                             } else {
-                                TextButton(onClick = { vm.downloadModel(model) }) {
+                                TextButton(
+                                    onClick = { vm.downloadModel(model) },
+                                    enabled = vm.downloadingModelId == null
+                                ) {
                                     Text("Завантажити", color = AppTheme.colors.accent, fontSize = 12.sp)
                                 }
                             }

@@ -250,6 +250,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private var pendingText: String = ""
 
     private val runtimePrefs = app.getSharedPreferences("dynamicai_runtime", android.content.Context.MODE_PRIVATE)
+    private val _downloadTrigger = MutableStateFlow(0)
+    val downloadTrigger: StateFlow<Int> = _downloadTrigger.asStateFlow()
+
     private val downloadReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
             val action = intent?.action ?: return
@@ -260,6 +263,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                     if (modelId != null) {
                         downloadingModelId = null
                         _downloadProgress.value = null
+                        _downloadTrigger.value++
                         setCurrentModel(modelId)
                     }
                 }
@@ -268,6 +272,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                     android.util.Log.e("MNN_DL", "❌ Service reported error: $error")
                     downloadingModelId = null
                     _downloadProgress.value = ModelDownloader.Progress.Error(error)
+                    _downloadTrigger.value++
                 }
             }
         }

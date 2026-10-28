@@ -708,7 +708,11 @@ fun SettingsScreen(
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("🧪 MNN Models", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                val downloadedMnn = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)
+                // Тригер для оновлення статусу після завантаження
+                val downloadTrigger by vm.downloadTrigger.collectAsStateWithLifecycle()
+                val downloadedMnn = remember(downloadTrigger) {
+                    com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)
+                }
                 mnnModels.forEach { (id, name, size) ->
                     val isCurrent = vm.currentModelId == id
                     val isDownloaded = downloadedMnn.any { it.id == id }

@@ -8,6 +8,8 @@ import com.dynamicai.launcher.data.LauncherSettings
 import com.dynamicai.launcher.data.SettingsStorage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 
 /**

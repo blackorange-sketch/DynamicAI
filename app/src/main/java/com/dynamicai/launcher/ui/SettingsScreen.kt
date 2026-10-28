@@ -132,6 +132,8 @@ fun SettingsScreen(
         LaunchedEffect(Unit) { installedApps = AppRepository(ctx).loadCached() }
 
         if (initialCategory == null || initialCategory == "tools") {
+    var modelFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("all") }
+
         GlassSectionHeader("Застосунки за замовчуванням")
         GlassCard {
             AppPickerRow("Музика", settings.defaultMusicApp, installedApps, Icons.Default.PlayArrow, Color(0xFF1DB954)) {
@@ -541,8 +543,6 @@ fun SettingsScreen(
         GlassSectionHeader("Bluetooth")
         BluetoothTestRow()
 
-        // Фільтр моделей за рушієм
-        var modelFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("all") }
 
         if (initialCategory == null || initialCategory == "ai") {
         GlassSectionHeader("🤖 ШІ та Асистент")

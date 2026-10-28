@@ -11,7 +11,8 @@ data class LlmModel(
     val url: String,
     val sizeBytes: Long,
     val fileName: String,
-    val supportedBackends: List<String> = listOf("CPU", "GPU")
+    val supportedBackends: List<String> = listOf("CPU", "GPU"),
+    val engine: String = "litert"  // "litert" | "mnn"
 )
 
 object ModelRepository {

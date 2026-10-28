@@ -823,7 +823,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                     "tokenizer.txt" to 100_000L,
                     "llm.mnn.weight" to 100_000_000L
                 )
-                val correctUrl = "https://huggingface.co/taobao-mnn/\$repoName/resolve/main"
+                val correctUrl = "https://huggingface.co/taobao-mnn/$repoName/resolve/main"
                 val downloader = ModelDownloader(getApplication())
 
                 for ((file, minSize) in files) {
@@ -831,7 +831,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                     val target = java.io.File(targetDir, file)
                     if (target.exists() && target.length() >= minSize) continue
 
-                    val url = "\$correctUrl/\$file"
+                    val url = "$correctUrl/$file"
                     downloader.downloadUrl(url, file).collect { progress ->
                         if (progress is ModelDownloader.Progress.Downloading) {
                             _downloadProgress.value = progress

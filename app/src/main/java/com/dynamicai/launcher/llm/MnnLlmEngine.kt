@@ -60,7 +60,16 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
     }
 
     private suspend fun _initializeInternal(modelDir: File): Boolean = withContext(Dispatchers.IO) {
-        if (isReady) return@withContext true
+        if (isReady && currentModelName == modelDir.name) return@withContext true
+        
+        // Якщо завантажена інша модель — примусово звільняємо її
+        if (isReady && currentModelName != modelDir.name) {
+            Log.e(TAG, "Switching model: $currentModelName -> ${modelDir.name}. Releasing old session.")
+            try { session?.release() } catch (_: Throwable) {}
+            session = null
+            System.gc()
+        }
+
         if (!modelDir.exists() || !modelDir.isDirectory) {
             lastError = "Папка моделі не знайдена: ${modelDir.absolutePath}"
             Log.e(TAG, lastError)

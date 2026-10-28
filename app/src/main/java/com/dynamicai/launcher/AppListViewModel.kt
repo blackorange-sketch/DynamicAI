@@ -770,6 +770,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Завантажує будь-яку MNN-модель за ID (mnn-*) і активує її. */
     fun downloadMnnModelById(modelId: String) {
+        android.util.Log.e("MNN_DL", "🔥 ENTRY downloadMnnModelById: $modelId")
         val folderName = when (modelId) {
             "mnn-qwen3.5-0.8b" -> "qwen3.5-0.8b"
             "mnn-qwen3.5-2b" -> "qwen3.5-2b"

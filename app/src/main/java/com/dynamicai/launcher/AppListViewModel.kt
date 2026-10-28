@@ -193,7 +193,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         // === MNN special case ===
         if (currentModelId.startsWith("mnn-")) {
             val modelName = currentModelId.removePrefix("mnn-")
-            val mnnBase = getApplication<android.app.Application>().getExternalFilesDir("mnn_models")
+            val mnnBase = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")
             val mnnDir = File(mnnBase, modelName)
             android.util.Log.e("LLM_DEBUG", "MNN dir: ${mnnDir.absolutePath}, exists=${mnnDir.exists()}")
             if (!mnnDir.exists() || !mnnDir.isDirectory) {
@@ -720,6 +720,42 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 android.util.Log.e("LLM_DEBUG", "setCurrentModel failed: ${t.message}", t)
                 _llmReady.value = false
             }
+        }
+    }
+
+    /** Завантажує MNN-модель Qwen 2.5 1.5B (6 файлів) у filesDir/mnn_models/qwen2.5-1.5b/ */
+    fun downloadMnnModel() {
+        viewModelScope.launch {
+            val baseDir = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")
+            val targetDir = java.io.File(baseDir, "qwen2.5-1.5b")
+            if (!targetDir.exists()) targetDir.mkdirs()
+
+            val files = listOf(
+                "config.json", "llm_config.json", "llm.mnn", "llm.mnn.json", "llm.mnn.weight", "tokenizer.txt"
+            )
+            val baseUrl = "https://huggingface.co/taobao-mnn/Qwen2.5-1.5B-Instruct-MNN/resolve/main"
+
+            for (file in files) {
+                val target = java.io.File(targetDir, file)
+                if (target.exists() && target.length() > 0) {
+                    android.util.Log.e("MNN_DL", "Skip $file (exists, ${target.length()} bytes)")
+                    continue
+                }
+                val url = "$baseUrl/$file"
+                android.util.Log.e("MNN_DL", "Downloading $file from $url")
+                downloader.downloadUrl(url, "mnn_models/qwen2.5-1.5b/$file")
+                    .collect { progress ->
+                        when (progress) {
+                            is ModelDownloader.Progress.Complete ->
+                                android.util.Log.e("MNN_DL", "✅ $file done")
+                            is ModelDownloader.Progress.Error ->
+                                android.util.Log.e("MNN_DL", "❌ $file: ${progress.message}")
+                            is ModelDownloader.Progress.Downloading ->
+                                android.util.Log.e("MNN_DL", "⏳ $file: ${progress.percent}%")
+                        }
+                    }
+            }
+            android.util.Log.e("MNN_DL", "🎉 All files in ${targetDir.absolutePath}")
         }
     }
 

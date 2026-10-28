@@ -667,7 +667,10 @@ fun SettingsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { vm.setCurrentModel("mnn-qwen2.5-1.5b") }
+                    .clickable {
+                        vm.downloadMnnModel()
+                        vm.setCurrentModel("mnn-qwen2.5-1.5b")
+                    }
                     .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {

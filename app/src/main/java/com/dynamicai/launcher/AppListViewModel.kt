@@ -817,6 +817,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 }
 
                 val isGemma = modelId.contains("gemma", ignoreCase = true)
+                val isQwen35 = modelId.contains("qwen3.5", ignoreCase = true)
                 val tokenizerName = if (isGemma) "tokenizer.mtok" else "tokenizer.txt"
                 
                 val files = linkedMapOf(
@@ -826,6 +827,15 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                     tokenizerName to 100_000L,
                     "llm.mnn.weight" to 100_000_000L
                 )
+                
+                // Додаємо мультимодальні файли, які MNN вимагає при старті
+                if (isQwen35 || isGemma) {
+                    files["visual.mnn"] = 100_000L
+                    files["visual.mnn.weight"] = 1_000_000L
+                }
+                if (isGemma) {
+                    files["audio.mnn"] = 100_000L
+                }
                 val correctUrl = "https://huggingface.co/taobao-mnn/$repoName/resolve/main"
                 val downloader = ModelDownloader(getApplication())
 

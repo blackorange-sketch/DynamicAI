@@ -708,18 +708,29 @@ fun SettingsScreen(
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("🧪 MNN Models", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
+                val downloadedMnn = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)
                 mnnModels.forEach { (id, name, size) ->
                     val isCurrent = vm.currentModelId == id
+                    val isDownloaded = downloadedMnn.any { it.id == id }
                     val status = when {
                         mnnDownloading && isCurrent -> "Завантаження... ${(mnnProgress as com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading).percent}%"
                         isCurrent && mnnIsReady -> "✅ Активна"
                         isCurrent -> "Активація..."
+                        isDownloaded -> "✅ Завантажено • Обрати"
                         else -> "$size • Натисніть для завантаження"
                     }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(enabled = !mnnDownloading) { vm.downloadMnnModelById(id) }
+                            .clickable(enabled = !mnnDownloading) {
+                                if (isDownloaded && !isCurrent) {
+                                    // Вже завантажено — просто активувати
+                                    vm.setCurrentModel(id)
+                                } else if (!isDownloaded) {
+                                    // Треба завантажити
+                                    vm.downloadMnnModelById(id)
+                                }
+                            }
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {

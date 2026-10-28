@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -25,7 +26,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -89,24 +89,6 @@ fun SettingsScreen(
     onTestLlm: suspend (String) -> String? = { null },
     initialCategory: String? = null,
     onBackToMenu: () -> Unit = {}
-) { 
-    val localContext = androidx.compose.ui.platform.LocalContext.current
-    var modelFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("all") }
-    val downloadTrigger by vm.downloadTrigger.collectAsStateWithLifecycle()
-    val downloadedMnn = remember(downloadTrigger) { com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(localContext) }
-    val mnnProgress = vm.downloadProgress.value
-
-com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
-    val mnnProgress = vm.downloadProgress.value
-
-    onOpenNotes: () -> Unit = {},
-    llmDownloaded: Boolean,
-    llmReady: Boolean,
-    versionName: String,
-    onClose: () -> Unit,
-    onTestLlm: suspend (String) -> String? = { null },
-    initialCategory: String? = null,
-    onBackToMenu: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -147,6 +129,7 @@ com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
     }
             var showOverlayPermDialog by remember { mutableStateOf(false) }
         var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
+        var modelFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("all") }
         LaunchedEffect(Unit) { installedApps = AppRepository(ctx).loadCached() }
 
         if (initialCategory == null || initialCategory == "tools") {
@@ -279,10 +262,13 @@ com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
                 onChange = { onSettingsChange(settings.copy(weatherUnit = it)) }
             )
         }
+        }
+        }
 
         // ==== Фон лаунчера ====
         if (initialCategory == null || initialCategory == "appearance") {
         GlassSectionHeader("🎨 Зовнішній вигляд")
+        if (initialCategory == null || initialCategory == "appearance") {
         GlassCard {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Стиль інтерфейсу", color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -556,6 +542,7 @@ com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
         GlassSectionHeader("Bluetooth")
         BluetoothTestRow()
 
+
         if (initialCategory == null || initialCategory == "ai") {
         GlassSectionHeader("🤖 ШІ та Асистент")
                 if (initialCategory == null || initialCategory == "ai") {
@@ -652,12 +639,124 @@ com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
                 }
 
         if (initialCategory == null || initialCategory == "ai") {
+        // Перемикач рушія
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf("all" to "Усі", "litert" to "LiteRT", "mnn" to "MNN").forEach { (key, label) ->
+                val selected = modelFilter == key
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (selected) AppTheme.colors.accent.copy(alpha = 0.3f) else AppTheme.colors.surface)
+                        .clickable { modelFilter = key }
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(label, color = AppTheme.colors.textPrimary, fontSize = 12.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+
         GlassSectionHeader("Локальна LLM")
+
+        // === Backend + Temperature selector ===
+        GlassCard {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Прискорювач (Backend)", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LlmBackendChip("Auto", "auto", settings.llmBackend) { onSettingsChange(settings.copy(llmBackend = it)) }
+
+                    LlmBackendChip("GPU", "gpu", settings.llmBackend) { onSettingsChange(settings.copy(llmBackend = it)) }
+                    LlmBackendChip("CPU", "cpu", settings.llmBackend) { onSettingsChange(settings.copy(llmBackend = it)) }
+                }
+                Spacer(Modifier.height(12.dp))
+                TtsSlider(
+                    label = "Температура: ${"%.2f".format(settings.llmTemperature)}",
+                    value = settings.llmTemperature,
+                    values = listOf(0.0f, 0.2f, 0.4f, 0.6f, 0.8f, 1.0f),
+                    onChange = { onSettingsChange(settings.copy(llmTemperature = it)) }
+                )
+                Text("Зміни застосуються після повторного вибору моделі.",
+                     color = AppTheme.colors.textMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+            }
+        }
+
+
+        // === MNN Models ===
+        if (modelFilter == "all" || modelFilter == "mnn") {
+            val mnnModels = listOf(
+                Triple("mnn-qwen3.5-0.8b", "Qwen3.5 0.8B", "800 MB"),
+                Triple("mnn-qwen3.5-2b", "Qwen3.5 2B", "2.0 GB"),
+                Triple("mnn-qwen3.5-4b", "Qwen3.5 4B", "4.0 GB"),
+                Triple("mnn-gemma-4-e2b", "Gemma 4 E2B", "2.0 GB"),
+                Triple("mnn-gemma-4-e4b", "Gemma 4 E4B", "4.0 GB"),
+                Triple("mnn-lfm2.5-1.2b", "LFM2.5 1.2B", "1.2 GB"),
+                Triple("mnn-qwen3-0.6b", "Qwen3 0.6B", "400 MB"),
+                Triple("mnn-qwen3-1.7b", "Qwen3 1.7B", "1.7 GB"),
+                Triple("mnn-qwen2.5-1.5b", "Qwen2.5 1.5B", "1.5 GB")
+            )
+            val mnnProgress = vm.downloadProgress.value
+            val downloadTrigger by vm.downloadTrigger.collectAsStateWithLifecycle()
+            val downloadedMnn = remember(downloadTrigger) { com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
+
+            GlassCard {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("🧪 MNN Models", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+
+                    mnnModels.forEach { (id, name, size) ->
+                        val isCurrent = vm.currentModelId == id
+                        val isDownloaded = downloadedMnn.any { it.id == id }
+                        val isDownloading = vm.downloadingModelId == id && mnnProgress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(enabled = !isDownloading) {
+                                    if (isDownloaded) {
+                                        if (!isCurrent) vm.setCurrentModel(id)
+                                    } else {
+                                        vm.downloadMnnModelById(id)
+                                    }
+                                }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(name, color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                if (isDownloaded) {
+                                    Text(if (isCurrent) "✓ Активна" else "✓ Завантажено • Обрати", color = if (isCurrent) AppTheme.colors.success else AppTheme.colors.accent, fontSize = 11.sp)
+                                } else if (isDownloading) {
+                                    val prog = mnnProgress as com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading
+                                    LinearProgressIndicator(progress = { prog.percent / 100f }, modifier = Modifier.fillMaxWidth().height(4.dp).padding(top = 6.dp), color = AppTheme.colors.accent)
+                                    Text("${prog.percent}% (${prog.downloadedMb} / ${prog.totalMb} МБ)", color = AppTheme.colors.accent, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
+                                } else {
+                                    Text("$size • Натисніть для завантаження", color = AppTheme.colors.textSecondary, fontSize = 11.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         GlassCard {
             val downloadedModels = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)
             val progressState = vm.downloadProgress.value
 
-            com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.forEach { model ->
+            val filteredModels = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.filter { m ->
+            when (modelFilter) {
+                "litert" -> !m.id.startsWith("mnn-")
+                "mnn" -> m.id.startsWith("mnn-")
+                else -> true
+            }
+        }
+        filteredModels.filterNot { it.id.startsWith("mnn-") }.forEach { model ->
                 val isDownloaded = downloadedModels.any { it.id == model.id }
                 val isSelected = model.id == vm.currentModelId
                 
@@ -665,6 +764,11 @@ com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(model.name, color = AppTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        Text(
+                            "Підтримка: ${model.supportedBackends.joinToString(", ")}",
+                            color = AppTheme.colors.textMuted,
+                            fontSize = 10.sp
+                        )
                             
                             val statusText = if (isDownloaded) "Завантажено" else "Не завантажено (${model.sizeBytes / 1_000_000} МБ)"
                             Text(statusText, color = AppTheme.colors.textSecondary, fontSize = 11.sp)
@@ -722,128 +826,7 @@ com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
                     HorizontalDivider(color = AppTheme.colors.textPrimary.copy(alpha = 0.1f), modifier = Modifier.padding(top = 8.dp))
                 }
             }
-
-            if (modelFilter == "all" || modelFilter == "mnn") {
-            // MNN Models UI
-            val downloadTrigger by vm.downloadTrigger.collectAsStateWithLifecycle()
-            val downloadedMnn = remember(downloadTrigger) { com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
-            val mnnProgress = vm.downloadProgress.value
-
-            // Вкладки фільтру
-            androidx.compose.foundation.layout.Row(
-                modifier = androidx.compose.ui.Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
-            ) {
-                androidx.compose.material3.FilterChip(
-                    selected = modelFilter == "all",
-                    onClick = { modelFilter = "all" },
-                    label = { androidx.compose.material3.Text("Усі") }
-                )
-                androidx.compose.material3.FilterChip(
-                    selected = modelFilter == "litert",
-                    onClick = { modelFilter = "litert" },
-                    label = { androidx.compose.material3.Text("LiteRT") }
-                )
-                androidx.compose.material3.FilterChip(
-                    selected = modelFilter == "mnn",
-                    onClick = { modelFilter = "mnn" },
-                    label = { androidx.compose.material3.Text("MNN") }
-                )
-            }
-
-            val mnnModelsList = listOf(
-                Triple("mnn-qwen3.5-0.8b", "Qwen3.5 0.8B", "800 MB"),
-                Triple("mnn-qwen3.5-2b", "Qwen3.5 2B", "2.0 GB"),
-                Triple("mnn-qwen3.5-4b", "Qwen3.5 4B", "4.0 GB"),
-                Triple("mnn-gemma-4-e2b", "Gemma 4 E2B", "2.0 GB"),
-                Triple("mnn-gemma-4-e4b", "Gemma 4 E4B", "4.0 GB"),
-                Triple("mnn-lfm2.5-1.2b", "LFM2.5 1.2B", "1.2 GB"),
-                Triple("mnn-qwen3-0.6b", "Qwen3 0.6B", "400 MB"),
-                Triple("mnn-qwen3-1.7b", "Qwen3 1.7B", "1.7 GB"),
-                Triple("mnn-qwen2.5-1.5b", "Qwen2.5 1.5B", "1.5 GB")
-            )
-
-            GlassSectionHeader("MNN Models")
-            GlassCard {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    mnnModelsList.forEach { (id, name, size) ->
-                        val isCurrent = vm.currentModelId == id
-                        val isDownloaded = downloadedMnn.any { it.id == id }
-                        val isDownloading = vm.downloadingModelId == id && mnnProgress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(enabled = !isDownloading) {
-                                    if (isDownloaded) {
-                                        if (!isCurrent) vm.setCurrentModel(id)
-                                    } else {
-                                        vm.downloadMnnModelById(id)
-                                    }
-                                }
-                                .padding(vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(name, color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                                if (isDownloaded) {
-                                    Text(if (isCurrent) "✓ Активна" else "✓ Завантажено • Обрати", color = if (isCurrent) AppTheme.colors.success else AppTheme.colors.accent, fontSize = 11.sp)
-                                } else if (isDownloading) {
-                                    val prog = mnnProgress as com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading
-                                    LinearProgressIndicator(progress = { prog.percent / 100f }, modifier = Modifier.fillMaxWidth().height(4.dp).padding(top = 6.dp), color = AppTheme.colors.accent)
-                                    Text("${prog.percent}% (${prog.downloadedMb} / ${prog.totalMb} МБ)", color = AppTheme.colors.accent, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
-                                } else {
-                                    Text("$size • Натисніть для завантаження", color = AppTheme.colors.textSecondary, fontSize = 11.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            }
-
-
-            if (modelFilter == "all" || modelFilter == "litert") {
-                val litertModels = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.filter { !it.id.startsWith("mnn-") }
-                
-                litertModels.forEach { model ->
-                    val isCurrent = vm.currentModelId == model.id
-                    val isDownloaded = downloadedMnn.any { it.id == model.id }
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(model.name, color = AppTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                            Text("Підтримка: ${model.supportedBackends.joinToString(", ")}", color = AppTheme.colors.textMuted, fontSize = 10.sp)
-                            val statusText = if (isDownloaded) "Завантажено" else "Не завантажено (${model.sizeBytes / 1_000_000} МБ)"
-                            Text(statusText, color = AppTheme.colors.textSecondary, fontSize = 11.sp)
-                        }
-
-                        if (isDownloaded) {
-                            if (isCurrent) {
-                                Text("✓ Активна", color = AppTheme.colors.success, fontSize = 12.sp)
-                            } else {
-                                TextButton(onClick = { vm.setCurrentModel(model.id) }) {
-                                    Text("Обрати", color = AppTheme.colors.accent, fontSize = 12.sp)
-                                }
-                            }
-                            IconButton(onClick = { vm.deleteModel(model) }) {
-                                Icon(androidx.compose.material.icons.Icons.Default.Delete, contentDescription = "Видалити", tint = AppTheme.colors.danger)
-                            }
-                        } else {
-                            TextButton(onClick = { vm.downloadModel(model) }) {
-                                Text("Завантажити", color = AppTheme.colors.accent, fontSize = 12.sp)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Toggle завжди видно
-
+// Toggle завжди видно
             SwitchRow(
                 label = "Озвучувати відповіді (TTS)",
                 checked = settings.useTts,
@@ -943,6 +926,7 @@ com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
                 LlmTestRow(onTest = onTestLlm)
             }
         }
+        }
 
         Spacer(Modifier.height(16.dp))
         Text(
@@ -953,8 +937,6 @@ com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
         )
         Spacer(Modifier.height(48.dp))
     }
-}
-}
 }
 
 // ===== Компоненти =====
@@ -973,5 +955,22 @@ private fun RowScope.ThemeChip(label: String, themeId: String, currentTheme: Str
         contentAlignment = Alignment.Center
     ) {
         Text(label, color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+    }
+}
+
+@Composable
+private fun RowScope.LlmBackendChip(label: String, backendId: String, current: String, onSelect: (String) -> Unit) {
+    val selected = current == backendId
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (selected) AppTheme.colors.accent.copy(alpha = 0.3f) else AppTheme.colors.surface)
+            .border(1.dp, if (selected) AppTheme.colors.accent else Color.Transparent, RoundedCornerShape(10.dp))
+            .clickable { onSelect(backendId) }
+            .padding(vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
     }
 }

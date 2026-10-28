@@ -34,14 +34,13 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         // Reflection — досліджуємо API
         val info = StringBuilder()
         val classesToProbe = listOf(
-            "com.google.ai.edge.litertlm.Backend",
-            "com.google.ai.edge.litertlm.EngineConfig",
+            "com.google.ai.edge.litertlm.SamplerConfig",
+            "com.google.ai.edge.litertlm.SamplerType",
+            "com.google.ai.edge.litertlm.SessionConfig",
             "com.google.ai.edge.litertlm.Engine",
             "com.google.ai.edge.litertlm.Conversation",
-            "com.google.ai.edge.litertlm.SamplerConfig",
-            "com.google.ai.edge.litertlm.Sampler",
-            "com.google.ai.edge.litertlm.GenerationConfig",
-            "com.google.ai.edge.litertlm.SessionConfig"
+            "com.google.ai.edge.litertlm.Backend",
+            "com.google.ai.edge.litertlm.EngineConfig"
         )
         for (className in classesToProbe) {
             try {

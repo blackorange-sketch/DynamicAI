@@ -637,6 +637,30 @@ fun SettingsScreen(
 
         if (initialCategory == null || initialCategory == "ai") {
         GlassSectionHeader("Локальна LLM")
+
+        // === Backend + Temperature selector ===
+        GlassCard {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Прискорювач (Backend)", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LlmBackendChip("Auto", "auto", settings.llmBackend) { onSettingsChange(settings.copy(llmBackend = it)) }
+                    LlmBackendChip("NPU", "npu", settings.llmBackend) { onSettingsChange(settings.copy(llmBackend = it)) }
+                    LlmBackendChip("GPU", "gpu", settings.llmBackend) { onSettingsChange(settings.copy(llmBackend = it)) }
+                    LlmBackendChip("CPU", "cpu", settings.llmBackend) { onSettingsChange(settings.copy(llmBackend = it)) }
+                }
+                Spacer(Modifier.height(12.dp))
+                TtsSlider(
+                    label = "Температура: ${"%.2f".format(settings.llmTemperature)}",
+                    value = settings.llmTemperature,
+                    values = listOf(0.0f, 0.2f, 0.4f, 0.6f, 0.8f, 1.0f),
+                    onChange = { onSettingsChange(settings.copy(llmTemperature = it)) }
+                )
+                Text("Зміни застосуються після повторного вибору моделі.",
+                     color = AppTheme.colors.textMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+            }
+        }
+
         GlassCard {
             val downloadedModels = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)
             val progressState = vm.downloadProgress.value
@@ -835,5 +859,22 @@ private fun RowScope.ThemeChip(label: String, themeId: String, currentTheme: Str
         contentAlignment = Alignment.Center
     ) {
         Text(label, color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+    }
+}
+
+@Composable
+private fun RowScope.LlmBackendChip(label: String, backendId: String, current: String, onSelect: (String) -> Unit) {
+    val selected = current == backendId
+    Box(
+        modifier = Modifier
+            .weight(1f)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (selected) AppTheme.colors.accent.copy(alpha = 0.3f) else AppTheme.colors.surface)
+            .border(1.dp, if (selected) AppTheme.colors.accent else Color.Transparent, RoundedCornerShape(10.dp))
+            .clickable { onSelect(backendId) }
+            .padding(vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
     }
 }

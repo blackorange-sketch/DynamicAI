@@ -81,9 +81,22 @@ fun SettingsScreen(
     onOpenDockEditor: () -> Unit,
     onOpenFolderManager: () -> Unit,
     onOpenMacroManager: () -> Unit = {},
+    onOpenNotes: () -> Unit = {},
+    llmDownloaded: Boolean,
+    llmReady: Boolean,
+    versionName: String,
+    onClose: () -> Unit,
+    onTestLlm: suspend (String) -> String? = { null },
+    initialCategory: String? = null,
+    onBackToMenu: () -> Unit = {}
+) { 
+    val localContext = androidx.compose.ui.platform.LocalContext.current
     var modelFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("all") }
     val downloadTrigger by vm.downloadTrigger.collectAsStateWithLifecycle()
-    val downloadedMnn = remember(downloadTrigger) { com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
+    val downloadedMnn = remember(downloadTrigger) { com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(localContext) }
+    val mnnProgress = vm.downloadProgress.value
+
+com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
     val mnnProgress = vm.downloadProgress.value
 
     onOpenNotes: () -> Unit = {},

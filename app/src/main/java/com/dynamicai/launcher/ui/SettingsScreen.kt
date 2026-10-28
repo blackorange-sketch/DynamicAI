@@ -871,6 +871,8 @@ fun SettingsScreen(
         Spacer(Modifier.height(48.dp))
     }
 }
+}
+}
 
 // ===== Компоненти =====
 

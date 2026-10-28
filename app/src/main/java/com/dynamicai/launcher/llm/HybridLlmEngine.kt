@@ -9,7 +9,7 @@ import java.io.File
  * для папки з llm.mnn — MNN.
  */
 class HybridLlmEngine(private val context: Context) : LlmEngine {
-    override val isMnn: Boolean get() = current is MnnLlmEngine || current is com.alibaba.mnnllm.android.llm.LlmSession
+    override val isMnn: Boolean get() = activeKind == Kind.MNN
 
     enum class Kind { NONE, LITERT, MNN }
 

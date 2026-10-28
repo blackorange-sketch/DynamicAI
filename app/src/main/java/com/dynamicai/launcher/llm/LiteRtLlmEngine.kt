@@ -24,6 +24,9 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
 
     @Volatile var lastError: String = ""
 
+    private var currentSettings: com.dynamicai.launcher.data.LauncherSettings =
+        com.dynamicai.launcher.data.LauncherSettings()
+
     suspend fun initialize(modelFile: File): Boolean = withContext(Dispatchers.IO) {
         if (_isReady) return@withContext true
         if (!modelFile.exists()) {
@@ -62,6 +65,10 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         Log.e(TAG, info.toString())
 
         // Спроби різних API
+        // Завантажуємо актуальні налаштування
+        currentSettings = com.dynamicai.launcher.data.SettingsStorage(context).load()
+        Log.e(TAG, "⚙️ Backend=${currentSettings.llmBackend}, Temp=${currentSettings.llmTemperature}")
+
         val attempts = mutableListOf<Pair<String, () -> Boolean>>()
 
         // Спроба 1: NPU (Hexagon HTP через QNN)
@@ -134,7 +141,18 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
             true
         })
 
-        for ((name, block) in attempts) {
+        // Фільтруємо спроби згідно з налаштуванням
+        val filteredAttempts = attempts.filter { (name, _) ->
+            when (currentSettings.llmBackend) {
+                "npu" -> name.contains("NPU")
+                "gpu" -> name.contains("GPU")
+                "cpu" -> name.contains("CPU")
+                else -> true  // auto — пробуємо все
+            }
+        }
+        Log.e(TAG, "🎯 Спроби: ${filteredAttempts.map { it.first }}")
+
+        for ((name, block) in filteredAttempts) {
             try {
                 block()
                 lastError = ""
@@ -157,7 +175,7 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
             // Створюємо SamplerConfig з низькою температурою
             val samplerConfig = com.google.ai.edge.litertlm.SamplerConfig(
                 seed = 0,
-                temperature = 0.2, // Прибирає галюцинації
+                temperature = currentSettings.llmTemperature.toDouble(),
                 topK = 40,
                 topP = 0.9
             )
@@ -202,7 +220,7 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         val e = engine ?: return@withContext null
         return@withContext try {
             val samplerConfig = com.google.ai.edge.litertlm.SamplerConfig(
-                seed = 0, temperature = 0.2, topK = 40, topP = 0.9
+                seed = 0, temperature = currentSettings.llmTemperature.toDouble(), topK = 40, topP = 0.9
             )
             val conversationConfig = com.google.ai.edge.litertlm.ConversationConfig(
                 samplerConfig = samplerConfig

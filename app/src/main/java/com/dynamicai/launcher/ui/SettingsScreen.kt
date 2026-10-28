@@ -707,7 +707,16 @@ fun SettingsScreen(
 
             GlassCard {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("🧪 MNN Models", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("🧪 MNN Models", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        TextButton(onClick = { vm.clearMnnCache() }) {
+                            Text("Очистити кеш", color = AppTheme.colors.danger, fontSize = 11.sp)
+                        }
+                    }
                     Spacer(Modifier.height(8.dp))
 
                     mnnModels.forEach { (id, name, size) ->

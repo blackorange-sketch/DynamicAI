@@ -876,6 +876,26 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun clearMnnCache() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val baseDir = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")
+            var count = 0
+            if (baseDir.exists()) {
+                baseDir.walkTopDown().forEach { file ->
+                    if (file.isFile && (file.name.endsWith(".opencl.weight") || file.name == "mnn_cachefile.bin")) {
+                        if (file.delete()) count++
+                    }
+                }
+            }
+            android.util.Log.e("MNN_CLEANUP", "Manual cache clear: deleted $count files")
+            withContext(Dispatchers.Main) {
+                _downloadTrigger.value = (_downloadTrigger.value ?: 0) + 1
+                _downloadProgress.value = null
+            }
+        }
+    }
+
+
     private suspend fun downloadMnnModelByIdSuspending(repoName: String, folderName: String): Boolean =
         withContext(Dispatchers.IO) {
             val baseDir = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")

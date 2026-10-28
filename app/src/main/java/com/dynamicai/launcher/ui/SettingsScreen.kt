@@ -707,9 +707,32 @@ fun SettingsScreen(
 
             if (modelFilter == "all" || modelFilter == "mnn") {
             // MNN Models UI
+            var modelFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("all") }
             val downloadTrigger by vm.downloadTrigger.collectAsStateWithLifecycle()
             val downloadedMnn = remember(downloadTrigger) { com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
             val mnnProgress = vm.downloadProgress.value
+
+            // Вкладки фільтру
+            androidx.compose.foundation.layout.Row(
+                modifier = androidx.compose.ui.Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+            ) {
+                androidx.compose.material3.FilterChip(
+                    selected = modelFilter == "all",
+                    onClick = { modelFilter = "all" },
+                    label = { androidx.compose.material3.Text("Усі") }
+                )
+                androidx.compose.material3.FilterChip(
+                    selected = modelFilter == "litert",
+                    onClick = { modelFilter = "litert" },
+                    label = { androidx.compose.material3.Text("LiteRT") }
+                )
+                androidx.compose.material3.FilterChip(
+                    selected = modelFilter == "mnn",
+                    onClick = { modelFilter = "mnn" },
+                    label = { androidx.compose.material3.Text("MNN") }
+                )
+            }
 
             val mnnModelsList = listOf(
                 Triple("mnn-qwen3.5-0.8b", "Qwen3.5 0.8B", "800 MB"),

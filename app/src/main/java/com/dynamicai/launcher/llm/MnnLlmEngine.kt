@@ -54,6 +54,7 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
 
     private var currentSettings: LauncherSettings = LauncherSettings()
     private var currentModelName: String = ""
+    private val initializeMutex = kotlinx.coroutines.sync.Mutex()
 
     override val isReady: Boolean get() = session?.isReady() == true
 
@@ -61,6 +62,12 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
      * @param modelDir папка з моделлю (містить llm.mnn тощо)
      */
     suspend fun initialize(modelDir: File): Boolean = withContext(Dispatchers.IO) {
+        initializeMutex.withLock {
+            _initializeInternal(modelDir)
+        }
+    }
+
+    private suspend fun _initializeInternal(modelDir: File): Boolean = withContext(Dispatchers.IO) {
         if (isReady) return@withContext true
         if (!modelDir.exists() || !modelDir.isDirectory) {
             lastError = "Папка моделі не знайдена: ${modelDir.absolutePath}"

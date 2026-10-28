@@ -334,8 +334,8 @@ class ChatEngine(
     suspend fun simpleAnswer(question: String): String {
         if (!llm.isReady) return "LLM не активна"
         return try {
-            val settings = SettingsStorage(context).load()
-            val isMnn = currentModelId.startsWith("mnn-")
+            val settings = com.dynamicai.launcher.data.SettingsStorage(context).load()
+            val isMnn = llm is com.dynamicai.launcher.llm.MnnLlmEngine
             
             // Вибираємо шаблон залежно від рушія
             val template = if (isMnn) settings.mnnPrompt else settings.litertPrompt

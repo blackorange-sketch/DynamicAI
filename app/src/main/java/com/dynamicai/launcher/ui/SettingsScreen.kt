@@ -661,6 +661,35 @@ fun SettingsScreen(
             }
         }
 
+
+        // === MNN Test Card ===
+        GlassCard {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { vm.setCurrentModel("mnn-qwen2.5-1.5b") }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("🧪", fontSize = 20.sp)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Тест MNN Qwen 2.5 1.5B",
+                        color = AppTheme.colors.textPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        if (vm.currentModelId == "mnn-qwen2.5-1.5b") "Активна (MNN)" else "Натисніть для тесту",
+                        color = AppTheme.colors.textSecondary,
+                        fontSize = 11.sp
+                    )
+                }
+                Text("→", color = AppTheme.colors.accent, fontSize = 20.sp)
+            }
+        }
+
         GlassCard {
             val downloadedModels = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)
             val progressState = vm.downloadProgress.value

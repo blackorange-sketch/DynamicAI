@@ -22,7 +22,8 @@ import com.dynamicai.launcher.folder.FolderStorage
 import com.dynamicai.launcher.llm.ChatEngine
 import com.dynamicai.launcher.llm.LlmAgent
 import com.dynamicai.launcher.llm.WebSearchRepository
-import com.dynamicai.launcher.llm.LiteRtLlmEngine
+import com.dynamicai.launcher.llm.HybridLlmEngine
+import java.io.File
 import com.dynamicai.launcher.llm.ModelDownloader
 import com.dynamicai.launcher.model.AppInfo
 import com.dynamicai.launcher.suggestion.ContactInfo
@@ -40,13 +41,13 @@ import androidx.compose.runtime.setValue
 class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
-        @Volatile private var sharedLlm: LiteRtLlmEngine? = null
+        @Volatile private var sharedLlm: HybridLlmEngine? = null
         @Volatile private var sharedChatEngine: ChatEngine? = null
         @Volatile private var sharedDownloader: ModelDownloader? = null
 
-        fun getSharedLlm(context: android.content.Context): LiteRtLlmEngine =
+        fun getSharedLlm(context: android.content.Context): HybridLlmEngine =
             sharedLlm ?: synchronized(this) {
-                sharedLlm ?: LiteRtLlmEngine(context.applicationContext).also { sharedLlm = it }
+                sharedLlm ?: HybridLlmEngine(context.applicationContext).also { sharedLlm = it }
             }
 
         fun getSharedChatEngine(context: android.content.Context): ChatEngine =
@@ -188,6 +189,29 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     /** Викликається лениво при першому реальному запиті LLM. */
     suspend fun ensureLlmLoaded(): Boolean {
         if (llm.isReady) return true
+
+        // === MNN special case ===
+        if (currentModelId.startsWith("mnn-")) {
+            val modelName = currentModelId.removePrefix("mnn-")
+            val mnnBase = getApplication<android.app.Application>().getExternalFilesDir("mnn_models")
+            val mnnDir = File(mnnBase, modelName)
+            android.util.Log.e("LLM_DEBUG", "MNN dir: ${mnnDir.absolutePath}, exists=${mnnDir.exists()}")
+            if (!mnnDir.exists() || !mnnDir.isDirectory) {
+                android.util.Log.e("LLM_DEBUG", "MNN dir not found")
+                _llmReady.value = false
+                return false
+            }
+            return try {
+                val ok = llm.initialize(mnnDir)
+                _llmReady.value = ok
+                android.util.Log.e("LLM_DEBUG", "MNN init: $ok")
+                ok
+            } catch (t: Throwable) {
+                android.util.Log.e("LLM_DEBUG", "MNN init failed: ${t.message}", t)
+                _llmReady.value = false
+                false
+            }
+        }
         
         // Спочатку завантажуємо нативну бібліотеку LLM
         if (!com.dynamicai.launcher.ocr.NativeLibManager.ensureLlmLoaded(getApplication())) {

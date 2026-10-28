@@ -58,6 +58,12 @@ class VoiceChatActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Вмикаємо апаратне придушення відлуння (AEC)
+        try {
+            val am = getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+            am.mode = android.media.AudioManager.MODE_IN_COMMUNICATION
+        } catch (_: Throwable) {}
+
         setContent {
             val vm: AppListViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
             VoiceChatScreen(vm = vm, onClose = { finish() })
@@ -496,8 +502,15 @@ fun processQuery(
             val answer = vm.chatEngine.answerWithAgent(text, history)
             // Видаляємо статус "Думаю"
             // (він зникне, бо ми замінимо список повідомлень)
+            stopListening() // Примусово вимикаємо мікрофон, щоб не зчитав TTS
             onStateChange(VoiceState.SPEAKING)
-            vm.tts.speakWithCallback(answer) { onStateChange(VoiceState.LISTENING) }
+            vm.tts.speakWithCallback(answer) {
+                // Чекаємо 400мс, щоб динамік повністю замовк і мікрофон не зчитав відлуння
+                kotlinx.coroutines.MainScope().launch {
+                    kotlinx.coroutines.delay(400)
+                    onStateChange(VoiceState.LISTENING)
+                }
+            }
             onMessage(ChatMessage("assistant", answer))
         } catch (e: Exception) {
             onMessage(ChatMessage("assistant", "Помилка: ${e.message}"))

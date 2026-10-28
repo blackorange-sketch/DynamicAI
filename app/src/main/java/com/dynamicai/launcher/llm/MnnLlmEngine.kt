@@ -18,6 +18,11 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
 
     companion object {
         private const val TAG = "MnnLlmEngine"
+
+        /** Qwen 2.5 chat template (з llm_config.json) */
+        private fun formatQwenPrompt(prompt: String): String {
+            return "<|im_start|>user\n$prompt<|im_end|>\n<|im_start|>assistant\n"
+        }
     }
 
     private var session: LlmSession? = null
@@ -112,10 +117,20 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
             return@withContext null
         }
         lastUsedAt = System.currentTimeMillis()
+        val buffer = StringBuilder()
+        val formattedPrompt = formatQwenPrompt(prompt)
+        Log.e(TAG, "complete: formatted prompt (${formattedPrompt.length} chars), first 100: ${formattedPrompt.take(100)}")
         return@withContext try {
-            s.generate(prompt, object : GenerateProgressListener {
-                override fun onProgress(progress: String?): Boolean = true
+            s.generate(formattedPrompt, object : GenerateProgressListener {
+                override fun onProgress(progress: String?): Boolean {
+                    if (!progress.isNullOrEmpty()) {
+                        buffer.append(progress)
+                    }
+                    return true  // продовжити генерацію
+                }
             })
+            Log.e(TAG, "complete: generated ${buffer.length} chars")
+            buffer.toString()
         } catch (t: Throwable) {
             lastError = "complete failed: ${t.message}"
             Log.e(TAG, lastError, t)
@@ -134,26 +149,19 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
         }
         lastUsedAt = System.currentTimeMillis()
         val buffer = StringBuilder()
+        val formattedPrompt = formatQwenPrompt(prompt)
         return@withContext try {
-            val result = s.generate(prompt, object : GenerateProgressListener {
+            s.generate(formattedPrompt, object : GenerateProgressListener {
                 override fun onProgress(progress: String?): Boolean {
                     if (!progress.isNullOrEmpty()) {
-                        // MNN може передавати або сирий токен, або JSON
-                        val token = try {
-                            val obj = org.json.JSONObject(progress)
-                            obj.optString("text", progress)
-                        } catch (_: Throwable) {
-                            progress
-                        }
-                        if (token.isNotEmpty()) {
-                            buffer.append(token)
-                            try { onToken(token) } catch (_: Throwable) {}
-                        }
+                        buffer.append(progress)
+                        try { onToken(progress) } catch (_: Throwable) {}
                     }
                     return true
                 }
             })
-            result ?: buffer.toString()
+            Log.e(TAG, "streamComplete: generated ${buffer.length} chars")
+            buffer.toString()
         } catch (t: Throwable) {
             lastError = "streamComplete failed: ${t.message}"
             Log.e(TAG, lastError, t)

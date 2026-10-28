@@ -73,15 +73,18 @@ class LlmSession(
         }
     }
 
-    fun generate(prompt: String, listener: GenerateProgressListener): String? {
-        if (nativePtr == 0L) return null
-        return try {
-            val result = submitNative(nativePtr, prompt, keepHistory, listener)
-            Log.e(TAG, "submitNative result keys=${result.keys}")
-            (result["text"] as? String) ?: (result["result"] as? String) ?: result.toString()
+    fun generate(prompt: String, listener: GenerateProgressListener) {
+        if (nativePtr == 0L) {
+            Log.e(TAG, "generate: nativePtr is 0")
+            return
+        }
+        try {
+            // submitNative синхронний — повертає метрики (prefill_time, decode_len тощо).
+            // Текст генерується через listener.onProgress().
+            val metrics = submitNative(nativePtr, prompt, keepHistory, listener)
+            Log.e(TAG, "submitNative metrics: $metrics")
         } catch (t: Throwable) {
             Log.e(TAG, "generate failed: ${t.message}", t)
-            null
         }
     }
 

@@ -339,6 +339,7 @@ class ChatEngine(
             
             // Вибираємо шаблон залежно від рушія
             val template = if (isMnn) settings.mnnPrompt else settings.litertPrompt
+            Log.e("MNN_PROMPT", "Using template (isMnn=$isMnn): $template")
             val prompt = template.replace("{{question}}", question)
             
             val response = llm.complete(prompt)

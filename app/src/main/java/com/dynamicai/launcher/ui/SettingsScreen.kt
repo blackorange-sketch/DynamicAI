@@ -959,6 +959,14 @@ fun SettingsScreen(
                         textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 13.sp),
                         modifier = Modifier.fillMaxWidth().height(80.dp).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f), RoundedCornerShape(8.dp)).padding(8.dp)
                     )
+                    
+                    Spacer(Modifier.height(12.dp))
+                    TextButton(
+                        onClick = { onSettingsChange(settings) }, // Примусове збереження
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("💾 Застосувати промпти", color = AppTheme.colors.accent)
+                    }
                 }
             }
 

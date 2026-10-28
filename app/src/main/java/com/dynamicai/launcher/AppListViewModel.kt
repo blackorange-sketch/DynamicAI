@@ -729,17 +729,27 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     fun downloadMnnModelById(modelId: String) {
         viewModelScope.launch {
             val folderName = when (modelId) {
-                "mnn-qwen2.5-1.5b" -> "qwen2.5-1.5b"
+                "mnn-qwen3.5-0.8b" -> "qwen3.5-0.8b"
+                "mnn-qwen3.5-2b" -> "qwen3.5-2b"
+                "mnn-qwen3.5-4b" -> "qwen3.5-4b"
+                "mnn-gemma-4-e2b" -> "gemma-4-e2b"
+                "mnn-gemma-4-e4b" -> "gemma-4-e4b"
+                "mnn-lfm2.5-1.2b" -> "lfm2.5-1.2b"
                 "mnn-qwen3-0.6b" -> "qwen3-0.6b"
                 "mnn-qwen3-1.7b" -> "qwen3-1.7b"
-                "mnn-gemma-2-2b" -> "gemma-2-2b"
+                "mnn-qwen2.5-1.5b" -> "qwen2.5-1.5b"
                 else -> modelId.removePrefix("mnn-")
             }
             val repoName = when (modelId) {
-                "mnn-qwen2.5-1.5b" -> "Qwen2.5-1.5B-Instruct-MNN"
+                "mnn-qwen3.5-0.8b" -> "Qwen3.5-0.8B-MNN"
+                "mnn-qwen3.5-2b" -> "Qwen3.5-2B-MNN"
+                "mnn-qwen3.5-4b" -> "Qwen3.5-4B-MNN"
+                "mnn-gemma-4-e2b" -> "gemma-4-E2B-it-MNN"
+                "mnn-gemma-4-e4b" -> "gemma-4-E4B-it-MNN"
+                "mnn-lfm2.5-1.2b" -> "LFM2.5-1.2B-Instruct-MNN"
                 "mnn-qwen3-0.6b" -> "Qwen3-0.6B-MNN"
                 "mnn-qwen3-1.7b" -> "Qwen3-1.7B-MNN"
-                "mnn-gemma-2-2b" -> "gemma-2-2b-it-MNN"
+                "mnn-qwen2.5-1.5b" -> "Qwen2.5-1.5B-Instruct-MNN"
                 else -> return@launch
             }
             val ok = downloadMnnModelByIdSuspending(repoName, folderName)
@@ -766,8 +776,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 "tokenizer.txt" to 100_000L,
                 "llm.mnn.weight" to 100_000_000L
             )
-            // Опційні — якщо 404, пропускаємо
+            // Опційні (llm.mnn.json є у Qwen2.5, але немає в Qwen3/3.5/Gemma4)
             val optionalFiles = listOf("llm.mnn.json")
+
             val baseUrl = "https://huggingface.co/taobao-mnn/$repoName/resolve/main"
 
             for ((file, minSize) in files) {
@@ -795,7 +806,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 if (!ok) return@withContext false
             }
 
-            // Опційні файли — не критичні
+            // Опційні файли (404 → пропускаємо)
             for (file in optionalFiles) {
                 val target = java.io.File(targetDir, file)
                 if (target.exists() && target.length() > 1000) {
@@ -804,36 +815,18 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 val url = "$baseUrl/$file"
                 android.util.Log.e("MNN_DL", "Downloading optional $file")
-                var ok = false
                 downloader.downloadUrl(url, "mnn_models/$folderName/$file").collect { progress ->
                     when (progress) {
-                        is ModelDownloader.Progress.Complete -> {
-                            ok = true
+                        is ModelDownloader.Progress.Complete ->
                             android.util.Log.e("MNN_DL", "✅ optional $file done")
-                        }
-                        is ModelDownloader.Progress.Error -> {
+                        is ModelDownloader.Progress.Error ->
                             android.util.Log.w("MNN_DL", "⚠️ optional $file: ${progress.message} (пропускаємо)")
-                            // 404 — нормально, пропускаємо
-                        }
                         is ModelDownloader.Progress.Downloading -> {}
                     }
                 }
             }
             true
         }
-
-    /** Завантажує MNN-модель Qwen 2.5 1.5B і після успіху активує її. */
-    fun downloadMnnModel() {
-        viewModelScope.launch {
-            val ok = downloadMnnModelSuspending()
-            if (ok) {
-                android.util.Log.e("MNN_DL", "All files OK, activating mnn-qwen2.5-1.5b")
-                setCurrentModel("mnn-qwen2.5-1.5b")
-            } else {
-                android.util.Log.e("MNN_DL", "Download failed, NOT activating")
-            }
-        }
-    }
 
     private suspend fun downloadMnnModelSuspending(): Boolean = withContext(kotlinx.coroutines.Dispatchers.IO) {
         val baseDir = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")

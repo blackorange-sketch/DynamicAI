@@ -19,9 +19,21 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
     companion object {
         private const val TAG = "MnnLlmEngine"
 
-        /** Qwen 2.5 chat template (з llm_config.json) */
-        private fun formatQwenPrompt(prompt: String): String {
-            return "<|im_start|>user\n$prompt<|im_end|>\n<|im_start|>assistant\n"
+        /** Універсальний chat template для Qwen/Gemma/LFM */
+        private fun formatPrompt(prompt: String, modelId: String): String {
+            return when {
+                // Qwen family (Qwen2.5, Qwen3, Qwen3.5)
+                modelId.contains("qwen", ignoreCase = true) ->
+                    "<|im_start|>user\n$prompt<|im_end|>\n<|im_start|>assistant\n"
+                // Gemma (3, 4)
+                modelId.contains("gemma", ignoreCase = true) ->
+                    "<start_of_turn>user\n$prompt<end_of_turn>\n<start_of_turn>model\n"
+                // LFM2.5
+                modelId.contains("lfm", ignoreCase = true) ->
+                    "<|im_start|>user\n$prompt<|im_end|>\n<|im_start|>assistant\n"
+                // Default
+                else -> prompt
+            }
         }
     }
 
@@ -35,6 +47,7 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
     var lastError: String = ""
 
     private var currentSettings: LauncherSettings = LauncherSettings()
+    private var currentModelName: String = ""
 
     override val isReady: Boolean get() = session?.isReady() == true
 
@@ -70,6 +83,8 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
         System.gc()
 
         currentSettings = SettingsStorage(context).load()
+        currentModelName = modelDir.name
+        Log.e(TAG, "currentModelName=$currentModelName")
 
         // Мапимо вибір з UI → MNN backend_type + fallback
         val backends = when (currentSettings.llmBackend) {
@@ -118,7 +133,7 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
         }
         lastUsedAt = System.currentTimeMillis()
         val buffer = StringBuilder()
-        val formattedPrompt = formatQwenPrompt(prompt)
+        val formattedPrompt = formatPrompt(prompt, currentModelName)
         Log.e(TAG, "complete: formatted prompt (${formattedPrompt.length} chars), first 100: ${formattedPrompt.take(100)}")
         return@withContext try {
             s.generate(formattedPrompt, object : GenerateProgressListener {
@@ -149,7 +164,7 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
         }
         lastUsedAt = System.currentTimeMillis()
         val buffer = StringBuilder()
-        val formattedPrompt = formatQwenPrompt(prompt)
+        val formattedPrompt = formatPrompt(prompt, currentModelName)
         return@withContext try {
             s.generate(formattedPrompt, object : GenerateProgressListener {
                 override fun onProgress(progress: String?): Boolean {

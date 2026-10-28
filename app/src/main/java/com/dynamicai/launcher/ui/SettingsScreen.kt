@@ -541,6 +541,9 @@ fun SettingsScreen(
         GlassSectionHeader("Bluetooth")
         BluetoothTestRow()
 
+        // Фільтр моделей за рушієм
+        var modelFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("all") }
+
         if (initialCategory == null || initialCategory == "ai") {
         GlassSectionHeader("🤖 ШІ та Асистент")
                 if (initialCategory == null || initialCategory == "ai") {
@@ -637,6 +640,29 @@ fun SettingsScreen(
                 }
 
         if (initialCategory == null || initialCategory == "ai") {
+        // Перемикач рушія
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            listOf("all" to "Усі", "litert" to "LiteRT", "mnn" to "MNN").forEach { (key, label) ->
+                val selected = modelFilter == key
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (selected) AppTheme.colors.accent.copy(alpha = 0.3f) else AppTheme.colors.surface)
+                        .clickable { modelFilter = key }
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(label, color = AppTheme.colors.textPrimary, fontSize = 12.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+
         GlassSectionHeader("Локальна LLM")
 
         // === Backend + Temperature selector ===
@@ -665,9 +691,15 @@ fun SettingsScreen(
 
         // === MNN Models ===
         val mnnModels = listOf(
-            Triple("mnn-qwen2.5-1.5b", "MNN Qwen 2.5 1.5B", "qwen2.5-1.5b"),
-            Triple("mnn-qwen3-0.6b", "MNN Qwen3 0.6B (Крихітна)", "qwen3-0.6b"),
-            Triple("mnn-qwen3-1.7b", "MNN Qwen3 1.7B (Швидка)", "qwen3-1.7b")
+            Triple("mnn-qwen3.5-0.8b", "Qwen3.5 0.8B", "800 MB"),
+            Triple("mnn-qwen3.5-2b", "Qwen3.5 2B", "2.0 GB"),
+            Triple("mnn-qwen3.5-4b", "Qwen3.5 4B", "4.0 GB"),
+            Triple("mnn-gemma-4-e2b", "Gemma 4 E2B", "2.0 GB"),
+            Triple("mnn-gemma-4-e4b", "Gemma 4 E4B", "4.0 GB"),
+            Triple("mnn-lfm2.5-1.2b", "LFM2.5 1.2B", "1.2 GB"),
+            Triple("mnn-qwen3-0.6b", "Qwen3 0.6B (Крихітна)", "400 MB"),
+            Triple("mnn-qwen3-1.7b", "Qwen3 1.7B (Швидка)", "1.7 GB"),
+            Triple("mnn-qwen2.5-1.5b", "Qwen2.5 1.5B", "1.5 GB")
         )
         val mnnProgress = vm.downloadProgress.value
         val mnnDownloading = mnnProgress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading
@@ -677,13 +709,13 @@ fun SettingsScreen(
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("🧪 MNN Models", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                mnnModels.forEach { (id, name, _) ->
+                mnnModels.forEach { (id, name, size) ->
                     val isCurrent = vm.currentModelId == id
                     val status = when {
                         mnnDownloading && isCurrent -> "Завантаження... ${(mnnProgress as com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading).percent}%"
                         isCurrent && mnnIsReady -> "✅ Активна"
                         isCurrent -> "Активація..."
-                        else -> "Натисніть для завантаження"
+                        else -> "$size • Натисніть для завантаження"
                     }
                     Row(
                         modifier = Modifier
@@ -714,7 +746,14 @@ fun SettingsScreen(
             val downloadedModels = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)
             val progressState = vm.downloadProgress.value
 
-            com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.forEach { model ->
+            val filteredModels = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.filter { m ->
+            when (modelFilter) {
+                "litert" -> !m.id.startsWith("mnn-")
+                "mnn" -> m.id.startsWith("mnn-")
+                else -> true
+            }
+        }
+        filteredModels.forEach { model ->
                 val isDownloaded = downloadedModels.any { it.id == model.id }
                 val isSelected = model.id == vm.currentModelId
                 

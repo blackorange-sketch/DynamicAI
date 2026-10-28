@@ -94,28 +94,88 @@ object ModelRepository {
             sizeBytes = 1_700_000_000L,
             fileName = "SmolLM2-1_7B-Instruct_dynamic_wi8_afp32.litertlm"
         ),
+        // ===== MNN Models =====
         LlmModel(
-            id = "mnn-qwen2.5-1.5b",
-            name = "MNN Qwen 2.5 1.5B",
-            url = "https://huggingface.co/taobao-mnn/Qwen2.5-1.5B-Instruct-MNN/resolve/main/llm.mnn.weight",
-            sizeBytes = 1_500_000_000L,
-            fileName = "qwen2.5-1.5b"
+            id = "mnn-qwen3.5-0.8b",
+            name = "MNN Qwen3.5 0.8B (Крихітна)",
+            url = "https://huggingface.co/taobao-mnn/Qwen3.5-0.8B-MNN/resolve/main/llm.mnn.weight",
+            sizeBytes = 800_000_000L,
+            fileName = "qwen3.5-0.8b",
+            engine = "mnn",
+            supportedBackends = listOf("CPU", "GPU")
+        ),
+        LlmModel(
+            id = "mnn-qwen3.5-2b",
+            name = "MNN Qwen3.5 2B (Швидка)",
+            url = "https://huggingface.co/taobao-mnn/Qwen3.5-2B-MNN/resolve/main/llm.mnn.weight",
+            sizeBytes = 2_000_000_000L,
+            fileName = "qwen3.5-2b",
+            engine = "mnn",
+            supportedBackends = listOf("CPU", "GPU")
+        ),
+        LlmModel(
+            id = "mnn-qwen3.5-4b",
+            name = "MNN Qwen3.5 4B (Розумна)",
+            url = "https://huggingface.co/taobao-mnn/Qwen3.5-4B-MNN/resolve/main/llm.mnn.weight",
+            sizeBytes = 4_000_000_000L,
+            fileName = "qwen3.5-4b",
+            engine = "mnn",
+            supportedBackends = listOf("CPU", "GPU")
+        ),
+        LlmModel(
+            id = "mnn-gemma-4-e2b",
+            name = "MNN Gemma 4 E2B",
+            url = "https://huggingface.co/taobao-mnn/gemma-4-E2B-it-MNN/resolve/main/llm.mnn.weight",
+            sizeBytes = 2_000_000_000L,
+            fileName = "gemma-4-e2b",
+            engine = "mnn",
+            supportedBackends = listOf("CPU", "GPU")
+        ),
+        LlmModel(
+            id = "mnn-gemma-4-e4b",
+            name = "MNN Gemma 4 E4B",
+            url = "https://huggingface.co/taobao-mnn/gemma-4-E4B-it-MNN/resolve/main/llm.mnn.weight",
+            sizeBytes = 4_000_000_000L,
+            fileName = "gemma-4-e4b",
+            engine = "mnn",
+            supportedBackends = listOf("CPU", "GPU")
+        ),
+        LlmModel(
+            id = "mnn-lfm2.5-1.2b",
+            name = "MNN LFM2.5 1.2B",
+            url = "https://huggingface.co/taobao-mnn/LFM2.5-1.2B-Instruct-MNN/resolve/main/llm.mnn.weight",
+            sizeBytes = 1_200_000_000L,
+            fileName = "lfm2.5-1.2b",
+            engine = "mnn",
+            supportedBackends = listOf("CPU", "GPU")
         ),
         LlmModel(
             id = "mnn-qwen3-0.6b",
             name = "MNN Qwen3 0.6B (Крихітна)",
             url = "https://huggingface.co/taobao-mnn/Qwen3-0.6B-MNN/resolve/main/llm.mnn.weight",
             sizeBytes = 400_000_000L,
-            fileName = "qwen3-0.6b"
+            fileName = "qwen3-0.6b",
+            engine = "mnn",
+            supportedBackends = listOf("CPU", "GPU")
         ),
         LlmModel(
             id = "mnn-qwen3-1.7b",
             name = "MNN Qwen3 1.7B (Швидка)",
             url = "https://huggingface.co/taobao-mnn/Qwen3-1.7B-MNN/resolve/main/llm.mnn.weight",
             sizeBytes = 1_700_000_000L,
-            fileName = "qwen3-1.7b"
+            fileName = "qwen3-1.7b",
+            engine = "mnn",
+            supportedBackends = listOf("CPU", "GPU")
+        ),
+        LlmModel(
+            id = "mnn-qwen2.5-1.5b",
+            name = "MNN Qwen 2.5 1.5B",
+            url = "https://huggingface.co/taobao-mnn/Qwen2.5-1.5B-Instruct-MNN/resolve/main/llm.mnn.weight",
+            sizeBytes = 1_500_000_000L,
+            fileName = "qwen2.5-1.5b",
+            engine = "mnn",
+            supportedBackends = listOf("CPU", "GPU")
         )
-
                     )
 
     fun getDownloadedModels(context: Context): List<LlmModel> {

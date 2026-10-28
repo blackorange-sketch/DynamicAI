@@ -703,6 +703,63 @@ fun SettingsScreen(
                     HorizontalDivider(color = AppTheme.colors.textPrimary.copy(alpha = 0.1f), modifier = Modifier.padding(top = 8.dp))
                 }
             }
+
+            // MNN Models UI
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            val downloadTrigger by vm.downloadTrigger.collectAsStateWithLifecycle()
+            val downloadedMnn = remember(downloadTrigger) { com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
+            val mnnProgress = vm.downloadProgress.value
+
+            val mnnModelsList = listOf(
+                Triple("mnn-qwen3.5-0.8b", "Qwen3.5 0.8B", "800 MB"),
+                Triple("mnn-qwen3.5-2b", "Qwen3.5 2B", "2.0 GB"),
+                Triple("mnn-qwen3.5-4b", "Qwen3.5 4B", "4.0 GB"),
+                Triple("mnn-gemma-4-e2b", "Gemma 4 E2B", "2.0 GB"),
+                Triple("mnn-gemma-4-e4b", "Gemma 4 E4B", "4.0 GB"),
+                Triple("mnn-lfm2.5-1.2b", "LFM2.5 1.2B", "1.2 GB"),
+                Triple("mnn-qwen3-0.6b", "Qwen3 0.6B", "400 MB"),
+                Triple("mnn-qwen3-1.7b", "Qwen3 1.7B", "1.7 GB"),
+                Triple("mnn-qwen2.5-1.5b", "Qwen2.5 1.5B", "1.5 GB")
+            )
+
+            GlassSectionHeader("MNN Models")
+            GlassCard {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    mnnModelsList.forEach { (id, name, size) ->
+                        val isCurrent = vm.currentModelId == id
+                        val isDownloaded = downloadedMnn.any { it.id == id }
+                        val isDownloading = vm.downloadingModelId == id && mnnProgress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(enabled = !isDownloading) {
+                                    if (isDownloaded) {
+                                        if (!isCurrent) vm.setCurrentModel(id)
+                                    } else {
+                                        vm.downloadMnnModelById(id)
+                                    }
+                                }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(name, color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                                if (isDownloaded) {
+                                    Text(if (isCurrent) "✓ Активна" else "✓ Завантажено • Обрати", color = if (isCurrent) AppTheme.colors.success else AppTheme.colors.accent, fontSize = 11.sp)
+                                } else if (isDownloading) {
+                                    val prog = mnnProgress as com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading
+                                    LinearProgressIndicator(progress = { prog.percent / 100f }, modifier = Modifier.fillMaxWidth().height(4.dp).padding(top = 6.dp), color = AppTheme.colors.accent)
+                                    Text("${prog.percent}% (${prog.downloadedMb} / ${prog.totalMb} МБ)", color = AppTheme.colors.accent, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
+                                } else {
+                                    Text("$size • Натисніть для завантаження", color = AppTheme.colors.textSecondary, fontSize = 11.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
 // Toggle завжди видно
             SwitchRow(
                 label = "Озвучувати відповіді (TTS)",
@@ -803,7 +860,6 @@ fun SettingsScreen(
                 LlmTestRow(onTest = onTestLlm)
             }
         }
-        }
 
         Spacer(Modifier.height(16.dp))
         Text(
@@ -834,5 +890,3 @@ private fun RowScope.ThemeChip(label: String, themeId: String, currentTheme: Str
         Text(label, color = AppTheme.colors.textPrimary, fontSize = 14.sp)
     }
 }
-
-}}

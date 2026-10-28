@@ -70,6 +70,13 @@ object ModelRepository {
             url = "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm",
             sizeBytes = 1_600_000_000L,
             fileName = "Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv4096.litertlm"
+        ),
+        LlmModel(
+            id = "qwen3-1.7b",
+            name = "Qwen3 1.7B (Українська)",
+            url = "https://huggingface.co/litert-community/Qwen3-1.7B/resolve/main/Qwen3_1.7B.litertlm",
+            sizeBytes = 1_700_000_000L,
+            fileName = "Qwen3_1.7B.litertlm"
         ),        LlmModel(
             id = "smollm2-1.7b",
             name = "SmolLM2 1.7B (Швидка)",

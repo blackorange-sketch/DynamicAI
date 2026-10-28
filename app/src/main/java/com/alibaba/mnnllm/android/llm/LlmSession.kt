@@ -5,26 +5,59 @@ import java.io.File
 
 /**
  * Мінімальна версія LlmSession — JNI-обгортка для libmnnllmapp.so.
- *
- * Клас має бути САМЕ у пакеті com.alibaba.mnnllm.android.llm з САМЕ такою назвою —
- * інакше JNI-функції Java_com_alibaba_mnnllm_android_llm_LlmSession_* не знайдуться.
+ * Клас має бути САМЕ у пакеті com.alibaba.mnnllm.android.llm з САМЕ такою назвою.
  */
 class LlmSession(
     private val modelId: String,
     private val configDir: File,
-    private val backendType: String = "cpu",   // "cpu" | "opencl" | "vulkan"
+    private val backendType: String = "cpu",
     private val maxNewTokens: Int = 512,
 ) {
     companion object {
         private const val TAG = "MnnLlmSession"
+
         init {
             try {
                 System.loadLibrary("c++_shared")
+                Log.e(TAG, "✅ c++_shared loaded")
+
+                try {
+                    System.loadLibrary("MNNOpenCV")
+                    Log.e(TAG, "✅ MNNOpenCV loaded")
+                } catch (t: Throwable) {
+                    Log.e(TAG, "⚠️ MNNOpenCV: ${t.message}")
+                }
+
+                try {
+                    System.loadLibrary("MNNAudio")
+                    Log.e(TAG, "✅ MNNAudio loaded")
+                } catch (t: Throwable) {
+                    Log.e(TAG, "⚠️ MNNAudio: ${t.message}")
+                }
+
                 System.loadLibrary("MNN")
+                Log.e(TAG, "✅ MNN loaded")
+
+                System.loadLibrary("MNN_Express")
+                Log.e(TAG, "✅ MNN_Express loaded")
+
                 System.loadLibrary("MNN_CL")
+                Log.e(TAG, "✅ MNN_CL loaded")
+
+                try {
+                    System.loadLibrary("MNN_Vulkan")
+                    Log.e(TAG, "✅ MNN_Vulkan loaded")
+                } catch (t: Throwable) {
+                    Log.e(TAG, "⚠️ MNN_Vulkan: ${t.message}")
+                }
+
                 System.loadLibrary("llm")
+                Log.e(TAG, "✅ llm loaded")
+
                 System.loadLibrary("mnnllmapp")
-                Log.e(TAG, "✅ MNN libraries loaded")
+                Log.e(TAG, "✅ mnnllmapp loaded")
+
+                Log.e(TAG, "✅ ALL MNN libraries loaded")
             } catch (t: Throwable) {
                 Log.e(TAG, "❌ Failed to load MNN libs: ${t.message}", t)
             }
@@ -34,7 +67,6 @@ class LlmSession(
     private var nativePtr: Long = 0L
     private var keepHistory: Boolean = true
 
-    // === JNI METHODS (реалізовані в libmnnllmapp.so) ===
     private external fun initNative(
         configPath: String?,
         history: List<String>?,
@@ -51,8 +83,6 @@ class LlmSession(
 
     private external fun releaseNative(instanceId: Long)
     private external fun resetNative(instanceId: Long)
-
-    // === PUBLIC API ===
 
     fun load(): Boolean {
         if (nativePtr != 0L) return true

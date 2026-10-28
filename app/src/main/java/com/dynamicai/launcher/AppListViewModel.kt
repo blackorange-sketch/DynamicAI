@@ -842,7 +842,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 _downloadProgress.value = null
                 downloadingModelId = null
-                downloadTrigger.emit(System.currentTimeMillis())
+                _downloadTrigger.value = (_downloadTrigger.value ?: 0) + 1
             } catch (e: Exception) {
                 _downloadProgress.value = ModelDownloader.Progress.Error(e.message ?: "Помилка")
                 downloadingModelId = null

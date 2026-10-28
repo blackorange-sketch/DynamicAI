@@ -128,6 +128,4 @@ dependencies {
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("com.qualcomm.qti:qnn-runtime:2.47.0")
-    implementation("com.qualcomm.qti:qnn-litert-delegate:2.47.0")
 }

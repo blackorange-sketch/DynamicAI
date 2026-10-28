@@ -671,7 +671,7 @@ fun SettingsScreen(
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     LlmBackendChip("Auto", "auto", settings.llmBackend) { onSettingsChange(settings.copy(llmBackend = it)) }
-                    LlmBackendChip("NPU", "npu", settings.llmBackend) { onSettingsChange(settings.copy(llmBackend = it)) }
+
                     LlmBackendChip("GPU", "gpu", settings.llmBackend) { onSettingsChange(settings.copy(llmBackend = it)) }
                     LlmBackendChip("CPU", "cpu", settings.llmBackend) { onSettingsChange(settings.copy(llmBackend = it)) }
                 }

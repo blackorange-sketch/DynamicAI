@@ -34,22 +34,6 @@ object ModelRepository {
             fileName = "gemma-4-E2B-it-gpu.litertlm"
         ),
         LlmModel(
-            id = "gemma-4-E2B-npu",
-            name = "Gemma 4 E2B (NPU QCS8275)",
-            supportedBackends = listOf("NPU"),
-            url = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it_Qualcomm_QCS8275.litertlm",
-            sizeBytes = 2_722_000_000L,
-            fileName = "gemma-4-E2B-it_Qualcomm_QCS8275.litertlm"
-        ),
-        LlmModel(
-            id = "gemma-4-E2B-npu-jit",
-            name = "Gemma 4 E2B (NPU JIT)",
-            supportedBackends = listOf("NPU"),
-            url = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it_NPU_Uncompiled.litertlm",
-            sizeBytes = 2_615_000_000L,
-            fileName = "gemma-4-E2B-it_NPU_Uncompiled.litertlm"
-        ),
-        LlmModel(
             id = "qwen3.5-4b-int4",
             name = "Qwen 3.5 4B (Розумна, INT4)",
             supportedBackends = listOf("CPU", "GPU"),

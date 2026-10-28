@@ -43,46 +43,7 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
 
         val attempts = mutableListOf<Pair<String, () -> Boolean>>()
 
-        // Спроба 1: NPU (Hexagon HTP через QNN)
-        attempts.add("Backend.NPU()" to {
-            try {
-                val config = EngineConfig(
-                    modelPath = modelFile.absolutePath,
-                    backend = Backend.NPU(nativeLibraryDir = context.applicationInfo.nativeLibraryDir),
-                    cacheDir = context.cacheDir.path
-                )
-                // Спроба встановити HTPPerformanceMode = BURST через рефлексію
-                try {
-                    val qualcommOptionsClass = Class.forName("com.google.ai.edge.litertlm.CompiledModel\$QualcommOptions")
-                    val htpPerformanceModeClass = Class.forName("com.google.ai.edge.litertlm.CompiledModel\$QualcommOptions\$HtpPerformanceMode")
-                    val burstEnum = htpPerformanceModeClass.enumConstants.first { it.toString() == "BURST" }
-                    val qualcommOptionsConstructor = qualcommOptionsClass.getConstructor(htpPerformanceModeClass)
-                    val qualcommOptions = qualcommOptionsConstructor.newInstance(burstEnum)
-                    
-                    // Намагаємось встановити qualcommOptions в EngineConfig
-                    val engineConfigClass = config.javaClass
-                    val field = engineConfigClass.getDeclaredField("qualcommOptions")
-                    field.isAccessible = true
-                    field.set(config, qualcommOptions)
-                    android.util.Log.e(TAG, "✅ Встановлено HTPPerformanceMode = BURST")
-                } catch (t: Throwable) {
-                    android.util.Log.w(TAG, "Не вдалося встановити HTPPerformanceMode: ${t.message}")
-                }
-                val e = Engine(config)
-                e.initialize()
-                engine = e
-                _isReady = true
-                lastUsedAt = System.currentTimeMillis()
-                Log.e(TAG, "✅ NPU backend OK")
-                true
-            } catch (t: Throwable) {
-                Log.e(TAG, "❌ NPU backend failed: ${t.message}")
-                _isReady = false  // Гарантовано скидаємо прапорець
-                false
-            }
-        })
-
-        // Спроба 2: GPU (через системний OpenCL, з дозволами в маніфесті)
+        // Спроба 1: GPU (через системний OpenCL, з дозволами в маніфесті)
         attempts.add("Backend.GPU()" to {
             val config = EngineConfig(
                 modelPath = modelFile.absolutePath,

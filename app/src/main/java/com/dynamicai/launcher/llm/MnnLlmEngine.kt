@@ -95,7 +95,8 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
         val backends = when (currentSettings.llmBackend) {
             "gpu" -> listOf("opencl")
             "cpu" -> listOf("cpu")
-            "npu" -> listOf("qnn")
+            // QNN видалено (не працює на SM8550) — NPU fallback на auto
+            "npu" -> listOf("opencl", "cpu")
             "auto", "" -> listOf("opencl", "cpu")
             else -> listOf("opencl", "cpu")
         }

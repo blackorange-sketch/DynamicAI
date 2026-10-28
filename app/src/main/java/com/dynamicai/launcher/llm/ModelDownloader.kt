@@ -48,6 +48,7 @@ class ModelDownloader(private val context: Context) {
             .header("Accept-Encoding", "identity")
             .build()
         val file = File(context.filesDir, fileName)
+        file.parentFile?.mkdirs() // Гарантовано створюємо папку, якщо її немає
         val tempFile = File(context.filesDir, "$fileName.tmp")
 
         try {
@@ -87,8 +88,14 @@ class ModelDownloader(private val context: Context) {
                 }
             }
             if (file.exists()) file.delete()
-            tempFile.renameTo(file)
-            emit(Progress.Complete(file))
+            val renamed = tempFile.renameTo(file)
+            if (renamed) {
+                Log.e("ModelDownloader", "=== SAVED OK: ${file.absolutePath}, size=${file.length()} ===")
+                emit(Progress.Complete(file))
+            } else {
+                Log.e("ModelDownloader", "=== RENAME FAILED: ${tempFile.absolutePath} -> ${file.absolutePath} ===")
+                emit(Progress.Error("Не вдалося зберегти файл (rename failed)"))
+            }
         } catch (t: Throwable) {
             val detail = "${t.javaClass.simpleName}: ${t.message ?: "no message"}"
             Log.e("ModelDownloader", "=== DOWNLOAD FAILED: $detail ===", t)

@@ -832,7 +832,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                     if (target.exists() && target.length() >= minSize) continue
 
                     val url = "$correctUrl/$file"
-                    downloader.downloadUrl(url, file).collect { progress ->
+                    downloader.downloadUrl(url, "mnn_models/$folderName/$file").collect { progress ->
                         if (progress is ModelDownloader.Progress.Downloading) {
                             _downloadProgress.value = progress
                         } else if (progress is ModelDownloader.Progress.Error) {

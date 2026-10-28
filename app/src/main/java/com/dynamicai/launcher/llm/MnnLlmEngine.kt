@@ -21,26 +21,16 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
     companion object {
         private const val TAG = "MnnLlmEngine"
 
-        /** Універсальний chat template для Qwen/Gemma/LFM */
+        /**
+         * НЕ обгортаємо промпт у chat template — MNN сам застосовує `prompt_template`
+         * з llm_config.json. Просто додаємо /no_think для Qwen3 thinking mode.
+         */
         private fun formatPrompt(prompt: String, modelId: String): String {
-            return when {
-                // Qwen3 (thinking mode) — /no_think в кінці user message
-                modelId.contains("qwen3-", ignoreCase = true) ->
-                    "<|im_start|>user\n$prompt /no_think<|im_end|>\n<|im_start|>assistant\n"
-                // Qwen3.5 — теж thinking
-                modelId.contains("qwen3.5", ignoreCase = true) ->
-                    "<|im_start|>user\n$prompt /no_think<|im_end|>\n<|im_start|>assistant\n"
-                // Qwen2.5 — без thinking
-                modelId.contains("qwen2.5", ignoreCase = true) ->
-                    "<|im_start|>user\n$prompt<|im_end|>\n<|im_start|>assistant\n"
-                // Gemma (3, 4)
-                modelId.contains("gemma", ignoreCase = true) ->
-                    "<start_of_turn>user\n$prompt<end_of_turn>\n<start_of_turn>model\n"
-                // LFM2.5
-                modelId.contains("lfm", ignoreCase = true) ->
-                    "<|im_start|>user\n$prompt<|im_end|>\n<|im_start|>assistant\n"
-                // Default
-                else -> prompt
+            return if (modelId.contains("qwen3", ignoreCase = true)) {
+                // /no_think для вимкнення thinking mode Qwen3
+                "$prompt /no_think"
+            } else {
+                prompt
             }
         }
     }

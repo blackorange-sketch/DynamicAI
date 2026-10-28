@@ -49,45 +49,60 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
             return@withContext false
         }
 
+        // Логуємо вміст папки моделі
+        Log.e(TAG, "=== Файли в ${modelDir.absolutePath} ===")
+        try {
+            modelDir.listFiles()?.sortedBy { it.name }?.forEach { f ->
+                Log.e(TAG, "  ${f.name}: ${f.length()} bytes")
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "listFiles failed: ${t.message}")
+        }
+
         // Звільняємо попередній engine
         try { session?.release() } catch (_: Throwable) {}
         session = null
         System.gc()
 
         currentSettings = SettingsStorage(context).load()
-        val backendType = when (currentSettings.llmBackend) {
-            "gpu" -> "opencl"
-            "cpu" -> "cpu"
-            "npu" -> "qnn"  // поки не підтримується MNN без QNN-плагіна
-            else -> "opencl" // auto → спробуємо GPU
+
+        // Мапимо вибір з UI → MNN backend_type + fallback
+        val backends = when (currentSettings.llmBackend) {
+            "gpu" -> listOf("opencl")
+            "cpu" -> listOf("cpu")
+            "npu" -> listOf("qnn")
+            "auto", "" -> listOf("opencl", "cpu")
+            else -> listOf("opencl", "cpu")
         }
+        Log.e(TAG, "initialize: dir=${modelDir.absolutePath}, backends=$backends")
 
-        Log.e(TAG, "initialize: dir=${modelDir.absolutePath}, backend=$backendType")
-
-        return@withContext try {
-            val s = LlmSession(
-                modelId = modelDir.name,
-                configDir = modelDir,
-                backendType = backendType,
-                maxNewTokens = 512
-            )
-            val ok = s.load()
-            if (ok) {
-                session = s
-                lastUsedAt = System.currentTimeMillis()
-                lastError = ""
-                Log.e(TAG, "✅ MNN engine ready")
-                true
-            } else {
-                lastError = "LlmSession.load() failed"
-                Log.e(TAG, "❌ $lastError")
-                false
+        for (backend in backends) {
+            Log.e(TAG, "Спроба backend=$backend")
+            try {
+                val s = LlmSession(
+                    modelId = modelDir.name,
+                    configDir = modelDir,
+                    backendType = backend,
+                    maxNewTokens = 512
+                )
+                val ok = s.load()
+                if (ok) {
+                    session = s
+                    lastUsedAt = System.currentTimeMillis()
+                    lastError = ""
+                    Log.e(TAG, "✅ MNN engine ready (backend=$backend)")
+                    return@withContext true
+                } else {
+                    lastError = "LlmSession.load() failed (backend=$backend)"
+                    Log.w(TAG, "❌ $lastError")
+                }
+            } catch (t: Throwable) {
+                lastError = "backend=$backend exception: ${t.javaClass.simpleName}: ${t.message}"
+                Log.w(TAG, "❌ $lastError", t)
             }
-        } catch (t: Throwable) {
-            lastError = "init exception: ${t.javaClass.simpleName}: ${t.message}"
-            Log.e(TAG, lastError, t)
-            false
         }
+        Log.e(TAG, "❌ Всі backend-и провалились")
+        return@withContext false
     }
 
     override suspend fun complete(prompt: String): String? = withContext(Dispatchers.IO) {

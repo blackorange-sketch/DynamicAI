@@ -81,6 +81,7 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
                 true
             } catch (t: Throwable) {
                 Log.e(TAG, "❌ NPU backend failed: ${t.message}")
+                _isReady = false  // Гарантовано скидаємо прапорець
                 false
             }
         })

@@ -25,6 +25,7 @@ import com.dynamicai.launcher.llm.WebSearchRepository
 import com.dynamicai.launcher.llm.HybridLlmEngine
 import java.io.File
 import com.dynamicai.launcher.llm.ModelDownloader
+import com.dynamicai.launcher.llm.ModelDownloadService
 import com.dynamicai.launcher.model.AppInfo
 import com.dynamicai.launcher.suggestion.ContactInfo
 import com.dynamicai.launcher.suggestion.ContactRepository

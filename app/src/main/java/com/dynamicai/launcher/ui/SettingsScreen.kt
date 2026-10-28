@@ -673,6 +673,11 @@ fun SettingsScreen(
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(model.name, color = AppTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        Text(
+                            "Підтримка: ${model.supportedBackends.joinToString(", ")}",
+                            color = AppTheme.colors.textMuted,
+                            fontSize = 10.sp
+                        )
                             
                             val statusText = if (isDownloaded) "Завантажено" else "Не завантажено (${model.sizeBytes / 1_000_000} МБ)"
                             Text(statusText, color = AppTheme.colors.textSecondary, fontSize = 11.sp)

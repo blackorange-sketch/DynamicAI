@@ -63,6 +63,11 @@
         android:icon="@android:drawable/sym_def_app_icon"
         android:theme="@style/Theme.DynamicAI"
         android:supportsRtl="true">
+        <!-- Дозволяємо використання системних нативних бібліотек (OpenCL для GPU) -->
+        <uses-native-library android:name="libvndksupport.so" android:required="false" />
+        <uses-native-library android:name="libOpenCL.so" android:required="false" />
+        <uses-native-library android:name="libOpenCL-pixel.so" android:required="false" />
+
 
 
         <provider

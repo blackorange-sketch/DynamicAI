@@ -62,7 +62,23 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         // Спроби різних API
         val attempts = mutableListOf<Pair<String, () -> Boolean>>()
 
-        // CPU backend (OpenCL заблокований на багатьох пристроях, тому використовуємо CPU)
+        // Спроба 1: GPU (через системний OpenCL, з дозволами в маніфесті)
+        attempts.add("Backend.GPU()" to {
+            val config = EngineConfig(
+                modelPath = modelFile.absolutePath,
+                backend = Backend.GPU(),
+                cacheDir = context.cacheDir.path
+            )
+            val e = Engine(config)
+            e.initialize()
+            engine = e
+            _isReady = true
+            lastUsedAt = System.currentTimeMillis()
+            Log.e(TAG, "✅ GPU backend OK")
+            true
+        })
+
+        // Спроба 2: CPU (fallback)
         attempts.add("Backend.CPU()" to {
             val config = EngineConfig(
                 modelPath = modelFile.absolutePath,

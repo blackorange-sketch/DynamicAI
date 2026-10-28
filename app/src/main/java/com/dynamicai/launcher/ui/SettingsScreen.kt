@@ -706,7 +706,6 @@ fun SettingsScreen(
             }
 
             // MNN Models UI
-            val ctx = androidx.compose.ui.platform.LocalContext.current
             val downloadTrigger by vm.downloadTrigger.collectAsStateWithLifecycle()
             val downloadedMnn = remember(downloadTrigger) { com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
             val mnnProgress = vm.downloadProgress.value
@@ -871,8 +870,6 @@ fun SettingsScreen(
         )
         Spacer(Modifier.height(48.dp))
     }
-}
-}
 }
 
 // ===== Компоненти =====

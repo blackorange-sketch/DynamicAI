@@ -84,7 +84,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     val downloader by lazy { getSharedDownloader(app) }
     private val prefs = getApplication<android.app.Application>().getSharedPreferences("llm_prefs", android.content.Context.MODE_PRIVATE)
     var downloadingModelId by androidx.compose.runtime.mutableStateOf<String?>(null)
-    var currentModelId by androidx.compose.runtime.mutableStateOf(prefs.getString("current_model_id", "gemma-4-E2B") ?: "gemma-4-E2B")
+    var currentModelId by androidx.compose.runtime.mutableStateOf(prefs.getString("current_model_id", "gemma-4-E2B-cpu") ?: "gemma-4-E2B-cpu")
 
     private val _downloadProgress = MutableStateFlow<ModelDownloader.Progress?>(null)
     val downloadProgress: StateFlow<ModelDownloader.Progress?> = _downloadProgress.asStateFlow()
@@ -174,8 +174,15 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun checkLlmReady() {
-        // Тільки перевірка наявності файлу моделі. Engine НЕ створюється.
-        _llmReady.value = downloader.isDownloaded
+        // _llmReady = true ТІЛЬКИ якщо engine реально ініціалізований
+        if (llm.isReady) {
+            _llmReady.value = true
+        } else {
+            // Перевіряємо, чи файл моделі існує, але engine не створюємо
+            val modelExists = downloader.isDownloaded
+            _llmReady.value = false  // поки не ініціалізовано — false
+            android.util.Log.e("LLM_DEBUG", "checkLlmReady: model file exists=$modelExists, engine ready=${llm.isReady}")
+        }
     }
 
     /** Викликається лениво при першому реальному запиті LLM. */
@@ -197,8 +204,14 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             return false
         }
         return try {
-            llm.initialize(modelFile).also { ok -> if (ok) _llmReady.value = true }
-        } catch (_: Throwable) { false }
+            val ok = llm.initialize(modelFile)
+            _llmReady.value = ok
+            ok
+        } catch (t: Throwable) {
+            android.util.Log.e("LLM_DEBUG", "initialize failed: ${t.message}", t)
+            _llmReady.value = false
+            false
+        }
     }
 
     private val _pendingChoice = MutableStateFlow<List<AppInfo>?>(null)
@@ -668,7 +681,22 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     fun setCurrentModel(modelId: String) {
         currentModelId = modelId
         prefs.edit().putString("current_model_id", modelId).apply()
+        
         // Перезавантажуємо LLM з новою моделлю
+        viewModelScope.launch {
+            try {
+                android.util.Log.e("LLM_DEBUG", "Перемикання на модель: $modelId")
+                _llmReady.value = false          // скидаємо прапорець для UI
+                llm.close()                       // звільняємо стару модель
+                System.gc()                       // забираємо сміття
+                kotlinx.coroutines.delay(200)     // коротка пауза для GC
+                val ok = ensureLlmLoaded()
+                android.util.Log.e("LLM_DEBUG", "Перемикання ${if (ok) "успішне" else "невдале"}: $modelId")
+            } catch (t: Throwable) {
+                android.util.Log.e("LLM_DEBUG", "setCurrentModel failed: ${t.message}", t)
+                _llmReady.value = false
+            }
+        }
     }
 
     fun downloadModel(model: com.dynamicai.launcher.llm.LlmModel) {
@@ -695,7 +723,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             com.dynamicai.launcher.llm.ModelRepository.deleteModel(getApplication(), model)
             if (currentModelId == model.id) {
-                currentModelId = "gemma-4-E2B" // Фолбек
+                currentModelId = "gemma-4-E2B-cpu" // Фолбек
                 prefs.edit().putString("current_model_id", "gemma-4-E2B").apply()
             }
         }

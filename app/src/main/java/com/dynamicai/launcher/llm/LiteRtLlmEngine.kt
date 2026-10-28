@@ -33,41 +33,13 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
             lastError = "Файл моделі не знайдено"
             return@withContext false
         }
-
-        // Reflection — досліджуємо API
-        val info = StringBuilder()
-        val classesToProbe = listOf(
-            "com.google.ai.edge.litertlm.ConversationConfig",
-            "com.google.ai.edge.litertlm.SessionConfig",
-            "com.google.ai.edge.litertlm.SamplerConfig",
-            "com.google.ai.edge.litertlm.Session",
-            "com.google.ai.edge.litertlm.Engine",
-            "com.google.ai.edge.litertlm.Conversation"
-        )
-        for (className in classesToProbe) {
-            try {
-                val clazz = Class.forName(className)
-                info.append("=== $className ===\n")
-                info.append("Fields: ")
-                info.append(clazz.declaredFields.map { it.name }.joinToString())
-                info.append("\n")
-                info.append("Methods: ")
-                info.append(clazz.declaredMethods.map { it.name }.joinToString())
-                info.append("\n")
-                info.append("Constructors: ")
-                info.append(clazz.declaredConstructors.map { c -> c.parameterTypes.joinToString(",") { it.simpleName } }.joinToString(" | "))
-                info.append("\n\n")
-            } catch (t: Throwable) {
-                info.append("=== $className ===\n")
-                info.append("NOT FOUND: ${t.message}\n\n")
-            }
-        }
-        Log.e(TAG, info.toString())
-
-        // Спроби різних API
+// Спроби різних API
         // Завантажуємо актуальні налаштування
         currentSettings = com.dynamicai.launcher.data.SettingsStorage(context).load()
         Log.e(TAG, "⚙️ Backend=${currentSettings.llmBackend}, Temp=${currentSettings.llmTemperature}")
+
+        // Звільняємо стару модель перед завантаженням нової (щоб не було OOM)
+        freeOldEngineBeforeLoad(modelFile)
 
         val attempts = mutableListOf<Pair<String, () -> Boolean>>()
 
@@ -271,6 +243,61 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
             } catch (_: Throwable) {}
         }
         return null
+    }
+
+    /**
+     * Звільняє пам'ять перед завантаженням нової моделі:
+     * 1. Закриває старий engine (якщо є)
+     * 2. Очищає посилання
+     * 3. Викликає GC
+     * 4. Логує вільну RAM
+     */
+    private fun freeOldEngineBeforeLoad(newModelFile: File) {
+        try {
+            engine?.let {
+                try {
+                    it.close()
+                    Log.e(TAG, "♻️ Старий engine закрито")
+                } catch (t: Throwable) {
+                    Log.w(TAG, "close() failed: ${t.message}")
+                }
+            }
+            engine = null
+            _isReady = false
+
+            // Очищаємо .tmp/.part файли (залишки від завантажень)
+            try {
+                context.cacheDir.listFiles()?.forEach { f ->
+                    if (f.name.endsWith(".tmp") || f.name.endsWith(".part")) {
+                        f.delete()
+                        Log.e(TAG, "🗑️ Видалено: ${f.name}")
+                    }
+                }
+            } catch (_: Throwable) {}
+
+            // GC + коротка пауза
+            System.gc()
+            Thread.sleep(150)
+
+            // Логуємо RAM
+            val rt = Runtime.getRuntime()
+            val totalMb = rt.totalMemory() / 1024 / 1024
+            val freeMb = rt.freeMemory() / 1024 / 1024
+            val usedMb = totalMb - freeMb
+            val maxMb = rt.maxMemory() / 1024 / 1024
+            val modelMb = newModelFile.length() / 1024 / 1024
+            val freeInMax = maxMb - usedMb
+
+            Log.e(TAG, "📊 RAM: used=${usedMb}MB / max=${maxMb}MB, free_in_max=${freeInMax}MB, model=${modelMb}MB")
+
+            if (modelMb > freeInMax) {
+                Log.w(TAG, "⚠️ Модель (${modelMb}MB) більша за доступну RAM (${freeInMax}MB) — можливий OOM")
+            } else {
+                Log.e(TAG, "✅ RAM достатньо: треба ${modelMb}MB, є ${freeInMax}MB")
+            }
+        } catch (t: Throwable) {
+            Log.w(TAG, "freeOldEngineBeforeLoad failed: ${t.message}")
+        }
     }
 
     fun close() {

@@ -301,6 +301,11 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
     private suspend fun executeTool(toolCall: String): String {
         return try {
             when {
+                toolCall.startsWith("openApp") && getArg(toolCall, "package").isNotBlank() -> {
+                    val pkg = getArg(toolCall, "package")
+                    val label = com.dynamicai.launcher.macro.AppUtils.labelFor(context, pkg)
+                    if (appRepo.launchApp(pkg)) "Відкриваю $label" else "Не вдалося відкрити $label"
+                }
                 toolCall.startsWith("openApp") -> {
                     val appName = getArg(toolCall, "name")
                     val apps = appRepo.loadInstalledApps()
@@ -481,6 +486,12 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 toolCall.startsWith("setDnd") -> com.dynamicai.launcher.macro.MacroTools(context).setDnd(getArg(toolCall, "state") == "on")
                 toolCall.startsWith("setMobileData") -> com.dynamicai.launcher.macro.MacroTools(context).setMobileData(getArg(toolCall, "state") == "on")
                 toolCall.startsWith("setAirplane") -> com.dynamicai.launcher.macro.MacroTools(context).setAirplane(getArg(toolCall, "state") == "on")
+                toolCall.startsWith("sendSms") -> com.dynamicai.launcher.macro.MacroTools(context).sendSms(getArg(toolCall, "number"), getArg(toolCall, "text"))
+                toolCall.startsWith("copyText") -> com.dynamicai.launcher.macro.MacroTools(context).copyText(getArg(toolCall, "text"))
+                toolCall.startsWith("toggleNfc") -> com.dynamicai.launcher.macro.MacroTools(context).setNfc(getArg(toolCall, "state") == "on")
+                toolCall.startsWith("toggleLocation") -> com.dynamicai.launcher.macro.MacroTools(context).setLocation(getArg(toolCall, "state") == "on")
+                toolCall.startsWith("setAutoRotate") -> com.dynamicai.launcher.macro.MacroTools(context).setAutoRotate(getArg(toolCall, "state") == "on")
+                toolCall.startsWith("forceStop") -> com.dynamicai.launcher.macro.MacroTools(context).forceStop(getArg(toolCall, "package"))
                 toolCall.startsWith("shell") -> com.dynamicai.launcher.macro.MacroTools(context).shell(getArg(toolCall, "cmd"))
                 toolCall.startsWith("httpGet") -> com.dynamicai.launcher.macro.MacroTools(context).httpGet(getArg(toolCall, "url"))
                 toolCall.startsWith("notify") -> com.dynamicai.launcher.macro.MacroTools(context).notify(getArg(toolCall, "title"), getArg(toolCall, "text"))

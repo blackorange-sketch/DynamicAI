@@ -126,4 +126,56 @@ class MacroTools(private val context: Context) {
         }
         return "Озвучую: $text"
     }
+
+    fun sendSms(number: String, text: String): String {
+        if (number.isBlank() || text.isBlank()) return "Потрібні номер і текст"
+        if (context.checkSelfPermission(android.Manifest.permission.SEND_SMS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+            return "Немає дозволу на надсилання SMS"
+        return try {
+            val sm = if (android.os.Build.VERSION.SDK_INT >= 31) context.getSystemService(android.telephony.SmsManager::class.java)
+            else @Suppress("DEPRECATION") android.telephony.SmsManager.getDefault()
+            sm.sendMultipartTextMessage(number, null, sm.divideMessage(text), null, null)
+            "SMS надіслано на $number"
+        } catch (t: Throwable) { "Не вдалося надіслати SMS: ${t.message}" }
+    }
+
+    fun copyText(text: String): String = try {
+        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("macro", text))
+        "Скопійовано"
+    } catch (t: Throwable) { "Не вдалося скопіювати: ${t.message}" }
+
+    suspend fun setNfc(on: Boolean): String {
+        if (shizukuOk) {
+            shizuku.execShell("svc nfc ${if (on) "enable" else "disable"}")
+            return "NFC ${if (on) "увімкнено" else "вимкнено"}"
+        }
+        try { context.startActivity(Intent(Settings.ACTION_NFC_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Throwable) {}
+        return "Без Shizuku NFC не перемикається автоматично — відкрив налаштування"
+    }
+
+    suspend fun setLocation(on: Boolean): String {
+        if (shizukuOk) {
+            shizuku.execShell("cmd location set-location-enabled ${if (on) "true" else "false"}")
+            return "Геолокація ${if (on) "увімкнена" else "вимкнена"}"
+        }
+        try { context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Throwable) {}
+        return "Без Shizuku геолокація не перемикається автоматично — відкрив налаштування"
+    }
+
+    fun setAutoRotate(on: Boolean): String {
+        if (!Settings.System.canWrite(context)) {
+            try { context.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, android.net.Uri.parse("package:${context.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Throwable) {}
+            return "Немає дозволу змінювати налаштування системи"
+        }
+        Settings.System.putInt(context.contentResolver, Settings.System.ACCELEROMETER_ROTATION, if (on) 1 else 0)
+        return "Автоповорот ${if (on) "увімкнено" else "вимкнено"}"
+    }
+
+    suspend fun forceStop(pkg: String): String {
+        if (pkg.isBlank()) return "Не вказано додаток"
+        if (!shizukuOk) return "Потрібен Shizuku, щоб примусово закрити додаток"
+        shizuku.execShell("am force-stop $pkg")
+        return "Додаток закрито: ${AppUtils.labelFor(context, pkg)}"
+    }
 }

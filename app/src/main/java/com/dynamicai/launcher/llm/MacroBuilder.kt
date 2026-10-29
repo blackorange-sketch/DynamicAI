@@ -24,23 +24,27 @@ object MacroBuilder {
 
     private val TRIGGER_KINDS = setOf(
         "charging_start", "charging_stop", "battery_low", "bt_connected", "bt_disconnected", "wifi_connected", "wifi_disconnected",
-        "headset_plugged", "headset_unplugged", "screen_on", "screen_off", "unlock", "airplane_on", "airplane_off", "time", "boot"
+        "headset_plugged", "headset_unplugged", "screen_on", "screen_off", "unlock", "airplane_on", "airplane_off", "time", "boot",
+        "app_opened", "app_closed", "notification", "sms_received", "call_incoming", "call_ended", "nfc", "shake", "bt_on", "bt_off",
+        "battery_full", "every"
     )
     private val TOOLS = setOf(
         "openApp", "closeApp", "toggleWifi", "toggleBluetooth", "connectBluetooth", "ensureInternet", "playYouTubeMusic", "playYouTube",
         "mediaKey", "setVolume", "toggleFlashlight", "setBrightness", "setDnd", "setRingerMode", "setMobileData", "setAirplane",
         "vibrate", "notify", "speak", "takeNote", "getWeather", "getNews", "getTime", "getBattery", "searchWeb", "navigateTo",
-        "openUrl", "carMode", "systemAction", "openCamera", "setAlarm", "runMacro"
+        "openUrl", "carMode", "systemAction", "openCamera", "setAlarm", "runMacro", "sendSms", "copyText", "toggleNfc", "toggleLocation",
+        "setAutoRotate"
     )
     private val CONTROL = listOf("WAIT:", "WAIT_UNTIL:", "IF:", "IF_NOT:", "SAY:", "SET:", "REPEAT:")
 
     private fun prompt(request: String) = """Ти конструктор макросів для Android. Перетвори прохання на JSON і виведи ТІЛЬКИ JSON, без пояснень.
 Формат: {"name":"коротка назва","triggers":[],"constraints":"","steps":[]}
 triggers — події автозапуску (порожньо [], якщо макрос запускається лише вручну чи голосом):
-charging_start, charging_stop, battery_low:20, bt_connected:НазваПристрою, bt_disconnected:НазваПристрою, wifi_connected, wifi_disconnected, headset_plugged, headset_unplugged, screen_on, screen_off, unlock, airplane_on, airplane_off, time:07:30:12345 (година:хвилини:дні, 1=Пн…7=Нд, дні можна пропустити), boot
+charging_start, charging_stop, battery_low:20, bt_connected:НазваПристрою, bt_disconnected:НазваПристрою, wifi_connected, wifi_disconnected, headset_plugged, headset_unplugged, screen_on, screen_off, unlock, airplane_on, airplane_off, bt_on, bt_off, battery_full, call_incoming, call_ended, shake, nfc, every:30 (кожні N хвилин), app_opened:НазваДодатка, app_closed:НазваДодатка, notification:НазваДодатка, sms_received, time:07:30:12345 (година:хвилини:дні, 1=Пн…7=Нд, дні можна пропустити), boot
 constraints — умови через кому: online, wifi_on, bt_on, bt_connected, charging, music, battery<20, time>18:00
 steps — кроки по порядку (лапки тільки одинарні):
-toggleWifi(state='on'), toggleBluetooth(state='off'), connectBluetooth(name='...'), ensureInternet(), openApp(name='...'), playYouTubeMusic(), mediaKey(key='play'|'pause'|'next'|'prev'), setVolume(level='60'), toggleFlashlight(state='on'), setBrightness(percent='40'), setDnd(state='on'), setRingerMode(mode='normal'|'vibrate'|'silent'), setMobileData(state='on'), setAirplane(state='off'), vibrate(ms='400'), notify(title='...', text='...'), speak(text='...'), takeNote(text='...'), getWeather(city='...'), getNews(), searchWeb(query='...'), navigateTo(destination='...'), openUrl(url='...'), carMode(), setAlarm(hour='7', minute='0', message='...'), WAIT: 3, WAIT_UNTIL: bt_connected 20, IF: умова ? крок, SAY: текст
+toggleWifi(state='on'), toggleBluetooth(state='off'), connectBluetooth(name='...'), ensureInternet(), openApp(name='...'), playYouTubeMusic(), mediaKey(key='play'|'pause'|'next'|'prev'), setVolume(level='60'), toggleFlashlight(state='on'), setBrightness(percent='40'), setDnd(state='on'), setRingerMode(mode='normal'|'vibrate'|'silent'), setMobileData(state='on'), setAirplane(state='off'), vibrate(ms='400'), notify(title='...', text='...'), speak(text='...'), takeNote(text='...'), getWeather(city='...'), getNews(), searchWeb(query='...'), navigateTo(destination='...'), openUrl(url='...'), carMode(), setAlarm(hour='7', minute='0', message='...'), WAIT: 3, WAIT_UNTIL: bt_connected 20, IF: умова ? крок, SAY: текст, sendSms(number='+380...', text='...'), copyText(text='...'), toggleNfc(state='on'), toggleLocation(state='on'), setAutoRotate(state='on')
+У кроках доступні змінні подій: {app} {title} {text} (сповіщення), {sender} {body} (SMS), {device}
 
 Прохання: коли підключаюсь до Bluetooth авто, вмикай музику
 {"name":"Музика в авто","triggers":["bt_connected:авто"],"constraints":"","steps":["playYouTubeMusic()"]}
@@ -75,6 +79,12 @@ toggleWifi(state='on'), toggleBluetooth(state='off'), connectBluetooth(name='...
                 val kind = t.substringBefore(':')
                 if (kind !in TRIGGER_KINDS) continue
                 if (kind == "time" && !Regex("time:\\d{1,2}:\\d{2}(:\\d*)?").matches(t)) continue
+                if (kind == "app_opened" || kind == "app_closed" || kind == "notification") {
+                    val arg = t.substringAfter(':', "")
+                    val name = arg.substringBefore(':')
+                    val pkg = if (name.contains('.')) name else com.dynamicai.launcher.macro.AppUtils.packageFor(context, name) ?: continue
+                    t = "$kind:$pkg" + (if (arg.contains(':')) ":" + arg.substringAfter(':') else "")
+                }
                 if (kind == "bt_connected" || kind == "bt_disconnected") {
                     val arg = t.substringAfter(':', "")
                     if (arg.lowercase() in setOf("авто", "машина", "машини", "car", "автомобіля", "авто.")) t = "$kind:$carBt"

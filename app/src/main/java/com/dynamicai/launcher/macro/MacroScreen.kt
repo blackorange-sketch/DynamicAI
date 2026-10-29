@@ -1,6 +1,7 @@
 package com.dynamicai.launcher.macro
 
 import com.dynamicai.launcher.ui.theme.AppTheme
+import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,18 +22,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /** Шаблон кроку: {0}, {1} у template замінюються значеннями полів. */
-private data class StepSpec(val label: String, val template: String, val params: List<Pair<String, String>> = emptyList(), val desc: String = "")
+private data class StepSpec(val label: String, val template: String, val params: List<Pair<String, String>> = emptyList(), val desc: String = "", val pick: String = "")
 
 private val STEP_CATALOG: List<Pair<String, List<StepSpec>>> = listOf(
     "Мережа" to listOf(
@@ -40,11 +43,16 @@ private val STEP_CATALOG: List<Pair<String, List<StepSpec>>> = listOf(
         StepSpec("Wi-Fi вимкнути", "toggleWifi(state=\"off\")"),
         StepSpec("Bluetooth увімкнути", "toggleBluetooth(state=\"on\")"),
         StepSpec("Bluetooth вимкнути", "toggleBluetooth(state=\"off\")"),
-        StepSpec("Підключити Bluetooth-пристрій", "connectBluetooth(name=\"{0}\")", listOf("Назва пристрою (порожньо — авто з налаштувань)" to "")),
+        StepSpec("Підключити Bluetooth-пристрій", "connectBluetooth(name=\"{0}\")", desc = "Обрати зі спарених або «Моє авто»", pick = "btcar"),
+        StepSpec("NFC увімкнути", "toggleNfc(state=\"on\")", desc = "Автоматично — з Shizuku, інакше відкриє налаштування"),
+        StepSpec("NFC вимкнути", "toggleNfc(state=\"off\")", desc = "Автоматично — з Shizuku, інакше відкриє налаштування"),
+        StepSpec("Геолокація увімкнути", "toggleLocation(state=\"on\")", desc = "Автоматично — з Shizuku"),
+        StepSpec("Геолокація вимкнути", "toggleLocation(state=\"off\")", desc = "Автоматично — з Shizuku"),
         StepSpec("Є інтернет (вимкнути політ, увімкнути дані)", "ensureInternet()")
     ),
     "Додатки" to listOf(
-        StepSpec("Відкрити додаток", "openApp(name=\"{0}\")", listOf("Назва додатка" to "")),
+        StepSpec("Відкрити додаток", "openApp(package=\"{0}\")", desc = "Оберіть додаток зі списку", pick = "app"),
+        StepSpec("Примусово закрити додаток", "forceStop(package=\"{0}\")", desc = "Потрібен Shizuku", pick = "app"),
         StepSpec("Закрити / на головний", "closeApp()"),
         StepSpec("YouTube Music: грати", "playYouTubeMusic()"),
         StepSpec("Пошук на YouTube", "playYouTube(query=\"{0}\")", listOf("Запит" to "")),
@@ -66,6 +74,10 @@ private val STEP_CATALOG: List<Pair<String, List<StepSpec>>> = listOf(
         StepSpec("Яскравість, %", "setBrightness(percent=\"{0}\")", listOf("Рівень 0–100" to "50")),
         StepSpec("Не турбувати: увімкнути", "setDnd(state=\"on\")"),
         StepSpec("Не турбувати: вимкнути", "setDnd(state=\"off\")"),
+        StepSpec("Автоповорот увімкнути", "setAutoRotate(state=\"on\")"),
+        StepSpec("Автоповорот вимкнути", "setAutoRotate(state=\"off\")"),
+        StepSpec("Надіслати SMS", "sendSms(number=\"{0}\", text=\"{1}\")", listOf("Номер" to "+380", "Текст ({time}, {battery}…)" to "")),
+        StepSpec("Копіювати текст", "copyText(text=\"{0}\")", listOf("Текст ({body}, {title}, {last}…)" to "")),
         StepSpec("Режим дзвінка", "setRingerMode(mode=\"{0}\")", listOf("normal, vibrate або silent" to "vibrate")),
         StepSpec("Мобільні дані: увімкнути", "setMobileData(state=\"on\")"),
         StepSpec("Мобільні дані: вимкнути", "setMobileData(state=\"off\")"),
@@ -111,9 +123,17 @@ private val TRIGGER_GROUPS: List<Pair<String, List<StepSpec>>> = listOf(
         StepSpec("🪫 Батарея нижче N %", "battery_low:{0}", listOf("Відсоток" to "20"), "Спрацює один раз, коли заряд опуститься нижче вказаного рівня")
     ),
     "📡 Зв'язок" to listOf(
-        StepSpec("🔵 Bluetooth підключився", "bt_connected:{0}", listOf("Назва пристрою (порожньо — будь-який)" to ""), "Коли телефон з'єднався з Bluetooth-пристроєм: авто, колонка, навушники"),
-        StepSpec("🔵 Bluetooth відключився", "bt_disconnected:{0}", listOf("Назва пристрою (порожньо — будь-який)" to ""), "Коли з'єднання з пристроєм обірвалось"),
-        StepSpec("📶 Wi-Fi підключено", "wifi_connected", desc = "Коли телефон підключився до Wi-Fi"),
+        StepSpec("🔵 Bluetooth підключився", "bt_connected:{0}", desc = "Коли телефон з'єднався з Bluetooth-пристроєм: авто, колонка, навушники", pick = "bt"),
+        StepSpec("🔵 Bluetooth відключився", "bt_disconnected:{0}", desc = "Коли з'єднання з пристроєм обірвалось", pick = "bt"),
+        StepSpec("🔵 Bluetooth увімкнено", "bt_on", desc = "Коли ввімкнули Bluetooth"),
+        StepSpec("🔵 Bluetooth вимкнено", "bt_off", desc = "Коли вимкнули Bluetooth"),
+        StepSpec("🏷 NFC-мітка", "nfc:{0}", desc = "Піднесіть мітку або картку — ми запам'ятаємо її ідентифікатор. Можна й «будь-яка мітка»", pick = "nfc"),
+        StepSpec("📶 Wi-Fi підключено (будь-яка)", "wifi_connected", desc = "Коли телефон підключився до Wi-Fi"),
+        StepSpec("📶 Конкретна Wi-Fi мережа", "wifi_connected:{0}", listOf("Назва мережі (SSID)" to ""), "Коли підключились до мережі з цією назвою (вдома, на роботі). Потрібна геолокація"),
+        StepSpec("📶 Вийшли з конкретної Wi-Fi", "wifi_disconnected:{0}", listOf("Назва мережі (SSID)" to ""), "Коли відключились від мережі з цією назвою"),
+        StepSpec("📩 Вхідне SMS", "sms_received:{0}", listOf("Відправник містить (порожньо — будь-який)" to ""), "У змінних буде {sender} і {body}"),
+        StepSpec("📞 Вхідний дзвінок", "call_incoming", desc = "Коли телефон дзвонить"),
+        StepSpec("📞 Дзвінок завершено", "call_ended", desc = "Коли розмова або виклик закінчились"),
         StepSpec("📶 Wi-Fi відключено", "wifi_disconnected", desc = "Коли Wi-Fi зник або вимкнувся"),
         StepSpec("✈ Режим польоту увімкнено", "airplane_on", desc = "Коли ввімкнули режим польоту"),
         StepSpec("✈ Режим польоту вимкнено", "airplane_off", desc = "Коли вимкнули режим польоту")
@@ -123,15 +143,24 @@ private val TRIGGER_GROUPS: List<Pair<String, List<StepSpec>>> = listOf(
         StepSpec("🎧 Навушники відключено", "headset_unplugged", desc = "Дротові або USB-навушники вийнято"),
         StepSpec("📱 Екран увімкнено", "screen_on", desc = "Коли засвітився екран"),
         StepSpec("📱 Екран вимкнено", "screen_off", desc = "Коли екран погас"),
-        StepSpec("🔓 Телефон розблоковано", "unlock", desc = "Після розблокування екрана")
+        StepSpec("🔓 Телефон розблоковано", "unlock", desc = "Після розблокування екрана"),
+        StepSpec("📳 Струс телефону", "shake", desc = "Різко струсніть телефон тричі"),
+        StepSpec("🔋 Батарею заряджено на 100%", "battery_full", desc = "Коли заряд досяг 100%")
+    ),
+    "📲 Додатки" to listOf(
+        StepSpec("📲 Додаток відкрито", "app_opened:{0}", desc = "Коли обраний додаток вийшов на екран (потрібен доступ до статистики використання)", pick = "app"),
+        StepSpec("📲 Додаток закрито", "app_closed:{0}", desc = "Коли ви залишили обраний додаток (потрібен доступ до статистики використання)", pick = "app"),
+        StepSpec("🔔 Сповіщення від додатка", "notification:{0}:{1}", listOf("Текст містить (порожньо — будь-яке)" to ""), "Коли додаток показав сповіщення; змінні {app} {title} {text}. Потрібен доступ до сповіщень", "app")
     ),
     "⏰ Час і система" to listOf(
         StepSpec("⏰ За часом", "time:{0}:{1}:{2}", listOf("Година" to "7", "Хвилини" to "30", "Дні 1=Пн…7=Нд (порожньо — щодня)" to "12345"), "Щодня або в обрані дні тижня в заданий час"),
+        StepSpec("🔁 Кожні N хвилин", "every:{0}", listOf("Хвилин" to "30"), "Повторюється, поки телефон увімкнений"),
         StepSpec("🚀 Запуск телефону", "boot", desc = "Після перезавантаження телефону")
     )
 )
 
-private fun describeTrigger(t: String): String {
+private fun describeTrigger(t: String, ctx: android.content.Context? = null): String {
+    fun app(p: String) = if (p.isBlank()) "будь-який додаток" else if (ctx != null) AppUtils.labelFor(ctx, p) else p
     val kind = t.substringBefore(':')
     val arg = t.substringAfter(':', "")
     return when (kind) {
@@ -140,8 +169,20 @@ private fun describeTrigger(t: String): String {
         "battery_low" -> "🪫 Батарея нижче $arg%"
         "bt_connected" -> "🔵 Bluetooth підключився" + (if (arg.isNotBlank()) ": $arg" else "")
         "bt_disconnected" -> "🔵 Bluetooth відключився" + (if (arg.isNotBlank()) ": $arg" else "")
-        "wifi_connected" -> "📶 Wi-Fi підключено"
-        "wifi_disconnected" -> "📶 Wi-Fi відключено"
+        "wifi_connected" -> "📶 Wi-Fi підключено" + (if (arg.isNotBlank()) ": $arg" else "")
+        "wifi_disconnected" -> "📶 Wi-Fi відключено" + (if (arg.isNotBlank()) ": $arg" else "")
+        "bt_on" -> "🔵 Bluetooth увімкнено"
+        "bt_off" -> "🔵 Bluetooth вимкнено"
+        "nfc" -> "🏷 NFC-мітка" + (if (arg.isNotBlank()) " $arg" else " (будь-яка)")
+        "sms_received" -> "📩 Вхідне SMS" + (if (arg.isNotBlank()) " від $arg" else "")
+        "call_incoming" -> "📞 Вхідний дзвінок"
+        "call_ended" -> "📞 Дзвінок завершено"
+        "shake" -> "📳 Струс телефону"
+        "battery_full" -> "🔋 Заряд 100%"
+        "every" -> "🔁 Кожні $arg хв"
+        "app_opened" -> "📲 Відкрито: ${app(arg)}"
+        "app_closed" -> "📲 Закрито: ${app(arg)}"
+        "notification" -> "🔔 Сповіщення: ${app(arg.substringBefore(':'))}" + (arg.substringAfter(':', "").takeIf { it.isNotBlank() }?.let { " «$it»" } ?: "")
         "headset_plugged" -> "🎧 Навушники підключено"
         "headset_unplugged" -> "🎧 Навушники відключено"
         "screen_on" -> "📱 Екран увімкнено"
@@ -159,9 +200,12 @@ private fun describeTrigger(t: String): String {
     }
 }
 
-private fun describeStep(step: String): String {
+private fun describeStep(step: String, ctx: android.content.Context? = null): String {
     val s = step.trim().removePrefix("TOOL_CALL:").trim()
+    fun pkgOf() = Regex("""package="([^"]*)"""").find(s)?.groupValues?.get(1).orEmpty().let { if (ctx != null) AppUtils.labelFor(ctx, it) else it }
     return when {
+        s.startsWith("openApp(") && s.contains("package=") -> "📲 Відкрити «${pkgOf()}»"
+        s.startsWith("forceStop(") -> "⛔ Закрити «${pkgOf()}»"
         s.startsWith("WAIT_UNTIL:") -> "⌛ Чекати: " + s.removePrefix("WAIT_UNTIL:").trim()
         s.startsWith("WAIT:") -> "⏱ Пауза " + s.removePrefix("WAIT:").trim() + " с"
         s.startsWith("IF_NOT:") -> "❓ Якщо НЕ " + s.removePrefix("IF_NOT:").trim().replace("?", "→")
@@ -260,7 +304,7 @@ fun MacroScreen(onClose: () -> Unit, carBtName: String = "", onCarChange: (Strin
                                 val agent = com.dynamicai.launcher.llm.AgentEngine(ctx, null)
                                 try {
                                     val log = MacroRunner(ctx, { agent.runTool(it) }).run(macro) { p ->
-                                        progressText = "Крок ${p.index}/${p.total}: ${describeStep(p.step)}"
+                                        progressText = "Крок ${p.index}/${p.total}: ${describeStep(p.step, ctx)}"
                                     }
                                     resultLog = "«${macro.name}»\n\n$log"
                                 } catch (e: kotlinx.coroutines.CancellationException) {
@@ -404,6 +448,141 @@ fun BtDevicePickerDialog(title: String, current: String, anyLabel: String, onPic
     )
 }
 
+/** Повноекранний вибір встановленого додатка з пошуком. Повертає назву пакета ("" = будь-який, якщо задано anyLabel). */
+@Composable
+fun AppPickerDialog(title: String, anyLabel: String?, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    var apps by remember { mutableStateOf<List<com.dynamicai.launcher.model.AppInfo>?>(null) }
+    var query by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) {
+        apps = try {
+            com.dynamicai.launcher.data.AppRepository(ctx).loadInstalledApps().distinctBy { it.packageName }.sortedBy { it.label.lowercase() }
+        } catch (_: Throwable) { emptyList() }
+    }
+    androidx.activity.compose.BackHandler(onBack = onDismiss)
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AppTheme.colors.backdropStart, AppTheme.colors.backdropEnd)))) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("←", color = AppTheme.colors.textPrimary, fontSize = 24.sp, modifier = Modifier.clickable(onClick = onDismiss).padding(end = 16.dp))
+                Text("Оберіть додаток", color = AppTheme.colors.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+            LabeledField("Пошук", query, "Назва додатка") { query = it }
+            val list = apps
+            if (list == null) {
+                Text("Завантаження…", color = AppTheme.colors.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(12.dp))
+            } else {
+                val shown = list.filter { query.isBlank() || it.label.contains(query, ignoreCase = true) }
+                LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 24.dp)) {
+                    if (anyLabel != null && query.isBlank()) {
+                        item(key = "any") {
+                            Text(anyLabel, color = AppTheme.colors.accent, fontSize = 15.sp,
+                                modifier = Modifier.fillMaxWidth().clickable { onPick("") }.padding(vertical = 12.dp))
+                        }
+                    }
+                    items(shown, key = { it.packageName }) { app ->
+                        val icon = remember(app.packageName) {
+                            try { (app.bitmap ?: app.icon.toBitmap(96, 96)).asImageBitmap() } catch (_: Throwable) { null }
+                        }
+                        Row(
+                            Modifier.fillMaxWidth().clickable { onPick(app.packageName) }.padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (icon != null) androidx.compose.foundation.Image(icon, null, Modifier.size(36.dp))
+                            else Spacer(Modifier.size(36.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 15.sp)
+                                Text(app.packageName, color = AppTheme.colors.textMuted, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Зчитування NFC-мітки прямо з редактора (режим читача, поки діалог відкритий). */
+@Composable
+fun NfcScanDialog(onPick: (String) -> Unit, onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    val activity = remember {
+        var c = ctx
+        while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
+        c as? android.app.Activity
+    }
+    val adapter = remember { try { android.nfc.NfcAdapter.getDefaultAdapter(ctx) } catch (_: Throwable) { null } }
+    var enabled by remember { mutableStateOf(adapter?.isEnabled == true) }
+    var found by remember { mutableStateOf("") }
+    DisposableEffect(adapter, enabled) {
+        val a = activity
+        if (adapter != null && enabled && a != null) {
+            val h = android.os.Handler(android.os.Looper.getMainLooper())
+            try {
+                adapter.enableReaderMode(
+                    a, { tag -> h.post { found = NfcTagActivity.hex(tag.id) } },
+                    android.nfc.NfcAdapter.FLAG_READER_NFC_A or android.nfc.NfcAdapter.FLAG_READER_NFC_B or
+                        android.nfc.NfcAdapter.FLAG_READER_NFC_F or android.nfc.NfcAdapter.FLAG_READER_NFC_V, null
+                )
+            } catch (_: Throwable) {}
+        }
+        onDispose { try { if (adapter != null && a != null) adapter.disableReaderMode(a) } catch (_: Throwable) {} }
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = AppTheme.colors.backdropStart,
+        title = { Text("🏷 NFC-мітка", color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
+        text = {
+            Column {
+                when {
+                    adapter == null -> Text("На цьому телефоні немає NFC.", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
+                    !enabled -> {
+                        Text("NFC вимкнено. Увімкніть його в налаштуваннях і поверніться.", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
+                        TextButton(onClick = {
+                            try { ctx.startActivity(Intent(android.provider.Settings.ACTION_NFC_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Throwable) {}
+                        }) { Text("Відкрити налаштування NFC", color = AppTheme.colors.successLight) }
+                        TextButton(onClick = { enabled = adapter.isEnabled }) { Text("Я увімкнув", color = AppTheme.colors.accent) }
+                    }
+                    found.isEmpty() -> Text("Піднесіть мітку чи картку до задньої панелі телефону…", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+                    else -> Text("✓ Мітку зчитано\nID: $found", color = AppTheme.colors.successLight, fontSize = 14.sp)
+                }
+                Spacer(Modifier.height(10.dp))
+                Text("Або: будь-яка мітка", color = AppTheme.colors.textSecondary, fontSize = 13.sp,
+                    modifier = Modifier.clickable { onPick("") }.padding(vertical = 6.dp))
+            }
+        },
+        confirmButton = {
+            if (found.isNotEmpty()) TextButton(onClick = { onPick(found) }) { Text("Використати", color = AppTheme.colors.successLight) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
+    )
+}
+
+/** Пояснення, який дозвіл потрібен для щойно доданого тригера/кроку, і кнопка його надати. */
+@Composable
+fun PermissionNeedDialog(need: TriggerPermissions.Need, onClose: () -> Unit) {
+    val ctx = LocalContext.current
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { onClose() }
+    AlertDialog(
+        onDismissRequest = onClose,
+        containerColor = AppTheme.colors.backdropStart,
+        title = { Text(need.title, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
+        text = { Text(need.text, color = AppTheme.colors.textSecondary, fontSize = 13.sp) },
+        confirmButton = {
+            TextButton(onClick = {
+                if (need.runtime != null) launcher.launch(need.runtime)
+                else {
+                    try { ctx.startActivity(Intent(need.settingsAction).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Throwable) {}
+                    onClose()
+                }
+            }) { Text("Дати дозвіл", color = AppTheme.colors.successLight) }
+        },
+        dismissButton = { TextButton(onClick = onClose) { Text("Пізніше", color = AppTheme.colors.textSecondary) } }
+    )
+}
+
 /** Повноекранний вибір із групами; список завжди прокручується. */
 @Composable
 private fun PickerScreen(title: String, groups: List<Pair<String, List<StepSpec>>>, onPick: (StepSpec) -> Unit, onClose: () -> Unit) {
@@ -473,6 +652,27 @@ fun MacroEditorScreen(
     var pendingSpec by remember { mutableStateOf<StepSpec?>(null) }
     var editIndex by remember { mutableStateOf(-1) }
     var rawStep by remember { mutableStateOf("") }
+
+    val ctx = LocalContext.current
+    var pickFor by remember { mutableStateOf<Pair<Boolean, StepSpec>?>(null) }
+    var permNeed by remember { mutableStateOf<TriggerPermissions.Need?>(null) }
+    fun commit(isTrigger: Boolean, text: String) {
+        if (isTrigger) triggers.add(text) else steps.add(text)
+        TriggerPermissions.missing(ctx, text)?.let { permNeed = it }
+    }
+    fun begin(isTrigger: Boolean, spec: StepSpec) {
+        when {
+            spec.pick.isNotEmpty() -> pickFor = isTrigger to spec
+            spec.params.isEmpty() -> commit(isTrigger, spec.template)
+            isTrigger -> pendingTrigger = spec
+            else -> pendingSpec = spec
+        }
+    }
+    fun afterPick(isTrigger: Boolean, spec: StepSpec, value: String) {
+        val v = value.replace(":", "").replace("\"", "")
+        val d = spec.copy(template = spec.template.replace("{0}", v).replace("{1}", "{0}").replace("{2}", "{1}"), pick = "")
+        if (d.params.isEmpty()) commit(isTrigger, d.template) else if (isTrigger) pendingTrigger = d else pendingSpec = d
+    }
 
     val iconOptions = listOf("⚡", "🏢", "🚗", "🎬", "🌙", "🏠", "🎮", "🎵", "☕", "💼", "🌞", "🚀")
     val colorOptions = listOf(0xFF2196F3, 0xFF4CAF50, 0xFFFF9800, 0xFF9C27B0, 0xFFE91E63, 0xFF00BCD4)
@@ -544,7 +744,7 @@ fun MacroEditorScreen(
                                     .background(AppTheme.colors.textPrimary.copy(alpha = 0.06f)).padding(horizontal = 10.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(describeTrigger(t), color = AppTheme.colors.textPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                                Text(describeTrigger(t, ctx), color = AppTheme.colors.textPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
                                 Text("✕", color = AppTheme.colors.danger, fontSize = 16.sp, modifier = Modifier.clickable { triggers.removeAt(i) }.padding(horizontal = 6.dp))
                             }
                         }
@@ -566,7 +766,7 @@ fun MacroEditorScreen(
                             ) {
                                 Text("${i + 1}.", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                                 Spacer(Modifier.width(6.dp))
-                                Text(describeStep(s), color = AppTheme.colors.textPrimary, fontSize = 12.sp,
+                                Text(describeStep(s, ctx), color = AppTheme.colors.textPrimary, fontSize = 12.sp,
                                     modifier = Modifier.weight(1f).clickable { editIndex = i; rawStep = s })
                                 Text("↑", color = AppTheme.colors.accent, fontSize = 18.sp, modifier = Modifier.clickable(enabled = i > 0) {
                                     val t = steps[i]; steps[i] = steps[i - 1]; steps[i - 1] = t
@@ -606,70 +806,67 @@ fun MacroEditorScreen(
 
         if (showTriggerPicker) PickerScreen("Оберіть подію", TRIGGER_GROUPS, onPick = { spec ->
             showTriggerPicker = false
-            if (spec.params.isEmpty()) triggers.add(spec.template) else pendingTrigger = spec
+            begin(true, spec)
         }, onClose = { showTriggerPicker = false })
 
         if (showStepPicker) PickerScreen("Оберіть дію", STEP_CATALOG, onPick = { spec ->
             showStepPicker = false
-            if (spec.params.isEmpty()) steps.add(spec.template) else pendingSpec = spec
+            begin(false, spec)
         }, onClose = { showStepPicker = false })
 
-        // Параметри тригера; для Bluetooth — вибір зі спарених пристроїв
-        pendingTrigger?.let { spec ->
-            if (spec.template.startsWith("bt_")) {
-                BtDevicePickerDialog(
-                    title = spec.label, current = carBtName,
-                    anyLabel = "Будь-який пристрій",
-                    onPick = { picked -> triggers.add(spec.template.replace("{0}", picked.replace(":", ""))); pendingTrigger = null },
-                    onDismiss = { pendingTrigger = null }
-                )
-            } else {
-                val values = remember(spec) { mutableStateListOf<String>().apply { addAll(spec.params.map { it.second }) } }
-                AlertDialog(
-                    onDismissRequest = { pendingTrigger = null },
-                    containerColor = AppTheme.colors.backdropStart,
-                    title = { Text(spec.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
-                    text = { Column(Modifier.verticalScroll(rememberScrollState())) { spec.params.forEachIndexed { i, p -> LabeledField(p.first, values[i]) { values[i] = it } } } },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            var t = spec.template
-                            values.forEachIndexed { i, v -> t = t.replace("{$i}", v.trim().replace(":", "")) }
-                            triggers.add(t)
-                            pendingTrigger = null
-                        }) { Text("Додати", color = AppTheme.colors.successLight) }
-                    },
-                    dismissButton = { TextButton(onClick = { pendingTrigger = null }) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
-                )
+        pickFor?.let { (isTrig, spec) ->
+            val close = { pickFor = null }
+            when (spec.pick) {
+                "app" -> AppPickerDialog(spec.label, if (isTrig) "Будь-який додаток" else null,
+                    onPick = { v -> close(); afterPick(isTrig, spec, v) }, onDismiss = { close() })
+                "bt" -> BtDevicePickerDialog(spec.label, carBtName, "Будь-який пристрій",
+                    onPick = { v -> close(); afterPick(isTrig, spec, v) }, onDismiss = { close() })
+                "btcar" -> BtDevicePickerDialog(spec.label, carBtName,
+                    if (carBtName.isNotBlank()) "🚗 Моє авто ($carBtName)" else "Авто з налаштувань",
+                    onPick = { v -> close(); afterPick(isTrig, spec, v) }, onDismiss = { close() })
+                "nfc" -> NfcScanDialog(onPick = { v -> close(); afterPick(isTrig, spec, v) }, onDismiss = { close() })
+                else -> close()
             }
         }
 
-        // Параметри кроку; для підключення Bluetooth — вибір пристрою
+        permNeed?.let { PermissionNeedDialog(it) { permNeed = null } }
+
+        pendingTrigger?.let { spec ->
+            val values = remember(spec) { mutableStateListOf<String>().apply { addAll(spec.params.map { it.second }) } }
+            AlertDialog(
+                onDismissRequest = { pendingTrigger = null },
+                containerColor = AppTheme.colors.backdropStart,
+                title = { Text(spec.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
+                text = { Column(Modifier.verticalScroll(rememberScrollState())) { spec.params.forEachIndexed { i, p -> LabeledField(p.first, values[i]) { values[i] = it } } } },
+                confirmButton = {
+                    TextButton(onClick = {
+                        var t = spec.template
+                        values.forEachIndexed { i, v -> t = t.replace("{$i}", v.trim().replace(":", "")) }
+                        pendingTrigger = null
+                        commit(true, t)
+                    }) { Text("Додати", color = AppTheme.colors.successLight) }
+                },
+                dismissButton = { TextButton(onClick = { pendingTrigger = null }) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
+            )
+        }
+
         pendingSpec?.let { spec ->
-            if (spec.template.startsWith("connectBluetooth")) {
-                BtDevicePickerDialog(
-                    title = spec.label, current = carBtName,
-                    anyLabel = if (carBtName.isNotBlank()) "🚗 Моє авто ($carBtName)" else "Авто з налаштувань",
-                    onPick = { picked -> steps.add("connectBluetooth(name=\"" + picked.replace("\"", "") + "\")"); pendingSpec = null },
-                    onDismiss = { pendingSpec = null }
-                )
-            } else {
-                val values = remember(spec) { mutableStateListOf<String>().apply { addAll(spec.params.map { it.second }) } }
-                AlertDialog(
-                    onDismissRequest = { pendingSpec = null },
-                    containerColor = AppTheme.colors.backdropStart,
-                    title = { Text(spec.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
-                    text = { Column(Modifier.verticalScroll(rememberScrollState())) { spec.params.forEachIndexed { i, p -> LabeledField(p.first, values[i]) { values[i] = it } } } },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            var t = spec.template
-                            values.forEachIndexed { i, v -> t = t.replace("{$i}", v.replace("\"", "")) }
-                            steps.add(t.trim())
-                            pendingSpec = null
-                        }) { Text("Додати", color = AppTheme.colors.successLight) }
-                    },
-                    dismissButton = { TextButton(onClick = { pendingSpec = null }) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
-                )
-            }
+            val values = remember(spec) { mutableStateListOf<String>().apply { addAll(spec.params.map { it.second }) } }
+            AlertDialog(
+                onDismissRequest = { pendingSpec = null },
+                containerColor = AppTheme.colors.backdropStart,
+                title = { Text(spec.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
+                text = { Column(Modifier.verticalScroll(rememberScrollState())) { spec.params.forEachIndexed { i, p -> LabeledField(p.first, values[i]) { values[i] = it } } } },
+                confirmButton = {
+                    TextButton(onClick = {
+                        var t = spec.template
+                        values.forEachIndexed { i, v -> t = t.replace("{$i}", v.replace("\"", "")) }
+                        pendingSpec = null
+                        commit(false, t.trim())
+                    }) { Text("Додати", color = AppTheme.colors.successLight) }
+                },
+                dismissButton = { TextButton(onClick = { pendingSpec = null }) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
+            )
         }
 
         if (editIndex != -1) {

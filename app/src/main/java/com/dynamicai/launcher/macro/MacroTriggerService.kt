@@ -68,6 +68,20 @@ class MacroTriggerService : Service() {
             return when (kind) {
                 "bt_connected", "bt_disconnected" ->
                     event == kind && (arg.isBlank() || p["device"]?.contains(arg, ignoreCase = true) == true)
+                "wifi_connected", "wifi_disconnected" ->
+                    event == kind && (arg.isBlank() || p["ssid"]?.contains(arg, ignoreCase = true) == true)
+                "app_opened", "app_closed" -> event == kind && (arg.isBlank() || p["pkg"] == arg)
+                "notification" -> {
+                    val pkg = arg.substringBefore(':'); val txt = arg.substringAfter(':', "")
+                    event == "notification" && (pkg.isBlank() || p["pkg"] == pkg) &&
+                        (txt.isBlank() || ((p["title"] ?: "") + " " + (p["text"] ?: "")).contains(txt, ignoreCase = true))
+                }
+                "sms_received" -> event == kind && (arg.isBlank() || p["sender"]?.contains(arg, ignoreCase = true) == true)
+                "nfc" -> event == kind && (arg.isBlank() || p["id"].equals(arg, ignoreCase = true))
+                "every" -> {
+                    val n = arg.toLongOrNull() ?: return false
+                    event == "every" && n > 0 && (p["min"]?.toLongOrNull() ?: 1L) % n == 0L
+                }
                 "battery_low" -> {
                     val n = arg.toIntOrNull() ?: 20
                     event == "battery_low" && (p["prev"]?.toIntOrNull() ?: 0) >= n && (p["level"]?.toIntOrNull() ?: 100) < n
@@ -91,6 +105,10 @@ class MacroTriggerService : Service() {
     private var lastLevel = -1
     private var netCb: ConnectivityManager.NetworkCallback? = null
     private var audioCb: AudioDeviceCallback? = null
+    private var lastSsid = ""
+    private var telRegistered = false
+    private var sensorListener: android.hardware.SensorEventListener? = null
+    private var lastCallState = ""
 
     private val rx = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
@@ -111,7 +129,30 @@ class MacroTriggerService : Service() {
                 Intent.ACTION_BATTERY_CHANGED -> {
                     val level = i.getIntExtra("level", -1) * 100 / i.getIntExtra("scale", 100).coerceAtLeast(1)
                     if (lastLevel >= 0 && level != lastLevel) fire("battery_low", mapOf("level" to level.toString(), "prev" to lastLevel.toString()))
+                    if (lastLevel in 0..99 && level >= 100) fire("battery_full", mapOf("level" to "100"))
                     lastLevel = level
+                }
+                android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED -> {
+                    when (i.getIntExtra(android.bluetooth.BluetoothAdapter.EXTRA_STATE, -1)) {
+                        android.bluetooth.BluetoothAdapter.STATE_ON -> fire("bt_on")
+                        android.bluetooth.BluetoothAdapter.STATE_OFF -> fire("bt_off")
+                    }
+                }
+                android.telephony.TelephonyManager.ACTION_PHONE_STATE_CHANGED -> {
+                    val st = i.getStringExtra(android.telephony.TelephonyManager.EXTRA_STATE).orEmpty()
+                    if (st != lastCallState) {
+                        if (st == android.telephony.TelephonyManager.EXTRA_STATE_RINGING) fire("call_incoming")
+                        if (st == android.telephony.TelephonyManager.EXTRA_STATE_IDLE && lastCallState.isNotEmpty() && lastCallState != android.telephony.TelephonyManager.EXTRA_STATE_IDLE) fire("call_ended")
+                        lastCallState = st
+                    }
+                }
+                android.provider.Telephony.Sms.Intents.SMS_RECEIVED_ACTION -> {
+                    try {
+                        val msgs = android.provider.Telephony.Sms.Intents.getMessagesFromIntent(i)
+                        val sender = msgs.firstOrNull()?.originatingAddress.orEmpty()
+                        val body = msgs.joinToString("") { it.messageBody.orEmpty() }
+                        fire("sms_received", mapOf("sender" to sender, "body" to body))
+                    } catch (_: Throwable) {}
                 }
             }
         }
@@ -130,14 +171,21 @@ class MacroTriggerService : Service() {
             addAction(Intent.ACTION_SCREEN_ON); addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_USER_PRESENT)
             addAction(Intent.ACTION_AIRPLANE_MODE_CHANGED); addAction(Intent.ACTION_BATTERY_CHANGED)
             addAction(BluetoothDevice.ACTION_ACL_CONNECTED); addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
+            addAction(android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED)
         }
         registerReceiver(rx, f, Context.RECEIVER_EXPORTED)
+        registerTelephony()
+        refreshSensors()
+        startAppWatcher()
 
         try {
             val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             netCb = object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) { fire("wifi_connected") }
-                override fun onLost(network: Network) { fire("wifi_disconnected") }
+                override fun onAvailable(network: Network) {
+                    lastSsid = currentSsid()
+                    fire("wifi_connected", mapOf("ssid" to lastSsid))
+                }
+                override fun onLost(network: Network) { fire("wifi_disconnected", mapOf("ssid" to lastSsid)) }
             }
             cm.registerNetworkCallback(NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build(), netCb!!)
         } catch (t: Throwable) { Log.e(TAG, "net cb: ${t.message}") }
@@ -163,6 +211,7 @@ class MacroTriggerService : Service() {
                     lastKey = key
                     val dow = ((c.get(Calendar.DAY_OF_WEEK) + 5) % 7 + 1).toString() // 1 = Пн … 7 = Нд
                     fire("time", mapOf("h" to c.get(Calendar.HOUR_OF_DAY).toString(), "m" to c.get(Calendar.MINUTE).toString(), "dow" to dow))
+                    fire("every", mapOf("min" to (System.currentTimeMillis() / 60000L).toString()))
                 }
                 delay(15_000)
             }
@@ -170,31 +219,105 @@ class MacroTriggerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        registerTelephony()
+        refreshSensors()
         if (intent?.getBooleanExtra("boot", false) == true) fire("boot", force = true)
         return START_STICKY
     }
 
     private fun fire(event: String, payload: Map<String, String> = emptyMap(), force: Boolean = false) {
         // Початкові «повідомлення про поточний стан» від системних колбеків ігноруємо
-        if (!force && event != "time" && System.currentTimeMillis() - startedAt < 4000) return
+        if (!force && event != "time" && event != "every" && System.currentTimeMillis() - startedAt < 4000) return
+        MacroDispatcher.fire(this, event, payload)
+    }
+
+    @Suppress("DEPRECATION")
+    private fun currentSsid(): String = try {
+        val wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+        val raw = wm.connectionInfo?.ssid.orEmpty().trim('"')
+        if (raw == "<unknown ssid>") "" else raw
+    } catch (_: Throwable) { "" }
+
+    private fun anyTrigger(prefix: String): Boolean = try {
+        MacroStorage(this).get().any { m -> m.enabled && m.triggers.any { it.startsWith(prefix) } }
+    } catch (_: Throwable) { false }
+
+    /** SMS і стан дзвінків реєструються лише коли надано дозволи (повторний виклик безпечний). */
+    private fun registerTelephony() {
+        if (telRegistered) return
+        val f = IntentFilter()
+        var any = false
+        if (checkSelfPermission(android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            f.addAction(android.provider.Telephony.Sms.Intents.SMS_RECEIVED_ACTION); any = true
+        }
+        if (checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            f.addAction(android.telephony.TelephonyManager.ACTION_PHONE_STATE_CHANGED); any = true
+        }
+        if (any) {
+            try { registerReceiver(rx, f, Context.RECEIVER_EXPORTED); telRegistered = true } catch (t: Throwable) { Log.e(TAG, "tel rx: ${t.message}") }
+        }
+    }
+
+    /** Датчик струсу вмикається лише коли є макрос із тригером shake. */
+    private fun refreshSensors() {
+        val need = anyTrigger("shake")
+        if (need && sensorListener == null) {
+            try {
+                val sm = getSystemService(Context.SENSOR_SERVICE) as android.hardware.SensorManager
+                val acc = sm.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER) ?: return
+                var lastPeak = 0L; var peaks = 0
+                val l = object : android.hardware.SensorEventListener {
+                    override fun onSensorChanged(e: android.hardware.SensorEvent) {
+                        val g = Math.sqrt((e.values[0] * e.values[0] + e.values[1] * e.values[1] + e.values[2] * e.values[2]).toDouble()) / 9.81
+                        val now = System.currentTimeMillis()
+                        if (g > 2.6) {
+                            if (now - lastPeak > 900) peaks = 0
+                            if (now - lastPeak > 150) peaks++
+                            lastPeak = now
+                            if (peaks >= 3) { peaks = 0; fire("shake") }
+                        }
+                    }
+                    override fun onAccuracyChanged(sensor: android.hardware.Sensor?, accuracy: Int) {}
+                }
+                sm.registerListener(l, acc, android.hardware.SensorManager.SENSOR_DELAY_UI)
+                sensorListener = l
+            } catch (t: Throwable) { Log.e(TAG, "sensor: ${t.message}") }
+        } else if (!need && sensorListener != null) {
+            try { (getSystemService(Context.SENSOR_SERVICE) as android.hardware.SensorManager).unregisterListener(sensorListener) } catch (_: Throwable) {}
+            sensorListener = null
+        }
+    }
+
+    /** Відкриття/закриття додатків: опитування UsageStats раз на 2 с, лише коли є відповідні макроси і надано доступ. */
+    private fun startAppWatcher() {
         scope.launch {
-            val storage = MacroStorage(this@MacroTriggerService)
-            if (!storage.autoEnabled()) return@launch
-            val runnerForChecks = MacroRunner(this@MacroTriggerService, { "" })
-            for (m in storage.get()) {
-                if (!m.enabled || m.triggers.none { matches(it, event, payload) }) continue
-                if (m.constraints.isNotBlank() && !m.constraints.split(',').all { runnerForChecks.check(it) }) continue
-                val now = System.currentTimeMillis()
-                if (now - (lastRun[m.id] ?: 0L) < 3000) continue
-                lastRun[m.id] = now
-                launch {
-                    Log.e(TAG, "▶ macro '${m.name}' on $event $payload")
+            var current = ""
+            var lastTs = System.currentTimeMillis()
+            var tick = 0
+            var needed = false
+            while (true) {
+                if (tick++ % 5 == 0) needed = anyTrigger("app_opened") || anyTrigger("app_closed")
+                if (needed && TriggerPermissions.hasUsageAccess(this@MacroTriggerService)) {
                     try {
-                        val agent = com.dynamicai.launcher.llm.AgentEngine(this@MacroTriggerService, null)
-                        val tools = MacroTools(this@MacroTriggerService)
-                        val vars = mutableMapOf("trigger" to event, "device" to (payload["device"] ?: ""), "level" to (payload["level"] ?: ""))
-                        MacroRunner(this@MacroTriggerService, { agent.runTool(it) }, { tools.notify(m.name, it) }, vars).run(m)
-                    } catch (t: Throwable) { Log.e(TAG, "macro failed", t) }
+                        val usm = getSystemService(Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
+                        val now = System.currentTimeMillis()
+                        val ev = usm.queryEvents(lastTs - 500, now)
+                        val e = android.app.usage.UsageEvents.Event()
+                        while (ev.hasNextEvent()) {
+                            ev.getNextEvent(e)
+                            if (e.eventType == android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND && e.packageName != current) {
+                                val prev = current
+                                current = e.packageName
+                                if (prev.isNotEmpty()) fire("app_closed", mapOf("pkg" to prev, "app" to AppUtils.labelFor(this@MacroTriggerService, prev)))
+                                fire("app_opened", mapOf("pkg" to current, "app" to AppUtils.labelFor(this@MacroTriggerService, current)))
+                            }
+                        }
+                        lastTs = now
+                    } catch (t: Throwable) { Log.e(TAG, "usage: ${t.message}") }
+                    delay(2000)
+                } else {
+                    lastTs = System.currentTimeMillis()
+                    delay(4000)
                 }
             }
         }
@@ -202,6 +325,7 @@ class MacroTriggerService : Service() {
 
     override fun onDestroy() {
         try { unregisterReceiver(rx) } catch (_: Throwable) {}
+        try { sensorListener?.let { (getSystemService(Context.SENSOR_SERVICE) as android.hardware.SensorManager).unregisterListener(it) } } catch (_: Throwable) {}
         try { netCb?.let { (getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).unregisterNetworkCallback(it) } } catch (_: Throwable) {}
         try { audioCb?.let { (getSystemService(Context.AUDIO_SERVICE) as AudioManager).unregisterAudioDeviceCallback(it) } } catch (_: Throwable) {}
         scope.cancel()

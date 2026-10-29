@@ -564,6 +564,12 @@ fun SettingsScreen(
         if (initialCategory == null || cat == "system") {
         GlassSectionHeader("Bluetooth")
         BluetoothTestRow()
+        GlassSectionHeader("🧹 Робот-пилосос")
+        GlassCard {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                VacuumSettingsBlock(settings, onSettingsChange)
+            }
+        }
         GlassSectionHeader("🚗 Авто")
         GlassCard {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -1305,4 +1311,55 @@ private fun CarModeSettingsBlock(settings: LauncherSettings, onSettingsChange: (
             onDismiss = { showPicker = false }
         )
     }
+}
+
+
+/** Локальне керування Xiaomi-пилососом (miIO): IP, токен, протокол і перевірка зв'язку. */
+@Composable
+private fun VacuumSettingsBlock(settings: LauncherSettings, onSettingsChange: (LauncherSettings) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    var testResult by remember { mutableStateOf("") }
+    var testing by remember { mutableStateOf(false) }
+    val tfColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = AppTheme.colors.textPrimary, unfocusedTextColor = AppTheme.colors.textPrimary,
+        focusedBorderColor = AppTheme.colors.successLight, unfocusedBorderColor = AppTheme.colors.glassBorder,
+        cursorColor = AppTheme.colors.successLight
+    )
+    Text(
+        "Керування пилососом по Wi-Fi без додатка: «запусти пилосос», «пилосос додому», «де пилосос». Потрібні IP пристрою (з роутера або Xiaomi Home → пристрій → Налаштування → Інформація про пристрій) і токен із 32 символів (його дістає утиліта Xiaomi-cloud-tokens-extractor). Працює вдома, в одній мережі з пилососом.",
+        color = AppTheme.colors.textSecondary, fontSize = 11.sp
+    )
+    Spacer(Modifier.height(8.dp))
+    OutlinedTextField(
+        value = settings.vacuumIp, onValueChange = { onSettingsChange(settings.copy(vacuumIp = it.trim())) },
+        label = { Text("IP пилососа", fontSize = 12.sp) }, singleLine = true, colors = tfColors, modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(Modifier.height(6.dp))
+    OutlinedTextField(
+        value = settings.vacuumToken, onValueChange = { onSettingsChange(settings.copy(vacuumToken = it.trim())) },
+        label = { Text("Токен (32 символи)", fontSize = 12.sp) }, singleLine = true, colors = tfColors, modifier = Modifier.fillMaxWidth()
+    )
+    Spacer(Modifier.height(8.dp))
+    Text("Протокол", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
+        listOf("auto" to "Авто", "miot" to "Dreame / Mop 2 Pro", "roborock" to "Roborock").forEach { (id, label) ->
+            val sel = settings.vacuumProto == id
+            Box(
+                Modifier.clip(RoundedCornerShape(16.dp))
+                    .background(if (sel) AppTheme.colors.successLight.copy(alpha = 0.3f) else AppTheme.colors.textPrimary.copy(alpha = 0.06f))
+                    .clickable { onSettingsChange(settings.copy(vacuumProto = id)) }
+                    .padding(horizontal = 12.dp, vertical = 7.dp)
+            ) { Text(label, color = AppTheme.colors.textPrimary, fontSize = 12.sp) }
+        }
+    }
+    Spacer(Modifier.height(4.dp))
+    TextButton(onClick = {
+        testing = true; testResult = "Перевіряю…"
+        scope.launch {
+            testResult = try { com.dynamicai.launcher.smarthome.VacuumControl(ctx).run("status") } catch (t: Throwable) { "Помилка: ${t.message}" }
+            testing = false
+        }
+    }, enabled = !testing) { Text("Перевірити зв'язок", color = AppTheme.colors.successLight) }
+    if (testResult.isNotBlank()) Text(testResult, color = AppTheme.colors.textPrimary, fontSize = 12.sp)
 }

@@ -120,6 +120,14 @@ private val STEP_CATALOG: List<Pair<String, List<StepSpec>>> = listOf(
         StepSpec("Вимкнути додаток", "disableApp(package=\"{0}\")", desc = "Ховає додаток із системи", pick = "app"),
         StepSpec("Увімкнути додаток", "enableApp(package=\"{0}\")", desc = "Повертає вимкнений додаток", pick = "app")
     ),
+    "🏠 Дім" to listOf(
+        StepSpec("🧹 Пилосос: почати прибирання", "vacuum(action=\"start\")", desc = "Потрібні IP і токен у Налаштування → Система"),
+        StepSpec("🧹 Пилосос: пауза", "vacuum(action=\"pause\")"),
+        StepSpec("🧹 Пилосос: зупинити", "vacuum(action=\"stop\")"),
+        StepSpec("🧹 Пилосос: на базу", "vacuum(action=\"home\")"),
+        StepSpec("🧹 Пилосос: де ти? (сигнал)", "vacuum(action=\"locate\")"),
+        StepSpec("🧹 Пилосос: статус", "vacuum(action=\"status\")")
+    ),
     "Інфо" to listOf(
         StepSpec("Погода", "getWeather(city=\"{0}\")", listOf("Місто (порожньо — авто)" to "")),
         StepSpec("Новини", "getNews()"),

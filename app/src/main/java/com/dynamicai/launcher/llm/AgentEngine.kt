@@ -49,6 +49,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         "systemAction(action: String) -> Системна дія: home, back, recents, notifications, quick, lock, screenshot.",
         "typeText(text: String) -> Ввести текст у поле на екрані.",
         "getNews() -> Останні заголовки новин.",
+        "vacuum(action: String) -> Робот-пилосос Xiaomi: 'start', 'pause', 'home', 'locate' або 'status'.",
         "toggleNfc(state: String) -> NFC: 'on' або 'off'.",
         "toggleLocation(state: String) -> Геолокація: 'on' або 'off'.",
         "setDarkMode(state: String) -> Темна тема: 'on', 'off' або 'auto'.",
@@ -114,6 +115,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         "systemAction" to listOf("назад", "додому", "недавн", "останні додатки", "шторк", "заблокуй", "скріншот"),
         "typeText" to listOf("введи", "надрукуй"),
         "getNews" to listOf("новин", "заголовк"),
+        "vacuum" to listOf("пилосос", "прибир", "прибер"),
         "toggleNfc" to listOf("nfc", "нфс"),
         "toggleLocation" to listOf("геолокац", "місцезнаход", "gps"),
         "setDarkMode" to listOf("темн", "dark"),
@@ -512,6 +514,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 toolCall.startsWith("forceStop") -> com.dynamicai.launcher.macro.MacroTools(context).forceStop(getArg(toolCall, "package"))
                 toolCall.substringBefore("(").trim() in com.dynamicai.launcher.macro.SystemTools.NAMES ->
                     com.dynamicai.launcher.macro.SystemTools(context).run(toolCall.substringBefore("(").trim()) { k -> getArg(toolCall, k) }
+                toolCall.startsWith("vacuum") -> com.dynamicai.launcher.smarthome.VacuumControl(context).run(getArg(toolCall, "action"))
                 toolCall.startsWith("shell") -> com.dynamicai.launcher.macro.MacroTools(context).shell(getArg(toolCall, "cmd"))
                 toolCall.startsWith("httpGet") -> com.dynamicai.launcher.macro.MacroTools(context).httpGet(getArg(toolCall, "url"))
                 toolCall.startsWith("notify") -> com.dynamicai.launcher.macro.MacroTools(context).notify(getArg(toolCall, "title"), getArg(toolCall, "text"))

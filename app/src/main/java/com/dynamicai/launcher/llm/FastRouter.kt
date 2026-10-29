@@ -67,8 +67,9 @@ class FastRouter(private val runTool: suspend (String) -> String) {
             (ON.containsMatchIn(t) || OFF.containsMatchIn(t))
         val sys = SYS_TOGGLES.any { it.first.containsMatchIn(t) } && (ON.containsMatchIn(t) || OFF.containsMatchIn(t)) ||
             SYS_PHRASES.any { it.first.containsMatchIn(t) }
+        val vac = t.contains("пилосос") || Regex("^(почни|запусти)\\s+прибирання$|^прибери(\\s+вдома|\\s+в\\s+квартирі)?$").containsMatchIn(t)
         val media = Regex("(наступн|попередн|минул)\\p{L}*\\s+(трек|пісн|композиц)|^\\s*(пауза|далі)\\s*$").containsMatchIn(t)
-        return toggle || media || sys
+        return toggle || media || sys || vac
     }
 
     suspend fun tryHandle(raw: String): String? {
@@ -93,6 +94,17 @@ class FastRouter(private val runTool: suspend (String) -> String) {
 
             // Сценарій «музика в авто»
             Regex("(музик|плейліст|ютуб\\s*мюзік|youtube\\s*music).*\\s(в|у)\\s+(машин|авто)|режим\\s+авто|я\\s+(в|у)\\s+(машин|авто)|поїхали").containsMatchIn(t) -> "carMode()"
+
+            // Робот-пилосос
+            Regex("пилосос").containsMatchIn(t) -> when {
+                Regex("де\\s+|знайди|сигнал|пискни").containsMatchIn(t) -> """vacuum(action="locate")"""
+                Regex("додому|базу|базі|зарядк|док").containsMatchIn(t) -> """vacuum(action="home")"""
+                Regex("статус|що\\s+робить|заряд|стан").containsMatchIn(t) -> """vacuum(action="status")"""
+                Regex("пауз").containsMatchIn(t) -> """vacuum(action="pause")"""
+                off || Regex("зупини|стоп|припини").containsMatchIn(t) -> """vacuum(action="stop")"""
+                else -> """vacuum(action="start")"""
+            }
+            Regex("^(почни|запусти)\\s+прибирання$|^прибери(\\s+вдома|\\s+в\\s+квартирі)?$").containsMatchIn(t) -> """vacuum(action="start")"""
 
             // Системні дії через Shizuku
             SYS_PHRASES.any { it.first.containsMatchIn(t) } -> SYS_PHRASES.first { it.first.containsMatchIn(t) }.second

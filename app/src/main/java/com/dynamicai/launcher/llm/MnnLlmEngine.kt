@@ -27,6 +27,16 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
          * НЕ обгортаємо промпт у chat template — MNN сам застосовує `prompt_template`
          * з llm_config.json. Просто додаємо /no_think для Qwen3 thinking mode.
          */
+        /** Qwen3 з /no_think повертає порожній блок <think></think> — прибираємо його (інакше він потрапляє в чат і в озвучення). */
+        private val THINK_REGEX = Regex("<think>.*?</think>", RegexOption.DOT_MATCHES_ALL)
+        internal fun stripThinking(text: String): String {
+            var t = THINK_REGEX.replace(text, "")
+            // Обірваний блок без закриття (досягнуто ліміт токенів у "роздумах")
+            val open = t.indexOf("<think>")
+            if (open >= 0) t = t.substring(0, open)
+            return t.trim()
+        }
+
         private fun formatPrompt(prompt: String, modelId: String): String {
             return if (modelId.contains("qwen3-", ignoreCase = true)) {
                 // /no_think для вимкнення thinking mode Qwen3
@@ -248,8 +258,8 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
                     }
                 })
             }
-            Log.e(TAG, "complete: generated ${buffer.length} chars: ${buffer.take(200).map { it.code }.take(20)} text='${buffer.take(200)}'")
-            buffer.toString()
+            Log.e(TAG, "complete: generated ${buffer.length} chars, text='${buffer.take(200)}'")
+            stripThinking(buffer.toString())
         } catch (t: Throwable) {
             lastError = "complete failed: ${t.message}"
             Log.e(TAG, lastError, t)
@@ -282,11 +292,11 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
                 })
             }
             Log.e(TAG, "streamComplete: generated ${buffer.length} chars")
-            buffer.toString()
+            stripThinking(buffer.toString())
         } catch (t: Throwable) {
             lastError = "streamComplete failed: ${t.message}"
             Log.e(TAG, lastError, t)
-            if (buffer.isNotEmpty()) buffer.toString() else null
+            if (buffer.isNotEmpty()) stripThinking(buffer.toString()) else null
         }
     }
 

@@ -856,31 +856,12 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 _downloadProgress.value = null
                 downloadingModelId = null
                 
-                // Вимикаємо зір для Qwen/Gemma, щоб MNN не вантажив visual.mnn
-                try {
-                    val configFile = java.io.File(targetDir, "config.json")
-                    if (configFile.exists()) {
-                        val json = org.json.JSONObject(configFile.readText())
-                        json.put("is_visual", false)
-                        json.put("is_mrope", false)
-                        json.put("system_prompt_template", "")
-                        configFile.writeText(json.toString())
-                        android.util.Log.e("MNN_CONFIG", "Patched config.json for $modelId")
-                    }
-                    // Видаляємо jinja та ставимо порожній системний промпт
-                    val llmConfigFile = java.io.File(targetDir, "llm_config.json")
-                    if (llmConfigFile.exists()) {
-                        val jsonLlm = org.json.JSONObject(llmConfigFile.readText())
-                        jsonLlm.remove("jinja")
-                        jsonLlm.put("system_prompt_template", "")
-                        jsonLlm.put("user_prompt_template", "<|im_start|>user\n%s<|im_end|>\n<|im_start|>assistant\n")
-                        llmConfigFile.writeText(jsonLlm.toString())
-                        android.util.Log.e("MNN_CONFIG", "Patched llm_config.json for $modelId")
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("MNN_CONFIG", "Failed to patch config: ${e.message}")
-                }
-                
+                // Конфіги моделі (config.json / llm_config.json) НЕ патчимо: оригінал Qwen3.5 має
+                // is_mrope=true і jinja-шаблон з eos/bos. Примусове is_mrope=false та видалення jinja
+                // ламали генерацію (1 токен / 0 токенів). Зір вимикається в runtime-конфігу
+                // (LlmSession.load -> "is_visual":false), файли моделі лишаються оригінальними.
+                android.util.Log.e("MNN_CONFIG", "Model configs left untouched for $modelId")
+
                 _downloadTrigger.value = (_downloadTrigger.value ?: 0) + 1
             } catch (e: Exception) {
                 _downloadProgress.value = ModelDownloader.Progress.Error(e.message ?: "Помилка")

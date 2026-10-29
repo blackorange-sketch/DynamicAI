@@ -92,9 +92,22 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
             Log.e(TAG, "listFiles failed: ${t.message}")
         }
 
+        // Необов'язкові перевизначення конфігу для експериментів без перезбірки:
+        //   adb shell "echo '{...}' > /sdcard/Android/data/<pkg>/files/mnn_overrides.json"
+        val overrides: org.json.JSONObject? = try {
+            val f = File(context.getExternalFilesDir(null), "mnn_overrides.json")
+            if (f.exists()) org.json.JSONObject(f.readText()).also {
+                Log.e(TAG, "mnn_overrides.json: $it")
+            } else null
+        } catch (t: Throwable) {
+            Log.e(TAG, "mnn_overrides.json read failed: ${t.message}")
+            null
+        }
+
         // Видаляємо застарілі OpenCL кеші, які роздувають пам'ять до гігабайтів
+        // (вимкнути: "clean_cache": false в mnn_overrides.json)
         try {
-            modelDir.listFiles()?.forEach { f ->
+            if (overrides?.optBoolean("clean_cache", true) != false) modelDir.listFiles()?.forEach { f ->
                 if (f.name.endsWith(".opencl.weight") || f.name == "mnn_cachefile.bin") {
                     val deleted = f.delete()
                     Log.e("MNN_CLEANUP", "🗑️ ${if (deleted) "Deleted" else "Failed to delete"} ${f.name} (${f.length()} bytes)")
@@ -131,7 +144,8 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
                     modelId = modelDir.name,
                     configDir = modelDir,
                     backendType = backend,
-                    maxNewTokens = 512
+                    maxNewTokens = 512,
+                    overrides = overrides
                 )
                 val ok = s.load()
                 if (ok) {
@@ -172,7 +186,7 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
                     return true  // продовжити генерацію
                 }
             })
-            Log.e(TAG, "complete: generated ${buffer.length} chars")
+            Log.e(TAG, "complete: generated ${buffer.length} chars: ${buffer.take(200).map { it.code }.take(20)} text='${buffer.take(200)}'")
             buffer.toString()
         } catch (t: Throwable) {
             lastError = "complete failed: ${t.message}"

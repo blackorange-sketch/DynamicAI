@@ -15,6 +15,32 @@ class FastRouter(private val runTool: suspend (String) -> String) {
         val OFF = Regex("""(?<!\p{L})(вимкни|виключи|вимкнути|погаси|відключи|заглуши)(?!\p{L})""")
     }
 
+    /** Системні перемикачі (потрібен Shizuku): шаблон фрази → інструмент зі станом. */
+    private val SYS_TOGGLES: List<Pair<Regex, String>> = listOf(
+        Regex("nfc|нфс|енфс|нфц") to "toggleNfc",
+        Regex("геолокац|місцезнаходж|gps|джіпіес") to "toggleLocation",
+        Regex("темн\\p{L}*\\s+(тем|режим)|dark\\s*mode") to "setDarkMode",
+        Regex("економ\\p{L}*\\s+(заряд|батаре|енерг)|режим\\s+економ") to "setBatterySaver",
+        Regex("автоповорот|автообертання|автоматичн\\p{L}*\\s+поворот") to "setAutoRotate",
+        Regex("автояскравість|автоматичн\\p{L}*\\s+яскравість") to "setAutoBrightness",
+        Regex("нічн\\p{L}*\\s+(світло|режим екрана)") to "setNightLight"
+    )
+
+    /** Фіксовані фрази без стану. */
+    private val SYS_PHRASES: List<Pair<Regex, String>> = listOf(
+        Regex("^(зроби\\s+)?(скріншот|знімок екрана|скрін)$") to """screenshot()""",
+        Regex("^(вимкни|погаси|заблокуй)\\s+(екран|телефон)$|^заблокуй$") to """screenOff()""",
+        Regex("^(увімкни|розбуди|засвіти)\\s+екран$") to """screenOn()""",
+        Regex("^(відкрий|покажи|опусти)\\s+шторку(\\s+сповіщень)?$|^покажи сповіщення$") to """expandNotifications()""",
+        Regex("^(відкрий|покажи)\\s+швидкі\\s+налаштування$") to """expandQuickSettings()""",
+        Regex("^закрий\\s+шторку$") to """collapsePanels()""",
+        Regex("^(закрий|вбий)\\s+(всі|усі)\\s+(фонові\\s+)?(додатки|програми)$|^очисти\\s+оперативку$|^очисти\\s+пам.ять$") to """killBackground()""",
+        Regex("^очисти\\s+кеш$") to """clearCache()""",
+        Regex("^(назад|тапни назад)$") to """pressKey(key="back")""",
+        Regex("^(додому|на головний екран|на головну)$") to """pressKey(key="home")""",
+        Regex("^(останні додатки|недавні додатки|відкрий недавні)$") to """pressKey(key="recents")"""
+    )
+
     private fun q(s: String) = s.replace("\"", "").trim()
 
     private val CURRENCIES = listOf(
@@ -39,8 +65,10 @@ class FastRouter(private val runTool: suspend (String) -> String) {
         val t = raw.lowercase()
         val toggle = Regex("ліхтар|wi-?fi|вай-?фай|bluetooth|блютуз|блютус").containsMatchIn(t) &&
             (ON.containsMatchIn(t) || OFF.containsMatchIn(t))
+        val sys = SYS_TOGGLES.any { it.first.containsMatchIn(t) } && (ON.containsMatchIn(t) || OFF.containsMatchIn(t)) ||
+            SYS_PHRASES.any { it.first.containsMatchIn(t) }
         val media = Regex("(наступн|попередн|минул)\\p{L}*\\s+(трек|пісн|композиц)|^\\s*(пауза|далі)\\s*$").containsMatchIn(t)
-        return toggle || media
+        return toggle || media || sys
     }
 
     suspend fun tryHandle(raw: String): String? {
@@ -65,6 +93,26 @@ class FastRouter(private val runTool: suspend (String) -> String) {
 
             // Сценарій «музика в авто»
             Regex("(музик|плейліст|ютуб\\s*мюзік|youtube\\s*music).*\\s(в|у)\\s+(машин|авто)|режим\\s+авто|я\\s+(в|у)\\s+(машин|авто)|поїхали").containsMatchIn(t) -> "carMode()"
+
+            // Системні дії через Shizuku
+            SYS_PHRASES.any { it.first.containsMatchIn(t) } -> SYS_PHRASES.first { it.first.containsMatchIn(t) }.second
+            (on || off) && SYS_TOGGLES.any { it.first.containsMatchIn(t) } ->
+                """${SYS_TOGGLES.first { it.first.containsMatchIn(t) }.second}(state="${if (off) "off" else "on"}")"""
+            Regex("(відкрий|покажи)\\s+налаштування\\s+(wi-?fi|вай-?фай|bluetooth|блютуз|екрана|батареї|додатків|nfc|геолокації|звуку|розробника)").containsMatchIn(t) ->
+                Regex("налаштування\\s+(\\S+)").find(t)?.groupValues?.get(1)?.let { w ->
+                    val page = when {
+                        w.contains("wi") || w.contains("вай") -> "wifi"
+                        w.contains("blue") || w.contains("блют") -> "bluetooth"
+                        w.startsWith("екран") -> "display"
+                        w.startsWith("батаре") -> "battery"
+                        w.startsWith("додатк") -> "apps"
+                        w.startsWith("nfc") -> "nfc"
+                        w.startsWith("геоло") -> "location"
+                        w.startsWith("звук") -> "sound"
+                        else -> "developer"
+                    }
+                    """openSettings(page="$page")"""
+                }
 
             // Режим польоту, «Не турбувати», мобільні дані, режим дзвінка
             Regex("режим\\s+польоту|авіарежим|літаковий").containsMatchIn(t) && (on || off) ->

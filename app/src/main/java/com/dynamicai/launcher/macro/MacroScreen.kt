@@ -93,6 +93,33 @@ private val STEP_CATALOG: List<Pair<String, List<StepSpec>>> = listOf(
         StepSpec("Натиснути текст на екрані", "tapText(text=\"{0}\")", listOf("Текст кнопки" to "")),
         StepSpec("Ввести текст", "typeText(text=\"{0}\")", listOf("Текст" to ""))
     ),
+    "⚙ Система (Shizuku)" to listOf(
+        StepSpec("Екран увімкнути", "screenOn()", desc = "Розбудити екран"),
+        StepSpec("Екран вимкнути / заблокувати", "screenOff()", desc = "Заблокувати телефон"),
+        StepSpec("Знімок екрана", "screenshot()"),
+        StepSpec("Натиснути клавішу", "pressKey(key=\"{0}\")", listOf("home, back, recents, power, volup, voldown, mute, menu, enter, camera, play, pause, next, prev" to "home")),
+        StepSpec("Відкрити шторку сповіщень", "expandNotifications()"),
+        StepSpec("Відкрити швидкі налаштування", "expandQuickSettings()"),
+        StepSpec("Закрити шторку", "collapsePanels()"),
+        StepSpec("Тап по координатах", "tap(x=\"{0}\", y=\"{1}\")", listOf("x, px" to "540", "y, px" to "1200")),
+        StepSpec("Свайп", "swipe(x=\"{0}\", y=\"{1}\", x2=\"{2}\", y2=\"{3}\", ms=\"{4}\")", listOf("x початок" to "540", "y початок" to "1600", "x кінець" to "540", "y кінець" to "600", "Тривалість, мс" to "300")),
+        StepSpec("Темна тема", "setDarkMode(state=\"{0}\")", listOf("on, off або auto" to "on")),
+        StepSpec("Економія заряду", "setBatterySaver(state=\"{0}\")", listOf("on або off" to "on")),
+        StepSpec("Автояскравість", "setAutoBrightness(state=\"{0}\")", listOf("on або off" to "on")),
+        StepSpec("Нічний режим екрана", "setNightLight(state=\"{0}\")", listOf("on або off" to "on")),
+        StepSpec("Час до вимкнення екрана", "setScreenTimeout(seconds=\"{0}\")", listOf("Секунд" to "60")),
+        StepSpec("Не гасити екран на зарядці", "setStayAwake(state=\"{0}\")", listOf("on або off" to "on")),
+        StepSpec("Анімації (масштаб)", "setAnimations(scale=\"{0}\")", listOf("0 — вимкнути, 0.5, 1" to "0.5")),
+        StepSpec("Розмір шрифту", "setFontScale(scale=\"{0}\")", listOf("Масштаб, напр. 1.0, 1.15" to "1.0")),
+        StepSpec("Показувати дотики", "showTouches(state=\"{0}\")", listOf("on або off" to "on")),
+        StepSpec("Орієнтація екрана", "setRotation(value=\"{0}\")", listOf("0 — звичайна, 1 — вліво, 2 — догори дриґом, 3 — вправо" to "0")),
+        StepSpec("Відкрити налаштування", "openSettings(page=\"{0}\")", listOf("wifi, bluetooth, display, battery, apps, nfc, location, sound, developer, storage, accessibility" to "wifi")),
+        StepSpec("Закрити всі фонові додатки", "killBackground()"),
+        StepSpec("Очистити кеш усіх додатків", "clearCache()"),
+        StepSpec("Очистити дані додатка", "clearData(package=\"{0}\")", desc = "Скидає додаток до чистого стану!", pick = "app"),
+        StepSpec("Вимкнути додаток", "disableApp(package=\"{0}\")", desc = "Ховає додаток із системи", pick = "app"),
+        StepSpec("Увімкнути додаток", "enableApp(package=\"{0}\")", desc = "Повертає вимкнений додаток", pick = "app")
+    ),
     "Інфо" to listOf(
         StepSpec("Погода", "getWeather(city=\"{0}\")", listOf("Місто (порожньо — авто)" to "")),
         StepSpec("Новини", "getNews()"),
@@ -206,6 +233,9 @@ private fun describeStep(step: String, ctx: android.content.Context? = null): St
     return when {
         s.startsWith("openApp(") && s.contains("package=") -> "📲 Відкрити «${pkgOf()}»"
         s.startsWith("forceStop(") -> "⛔ Закрити «${pkgOf()}»"
+        s.startsWith("clearData(") -> "🧹 Очистити дані «${pkgOf()}»"
+        s.startsWith("disableApp(") -> "🚫 Вимкнути «${pkgOf()}»"
+        s.startsWith("enableApp(") -> "✅ Увімкнути «${pkgOf()}»"
         s.startsWith("WAIT_UNTIL:") -> "⌛ Чекати: " + s.removePrefix("WAIT_UNTIL:").trim()
         s.startsWith("WAIT:") -> "⏱ Пауза " + s.removePrefix("WAIT:").trim() + " с"
         s.startsWith("IF_NOT:") -> "❓ Якщо НЕ " + s.removePrefix("IF_NOT:").trim().replace("?", "→")

@@ -33,7 +33,9 @@ object MacroBuilder {
         "mediaKey", "setVolume", "toggleFlashlight", "setBrightness", "setDnd", "setRingerMode", "setMobileData", "setAirplane",
         "vibrate", "notify", "speak", "takeNote", "getWeather", "getNews", "getTime", "getBattery", "searchWeb", "navigateTo",
         "openUrl", "carMode", "systemAction", "openCamera", "setAlarm", "runMacro", "sendSms", "copyText", "toggleNfc", "toggleLocation",
-        "setAutoRotate"
+        "setAutoRotate", "screenOn", "screenOff", "screenshot", "pressKey", "expandNotifications", "expandQuickSettings", "collapsePanels",
+        "setDarkMode", "setBatterySaver", "setAutoBrightness", "setScreenTimeout", "setStayAwake", "setNightLight", "setAnimations",
+        "setFontScale", "killBackground", "clearCache", "openSettings"
     )
     private val CONTROL = listOf("WAIT:", "WAIT_UNTIL:", "IF:", "IF_NOT:", "SAY:", "SET:", "REPEAT:")
 
@@ -43,7 +45,7 @@ triggers — події автозапуску (порожньо [], якщо м
 charging_start, charging_stop, battery_low:20, bt_connected:НазваПристрою, bt_disconnected:НазваПристрою, wifi_connected, wifi_disconnected, headset_plugged, headset_unplugged, screen_on, screen_off, unlock, airplane_on, airplane_off, bt_on, bt_off, battery_full, call_incoming, call_ended, shake, nfc, every:30 (кожні N хвилин), app_opened:НазваДодатка, app_closed:НазваДодатка, notification:НазваДодатка, sms_received, time:07:30:12345 (година:хвилини:дні, 1=Пн…7=Нд, дні можна пропустити), boot
 constraints — умови через кому: online, wifi_on, bt_on, bt_connected, charging, music, battery<20, time>18:00
 steps — кроки по порядку (лапки тільки одинарні):
-toggleWifi(state='on'), toggleBluetooth(state='off'), connectBluetooth(name='...'), ensureInternet(), openApp(name='...'), playYouTubeMusic(), mediaKey(key='play'|'pause'|'next'|'prev'), setVolume(level='60'), toggleFlashlight(state='on'), setBrightness(percent='40'), setDnd(state='on'), setRingerMode(mode='normal'|'vibrate'|'silent'), setMobileData(state='on'), setAirplane(state='off'), vibrate(ms='400'), notify(title='...', text='...'), speak(text='...'), takeNote(text='...'), getWeather(city='...'), getNews(), searchWeb(query='...'), navigateTo(destination='...'), openUrl(url='...'), carMode(), setAlarm(hour='7', minute='0', message='...'), WAIT: 3, WAIT_UNTIL: bt_connected 20, IF: умова ? крок, SAY: текст, sendSms(number='+380...', text='...'), copyText(text='...'), toggleNfc(state='on'), toggleLocation(state='on'), setAutoRotate(state='on')
+toggleWifi(state='on'), toggleBluetooth(state='off'), connectBluetooth(name='...'), ensureInternet(), openApp(name='...'), playYouTubeMusic(), mediaKey(key='play'|'pause'|'next'|'prev'), setVolume(level='60'), toggleFlashlight(state='on'), setBrightness(percent='40'), setDnd(state='on'), setRingerMode(mode='normal'|'vibrate'|'silent'), setMobileData(state='on'), setAirplane(state='off'), vibrate(ms='400'), notify(title='...', text='...'), speak(text='...'), takeNote(text='...'), getWeather(city='...'), getNews(), searchWeb(query='...'), navigateTo(destination='...'), openUrl(url='...'), carMode(), setAlarm(hour='7', minute='0', message='...'), WAIT: 3, WAIT_UNTIL: bt_connected 20, IF: умова ? крок, SAY: текст, sendSms(number='+380...', text='...'), copyText(text='...'), toggleNfc(state='on'), toggleLocation(state='on'), setAutoRotate(state='on'), setDarkMode(state='on'|'off'|'auto'), setBatterySaver(state='on'), setAutoBrightness(state='on'), setNightLight(state='on'), setScreenTimeout(seconds='60'), screenOn(), screenOff(), screenshot(), pressKey(key='home'|'back'|'recents'|'power'), expandNotifications(), killBackground(), clearCache(), openSettings(page='wifi'|'bluetooth'|'display'|'battery'|'apps')
 У кроках доступні змінні подій: {app} {title} {text} (сповіщення), {sender} {body} (SMS), {device}
 
 Прохання: коли підключаюсь до Bluetooth авто, вмикай музику

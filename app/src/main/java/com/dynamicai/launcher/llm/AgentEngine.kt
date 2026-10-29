@@ -48,7 +48,16 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         "scrollScreen(direction: String) -> Прокрутити екран: 'down' або 'up'.",
         "systemAction(action: String) -> Системна дія: home, back, recents, notifications, quick, lock, screenshot.",
         "typeText(text: String) -> Ввести текст у поле на екрані.",
-        "getNews() -> Останні заголовки новин."
+        "getNews() -> Останні заголовки новин.",
+        "toggleNfc(state: String) -> NFC: 'on' або 'off'.",
+        "toggleLocation(state: String) -> Геолокація: 'on' або 'off'.",
+        "setDarkMode(state: String) -> Темна тема: 'on', 'off' або 'auto'.",
+        "setBatterySaver(state: String) -> Режим економії заряду: 'on' або 'off'.",
+        "screenOff() -> Вимкнути екран (заблокувати).",
+        "screenshot() -> Зробити знімок екрана.",
+        "expandNotifications() -> Відкрити шторку сповіщень.",
+        "killBackground() -> Закрити всі фонові додатки.",
+        "openSettings(page: String) -> Відкрити налаштування: wifi, bluetooth, display, battery, apps, nfc, location, sound, developer."
     )
 
     /** Ключові слова (корені) для вибору інструментів: у промпт потрапляють лише релевантні — він коротший у рази. */
@@ -104,7 +113,16 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         "scrollScreen" to listOf("прокрут", "вниз", "вгору"),
         "systemAction" to listOf("назад", "додому", "недавн", "останні додатки", "шторк", "заблокуй", "скріншот"),
         "typeText" to listOf("введи", "надрукуй"),
-        "getNews" to listOf("новин", "заголовк")
+        "getNews" to listOf("новин", "заголовк"),
+        "toggleNfc" to listOf("nfc", "нфс"),
+        "toggleLocation" to listOf("геолокац", "місцезнаход", "gps"),
+        "setDarkMode" to listOf("темн", "dark"),
+        "setBatterySaver" to listOf("економ", "заощадж"),
+        "screenOff" to listOf("вимкни екран", "погаси екран"),
+        "screenshot" to listOf("скріншот", "знімок екрана"),
+        "expandNotifications" to listOf("шторк", "сповіщення"),
+        "killBackground" to listOf("закрий всі", "фонові", "очисти пам"),
+        "openSettings" to listOf("налаштування")
     )
 
     private val allToolLines: List<Pair<String, String>> by lazy {
@@ -492,6 +510,8 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 toolCall.startsWith("toggleLocation") -> com.dynamicai.launcher.macro.MacroTools(context).setLocation(getArg(toolCall, "state") == "on")
                 toolCall.startsWith("setAutoRotate") -> com.dynamicai.launcher.macro.MacroTools(context).setAutoRotate(getArg(toolCall, "state") == "on")
                 toolCall.startsWith("forceStop") -> com.dynamicai.launcher.macro.MacroTools(context).forceStop(getArg(toolCall, "package"))
+                toolCall.substringBefore("(").trim() in com.dynamicai.launcher.macro.SystemTools.NAMES ->
+                    com.dynamicai.launcher.macro.SystemTools(context).run(toolCall.substringBefore("(").trim()) { k -> getArg(toolCall, k) }
                 toolCall.startsWith("shell") -> com.dynamicai.launcher.macro.MacroTools(context).shell(getArg(toolCall, "cmd"))
                 toolCall.startsWith("httpGet") -> com.dynamicai.launcher.macro.MacroTools(context).httpGet(getArg(toolCall, "url"))
                 toolCall.startsWith("notify") -> com.dynamicai.launcher.macro.MacroTools(context).notify(getArg(toolCall, "title"), getArg(toolCall, "text"))

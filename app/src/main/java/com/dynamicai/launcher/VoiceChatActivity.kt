@@ -712,6 +712,41 @@ fun limitAnswer(text: String, maxTokens: Int): String {
     return if (end > maxChars / 3) cut.substring(0, end + 1).trim() else cut.trim() + "…"
 }
 
+/** Накопичує токени й віддає готові речення (для потокового озвучення). Ігнорує службовий блок <think>. */
+class SentenceSplitter(private val onSentence: (String) -> Unit) {
+    private val buf = StringBuilder()
+    var fedAny = false
+        private set
+
+    fun feed(token: String) {
+        fedAny = true
+        buf.append(token)
+        // Пропускаємо «роздуми» Qwen3 (<think>…</think>)
+        if (buf.startsWith("<think>")) {
+            val end = buf.indexOf("</think>")
+            if (end < 0) return
+            buf.delete(0, end + "</think>".length)
+        }
+        while (true) {
+            val s = buf.toString()
+            // Кінець речення: .!?… + пробіл (або новий рядок), речення не коротше 15 символів; «3.14» не ріжемо
+            val m = Regex("[.!?…]+\\s|\\n").find(s, minOf(14, s.length)) ?: break
+            val cut = m.range.last + 1
+            val sentence = s.substring(0, cut).trim()
+            buf.delete(0, cut)
+            if (sentence.isNotBlank()) onSentence(sentence)
+        }
+    }
+
+    /** Залишок тексту після завершення генерації. */
+    fun flush() {
+        if (buf.startsWith("<think>")) { buf.setLength(0); return }
+        val rest = buf.toString().trim()
+        buf.setLength(0)
+        if (rest.isNotBlank()) onSentence(rest)
+    }
+}
+
 fun processQuery(
     text: String, history: String, vm: AppListViewModel, scope: kotlinx.coroutines.CoroutineScope,
     onStateChange: (VoiceState) -> Unit, onMessage: (ChatMessage) -> Unit, stopListening: () -> Unit
@@ -746,13 +781,35 @@ fun processQuery(
             // для LiteRT (Gemma) — з агентними інструментами
             // Налаштування «Режим агента» вимкнено — теж простий чат (короткий промпт, зручно для діагностики GPU)
             val useAgent = vm.settings.value.useAgent
-            val rawAnswer = if (vm.currentModelId.startsWith("mnn-") || !useAgent) {
-                vm.chatEngine.simpleAnswer(text)
+            val maxTokens = vm.settings.value.maxResponseTokens
+            val simple = vm.currentModelId.startsWith("mnn-") || !useAgent
+            val job = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
+
+            // Потокове озвучення: перше речення звучить, поки модель дописує решту
+            var streamed = false
+            var spokenChars = 0
+            val maxSpoken = (maxTokens * 2).coerceAtLeast(200)
+            val streamDone = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val splitter = SentenceSplitter { sentence ->
+                if (job?.isActive == false) return@SentenceSplitter   // «Стоп»: нічого нового не озвучуємо
+                if (spokenChars >= maxSpoken) return@SentenceSplitter
+                if (!streamed) {
+                    streamed = true
+                    vm.tts.beginStream { streamDone.complete(Unit) }
+                    onStateChange(VoiceState.SPEAKING)
+                    stopListening()
+                }
+                spokenChars += sentence.length
+                vm.tts.speakChunk(sentence)
+            }
+
+            val rawAnswer = if (simple) {
+                vm.chatEngine.simpleAnswer(text) { token -> splitter.feed(token) }
             } else {
                 vm.chatEngine.answerWithAgent(text, history)
             }
             // Довга відповідь не влазить у повідомлення і довго озвучується — обрізаємо за реченням
-            val answer = limitAnswer(rawAnswer, vm.settings.value.maxResponseTokens)
+            val answer = limitAnswer(rawAnswer, maxTokens)
             stopListening() // Примусово вимикаємо мікрофон, щоб не зчитав TTS
 
             // Службові відповіді рушія — показуємо як помилку з кнопкою, а не озвучуємо
@@ -763,15 +820,35 @@ fun processQuery(
                 return@launch
             }
 
-            onStateChange(VoiceState.SPEAKING)
-            vm.tts.speakWithCallback(answer) {
-                // Чекаємо 400мс, щоб динамік повністю замовк і мікрофон не зчитав відлуння
-                kotlinx.coroutines.MainScope().launch {
+            onMessage(ChatMessage("assistant", answer))
+            if (simple && splitter.fedAny) {
+                // Дозвучуємо залишок і чекаємо кінця черги озвучення
+                splitter.flush()
+                if (!streamed) {
+                    // Токени не стрімились (напр. fallback без стріму) — озвучуємо готову відповідь одним шматком
+                    onStateChange(VoiceState.SPEAKING)
+                    vm.tts.speakWithCallback(answer) {
+                        kotlinx.coroutines.MainScope().launch {
+                            kotlinx.coroutines.delay(400)
+                            onStateChange(VoiceState.LISTENING)
+                        }
+                    }
+                } else {
+                    vm.tts.endStream()
+                    streamDone.await()
                     kotlinx.coroutines.delay(400)
                     onStateChange(VoiceState.LISTENING)
                 }
+            } else {
+                onStateChange(VoiceState.SPEAKING)
+                vm.tts.speakWithCallback(answer) {
+                    // Чекаємо 400мс, щоб динамік повністю замовк і мікрофон не зчитав відлуння
+                    kotlinx.coroutines.MainScope().launch {
+                        kotlinx.coroutines.delay(400)
+                        onStateChange(VoiceState.LISTENING)
+                    }
+                }
             }
-            onMessage(ChatMessage("assistant", answer))
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {

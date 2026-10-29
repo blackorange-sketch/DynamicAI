@@ -357,7 +357,7 @@ class ChatEngine(
     /** Проста команда телефону без LLM (null — це не проста команда). */
     suspend fun tryFastRoute(question: String): String? = fastRouter.tryHandle(question)
 
-    suspend fun simpleAnswer(question: String): String {
+    suspend fun simpleAnswer(question: String, onToken: ((String) -> Unit)? = null): String {
         if (!llm.isReady) return "LLM не активна"
         return try {
             val isMnn = llm.isMnn
@@ -390,7 +390,10 @@ class ChatEngine(
             Log.e("MNN_PROMPT", "Final prompt (${prompt.length} chars): ${prompt.replace("\n", "\\n")}")
             
             // LiteRT: стрім з ліміту довжини (зупиняє генерацію раніше); якщо порожньо — звичайний виклик
-            val response = if (!isMnn) {
+            val response = if (onToken != null) {
+                // Потокова генерація: токени одразу йдуть у озвучення
+                llm.streamComplete(prompt, onToken)?.takeIf { it.isNotBlank() } ?: llm.complete(prompt)
+            } else if (!isMnn) {
                 llm.streamComplete(prompt) { }?.takeIf { it.isNotBlank() } ?: llm.complete(prompt)
             } else llm.complete(prompt)
             Log.d(TAG, "simpleAnswer: prompt len=${prompt.length}, response=${response?.take(100)}")

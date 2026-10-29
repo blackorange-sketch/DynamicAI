@@ -62,7 +62,73 @@ class TtsManager(private val context: Context) {
         }
     }
 
+    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /** Налаштування «Озвучувати відповіді» — єдина точка перевірки для всіх викликів TTS. */
+    private fun enabled(): Boolean = try { settingsStorage.load().useTts } catch (_: Throwable) { true }
+
+    // ===== Потокове озвучення: речення ставляться в чергу по мірі генерації =====
+    private val streamLock = Any()
+    private var streamPending = 0
+    private var streamFinished = false
+    private var streamDone: (() -> Unit)? = null
+    private var streamCounter = 0
+
+    /** Починає потокове озвучення. onDone викличеться, коли озвучено все (або одразу, якщо озвучення вимкнено). */
+    fun beginStream(onDone: () -> Unit) {
+        synchronized(streamLock) {
+            streamPending = 0; streamFinished = false; streamDone = onDone; streamCounter = 0
+        }
+        try {
+            tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) {}
+                override fun onDone(utteranceId: String?) { streamUtteranceEnded() }
+                @Deprecated("Deprecated in Java")
+                override fun onError(utteranceId: String?) { streamUtteranceEnded() }
+            })
+        } catch (t: Throwable) { Log.e(TAG, "beginStream listener failed", t) }
+    }
+
+    private fun streamUtteranceEnded() {
+        synchronized(streamLock) { streamPending-- }
+        checkStreamDone()
+    }
+
+    private fun checkStreamDone() {
+        val cb: (() -> Unit)?
+        synchronized(streamLock) {
+            if (streamFinished && streamPending <= 0) { cb = streamDone; streamDone = null } else cb = null
+        }
+        if (cb != null) mainHandler.post { cb() }
+    }
+
+    /** Додає фрагмент (речення) в чергу озвучення. Повертає true, якщо щось реально поставлено. */
+    fun speakChunk(text: String): Boolean {
+        if (text.isBlank() || !ready || !enabled()) return false
+        val engine = tts ?: return false
+        synchronized(streamLock) { streamPending++ }
+        val id = synchronized(streamLock) { "stream_${streamCounter++}" }
+        val r = try { engine.speak(text, TextToSpeech.QUEUE_ADD, null, id) } catch (t: Throwable) { TextToSpeech.ERROR }
+        if (r == TextToSpeech.ERROR) {
+            synchronized(streamLock) { streamPending-- }
+            return false
+        }
+        return true
+    }
+
+    /** Генерація закінчилась: коли черга спорожніє — викликається onDone з beginStream. */
+    fun endStream() {
+        synchronized(streamLock) { streamFinished = true }
+        checkStreamDone()
+        // Запобіжник: якщо двигун не відповів, не блокуємо мікрофон назавжди
+        mainHandler.postDelayed({
+            synchronized(streamLock) { streamPending = 0 }
+            checkStreamDone()
+        }, 90_000L)
+    }
+
     fun speakWithCallback(text: String, onDone: () -> Unit) {
+        if (!enabled()) { mainHandler.post { onDone() }; return }
         try {
             val tts = this.tts
             if (tts == null || !ready) {
@@ -126,7 +192,7 @@ class TtsManager(private val context: Context) {
     }
 
     fun speak(text: String) {
-        if (text.isBlank()) return
+        if (text.isBlank() || !enabled()) return
         if (!ready) {
             pendingText = text
             return
@@ -141,6 +207,7 @@ class TtsManager(private val context: Context) {
     }
 
     fun stop() {
+        synchronized(streamLock) { streamDone = null; streamPending = 0; streamFinished = false }
         try { tts?.stop() } catch (_: Throwable) {}
     }
 

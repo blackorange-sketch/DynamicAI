@@ -172,8 +172,11 @@ object ModelRepository {
                 val hasLlm = File(dir, "llm.mnn").exists()
                 val hasWeight = File(dir, "llm.mnn.weight").exists()
                 val hasTokenizer = File(dir, "tokenizer.txt").exists() || File(dir, "tokenizer.mtok").exists()
-                android.util.Log.e("MNN_SCAN", "Model ${model.id} (${model.fileName}): dir=$hasDir, llm=$hasLlm, weight=$hasWeight, tok=$hasTokenizer")
-                hasDir && hasLlm && hasWeight && hasTokenizer
+                // Gemma 4 без цих файлів падає нативно — вважаємо її незавантаженою (UI запропонує докачати)
+                val gemmaComplete = !model.fileName.contains("gemma", ignoreCase = true) ||
+                    listOf("ple_embeddings_int4.bin", "audio.mnn.weight", "visual.mnn.weight").all { File(dir, it).exists() }
+                android.util.Log.d("MNN_SCAN", "Model ${model.id} (${model.fileName}): dir=$hasDir, llm=$hasLlm, weight=$hasWeight, tok=$hasTokenizer, complete=$gemmaComplete")
+                hasDir && hasLlm && hasWeight && hasTokenizer && gemmaComplete
             } else {
                 File(context.filesDir, model.fileName).exists()
             }

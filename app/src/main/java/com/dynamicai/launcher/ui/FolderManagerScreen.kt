@@ -49,7 +49,7 @@ fun FolderManagerScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.95f))
+            .background(com.dynamicai.launcher.ui.theme.AppTheme.colors.background.copy(alpha = 0.95f))
             .statusBarsPadding()
     ) {
         // Заголовок
@@ -120,7 +120,7 @@ fun FolderManagerScreen(
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     decorationBox = { inner ->
                         if (newFolderName.isEmpty()) {
-                            Text("Назва папки", color = Color.Gray, fontSize = 16.sp)
+                            Text("Назва папки", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 16.sp)
                         }
                         inner()
                     }
@@ -154,7 +154,7 @@ fun FolderManagerScreen(
             title = { Text("Додати до «${folder.name}»", color = AppTheme.colors.textPrimary) },
             text = {
                 if (availableApps.isEmpty()) {
-                    Text("Немає застосунків для додавання", color = Color.Gray, fontSize = 14.sp)
+                    Text("Немає застосунків для додавання", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 14.sp)
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)

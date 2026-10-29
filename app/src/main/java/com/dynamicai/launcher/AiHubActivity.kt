@@ -74,7 +74,9 @@ class AiHubActivity : ComponentActivity() {
         }
 
         setContent {
-            AiHubScreen(vm = vm, blurBgPath = intent.getStringExtra("blur_bg_path"), onClose = { finish() })
+            com.dynamicai.launcher.ui.theme.StoredAppTheme {
+                AiHubScreen(vm = vm, blurBgPath = intent.getStringExtra("blur_bg_path"), onClose = { finish() })
+            }
         }
     }
 }

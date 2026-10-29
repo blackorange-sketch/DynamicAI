@@ -57,7 +57,7 @@ fun DockEditorScreen(
         // Поле пошуку
         Text(
             "Обери застосунки для дока — вони з'являться і в лаунчері, і в плаваючому доку",
-            color = Color.Gray,
+            color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted,
             fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
         )
@@ -73,13 +73,13 @@ fun DockEditorScreen(
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             decorationBox = { inner ->
                 if (query.isEmpty()) {
-                    Text("Пошук застосунків…", color = Color.Gray, fontSize = 18.sp)
+                    Text("Пошук застосунків…", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 18.sp)
                 }
                 inner()
             }
         )
 
-        HorizontalDivider(color = Color.DarkGray)
+        HorizontalDivider(color = com.dynamicai.launcher.ui.theme.AppTheme.colors.glassBorder)
 
         // Список
         LazyColumn(
@@ -121,7 +121,7 @@ fun DockEditorScreen(
                         Icon(
                             Icons.Default.Add,
                             contentDescription = null,
-                            tint = Color.Gray,
+                            tint = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted,
                             modifier = Modifier.size(24.dp)
                         )
                     }

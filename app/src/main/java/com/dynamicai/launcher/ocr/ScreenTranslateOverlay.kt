@@ -57,7 +57,9 @@ object ScreenTranslateOverlay {
                 setViewTreeLifecycleOwner(owner)
                 setViewTreeSavedStateRegistryOwner(owner)
                 setContent {
-                    TranslateContent(blocks, targetLang, onCopy = onCopy, onClose = { hide() })
+                    com.dynamicai.launcher.ui.theme.StoredAppTheme {
+                        TranslateContent(blocks, targetLang, onCopy = onCopy, onClose = { hide() })
+                    }
                 }
             }
 

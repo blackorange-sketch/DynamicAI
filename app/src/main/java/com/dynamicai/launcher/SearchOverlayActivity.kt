@@ -67,7 +67,7 @@ class SearchOverlayActivity : ComponentActivity() {
         setTurnScreenOn(true)
 
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
+            com.dynamicai.launcher.ui.theme.StoredAppTheme {
                 OverlaySearchScreen(onClose = { finish() })
             }
         }

@@ -1,9 +1,24 @@
 package com.dynamicai.launcher.ui.theme
 
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import com.dynamicai.launcher.data.SettingsStorage
 
 // Структура нашої теми
 data class AppColors(
@@ -32,7 +47,9 @@ data class AppColors(
     val glassBackgroundAlt: Color,
     // Фон меню категорій
     val backdropStart: Color,
-    val backdropEnd: Color
+    val backdropEnd: Color,
+    // Світла тема? (для системних елементів Material)
+    val isDark: Boolean = true
 )
 
 // 1. Темна (базова, як зараз)
@@ -78,7 +95,8 @@ val GlassLightTheme = AppColors(
     glassBackground = Color(0xCCFFFFFF),
     glassBackgroundAlt = Color(0xE6F0F0F0),
     backdropStart = Color(0xFFE8E8EC),
-    backdropEnd = Color(0xFFF5F5F7)
+    backdropEnd = Color(0xFFF5F5F7),
+    isDark = false
 )
 
 // 3. AMOLED (чистий чорний)
@@ -129,21 +147,88 @@ val GlassOceanTheme = AppColors(
 
 val LocalAppColors = staticCompositionLocalOf { GlassDarkTheme }
 
+/** Material-схема, побудована з наших кольорів: діалоги, перемикачі, кнопки та слайдери автоматично слідують темі. */
+private fun AppColors.toMaterialScheme(backgroundOverride: Color?): ColorScheme {
+    val bg = backgroundOverride ?: background
+    val onAccent = if (isDark) Color.Black else Color.White
+    val base = if (isDark) darkColorScheme() else lightColorScheme()
+    return base.copy(
+        primary = accent,
+        onPrimary = onAccent,
+        primaryContainer = accentDark,
+        onPrimaryContainer = Color.White,
+        secondary = accentLight,
+        onSecondary = onAccent,
+        tertiary = purple,
+        background = bg,
+        onBackground = textPrimary,
+        surface = backgroundOverride ?: surface,
+        onSurface = textPrimary,
+        surfaceVariant = surface,
+        onSurfaceVariant = textMuted,
+        surfaceContainerLowest = background,
+        surfaceContainerLow = surface,
+        surfaceContainer = surface,
+        surfaceContainerHigh = surface,
+        surfaceContainerHighest = surface,
+        outline = glassBorder,
+        outlineVariant = glassBorder,
+        error = danger
+    )
+}
+
+fun appColorsFor(themeId: String): AppColors = when (themeId) {
+    "glass_light" -> GlassLightTheme
+    "glass_amoled" -> GlassAmoledTheme
+    "glass_ocean" -> GlassOceanTheme
+    else -> GlassDarkTheme
+}
+
+/**
+ * Єдина точка входу теми. Обгортає і наші кольори (AppTheme.colors), і MaterialTheme,
+ * тож усі екрани, діалоги та оверлеї виглядають однаково.
+ * @param backgroundOverride якщо задано — фон/поверхня Material (напр. прозорий, щоб було видно шпалери)
+ */
 @Composable
 fun DynamicAITheme(
     themeId: String = "glass_dark",
+    backgroundOverride: Color? = null,
     content: @Composable () -> Unit
 ) {
-    val colors = when (themeId) {
-        "glass_light" -> GlassLightTheme
-        "glass_amoled" -> GlassAmoledTheme
-        "glass_ocean" -> GlassOceanTheme
-        else -> GlassDarkTheme
+    val colors = appColorsFor(themeId)
+    val scheme = remember(themeId, backgroundOverride) { colors.toMaterialScheme(backgroundOverride) }
+    CompositionLocalProvider(
+        LocalAppColors provides colors,
+        LocalContentColor provides colors.textPrimary
+    ) {
+        MaterialTheme(colorScheme = scheme) {
+            // MaterialTheme не змінює LocalContentColor — задаємо ще раз усередині
+            CompositionLocalProvider(LocalContentColor provides colors.textPrimary) {
+                content()
+            }
+        }
     }
+}
 
-    CompositionLocalProvider(LocalAppColors provides colors) {
-        content()
+/**
+ * Для Activity та оверлеїв, які не мають доступу до ViewModel: читає тему з налаштувань
+ * і перечитує її щоразу, коли екран повертається на передній план (ON_RESUME).
+ */
+@Composable
+fun StoredAppTheme(content: @Composable () -> Unit) {
+    val ctx = LocalContext.current
+    var themeId by remember { mutableStateOf(runCatching { SettingsStorage(ctx).load().appTheme }.getOrDefault("glass_dark")) }
+    val owner = LocalLifecycleOwner.current
+    DisposableEffect(owner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                themeId = runCatching { SettingsStorage(ctx).load().appTheme }.getOrDefault(themeId)
+            }
+        }
+        owner.lifecycle.addObserver(observer)
+        onDispose { owner.lifecycle.removeObserver(observer) }
     }
+    DynamicAITheme(themeId = themeId, content = content)
 }
 
 object AppTheme {

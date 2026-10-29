@@ -67,7 +67,9 @@ class VoiceChatActivity : ComponentActivity() {
 
         setContent {
             val vm: AppListViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-            VoiceChatScreen(vm = vm, onClose = { finish() })
+            com.dynamicai.launcher.ui.theme.StoredAppTheme {
+                VoiceChatScreen(vm = vm, onClose = { finish() })
+            }
         }
     }
 }

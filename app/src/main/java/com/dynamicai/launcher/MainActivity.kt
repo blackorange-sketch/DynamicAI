@@ -137,30 +137,19 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            val ctx = LocalContext.current
-            val baseScheme = if (android.os.Build.VERSION.SDK_INT >= 31) {
-                dynamicDarkColorScheme(ctx)
-            } else {
-                darkColorScheme()
-            }
             val settings by vm.settings.collectAsStateWithLifecycle()
             // Динамічна прозорість: якщо є кастомне фото — непрозорий фон (щоб системні шпалери не просвічували),
             // якщо немає — прозорий (системні шпалери видно, як раніше)
             val hasCustomBg = settings.backgroundImageUri.isNotBlank()
             val dynamicBg = if (hasCustomBg) androidx.compose.ui.graphics.Color(0xFF000000) else androidx.compose.ui.graphics.Color.Transparent
-            val colorScheme = baseScheme.copy(
-                background = dynamicBg,
-                surface = dynamicBg
-            )
-            MaterialTheme(colorScheme = colorScheme) {
+            // Єдина тема: наші кольори + Material-схема, побудована з них
+            DynamicAITheme(themeId = settings.appTheme, backgroundOverride = dynamicBg) {
                 androidx.compose.material3.Surface(color = dynamicBg, modifier = Modifier.fillMaxSize()) {
-                DynamicAITheme(themeId = settings.appTheme) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         MainBackground(settings)
                         HomeScreen(vm = vm, hubEvent = hubEvent.value)
                     }
                 }
-                }  // Surface
             }
         }
     }

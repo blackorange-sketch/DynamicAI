@@ -55,7 +55,9 @@ class WildRiftAdvisorActivity : ComponentActivity() {
         }
         enableEdgeToEdge()
         setContent {
-            WildRiftAdvisorScreen(vm, onClose = { finish() })
+            com.dynamicai.launcher.ui.theme.StoredAppTheme {
+                WildRiftAdvisorScreen(vm, onClose = { finish() })
+            }
         }
     }
 }

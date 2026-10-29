@@ -238,6 +238,17 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val _downloadTrigger = MutableStateFlow(0)
     val downloadTrigger: StateFlow<Int> = _downloadTrigger.asStateFlow()
 
+    /** ID моделей, які реально є на диску (повністю). Оновлюється при кожному `_downloadTrigger`. */
+    private val _downloadedModelIds = MutableStateFlow<Set<String>>(emptySet())
+    val downloadedModelIds: StateFlow<Set<String>> = _downloadedModelIds.asStateFlow()
+
+    fun refreshDownloadedModels() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _downloadedModelIds.value = com.dynamicai.launcher.llm.ModelRepository
+                .getDownloadedModels(getApplication()).map { it.id }.toSet()
+        }
+    }
+
     private val downloadReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
             val action = intent?.action ?: return
@@ -271,6 +282,8 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     init {
+        // Список завантажених моделей оновлюється автоматично після будь-якої зміни (завантаження, видалення, очищення)
+        viewModelScope.launch { downloadTrigger.collect { refreshDownloadedModels() } }
         try {
             val filter = android.content.IntentFilter().apply {
                 addAction(ModelDownloadService.BROADCAST_COMPLETE)
@@ -865,6 +878,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 if (progress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Complete) {
                     _downloadProgress.value = null
                     downloadingModelId = null
+                    _downloadTrigger.value++
                     setCurrentModel(model.id)
                 }
             }
@@ -877,12 +891,22 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deleteModel(model: com.dynamicai.launcher.llm.LlmModel) {
+        // Не видаляємо модель, яка зараз завантажується
+        if (downloadingModelId == model.id) return
         viewModelScope.launch {
-            com.dynamicai.launcher.llm.ModelRepository.deleteModel(getApplication(), model)
-            if (currentModelId == model.id) {
-                currentModelId = "gemma-4-E2B-cpu" // Фолбек
-                prefs.edit().putString("current_model_id", "gemma-4-E2B").apply()
+            val wasCurrent = currentModelId == model.id
+            if (wasCurrent) {
+                // Звільняємо файли моделі перед видаленням
+                _llmReady.value = false
+                try { llm.close() } catch (_: Throwable) {}
             }
+            com.dynamicai.launcher.llm.ModelRepository.deleteModel(getApplication(), model)
+            if (wasCurrent) {
+                currentModelId = "gemma-4-E2B-cpu" // Фолбек
+                prefs.edit().putString("current_model_id", "gemma-4-E2B-cpu").apply()
+            }
+            // Одразу оновлюємо UI налаштувань
+            _downloadTrigger.value++
         }
     }
 

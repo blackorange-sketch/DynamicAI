@@ -61,16 +61,18 @@ object RegionSelectorOverlay {
                 setViewTreeLifecycleOwner(lcOwner)
                 setViewTreeSavedStateRegistryOwner(lcOwner)
                 setContent {
-                    RegionSelectorContent(
-                        onSelected = { rect ->
-                            hide()
-                            onSelected(rect)
-                        },
-                        onCancel = {
-                            hide()
-                            onCancel()
-                        }
-                    )
+                    com.dynamicai.launcher.ui.theme.StoredAppTheme {
+                        RegionSelectorContent(
+                            onSelected = { rect ->
+                                hide()
+                                onSelected(rect)
+                            },
+                            onCancel = {
+                                hide()
+                                onCancel()
+                            }
+                        )
+                    }
                 }
             }
 

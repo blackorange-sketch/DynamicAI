@@ -92,7 +92,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     val history by vm.history.collectAsStateWithLifecycle()
     val suggestions by vm.suggestions.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
-    DynamicAITheme(themeId = settings.appTheme) {
+    // background береться з зовнішньої теми (MainActivity): прозорий або чорний залежно від кастомного фону
+    DynamicAITheme(themeId = settings.appTheme, backgroundOverride = androidx.compose.material3.MaterialTheme.colorScheme.background) {
     val hidden by vm.hidden.collectAsStateWithLifecycle()
     val folders by vm.folders.collectAsStateWithLifecycle()
     val weather by vm.weather.collectAsStateWithLifecycle()
@@ -632,7 +633,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.85f))
+                    .background(com.dynamicai.launcher.ui.theme.AppTheme.colors.background.copy(alpha = 0.85f))
             )
         }
 
@@ -816,11 +817,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("Нічого не знайдено за \"$query\"", color = Color.Gray, fontSize = 16.sp)
+                            Text("Нічого не знайдено за \"$query\"", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 16.sp)
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 "Спробуй: ліхтарик · wifi · Аня",
-                                color = Color.DarkGray, fontSize = 13.sp
+                                color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted.copy(alpha = 0.7f), fontSize = 13.sp
                             )
                         }
                     }
@@ -1076,7 +1077,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 title = { Text("Нова папка", color = AppTheme.colors.textPrimary) },
                 text = {
                     Column {
-                        Text("Застосунок: ${app.label}", color = Color.Gray, fontSize = 13.sp)
+                        Text("Застосунок: ${app.label}", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 13.sp)
                         Spacer(Modifier.height(12.dp))
                         androidx.compose.foundation.text.BasicTextField(
                             value = createFolderName,
@@ -1087,7 +1088,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             decorationBox = { inner ->
                                 if (createFolderName.isEmpty()) {
-                                    Text("Назва папки", color = Color.Gray, fontSize = 16.sp)
+                                    Text("Назва папки", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 16.sp)
                                 }
                                 inner()
                             }
@@ -1120,7 +1121,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 text = {
                     Column {
                         if (folders.isEmpty()) {
-                            Text("Немає папок", color = Color.Gray, fontSize = 14.sp)
+                            Text("Немає папок", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 14.sp)
                         } else {
                             folders.forEach { f ->
                                 Text(
@@ -1296,13 +1297,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             decorationBox = { inner ->
                                 if (newFolderName.isEmpty()) {
-                                    Text("Назва папки", color = Color.Gray, fontSize = 16.sp)
+                                    Text("Назва папки", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 16.sp)
                                 }
                                 inner()
                             }
                         )
                         Spacer(Modifier.height(12.dp))
-                        Text("Обери застосунки:", color = Color.Gray, fontSize = 13.sp)
+                        Text("Обери застосунки:", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 13.sp)
                         Spacer(Modifier.height(6.dp))
                         androidx.compose.foundation.lazy.LazyColumn(
                             modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)
@@ -1604,7 +1605,7 @@ fun SuggestionActionRow(s: Suggestion.Action, onClick: () -> Unit) {
         Spacer(Modifier.width(14.dp))
         Column {
             Text(s.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
-            s.subtitle?.let { Text(it, color = Color.Gray, fontSize = 12.sp) }
+            s.subtitle?.let { Text(it, color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 12.sp) }
         }
     }
 }
@@ -1657,7 +1658,7 @@ fun SuggestionContactRow(s: Suggestion.Contact, onClick: () -> Unit) {
         Spacer(Modifier.width(14.dp))
         Column {
             Text(s.name, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
-            Text(s.subtitle, color = Color.Gray, fontSize = 12.sp)
+            Text(s.subtitle, color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 12.sp)
         }
     }
 }

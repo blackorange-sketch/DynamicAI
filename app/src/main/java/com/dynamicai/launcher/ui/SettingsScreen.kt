@@ -664,6 +664,34 @@ fun SettingsScreen(
 
         GlassSectionHeader("Локальна LLM")
 
+        // Реактивний стан: оновлюється автоматично після завантаження / видалення
+        val downloadedIds by vm.downloadedModelIds.collectAsStateWithLifecycle()
+        var modelToDelete by remember { mutableStateOf<com.dynamicai.launcher.llm.LlmModel?>(null) }
+        modelToDelete?.let { m ->
+            AlertDialog(
+                onDismissRequest = { modelToDelete = null },
+                containerColor = AppTheme.colors.surface,
+                title = { Text("Видалити модель?", color = AppTheme.colors.textPrimary) },
+                text = {
+                    Text(
+                        "${m.name} (${formatModelSize(m.sizeBytes)}) буде видалено з пристрою." +
+                            if (vm.currentModelId == m.id) " Це активна модель — буде обрано модель за замовчуванням." else "",
+                        color = AppTheme.colors.textSecondary
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { vm.deleteModel(m); modelToDelete = null }) {
+                        Text("Видалити", color = AppTheme.colors.danger)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { modelToDelete = null }) {
+                        Text("Скасувати", color = AppTheme.colors.textSecondary)
+                    }
+                }
+            )
+        }
+
         // === Backend + Temperature selector ===
         GlassCard {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -690,20 +718,13 @@ fun SettingsScreen(
 
         // === MNN Models ===
         if (modelFilter == "all" || modelFilter == "mnn") {
-            val mnnModels = listOf(
-                Triple("mnn-qwen3.5-0.8b", "Qwen3.5 0.8B", "800 MB"),
-                Triple("mnn-qwen3.5-2b", "Qwen3.5 2B", "2.0 GB"),
-                Triple("mnn-qwen3.5-4b", "Qwen3.5 4B", "4.0 GB"),
-                Triple("mnn-gemma-4-e2b", "Gemma 4 E2B", "2.0 GB"),
-                Triple("mnn-gemma-4-e4b", "Gemma 4 E4B", "4.0 GB"),
-                Triple("mnn-lfm2.5-1.2b", "LFM2.5 1.2B", "1.2 GB"),
-                Triple("mnn-qwen3-0.6b", "Qwen3 0.6B", "400 MB"),
-                Triple("mnn-qwen3-1.7b", "Qwen3 1.7B", "1.7 GB"),
-                Triple("mnn-qwen2.5-1.5b", "Qwen2.5 1.5B", "1.5 GB")
-            )
+            // Список і розміри беремо з ModelRepository (єдине джерело правди)
+            val mnnModels = remember {
+                com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS
+                    .filter { it.id.startsWith("mnn-") }
+                    .map { Triple(it.id, it.name.removePrefix("MNN ").substringBefore(" ("), formatModelSize(it.sizeBytes)) }
+            }
             val mnnProgress = vm.downloadProgress.collectAsStateWithLifecycle().value
-            val downloadTrigger by vm.downloadTrigger.collectAsStateWithLifecycle()
-            val downloadedMnn = remember(downloadTrigger) { com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx) }
 
             GlassCard {
                 Column(modifier = Modifier.padding(16.dp)) {
@@ -721,7 +742,7 @@ fun SettingsScreen(
 
                     mnnModels.forEach { (id, name, size) ->
                         val isCurrent = vm.currentModelId == id
-                        val isDownloaded = downloadedMnn.any { it.id == id }
+                        val isDownloaded = id in downloadedIds
                         val isDownloading = vm.downloadingModelId == id && mnnProgress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading
 
                         Row(
@@ -750,9 +771,8 @@ fun SettingsScreen(
                                 }
                             }
                             if (isDownloaded) {
-                                IconButton(onClick = {
-                                    val model = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.find { it.id == id }
-                                    if (model != null) vm.deleteModel(model)
+                                IconButton(enabled = !isDownloading, onClick = {
+                                    modelToDelete = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.find { it.id == id }
                                 }) {
                                     Icon(
                                         androidx.compose.material.icons.Icons.Default.Delete,
@@ -767,7 +787,6 @@ fun SettingsScreen(
             }
         }
         GlassCard {
-            val downloadedModels = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(ctx)
             val progressState = vm.downloadProgress.collectAsStateWithLifecycle().value
 
             val filteredModels = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.filter { m ->
@@ -778,7 +797,7 @@ fun SettingsScreen(
             }
         }
         filteredModels.filterNot { it.id.startsWith("mnn-") }.forEach { model ->
-                val isDownloaded = downloadedModels.any { it.id == model.id }
+                val isDownloaded = model.id in downloadedIds
                 val isSelected = model.id == vm.currentModelId
                 
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -807,7 +826,7 @@ fun SettingsScreen(
                                     Text("Обрати", color = AppTheme.colors.accent, fontSize = 12.sp)
                                 }
                             }
-                            IconButton(onClick = { vm.deleteModel(model) }) {
+                            IconButton(onClick = { modelToDelete = model }) {
                                 Icon(androidx.compose.material.icons.Icons.Default.Delete, contentDescription = "Видалити", tint = AppTheme.colors.danger)
                             }
                         } else {
@@ -838,11 +857,11 @@ fun SettingsScreen(
                                 "${prog.percent}% (${prog.downloadedMb} / ${prog.totalMb} МБ)" 
                             else 
                                 "${prog.downloadedMb} МБ завантажено..."
-                            Text(progressText, color = Color.Gray, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                            Text(progressText, color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
                         } else if (prog is com.dynamicai.launcher.llm.ModelDownloader.Progress.Error) {
                             Text("Помилка: ${prog.message}", color = AppTheme.colors.danger, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                             TextButton(onClick = { vm.clearDownloadError() }) {
-                                Text("Сховати", color = Color.Gray, fontSize = 11.sp)
+                                Text("Сховати", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 11.sp)
                             }
                         }
                     }
@@ -1038,3 +1057,7 @@ private fun RowScope.LlmBackendChip(label: String, backendId: String, current: S
         Text(label, color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
     }
 }
+
+/** 1_436_000_000 -> "1.4 ГБ", 614_000_000 -> "614 МБ" */
+private fun formatModelSize(bytes: Long): String =
+    if (bytes >= 1_000_000_000L) "%.1f ГБ".format(bytes / 1_000_000_000.0) else "${bytes / 1_000_000} МБ"

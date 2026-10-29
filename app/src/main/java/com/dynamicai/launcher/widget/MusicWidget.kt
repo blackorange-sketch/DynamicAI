@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -49,14 +50,14 @@ fun MusicWidget(size: String, modifier: Modifier = Modifier) {
 
     // Стиль як у інших віджетів (Liquid Glass dark)
     val glassBrush = Brush.verticalGradient(
-        colors = listOf(Color(0xF01F1F1F), Color(0xE00D0D0D))
+        colors = listOf(AppTheme.colors.glassBackground, AppTheme.colors.glassBackgroundAlt)
     )
 
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(24.dp))
             .background(glassBrush)
-            .border(0.5.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
+            .border(0.5.dp, AppTheme.colors.glassBorder, RoundedCornerShape(24.dp))
     ) {
         when (size) {
             "small" -> SmallContent(audioManager, isPlaying, context, scope) { isPlaying = it }
@@ -95,14 +96,14 @@ fun MediumContent(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            modifier = Modifier.size(44.dp).clip(CircleShape).background(Color(0x33E91E63)),
+            modifier = Modifier.size(44.dp).clip(CircleShape).background(AppTheme.colors.pink.copy(alpha = 0.2f)),
             contentAlignment = Alignment.Center
         ) { Text("🎵", fontSize = 22.sp) }
 
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(artist, color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, color = AppTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(artist, color = AppTheme.colors.textPrimary.copy(alpha = 0.5f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -127,19 +128,19 @@ fun LargeContent(
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)).background(Color(0x33E91E63)),
+                modifier = Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)).background(AppTheme.colors.pink.copy(alpha = 0.2f)),
                 contentAlignment = Alignment.Center
             ) { Text("🎵", fontSize = 28.sp) }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(artist, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(title, color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(artist, color = AppTheme.colors.textPrimary.copy(alpha = 0.5f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
 
         Spacer(Modifier.height(12.dp))
 
-        Text("Гучність", color = Color.White.copy(alpha = 0.4f), fontSize = 10.sp)
+        Text("Гучність", color = AppTheme.colors.textPrimary.copy(alpha = 0.4f), fontSize = 10.sp)
         Slider(
             value = volume,
             onValueChange = {
@@ -148,9 +149,9 @@ fun LargeContent(
             },
             valueRange = 0f..maxVol.toFloat(),
             colors = SliderDefaults.colors(
-                thumbColor = Color.White,
-                activeTrackColor = Color(0xFF64B5F6),
-                inactiveTrackColor = Color.White.copy(alpha = 0.15f)
+                thumbColor = AppTheme.colors.textPrimary,
+                activeTrackColor = AppTheme.colors.accent,
+                inactiveTrackColor = AppTheme.colors.textPrimary.copy(alpha = 0.15f)
             )
         )
 
@@ -175,12 +176,12 @@ fun LargeContent(
 @Composable
 fun CtrlBtn(icon: String, main: Boolean = false, onClick: () -> Unit) {
     val sz = if (main) 46.dp else 34.dp
-    val bg = if (main) Color.White.copy(alpha = 0.12f) else Color.Transparent
+    val bg = if (main) AppTheme.colors.textPrimary.copy(alpha = 0.12f) else Color.Transparent
     Box(
         modifier = Modifier.size(sz).clip(CircleShape).background(bg).clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(icon, color = Color.White, fontSize = if (main) 22.sp else 17.sp)
+        Text(icon, color = AppTheme.colors.textPrimary, fontSize = if (main) 22.sp else 17.sp)
     }
 }
 

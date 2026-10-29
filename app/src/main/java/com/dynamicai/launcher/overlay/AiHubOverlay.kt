@@ -72,11 +72,13 @@ object AiHubOverlay {
                 setViewTreeLifecycleOwner(lcOwner)
                 setViewTreeSavedStateRegistryOwner(lcOwner)
                 setContent {
-                    AiHubContent(
-                        ctx = context,
-                        vm = vm,
-                        onClose = { hide() }
-                    )
+                    com.dynamicai.launcher.ui.theme.StoredAppTheme {
+                        AiHubContent(
+                            ctx = context,
+                            vm = vm,
+                            onClose = { hide() }
+                        )
+                    }
                 }
             }
 

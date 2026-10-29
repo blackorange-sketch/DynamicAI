@@ -99,34 +99,36 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             setViewTreeViewModelStoreOwner(this@FloatingOrbService)
             setViewTreeSavedStateRegistryOwner(this@FloatingOrbService)
             setContent {
-                var isExpanded by remember { mutableStateOf(false) }
-                FloatingOrb(
-                    isExpanded = isExpanded,
-                    messages = ChatHistoryManager.history.map { it.role to it.content },
-                    isThinking = isThinking,
-                    onExpandChange = {
-                        isExpanded = it
-                        updateWindowSize(it)
-                    },
-                    onDrag = { dx, dy ->
-                        val displayMetrics = resources.displayMetrics
-                        val screenWidth = displayMetrics.widthPixels
-                        val screenHeight = displayMetrics.heightPixels
+                com.dynamicai.launcher.ui.theme.StoredAppTheme {
+                    var isExpanded by remember { mutableStateOf(false) }
+                    FloatingOrb(
+                        isExpanded = isExpanded,
+                        messages = ChatHistoryManager.history.map { it.role to it.content },
+                        isThinking = isThinking,
+                        onExpandChange = {
+                            isExpanded = it
+                            updateWindowSize(it)
+                        },
+                        onDrag = { dx, dy ->
+                            val displayMetrics = resources.displayMetrics
+                            val screenWidth = displayMetrics.widthPixels
+                            val screenHeight = displayMetrics.heightPixels
                         
-                        currentX += dx
-                        currentY += dy
+                            currentX += dx
+                            currentY += dy
                         
-                        // Обмеження, щоб не вилітало за екран
-                        currentX = currentX.coerceIn(0f, screenWidth - 150f)
-                        currentY = currentY.coerceIn(0f, screenHeight - 150f)
+                            // Обмеження, щоб не вилітало за екран
+                            currentX = currentX.coerceIn(0f, screenWidth - 150f)
+                            currentY = currentY.coerceIn(0f, screenHeight - 150f)
                         
-                        params.x = currentX.roundToInt()
-                        params.y = currentY.roundToInt()
-                        windowManager.updateViewLayout(composeView, params)
-                    },
-                    onSendMessage = { text -> processQuery(text) },
-                    onMicClick = { startListening() }
-                )
+                            params.x = currentX.roundToInt()
+                            params.y = currentY.roundToInt()
+                            windowManager.updateViewLayout(composeView, params)
+                        },
+                        onSendMessage = { text -> processQuery(text) },
+                        onMicClick = { startListening() }
+                    )
+                }
             }
         }
 

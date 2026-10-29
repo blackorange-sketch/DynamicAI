@@ -362,7 +362,7 @@ internal fun LlmTestRow(onTest: suspend (String) -> String?) {
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             decorationBox = { inner ->
                 if (query.isEmpty()) {
-                    Text("Prompt", color = Color.Gray, fontSize = 14.sp)
+                    Text("Prompt", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 14.sp)
                 }
                 inner()
             }
@@ -469,7 +469,7 @@ internal fun BluetoothTestRow() {
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 decorationBox = { inner ->
                     if (nameInput.isEmpty()) {
-                        Text("Назва пристрою (напр. Toyota)", color = Color.Gray, fontSize = 14.sp)
+                        Text("Назва пристрою (напр. Toyota)", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 14.sp)
                     }
                     inner()
                 }

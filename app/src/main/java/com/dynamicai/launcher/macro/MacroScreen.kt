@@ -210,7 +210,7 @@ fun MacroEditorDialog(
                         Text("${i + 1}.", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                         Spacer(Modifier.width(8.dp))
                         Text(s, color = AppTheme.colors.textPrimary, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                        Text("✕", color = Color(0xFFFF5252), fontSize = 14.sp,
+                        Text("✕", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.danger, fontSize = 14.sp,
                             modifier = Modifier.clickable { steps.removeAt(i) })
                     }
                 }

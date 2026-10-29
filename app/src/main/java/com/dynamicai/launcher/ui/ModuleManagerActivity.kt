@@ -35,7 +35,9 @@ class ModuleManagerActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            ModuleManagerScreen(onClose = { finish() })
+            com.dynamicai.launcher.ui.theme.StoredAppTheme {
+                ModuleManagerScreen(onClose = { finish() })
+            }
         }
     }
 }

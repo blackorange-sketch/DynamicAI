@@ -86,7 +86,9 @@ class LlmSession(
                 .put("keep_history", false)
                 .put("use_mmap", useMmap)
                 .put("is_visual", false)
-            if (useMmap) configJsonObj.put("mmap_dir", configDir.absolutePath)
+            // mmap_dir нативний код читає як рядок БЕЗУМОВНО: без цього ключа nlohmann кидає type_error → SIGABRT.
+            // (Раніше ключ додавався лише при use_mmap=true — через це падало завантаження будь-якої MNN-моделі.)
+            configJsonObj.put("mmap_dir", configDir.absolutePath)
             val configJson = configJsonObj.toString()
             Log.e(TAG, "initNative: configPath=${configDir.absolutePath}")
             Log.e(TAG, "mergedConfig=$mergedConfig")

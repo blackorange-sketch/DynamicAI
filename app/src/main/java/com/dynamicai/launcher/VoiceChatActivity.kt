@@ -23,7 +23,26 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.dynamicai.launcher.ui.GlassCloseButton
+import com.dynamicai.launcher.ui.theme.AppDims
 import androidx.compose.runtime.*
 import com.dynamicai.launcher.overlay.ChatMessage
 import com.dynamicai.launcher.overlay.ChatHistoryManager
@@ -92,6 +111,30 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
         } catch (_: Exception) {}
     }
 
+    var activeJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var showClearDialog by remember { mutableStateOf(false) }
+
+    /** Відправляє запит моделі. addUserMessage=false — для повтору останнього запиту. */
+    fun sendQuery(text: String, addUserMessage: Boolean = true) {
+        if (text.isBlank()) return
+        if (addUserMessage) ChatHistoryManager.addMessage("user", text)
+        val historyStr = messages
+            .filter { it.role == "user" || it.role == "assistant" }
+            .dropLast(1).takeLast(10)
+            .joinToString("\n") { msg ->
+                if (msg.role == "user") "Користувач: ${msg.content}" else "Асистент: ${msg.content}"
+            }
+        activeJob = processQuery(
+            text, historyStr, vm, scope,
+            { voiceState = it },
+            { m ->
+                if (m.role != "status") ChatHistoryManager.removeStatus()
+                ChatHistoryManager.addMessage(m.role, m.content, m.action)
+            },
+            { stopListening() }
+        )
+    }
+
     fun startListening() {
         if (!shouldListen.value) return
         if (!SpeechRecognizer.isRecognitionAvailable(ctx)) return
@@ -122,16 +165,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 override fun onResults(results: Bundle?) {
                     val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
                     if (text.isNotBlank()) {
-                        ChatHistoryManager.addMessage("user", text)
-                        val historyStr = messages.dropLast(1).takeLast(10).joinToString("\n") { msg ->
-                            if (msg.role == "user") "Користувач: ${msg.content}" else "Асистент: ${msg.content}"
-                        }
-                        processQuery(
-                            text, historyStr, vm, scope,
-                            { voiceState = it },
-                            { ChatHistoryManager.addMessage(it.role, it.content) },
-                            { stopListening() }
-                        )
+                        sendQuery(text)
                     } else {
                         voiceState = VoiceState.IDLE
                     }
@@ -147,6 +181,16 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
         }
         recognizer?.startListening(intent)
+    }
+
+    /** Зупиняє очікування відповіді та озвучення. Нативна генерація дописується у фоні, але результат відкидається. */
+    fun stopGeneration() {
+        activeJob?.cancel()
+        activeJob = null
+        vm.tts.stop()
+        ChatHistoryManager.removeStatus()
+        voiceState = VoiceState.LISTENING
+        startListening()
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -182,6 +226,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     }
 
     LaunchedEffect(Unit) { 
+        ChatHistoryManager.init(ctx)  // історія переживає закриття екрана
         vm.tts // прогрів
         if (messages.isEmpty()) {
             val greeting = when ((0..2).random()) {
@@ -232,121 +277,287 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
         )
 
         Column(
-            modifier = Modifier.fillMaxSize().statusBarsPadding().padding(16.dp)
+            modifier = Modifier.fillMaxSize().statusBarsPadding().padding(AppDims.spaceL)
         ) {
+            val visible = messages.filter { it.role != "status" }
+            val busy = voiceState == VoiceState.THINKING || voiceState == VoiceState.SPEAKING
+            val maxBubble = (LocalConfiguration.current.screenWidthDp * 0.82f).dp
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Голосовий асистент", color = AppTheme.colors.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Text("✕", color = AppTheme.colors.textSecondary, fontSize = 22.sp, modifier = Modifier.padding(8.dp).clickable(onClick = onClose))
+                Text("Голосовий асистент", color = AppTheme.colors.textPrimary, fontSize = AppDims.textTitle, fontWeight = FontWeight.SemiBold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (visible.isNotEmpty()) {
+                        IconButton(onClick = { showClearDialog = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Очистити розмову", tint = AppTheme.colors.textSecondary)
+                        }
+                    }
+                    GlassCloseButton(onClick = onClose)
+                }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Швидкий вибір моделі + статус рушія
+            ModelChip(vm)
+            Spacer(modifier = Modifier.height(AppDims.spaceM))
 
-            // Статус "Думаю..."
+            if (showClearDialog) {
+                AlertDialog(
+                    onDismissRequest = { showClearDialog = false },
+                    containerColor = AppTheme.colors.surface,
+                    title = { Text("Очистити розмову?", color = AppTheme.colors.textPrimary) },
+                    text = { Text("Усі повідомлення буде видалено.", color = AppTheme.colors.textSecondary) },
+                    confirmButton = {
+                        TextButton(onClick = { ChatHistoryManager.clear(); showClearDialog = false }) {
+                            Text("Очистити", color = AppTheme.colors.danger)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showClearDialog = false }) {
+                            Text("Скасувати", color = AppTheme.colors.textSecondary)
+                        }
+                    }
+                )
+            }
+
+            // Статус "Думаю…"
             val currentStatus = messages.lastOrNull { it.role == "status" }
             if (currentStatus != null) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = AppDims.spaceXS),
                     horizontalArrangement = Arrangement.Start
                 ) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(AppDims.radiusS))
                             .background(AppTheme.colors.accentDark.copy(alpha = 0.15f))
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .padding(horizontal = AppDims.spaceM, vertical = 6.dp)
                     ) {
                         Text(currentStatus.content, color = AppTheme.colors.accent, fontSize = 13.sp)
                     }
                 }
             }
 
+            // Автопрокрутка до нового повідомлення
+            LaunchedEffect(visible.size, currentStatus != null) {
+                if (visible.isNotEmpty()) listState.animateScrollToItem(visible.lastIndex)
+            }
+
             LazyColumn(
                 state = listState,
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(AppDims.spaceS)
             ) {
-                items(messages.filter { it.role != "status" }) { msg ->
-                    val isUser = msg.role == "user"
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .widthIn(max = 280.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(AppTheme.colors.textPrimary.copy(alpha = if (isUser) 0.15f else 0.08f))
-                                .border(0.5.dp, AppTheme.colors.glassBorder.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
-                                .padding(14.dp)
-                        ) {
-                            Text(msg.content, color = AppTheme.colors.textPrimary, fontSize = 15.sp)
+                items(visible) { msg ->
+                    MessageBubble(msg, maxBubble) { action ->
+                        when (action) {
+                            "restart" -> vm.restartLlmEngine()
+                            "retry" -> messages.lastOrNull { it.role == "user" }?.let { last ->
+                                ChatHistoryManager.history.removeAll { it.role == "error" }
+                                sendQuery(last.content, addUserMessage = false)
+                            }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(AppDims.spaceL))
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(24.dp))
-                    .background(AppTheme.colors.textPrimary.copy(alpha = 0.08f))
-                    .border(0.5.dp, AppTheme.colors.glassBorder, RoundedCornerShape(24.dp))
-                    .padding(8.dp),
+                    .background(AppTheme.colors.glassBackground)
+                    .border(1.dp, AppTheme.colors.glassBorder, RoundedCornerShape(24.dp))
+                    .padding(AppDims.spaceS),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 BasicTextField(
                     value = query,
                     onValueChange = { query = it },
-                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
-                    cursorBrush = SolidColor(AppTheme.colors.textPrimary),
+                    modifier = Modifier.weight(1f).padding(horizontal = AppDims.spaceM),
+                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = AppDims.textBodyLarge),
+                    cursorBrush = SolidColor(AppTheme.colors.accent),
                     decorationBox = { inner ->
-                        if (query.isEmpty()) Text("Запитай або скажи...", color = AppTheme.colors.textSecondary, fontSize = 16.sp)
+                        if (query.isEmpty()) Text("Запитай або скажи…", color = AppTheme.colors.textMuted, fontSize = AppDims.textBodyLarge)
                         inner()
                     }
                 )
-                Box(
-                    modifier = Modifier.size(44.dp).clip(CircleShape).background(AppTheme.colors.accent.copy(alpha = 0.15f)).clickable { 
-                        if (query.isNotBlank()) {
-                            ChatHistoryManager.addMessage("user", query)
-                            val historyStr = messages.dropLast(1).takeLast(10).joinToString("\n") { msg ->
-                                if (msg.role == "user") "Користувач: ${msg.content}" else "Асистент: ${msg.content}"
+                if (busy) {
+                    // Стоп: зупиняє очікування відповіді та озвучення
+                    Box(
+                        modifier = Modifier.size(44.dp).clip(CircleShape).background(AppTheme.colors.danger.copy(alpha = 0.18f)).clickable { stopGeneration() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Box(modifier = Modifier.size(14.dp).clip(RoundedCornerShape(3.dp)).background(AppTheme.colors.danger))
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier.size(44.dp).clip(CircleShape).background(AppTheme.colors.accent.copy(alpha = 0.18f)).clickable {
+                            if (query.isNotBlank()) {
+                                sendQuery(query)
+                                query = ""
                             }
-                            processQuery(
-                                query, historyStr, vm, scope,
-                                { voiceState = it },
-                                { ChatHistoryManager.addMessage(it.role, it.content) },
-                                { stopListening() }
-                            )
-                            query = ""
-                        }
-                    },
-                    contentAlignment = Alignment.Center
-                ) { Text("➤", color = AppTheme.colors.accent, fontSize = 20.sp) }
-                
+                        },
+                        contentAlignment = Alignment.Center
+                    ) { Icon(Icons.Default.Send, contentDescription = "Надіслати", tint = AppTheme.colors.accent) }
+                }
+
                 Box(
                     modifier = Modifier.size(44.dp).clip(CircleShape).background(if (voiceState == VoiceState.LISTENING) AppTheme.colors.success.copy(alpha = 0.2f) else Color.Transparent).clickable { startListening() },
                     contentAlignment = Alignment.Center
-                ) { Text("🎤", fontSize = 20.sp) }
+                ) { Icon(MicIcon, contentDescription = "Мікрофон", tint = if (voiceState == VoiceState.LISTENING) AppTheme.colors.success else AppTheme.colors.textSecondary) }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(AppDims.spaceM))
 
+            // Чіпи прокручуються, щоб не вилазити на вузьких екранах
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(AppDims.spaceS)
             ) {
-                LiquidChip("Пошук", Color(0xFF4285F4)) { ctx.startActivity(Intent(Intent.ACTION_WEB_SEARCH)) }
-                LiquidChip("Переклад", AppTheme.colors.warning) { }
-                LiquidChip("AI", AppTheme.colors.accentDark) { }
+                LiquidChip("Пошук", AppTheme.colors.accent) { ctx.startActivity(Intent(Intent.ACTION_WEB_SEARCH)) }
+                LiquidChip("Переклад", AppTheme.colors.warning) { query = "Переклади на англійську: " }
+                LiquidChip("AI", AppTheme.colors.accentDark) { ctx.startActivity(Intent(ctx, AiHubActivity::class.java)) }
                 LiquidChip("Wild Rift", AppTheme.colors.purple) { ctx.startActivity(Intent(ctx, WildRiftAdvisorActivity::class.java)) }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(AppDims.spaceS))
+        }
+    }
+}
+
+private val MicIcon: ImageVector by lazy {
+    ImageVector.Builder(
+        name = "Mic", defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f
+    ).addPath(
+        pathData = androidx.compose.ui.graphics.vector.addPathNodes(
+            "M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"
+        ),
+        fill = SolidColor(Color.Black)
+    ).build()
+}
+
+/** Швидкий вибір моделі та індикатор стану рушія у шапці чату. */
+@Composable
+private fun ModelChip(vm: AppListViewModel) {
+    val ready by vm.llmReady.collectAsStateWithLifecycle()
+    val restarting by vm.llmRestarting.collectAsStateWithLifecycle()
+    val downloaded by vm.downloadedModelIds.collectAsStateWithLifecycle()
+    val settings by vm.settings.collectAsStateWithLifecycle()
+    var open by remember { mutableStateOf(false) }
+    val models = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS
+    val current = models.find { it.id == vm.currentModelId }
+    val backend = when (settings.llmBackend) { "gpu" -> "GPU"; "cpu" -> "CPU"; else -> "Auto" }
+    val dot = when {
+        restarting -> AppTheme.colors.warning
+        ready -> AppTheme.colors.success
+        else -> AppTheme.colors.textMuted
+    }
+    val state = when {
+        restarting -> "перезапуск…"
+        ready -> backend
+        else -> "не завантажено"
+    }
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(AppDims.radiusS))
+                .background(AppTheme.colors.glassBackground)
+                .border(1.dp, AppTheme.colors.glassBorder, RoundedCornerShape(AppDims.radiusS))
+                .clickable { open = true }
+                .padding(horizontal = AppDims.spaceM, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(dot))
+            Spacer(Modifier.width(AppDims.spaceS))
+            Text(
+                (current?.name ?: vm.currentModelId) + " · " + state,
+                color = AppTheme.colors.textPrimary, fontSize = AppDims.textSmall, maxLines = 1
+            )
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = AppTheme.colors.textMuted)
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            val available = models.filter { it.id in downloaded }
+            if (available.isEmpty()) {
+                DropdownMenuItem(text = { Text("Немає завантажених моделей") }, onClick = { open = false }, enabled = false)
+            }
+            available.forEach { m ->
+                DropdownMenuItem(
+                    text = { Text(m.name + if (m.id == vm.currentModelId) "  ✓" else "") },
+                    onClick = {
+                        open = false
+                        if (m.id != vm.currentModelId) vm.setCurrentModel(m.id)
+                    }
+                )
+            }
+        }
+    }
+}
+
+/** Бульбашка повідомлення: користувач (акцент), асистент (скло), помилка (з дією). Довге натискання — копіювати/поділитись. */
+@Composable
+private fun MessageBubble(msg: ChatMessage, maxWidth: androidx.compose.ui.unit.Dp, onAction: (String) -> Unit) {
+    val ctx = LocalContext.current
+    var menu by remember { mutableStateOf(false) }
+    val c = AppTheme.colors
+    val isUser = msg.role == "user"
+    val isError = msg.role == "error"
+    val shape = if (isUser) RoundedCornerShape(20.dp, 20.dp, 4.dp, 20.dp) else RoundedCornerShape(20.dp, 20.dp, 20.dp, 4.dp)
+    val bg = when { isError -> c.danger.copy(alpha = 0.12f); isUser -> c.accent.copy(alpha = 0.20f); else -> c.glassBackground }
+    val border = when { isError -> c.danger.copy(alpha = 0.5f); isUser -> c.accent.copy(alpha = 0.4f); else -> c.glassBorder }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+    ) {
+        Box {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = maxWidth)
+                    .clip(shape)
+                    .background(bg)
+                    .border(1.dp, border, shape)
+                    .pointerInput(msg) { detectTapGestures(onLongPress = { menu = true }) }
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    msg.content,
+                    color = if (isError) c.danger else c.textPrimary,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp,
+                    fontWeight = if (isUser) FontWeight.Medium else FontWeight.Normal
+                )
+                if (isError && msg.action != null) {
+                    TextButton(onClick = { onAction(msg.action) }) {
+                        Text(
+                            if (msg.action == "restart") "Перезапустити рушій" else "Спробувати ще раз",
+                            color = c.accent, fontSize = 13.sp
+                        )
+                    }
+                }
+            }
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                DropdownMenuItem(text = { Text("Копіювати") }, onClick = {
+                    menu = false
+                    try {
+                        val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        cm.setPrimaryClip(android.content.ClipData.newPlainText("message", msg.content))
+                        android.widget.Toast.makeText(ctx, "Скопійовано", android.widget.Toast.LENGTH_SHORT).show()
+                    } catch (_: Throwable) {}
+                })
+                DropdownMenuItem(text = { Text("Поділитись") }, onClick = {
+                    menu = false
+                    try {
+                        val send = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, msg.content)
+                        }
+                        ctx.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    } catch (_: Throwable) {}
+                })
+            }
         }
     }
 }
@@ -489,17 +700,16 @@ fun LiquidChip(label: String, color: Color, onClick: () -> Unit) {
 fun processQuery(
     text: String, history: String, vm: AppListViewModel, scope: kotlinx.coroutines.CoroutineScope,
     onStateChange: (VoiceState) -> Unit, onMessage: (ChatMessage) -> Unit, stopListening: () -> Unit
-) {
+): kotlinx.coroutines.Job {
     onStateChange(VoiceState.THINKING)
     stopListening()
-    onMessage(ChatMessage("status", "🔍 Думаю..."))
-    scope.launch {
+    onMessage(ChatMessage("status", "Думаю…"))
+    return scope.launch {
         try {
             if (!vm.ensureLlmLoaded()) {
-                val err = "Модель ШІ не завантажена."
-                onMessage(ChatMessage("assistant", err))
+                onMessage(ChatMessage("error", "Модель не завантажилась. Перезапустіть рушій або оберіть іншу модель зверху.", "restart"))
                 onStateChange(VoiceState.SPEAKING)
-                vm.tts.speakWithCallback(err) { onStateChange(VoiceState.LISTENING) }
+                vm.tts.speakWithCallback("Модель не завантажилась.") { onStateChange(VoiceState.LISTENING) }
                 return@launch
             }
             // Для MNN-моделей використовуємо простий чат (без агента)
@@ -511,9 +721,16 @@ fun processQuery(
             } else {
                 vm.chatEngine.answerWithAgent(text, history)
             }
-            // Видаляємо статус "Думаю"
-            // (він зникне, бо ми замінимо список повідомлень)
             stopListening() // Примусово вимикаємо мікрофон, щоб не зчитав TTS
+
+            // Службові відповіді рушія — показуємо як помилку з кнопкою, а не озвучуємо
+            val failed = answer.startsWith("Помилка") || answer == "LLM не відповіла" || answer == "LLM не активна"
+            if (failed) {
+                onMessage(ChatMessage("error", "Не вдалося отримати відповідь від моделі ($answer).", "retry"))
+                onStateChange(VoiceState.LISTENING)
+                return@launch
+            }
+
             onStateChange(VoiceState.SPEAKING)
             vm.tts.speakWithCallback(answer) {
                 // Чекаємо 400мс, щоб динамік повністю замовк і мікрофон не зчитав відлуння
@@ -523,8 +740,10 @@ fun processQuery(
                 }
             }
             onMessage(ChatMessage("assistant", answer))
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
-            onMessage(ChatMessage("assistant", "Помилка: ${e.message}"))
+            onMessage(ChatMessage("error", "Щось пішло не так: ${e.message}", "retry"))
             onStateChange(VoiceState.IDLE)
         }
     }

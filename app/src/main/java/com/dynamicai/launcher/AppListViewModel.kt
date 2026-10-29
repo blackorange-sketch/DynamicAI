@@ -855,6 +855,21 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 _downloadProgress.value = null
                 downloadingModelId = null
+                
+                // Вимикаємо зір для Qwen/Gemma, щоб MNN не вантажив visual.mnn
+                try {
+                    val configFile = java.io.File(targetDir, "config.json")
+                    if (configFile.exists() && (modelId.contains("qwen3.5") || modelId.contains("gemma"))) {
+                        val json = org.json.JSONObject(configFile.readText())
+                        json.put("is_visual", false)
+                        json.put("is_mrope", false)
+                        configFile.writeText(json.toString())
+                        android.util.Log.e("MNN_CONFIG", "Disabled vision in config.json for $modelId")
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MNN_CONFIG", "Failed to patch config.json: ${e.message}")
+                }
+                
                 _downloadTrigger.value = (_downloadTrigger.value ?: 0) + 1
             } catch (e: Exception) {
                 _downloadProgress.value = ModelDownloader.Progress.Error(e.message ?: "Помилка")

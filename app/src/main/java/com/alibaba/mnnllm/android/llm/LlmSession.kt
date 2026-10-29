@@ -64,7 +64,7 @@ class LlmSession(
                 configDir.absolutePath + "/"
             }
             Log.e(TAG, "initNative: configPath=$configPathWithSlash")
-            nativePtr = initNative(configPathWithSlash, null, mergedConfig, configJson)
+            nativePtr = initNative(configPathWithSlash, listOf("You are a helpful assistant."), mergedConfig, configJson)
             Log.e(TAG, "initNative → nativePtr=$nativePtr")
             nativePtr != 0L
         } catch (t: Throwable) {

@@ -162,21 +162,6 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
 
-    private fun checkOcrMlkitUnload() {
-        try {
-            val now = System.currentTimeMillis()
-            val ocrLast = com.dynamicai.launcher.ocr.OcrUsageTracker.lastOcrAt
-            val mlkitLast = com.dynamicai.launcher.ocr.OcrUsageTracker.lastMlkitAt
-            
-            if (ocrLast > 0 && now - ocrLast > 5 * 60_000L) {
-                android.util.Log.e("OcrUnload", "OCR idle 5+ min")
-            }
-            if (mlkitLast > 0 && now - mlkitLast > 10 * 60_000L) {
-                android.util.Log.e("MlkitUnload", "ML Kit idle 10+ min")
-            }
-        } catch (_: Throwable) {}
-    }
-
     fun checkLlmReady() {
         // _llmReady = true ТІЛЬКИ якщо engine реально ініціалізований
         if (llm.isReady) {
@@ -415,10 +400,6 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun initLlmIfReady() {
-        checkLlmReady()
-    }
-
     fun updateSettings(newSettings: LauncherSettings) {
         settingsStorage.save(newSettings)
         _settings.value = newSettings
@@ -428,12 +409,6 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun hideApp(pkg: String) {
         hiddenStorage.hide(pkg)
-        _hidden.value = hiddenStorage.get()
-        updateQuery("")
-    }
-
-    fun unhideApp(pkg: String) {
-        hiddenStorage.show(pkg)
         _hidden.value = hiddenStorage.get()
         updateQuery("")
     }
@@ -477,10 +452,6 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun folderOf(pkg: String): Folder? = folderStorage.folderOf(pkg)
-
-    fun setResponse(text: String) {
-        _response.value = text
-    }
 
     private var weatherJob: kotlinx.coroutines.Job? = null
 
@@ -537,27 +508,6 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             _recentTasks.value.forEach { shizukuManager.forceStop(it.packageName) }
             loadRecentTasks()
         }
-    }
-
-    suspend fun testLlm(prompt: String): String {
-        val diag = buildString {
-            append("isReady=").append(llm.isReady).append("\n")
-            append("lastError='").append(llm.lastError).append("'\n")
-            append("---\n")
-        }
-
-        // Спочатку сирий виклик (показує "сиру" відповідь)
-        val raw = llm.complete(prompt)
-        val rawText = raw ?: "(null)"
-
-        // Потім через LlmAgent (з systemPrompt + tool call)
-        val agentResult = try {
-            llmAgent.resolve(prompt)?.toString() ?: "(agent: null)"
-        } catch (t: Throwable) {
-            "(agent error: ${t.message})"
-        }
-
-        return diag + "RAW:\n" + rawText.take(400) + "\n\nAGENT:\n" + agentResult
     }
 
     fun isCommand(text: String) = parser.parse(text) !is com.dynamicai.launcher.command.Command.Raw
@@ -905,120 +855,6 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-
-    private suspend fun downloadMnnModelByIdSuspending(repoName: String, folderName: String): Boolean =
-        withContext(Dispatchers.IO) {
-            val baseDir = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")
-            val targetDir = java.io.File(baseDir, folderName)
-            if (!targetDir.exists()) targetDir.mkdirs()
-            cleanupOpenClWeights(targetDir)
-
-            // Обов'язкові файли (є у всіх MNN-моделей)
-            val files = linkedMapOf(
-                "config.json" to 50L,
-                "llm_config.json" to 50L,
-                "llm.mnn" to 100_000L,
-                "tokenizer.txt" to 100_000L,
-                "llm.mnn.weight" to 100_000_000L
-            )
-            // Опційні (llm.mnn.json є у Qwen2.5, але немає в Qwen3/3.5/Gemma4)
-            val optionalFiles = listOf("llm.mnn.json")
-
-            val baseUrl = "https://huggingface.co/taobao-mnn/$repoName/resolve/main"
-
-            for ((file, minSize) in files) {
-                val target = java.io.File(targetDir, file)
-                if (target.exists() && target.length() >= minSize) {
-                    android.util.Log.e("MNN_DL", "Skip $file (${target.length()} bytes)")
-                    continue
-                }
-                val url = "$baseUrl/$file"
-                android.util.Log.e("MNN_DL", "Downloading $file from $url")
-                var ok = false
-                downloader.downloadUrl(url, "mnn_models/$folderName/$file").collect { progress ->
-                    when (progress) {
-                        is ModelDownloader.Progress.Complete -> {
-                            ok = true
-                            android.util.Log.e("MNN_DL", "✅ $file done")
-                        }
-                        is ModelDownloader.Progress.Error ->
-                            android.util.Log.e("MNN_DL", "❌ $file: ${progress.message}")
-                        is ModelDownloader.Progress.Downloading ->
-                            if (progress.percent % 20 == 0)
-                                android.util.Log.e("MNN_DL", "⏳ $file: ${progress.percent}%")
-                    }
-                }
-                if (!ok) return@withContext false
-            }
-
-            // Опційні файли (404 → пропускаємо)
-            for (file in optionalFiles) {
-                val target = java.io.File(targetDir, file)
-                if (target.exists() && target.length() > 1000) {
-                    android.util.Log.e("MNN_DL", "Skip optional $file")
-                    continue
-                }
-                val url = "$baseUrl/$file"
-                android.util.Log.e("MNN_DL", "Downloading optional $file")
-                downloader.downloadUrl(url, "mnn_models/$folderName/$file").collect { progress ->
-                    when (progress) {
-                        is ModelDownloader.Progress.Complete ->
-                            android.util.Log.e("MNN_DL", "✅ optional $file done")
-                        is ModelDownloader.Progress.Error ->
-                            android.util.Log.w("MNN_DL", "⚠️ optional $file: ${progress.message} (пропускаємо)")
-                        is ModelDownloader.Progress.Downloading -> {}
-                    }
-                }
-            }
-            true
-        }
-
-    private suspend fun downloadMnnModelSuspending(): Boolean = withContext(kotlinx.coroutines.Dispatchers.IO) {
-        val baseDir = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")
-        val targetDir = java.io.File(baseDir, "qwen2.5-1.5b")
-        if (!targetDir.exists()) targetDir.mkdirs()
-
-        // Мінімальні очікувані розміри (щоб перекачати обірвані файли)
-        val files = linkedMapOf(
-            "config.json" to 100L,
-            "llm_config.json" to 100L,
-            "llm.mnn" to 500_000L,
-            "llm.mnn.json" to 1_000_000L,
-            "tokenizer.txt" to 1_000_000L,
-            "llm.mnn.weight" to 800_000_000L   // останній — найбільший
-        )
-        val baseUrl = "https://huggingface.co/taobao-mnn/Qwen2.5-1.5B-Instruct-MNN/resolve/main"
-
-        for ((file, minSize) in files) {
-            val target = java.io.File(targetDir, file)
-            if (target.exists() && target.length() >= minSize) {
-                android.util.Log.e("MNN_DL", "Skip $file (${target.length()} bytes)")
-                continue
-            }
-            val url = "$baseUrl/$file"
-            android.util.Log.e("MNN_DL", "Downloading $file")
-            var ok = false
-            downloader.downloadUrl(url, "mnn_models/qwen2.5-1.5b/$file").collect { progress ->
-                when (progress) {
-                    is ModelDownloader.Progress.Complete -> {
-                        ok = true
-                        android.util.Log.e("MNN_DL", "✅ $file done (${target.length()} bytes)")
-                    }
-                    is ModelDownloader.Progress.Error ->
-                        android.util.Log.e("MNN_DL", "❌ $file: ${progress.message}")
-                    is ModelDownloader.Progress.Downloading ->
-                        if (progress.percent % 10 == 0)
-                            android.util.Log.e("MNN_DL", "⏳ $file: ${progress.percent}%")
-                }
-            }
-            if (!ok) {
-                android.util.Log.e("MNN_DL", "❌ Failed: $file")
-                return@withContext false
-            }
-        }
-        android.util.Log.e("MNN_DL", "🎉 All files OK in ${targetDir.absolutePath}")
-        true
-    }
 
     fun downloadModel(model: com.dynamicai.launcher.llm.LlmModel) {
         viewModelScope.launch {

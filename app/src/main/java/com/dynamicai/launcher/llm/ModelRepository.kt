@@ -67,7 +67,7 @@ object ModelRepository {
         ),
         LlmModel(
             id = "qwen3-1.7b",
-            name = "Qwen3 1.7B (Українська)",
+            name = "Qwen3 1.7B",
             supportedBackends = listOf("CPU", "GPU", "NPU"),
             url = "https://huggingface.co/litert-community/Qwen3-1.7B/resolve/main/Qwen3_1.7B.litertlm",
             sizeBytes = 1_700_000_000L,
@@ -111,7 +111,8 @@ object ModelRepository {
             id = "mnn-gemma-4-e2b",
             name = "MNN Gemma 4 E2B",
             url = "https://huggingface.co/taobao-mnn/gemma-4-E2B-it-MNN/resolve/main/llm.mnn.weight",
-            sizeBytes = 2_000_000_000L,
+            // Сума файлів, які реально качає додаток: llm.mnn.weight 1.44 + ple_embeddings 1.47 + audio 0.59 + visual 0.23 ГБ
+            sizeBytes = 3_730_000_000L,
             fileName = "gemma-4-e2b",
             engine = "mnn",
             supportedBackends = listOf("CPU", "GPU")

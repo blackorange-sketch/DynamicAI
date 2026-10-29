@@ -52,6 +52,7 @@ data class LauncherSettings(
     val litertSeparateCache: Boolean = false,
     val maxResponseTokens: Int = 256,          // ліміт довжини відповіді (MNN: токени; усі: обрізання за реченням)
     val answerStyle: String = "short",         // "short" | "normal": чи просити модель відповідати коротко
+    val autoSearch: Boolean = true,            // для фактичних питань спершу шукати у Вікіпедії
     val fastCommands: Boolean = true,          // прості команди телефону виконуються без моделі
     val llmPreload: Boolean = false,           // завантажувати модель у фоні при старті лаунчера
     val llmUnloadMinutes: Int = 3,             // 0 = ніколи не вивантажувати
@@ -110,6 +111,7 @@ class SettingsStorage(context: Context) {
             litertSeparateCache = prefs.getBoolean("litertSeparateCache", false),
             maxResponseTokens = prefs.getInt("maxResponseTokens", 256),
             answerStyle = prefs.getString("answerStyle", "short") ?: "short",
+            autoSearch = prefs.getBoolean("autoSearch", true),
             fastCommands = prefs.getBoolean("fastCommands", true),
             llmPreload = prefs.getBoolean("llmPreload", false),
             llmUnloadMinutes = prefs.getInt("llmUnloadMinutes", 3),
@@ -165,6 +167,7 @@ class SettingsStorage(context: Context) {
             .putBoolean("litertSeparateCache", s.litertSeparateCache)
             .putInt("maxResponseTokens", s.maxResponseTokens)
             .putString("answerStyle", s.answerStyle)
+            .putBoolean("autoSearch", s.autoSearch)
             .putBoolean("fastCommands", s.fastCommands)
             .putBoolean("llmPreload", s.llmPreload)
             .putInt("llmUnloadMinutes", s.llmUnloadMinutes)

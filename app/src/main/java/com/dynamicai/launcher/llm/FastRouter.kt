@@ -11,8 +11,8 @@ class FastRouter(private val runTool: suspend (String) -> String) {
 
     private companion object {
         const val TAG = "FastRouter"
-        val ON = Regex("""\b(увімкни|включи|ввімкни|запусти|активуй|вруби)\b""")
-        val OFF = Regex("""\b(вимкни|виключи|вимкнути|погаси|відключи|заглуши)\b""")
+        val ON = Regex("""(?<!\p{L})(увімкни|включи|ввімкни|запусти|активуй|вруби)(?!\p{L})""")
+        val OFF = Regex("""(?<!\p{L})(вимкни|виключи|вимкнути|погаси|відключи|заглуши)(?!\p{L})""")
     }
 
     private fun q(s: String) = s.replace("\"", "").trim()

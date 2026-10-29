@@ -54,31 +54,44 @@ class WebSearchRepository {
     }
 
     private suspend fun searchWikipedia(query: String): SearchResult = withContext(Dispatchers.IO) {
-        try {
+        // Спочатку українська Вікіпедія, якщо порожньо — англійська
+        for (lang in listOf("uk", "en")) {
+            val r = wikipediaExtracts(lang, query)
+            if (r.abstract.isNotBlank() || r.relatedTopics.isNotEmpty()) return@withContext r
+        }
+        SearchResult("", "", emptyList())
+    }
+
+    /** Пошук + вступ (extract) найкращих сторінок: це дає факти (дати, імена), а не лише фрагменти пошуку. */
+    private fun wikipediaExtracts(lang: String, query: String): SearchResult {
+        return try {
             val encoded = URLEncoder.encode(query, "UTF-8")
-            val url = "https://uk.wikipedia.org/w/api.php?action=query&list=search&srsearch=$encoded&utf8=1&format=json"
+            val url = "https://$lang.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=$encoded&gsrlimit=3" +
+                "&prop=extracts&exintro=1&explaintext=1&exchars=700&utf8=1&format=json"
             val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-                connectTimeout = 8_000
-                readTimeout = 8_000
+                connectTimeout = 6_000
+                readTimeout = 6_000
                 setRequestProperty("User-Agent", "DynamicAI/1.0")
             }
             val body = conn.inputStream.bufferedReader().use { it.readText() }
             conn.disconnect()
-            val json = JSONObject(body)
-            
-            val related = mutableListOf<String>()
-            val searchArr = json.getJSONObject("query").getJSONArray("search")
-            for (i in 0 until minOf(searchArr.length(), 3)) {
-                val item = searchArr.optJSONObject(i) ?: continue
-                // Прибираємо HTML теги зі снипету
-                val snippet = item.optString("snippet", "").replace(Regex("<[^>]*>"), "")
-                related.add(snippet)
+            val pages = JSONObject(body).optJSONObject("query")?.optJSONObject("pages")
+                ?: return SearchResult("", "", emptyList())
+            // Сторінки приходять як об'єкт; упорядковуємо за релевантністю (поле index)
+            val items = mutableListOf<Triple<Int, String, String>>()
+            val keys = pages.keys()
+            while (keys.hasNext()) {
+                val p = pages.getJSONObject(keys.next())
+                items.add(Triple(p.optInt("index", 99), p.optString("title"), p.optString("extract").trim()))
             }
-            
-            lastError = "Wikipedia OK: related=${related.size}"
-            SearchResult("", "", related)
+            items.sortBy { it.first }
+            val best = items.firstOrNull { it.third.isNotBlank() }
+            val abstract = best?.let { "${it.second}: ${it.third}" } ?: ""
+            val related = items.filter { it !== best && it.third.isNotBlank() }.map { "${it.second}: ${it.third.take(250)}" }
+            lastError = "Wikipedia[$lang] OK: ${items.size} pages"
+            SearchResult("", abstract, related)
         } catch (t: Throwable) {
-            lastError = "Wikipedia failed: ${t.message}"
+            lastError = "Wikipedia[$lang] failed: ${t.message}"
             Log.e(TAG, "Wikipedia search failed", t)
             SearchResult("", "", emptyList())
         }

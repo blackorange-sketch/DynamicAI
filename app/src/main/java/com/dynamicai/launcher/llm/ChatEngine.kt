@@ -331,6 +331,27 @@ class ChatEngine(
 
 
     /** Простий чат без агента та інструментів — для маленьких моделей (MNN Qwen 1.5B/0.6B). */
+    /** Чи схоже питання на запит факту (хто/коли/де/скільки/що таке…), для якого Вікіпедія корисна. */
+    private fun looksFactual(question: String): Boolean {
+        val t = question.lowercase().trim().trimEnd('?', '.', '!', ' ')
+        if (t.split(Regex("\\s+")).size > 14) return false
+        // Поточні дані (новини, курси, «зараз») у Вікіпедії не знайти
+        if (Regex("зараз|сьогодні|вчора|завтра|новин|курс|ціна|погода").containsMatchIn(t)) return false
+        return Regex("^(хто|коли|де|скільки|що\\s+таке|що\\s+за|який|яка|яке|які|чому|звідки|з\\s+чого|як\\s+називається|розкажи\\s+про|поясни)(?!\\p{L})").containsMatchIn(t)
+    }
+
+    private val SEARCH_STOP = setOf(
+        "хто", "такий", "така", "таке", "такі", "що", "коли", "де", "скільки", "розкажи", "про", "поясни", "народився",
+        "народилась", "народилася", "помер", "померла", "був", "була", "є", "це", "мені", "будь", "ласка", "який", "яка", "яке", "які"
+    )
+
+    /** Прибирає питальні слова: «коли помер Тарас Шевченко» → «Тарас Шевченко» (так пошук точніший). */
+    private fun searchQueryFrom(question: String): String {
+        val words = question.trim().trimEnd('?', '.', '!').split(Regex("\\s+"))
+        val kept = words.filter { it.lowercase() !in SEARCH_STOP }
+        return kept.joinToString(" ").ifBlank { question }
+    }
+
     private val fastRouter by lazy { FastRouter { agentEngine.runTool(it) } }
 
     /** Проста команда телефону без LLM (null — це не проста команда). */
@@ -342,7 +363,18 @@ class ChatEngine(
             val isMnn = llm.isMnn
             val settings = com.dynamicai.launcher.data.SettingsStorage(context).load()
             // «Коротко»: додається до питання, а не до шаблону, тож власні промпти з налаштувань лишаються недоторканими
-            val q = if (settings.answerStyle == "short") question + "\n(Відповідай коротко: 1–3 речення.)" else question
+            // Фактичні питання («хто такий…», «коли народився…»): спершу дані з Вікіпедії — мала модель вигадує дати й імена
+            val facts = if (settings.autoSearch && looksFactual(question)) {
+                try {
+                    val ctx = webSearch.toContext(webSearch.search(searchQueryFrom(question)))
+                    Log.e(TAG, "🔎 auto-search for '$question': ${ctx.length} chars")
+                    ctx
+                } catch (e: Exception) { "" }
+            } else ""
+            val base = if (facts.isNotBlank())
+                "Дані з Вікіпедії:\n${facts.take(1500)}\n\nПитання: $question\nВідповідай за цими даними, не вигадуй. Якщо даних недостатньо — так і скажи."
+            else question
+            val q = if (settings.answerStyle == "short") base + "\n(Відповідай коротко: 1–3 речення.)" else base
 
             // Беремо шаблон з файлу (не з SharedPreferences — надійніше)
             val template = if (isMnn) {

@@ -811,6 +811,12 @@ fun SettingsScreen(
                     LlmBackendChip("Звичайно", "normal", settings.answerStyle) { onSettingsChange(settings.copy(answerStyle = it)) }
                 }
                 SwitchRow(
+                    label = "Автопошук у Вікіпедії для фактичних питань",
+                    checked = settings.autoSearch,
+                    icon = Icons.Default.Settings,
+                    tint = AppTheme.colors.accent
+                ) { onSettingsChange(settings.copy(autoSearch = it)) }
+                SwitchRow(
                     label = "Швидкі команди без моделі (ліхтарик, додатки, будильник…)",
                     checked = settings.fastCommands,
                     icon = Icons.Default.Settings,

@@ -334,13 +334,17 @@ class ChatEngine(
     suspend fun simpleAnswer(question: String): String {
         if (!llm.isReady) return "LLM не активна"
         return try {
-            val settings = com.dynamicai.launcher.data.SettingsStorage(context).load()
             val isMnn = llm.isMnn
             
-            // Вибираємо шаблон залежно від рушія
-            val template = if (isMnn) settings.mnnPrompt else settings.litertPrompt
-            Log.e("MNN_PROMPT", "Using template (isMnn=$isMnn): $template")
+            // Беремо шаблон з файлу (не з SharedPreferences — надійніше)
+            val template = if (isMnn) {
+                com.dynamicai.launcher.llm.PromptManager.loadMnn(context)
+            } else {
+                com.dynamicai.launcher.llm.PromptManager.loadLitert(context)
+            }
+            Log.e("MNN_PROMPT", "Template from file (isMnn=$isMnn): ${template.replace("\n", "\\n")}")
             val prompt = template.replace("{{question}}", question)
+            Log.e("MNN_PROMPT", "Final prompt (${prompt.length} chars): ${prompt.replace("\n", "\\n")}")
             
             val response = llm.complete(prompt)
             Log.d(TAG, "simpleAnswer: prompt len=${prompt.length}, response=${response?.take(100)}")

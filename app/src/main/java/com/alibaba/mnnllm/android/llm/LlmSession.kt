@@ -29,7 +29,7 @@ class LlmSession(
     }
 
     private var nativePtr: Long = 0L
-    private var keepHistory: Boolean = true
+    private var keepHistory: Boolean = false // ВИМКНЕНО: історія псує генерацію
 
     private external fun initNative(
         configPath: String?,

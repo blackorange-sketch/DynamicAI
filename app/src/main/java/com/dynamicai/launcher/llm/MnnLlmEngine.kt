@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
+import kotlin.concurrent.withLock
 
 /**
  * Реалізація LlmEngine через MNN (libmnnllmapp.so + LlmSession).
@@ -37,6 +38,9 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
     }
 
     private var session: LlmSession? = null
+
+    /** Захищає нативну сесію: release() під час generate() або паралельний load() = SIGSEGV. */
+    private val sessionLock = java.util.concurrent.locks.ReentrantLock()
 
     @Volatile
     var lastUsedAt: Long = 0L
@@ -66,8 +70,10 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
         // Якщо завантажена інша модель — примусово звільняємо її
         if (isReady && currentModelName != modelDir.name) {
             Log.e(TAG, "Switching model: $currentModelName -> ${modelDir.name}. Releasing old session.")
-            try { session?.release() } catch (_: Throwable) {}
-            session = null
+            sessionLock.withLock {
+                try { session?.release() } catch (_: Throwable) {}
+                session = null
+            }
             System.gc()
         }
 
@@ -157,8 +163,10 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
         }
 
         // Звільняємо попередній engine
-        try { session?.release() } catch (_: Throwable) {}
-        session = null
+        sessionLock.withLock {
+            try { session?.release() } catch (_: Throwable) {}
+            session = null
+        }
         System.gc()
 
         currentSettings = SettingsStorage(context).load()
@@ -222,14 +230,16 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
         val formattedPrompt = formatPrompt(prompt, currentModelName)
         Log.e(TAG, "complete: formatted prompt (${formattedPrompt.length} chars), first 100: ${formattedPrompt.take(100)}")
         return@withContext try {
-            s.generate(formattedPrompt, object : GenerateProgressListener {
-                override fun onProgress(progress: String?): Boolean {
-                    if (!progress.isNullOrEmpty()) {
-                        buffer.append(progress)
+            sessionLock.withLock {
+                s.generate(formattedPrompt, object : GenerateProgressListener {
+                    override fun onProgress(progress: String?): Boolean {
+                        if (!progress.isNullOrEmpty()) {
+                            buffer.append(progress)
+                        }
+                        return false  // MNN: true = ЗУПИНИТИ генерацію (return true обривав відповідь після 1 токена)
                     }
-                    return false  // MNN: true = ЗУПИНИТИ генерацію (return true обривав відповідь після 1 токена)
-                }
-            })
+                })
+            }
             Log.e(TAG, "complete: generated ${buffer.length} chars: ${buffer.take(200).map { it.code }.take(20)} text='${buffer.take(200)}'")
             buffer.toString()
         } catch (t: Throwable) {
@@ -252,15 +262,17 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
         val buffer = StringBuilder()
         val formattedPrompt = formatPrompt(prompt, currentModelName)
         return@withContext try {
-            s.generate(formattedPrompt, object : GenerateProgressListener {
-                override fun onProgress(progress: String?): Boolean {
-                    if (!progress.isNullOrEmpty()) {
-                        buffer.append(progress)
-                        try { onToken(progress) } catch (_: Throwable) {}
+            sessionLock.withLock {
+                s.generate(formattedPrompt, object : GenerateProgressListener {
+                    override fun onProgress(progress: String?): Boolean {
+                        if (!progress.isNullOrEmpty()) {
+                            buffer.append(progress)
+                            try { onToken(progress) } catch (_: Throwable) {}
+                        }
+                        return false  // true = зупинити генерацію
                     }
-                    return false  // true = зупинити генерацію
-                }
-            })
+                })
+            }
             Log.e(TAG, "streamComplete: generated ${buffer.length} chars")
             buffer.toString()
         } catch (t: Throwable) {
@@ -271,11 +283,14 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
     }
 
     fun close() {
-        try {
-            session?.release()
-        } catch (t: Throwable) {
-            Log.w(TAG, "close failed: ${t.message}")
+        // Чекає завершення поточної генерації, щоб не звільнити сесію посеред generate()
+        sessionLock.withLock {
+            try {
+                session?.release()
+            } catch (t: Throwable) {
+                Log.w(TAG, "close failed: ${t.message}")
+            }
+            session = null
         }
-        session = null
     }
 }

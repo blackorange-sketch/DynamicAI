@@ -34,6 +34,7 @@ import com.dynamicai.launcher.suggestion.Suggestion
 import com.dynamicai.launcher.suggestion.SuggestionProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -47,6 +48,8 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         @Volatile private var sharedLlm: HybridLlmEngine? = null
         @Volatile private var sharedChatEngine: ChatEngine? = null
         @Volatile private var sharedDownloader: ModelDownloader? = null
+        /** Усі операції load/close/switch моделі йдуть по черзі — паралельний load MNN валить процес нативно. */
+        private val modelOpMutex = kotlinx.coroutines.sync.Mutex()
 
         fun getSharedLlm(context: android.content.Context): HybridLlmEngine =
             sharedLlm ?: synchronized(this) {
@@ -192,19 +195,21 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             _llmStatusText.value = "Закриття рушія…"
             _llmReady.value = false
             try {
-                withContext(Dispatchers.IO) {
-                    try { llm.close() } catch (t: Throwable) {
-                        android.util.Log.e("LLM_DEBUG", "close failed: ${t.message}")
+                val ok = modelOpMutex.withLock {
+                    withContext(Dispatchers.IO) {
+                        try { llm.close() } catch (t: Throwable) {
+                            android.util.Log.e("LLM_DEBUG", "close failed: ${t.message}")
+                        }
+                        if (clearGpuCache) {
+                            val n = com.dynamicai.launcher.llm.LiteRtLlmEngine.clearGpuCache(getApplication())
+                            _llmStatusText.value = "Кеш GPU очищено ($n)"
+                        }
+                        System.gc()
                     }
-                    if (clearGpuCache) {
-                        val n = com.dynamicai.launcher.llm.LiteRtLlmEngine.clearGpuCache(getApplication())
-                        _llmStatusText.value = "Кеш GPU очищено ($n)"
-                    }
-                    System.gc()
+                    kotlinx.coroutines.delay(300)
+                    _llmStatusText.value = "Завантаження моделі…"
+                    ensureLlmLoadedLocked()
                 }
-                kotlinx.coroutines.delay(300)
-                _llmStatusText.value = "Завантаження моделі…"
-                val ok = ensureLlmLoaded()
                 _llmStatusText.value = if (ok) "✓ Рушій перезапущено" else "✗ Не вдалося завантажити (див. logcat)"
             } catch (t: Throwable) {
                 android.util.Log.e("LLM_DEBUG", "restartLlmEngine failed: ${t.message}", t)
@@ -217,7 +222,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Викликається лениво при першому реальному запиті LLM. */
-    suspend fun ensureLlmLoaded(): Boolean {
+    suspend fun ensureLlmLoaded(): Boolean = modelOpMutex.withLock { ensureLlmLoadedLocked() }
+
+    private suspend fun ensureLlmLoadedLocked(): Boolean {
         if (llm.isReady) return true
 
         // === MNN special case ===
@@ -769,10 +776,12 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 android.util.Log.e("LLM_DEBUG", "Перемикання на модель: $modelId")
                 _llmReady.value = false          // скидаємо прапорець для UI
-                llm.close()                       // звільняємо стару модель
-                System.gc()                       // забираємо сміття
-                kotlinx.coroutines.delay(200)     // коротка пауза для GC
-                val ok = ensureLlmLoaded()
+                val ok = modelOpMutex.withLock {
+                    // close() чекає кінця поточної генерації; робимо це поза головним потоком
+                    withContext(Dispatchers.IO) { llm.close(); System.gc() }
+                    kotlinx.coroutines.delay(300)
+                    ensureLlmLoadedLocked()
+                }
                 android.util.Log.e("LLM_DEBUG", "Перемикання ${if (ok) "успішне" else "невдале"}: $modelId")
             } catch (t: Throwable) {
                 android.util.Log.e("LLM_DEBUG", "setCurrentModel failed: ${t.message}", t)

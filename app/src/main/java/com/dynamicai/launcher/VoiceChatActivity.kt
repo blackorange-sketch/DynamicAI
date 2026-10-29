@@ -447,6 +447,8 @@ private fun ModelChip(vm: AppListViewModel) {
     val downloaded by vm.downloadedModelIds.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     var open by remember { mutableStateOf(false) }
+    // Список завантажених моделей читаємо з диска щоразу при відкритті — не залежимо від того, чи вже оновився StateFlow
+    LaunchedEffect(open) { if (open) vm.refreshDownloadedModels() }
     val models = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS
     val current = models.find { it.id == vm.currentModelId }
     val backend = when (settings.llmBackend) { "gpu" -> "GPU"; "cpu" -> "CPU"; else -> "Auto" }
@@ -455,10 +457,14 @@ private fun ModelChip(vm: AppListViewModel) {
         ready -> AppTheme.colors.success
         else -> AppTheme.colors.textMuted
     }
+    val onDisk = vm.currentModelId in downloaded
+    // Модель вантажиться при першому запиті, тому «не в пам'яті» ≠ «не завантажено»
     val state = when {
-        restarting -> "перезапуск…"
+        restarting -> "завантаження…"
         ready -> backend
-        else -> "не завантажено"
+        onDisk -> "готова"
+        downloaded.isEmpty() -> "…"
+        else -> "немає на пристрої"
     }
     Box {
         Row(

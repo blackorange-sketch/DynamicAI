@@ -558,6 +558,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     onOpenWallpaper = { showWallpaper = true },
                     onOpenDockEditor = { showDockEditor = true },
                     onOpenFolderManager = { showFolderManager = true },
+                    onOpenMacroManager = { showMacroManager = true },
+                    onOpenNotes = { showNotesScreen = true },
                     llmDownloaded = vm.downloader.isDownloaded,
                     llmReady = llmReady,
                     versionName = BuildConfig.VERSION_NAME,

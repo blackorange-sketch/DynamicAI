@@ -1115,7 +1115,7 @@ fun SettingsScreen(
                 var litertText by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.dynamicai.launcher.llm.PromptManager.loadLitert(localCtx)) }
 
                 Text("MNN Prompt ({{question}})", color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                Text("Формат Qwen: <|im_start|>user...<|im_end|>", color = AppTheme.colors.textSecondary, fontSize = 10.sp, modifier = Modifier.padding(bottom = 4.dp))
+                Text("Шаблон чату (<|im_start|>…) MNN додає сам. Тут — інструкція й {{question}}", color = AppTheme.colors.textSecondary, fontSize = 10.sp, modifier = Modifier.padding(bottom = 4.dp))
                 androidx.compose.foundation.text.BasicTextField(
                     value = mnnText,
                     onValueChange = { mnnText = it },
@@ -1125,8 +1125,8 @@ fun SettingsScreen(
                 
                 Spacer(Modifier.height(16.dp))
                 
-                Text("LiteRT Prompt (для Gemma)", color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                Text("Формат Gemma: <start_of_turn>user...<end_of_turn>", color = AppTheme.colors.textSecondary, fontSize = 10.sp, modifier = Modifier.padding(bottom = 4.dp))
+                Text("LiteRT Prompt (Gemma та інші)", color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text("Шаблон чату (<start_of_turn>…) LiteRT додає сам. Тут — інструкція й {{question}}", color = AppTheme.colors.textSecondary, fontSize = 10.sp, modifier = Modifier.padding(bottom = 4.dp))
                 androidx.compose.foundation.text.BasicTextField(
                     value = litertText,
                     onValueChange = { litertText = it },

@@ -6,8 +6,15 @@ import java.io.File
 object PromptManager {
     private const val TAG = "PromptManager"
     
-    private val DEFAULT_MNN = "{{question}}"
-    private val DEFAULT_LITERT = "<start_of_turn>user\n{{question}}<end_of_turn>\n<start_of_turn>model\n"
+    // Обидва рушії самі застосовують chat template моделі, тому в промпті лише інструкція і питання.
+    private const val PERSONA = "Ти — голосовий асистент Джарвіс. Відповідай українською мовою, зрозуміло й по суті."
+    private val DEFAULT_MNN = "$PERSONA\n\n{{question}}"
+    private val DEFAULT_LITERT = "$PERSONA\n\n{{question}}"
+    // Попередні типові значення: якщо у файлі саме вони (користувач нічого не міняв) — оновлюємо до нових
+    private val OLD_DEFAULTS = setOf(
+        "{{question}}",
+        "<start_of_turn>user\n{{question}}<end_of_turn>\n<start_of_turn>model"
+    )
     
     private fun mnnFile(ctx: Context) = File(ctx.filesDir, "prompts/mnn.txt")
     private fun litertFile(ctx: Context) = File(ctx.filesDir, "prompts/litert.txt")
@@ -26,7 +33,12 @@ object PromptManager {
                 android.util.Log.e(TAG, "Created default: ${file.absolutePath}")
                 default
             } else {
-                val content = file.readText()
+                var content = file.readText()
+                if (content.trim() in OLD_DEFAULTS) {
+                    file.writeText(default)
+                    content = default
+                    android.util.Log.e(TAG, "Migrated old default prompt: ${file.absolutePath}")
+                }
                 android.util.Log.e(TAG, "Loaded ${file.absolutePath} (${content.length} chars): ${content.take(80)}")
                 content
             }

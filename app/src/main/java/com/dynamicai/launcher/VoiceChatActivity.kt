@@ -758,7 +758,7 @@ fun processQuery(
         try {
             // Прості команди (ліхтарик, відкрити додаток, будильник…) — миттєво, без моделі
             if (vm.settings.value.fastCommands) {
-                val fast = try { vm.chatEngine.tryFastRoute(text) } catch (e: Exception) { null }
+                val fast = try { vm.chatEngine.tryFastRoute(text, vm.apps.value) } catch (e: Exception) { null }
                 if (fast != null) {
                     onMessage(ChatMessage("assistant", fast))
                     onStateChange(VoiceState.SPEAKING)

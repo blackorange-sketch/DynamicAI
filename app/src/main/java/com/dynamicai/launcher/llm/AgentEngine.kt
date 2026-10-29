@@ -136,6 +136,20 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         return sanitized.toDouble()
     }
 
+    private fun trimNum(d: Double): String = if (d == d.toLong().toDouble()) d.toLong().toString() else d.toString()
+
+    /** Курс валют з відкритого API (без ключа). */
+    private suspend fun fetchRate(from: String, to: String): Double? = withContext(Dispatchers.IO) {
+        try {
+            val conn = (java.net.URL("https://open.er-api.com/v6/latest/$from").openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 6000; readTimeout = 6000
+            }
+            val body = conn.inputStream.bufferedReader().use { it.readText() }
+            conn.disconnect()
+            org.json.JSONObject(body).optJSONObject("rates")?.optDouble(to)?.takeIf { !it.isNaN() && it > 0 }
+        } catch (t: Throwable) { null }
+    }
+
     /** Прямий виклик інструмента (для FastRouter, без LLM). */
     suspend fun runTool(toolCall: String): String = withContext(Dispatchers.IO) { executeTool(toolCall) }
 
@@ -250,8 +264,36 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                     "Відкриваю календар для створення події: $title"
                 }
                 toolCall.startsWith("getWeather") -> {
-                    val city = getArg(toolCall, "city").ifEmpty { "Київ" }
-                    "У місті $city сонячно, +20°C. (Демо)"
+                    val city = getArg(toolCall, "city")
+                    // Справжня погода (Open-Meteo через WeatherRepository); порожнє місто = поточна локація з налаштувань
+                    val st = com.dynamicai.launcher.data.WeatherRepository(context).fetch(city.ifEmpty { null })
+                    if (st is com.dynamicai.launcher.data.WeatherState.Data) {
+                        "Погода${if (city.isNotEmpty()) " ($city)" else ""}: ${st.tempC}°, ${st.description}. " +
+                            "Відчувається як ${st.feelsLike}°, вологість ${st.humidity}%, вітер ${st.windSpeed}. " +
+                            "Сьогодні від ${st.tempMin}° до ${st.tempMax}°."
+                    } else "Не вдалося отримати погоду${if (city.isNotEmpty()) " для «$city»" else ""}."
+                }
+                toolCall.startsWith("openCamera") -> {
+                    val mode = getArg(toolCall, "mode")
+                    val action = if (mode == "video") android.provider.MediaStore.INTENT_ACTION_VIDEO_CAMERA
+                                 else android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA
+                    val intent = Intent(action).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        if (mode == "selfie") {
+                            putExtra("android.intent.extras.CAMERA_FACING", 1)
+                            putExtra("android.intent.extra.USE_FRONT_CAMERA", true)
+                        }
+                    }
+                    context.startActivity(intent)
+                    when (mode) { "selfie" -> "Відкриваю фронтальну камеру."; "video" -> "Відкриваю камеру для відео."; else -> "Відкриваю камеру." }
+                }
+                toolCall.startsWith("convertCurrency") -> {
+                    val amount = getArg(toolCall, "amount").replace(",", ".").toDoubleOrNull() ?: 1.0
+                    val from = getArg(toolCall, "from").uppercase()
+                    val to = getArg(toolCall, "to").uppercase()
+                    val rate = fetchRate(from, to)
+                    if (rate == null) "Не вдалося отримати курс $from → $to."
+                    else String.format(java.util.Locale.US, "%s %s = %.2f %s (курс %.4f)", trimNum(amount), from, amount * rate, to, rate)
                 }
                 toolCall.startsWith("navigateTo") -> {
                     val dest = getArg(toolCall, "destination")

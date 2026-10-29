@@ -354,8 +354,40 @@ class ChatEngine(
 
     private val fastRouter by lazy { FastRouter { agentEngine.runTool(it) } }
 
-    /** Проста команда телефону без LLM (null — це не проста команда). */
-    suspend fun tryFastRoute(question: String): String? = fastRouter.tryHandle(question)
+    private val commandParser by lazy { com.dynamicai.launcher.command.CommandParser() }
+
+    /**
+     * Проста команда телефону без LLM (null — це не проста команда).
+     * Спершу канонічний CommandParser/CommandExecutor проєкту (таймери, нагадування, дзвінки, медіа, перемикачі,
+     * калькулятор…), потім FastRouter (погода, навігація, камера, валюта, YouTube, нотатки).
+     */
+    suspend fun tryFastRoute(question: String, apps: List<com.dynamicai.launcher.model.AppInfo> = emptyList()): String? {
+        commandRoute(question, apps)?.let { return it }
+        return fastRouter.tryHandle(question)
+    }
+
+    private fun commandRoute(question: String, apps: List<com.dynamicai.launcher.model.AppInfo>): String? {
+        val C = com.dynamicai.launcher.command.Command
+        val cmd = try { commandParser.parse(question) } catch (e: Exception) { return null }
+        // Ці типи або не прості, або обробляються окремо (пошук, питання, переклад, нотатки) — лишаємо моделі
+        fun blocked(c: com.dynamicai.launcher.command.Command) =
+            c is C.Unknown || c is C.Raw || c is C.AskQuestion || c is C.WebSearch || c is C.OpenNotes ||
+                c is C.TranslateScreen || c is C.TranslateText
+        if (blocked(cmd)) return null
+        if (cmd is C.Compound && cmd.steps.any { blocked(it) }) return null
+        val executor = com.dynamicai.launcher.command.CommandExecutorProvider.get(context)
+        val result = try { executor.execute(cmd, apps) } catch (e: Exception) {
+            Log.e(TAG, "command execute failed", e); return null
+        }
+        Log.e(TAG, "⚡ command ${cmd::class.simpleName} → $result")
+        return when (result) {
+            is com.dynamicai.launcher.command.CommandResult.Success -> result.message
+            is com.dynamicai.launcher.command.CommandResult.Error ->
+                if (result.message.startsWith("__") || result.message.contains("не знайд", ignoreCase = true)) null else result.message
+            is com.dynamicai.launcher.command.CommandResult.ChooseApp ->
+                "Знайшов кілька додатків: " + result.candidates.take(4).joinToString(", ") { it.label } + ". Уточніть назву."
+        }
+    }
 
     suspend fun simpleAnswer(question: String, onToken: ((String) -> Unit)? = null): String {
         if (!llm.isReady) return "LLM не активна"

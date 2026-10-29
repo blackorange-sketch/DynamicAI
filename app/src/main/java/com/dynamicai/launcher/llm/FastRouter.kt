@@ -17,6 +17,23 @@ class FastRouter(private val runTool: suspend (String) -> String) {
 
     private fun q(s: String) = s.replace("\"", "").trim()
 
+    private val CURRENCIES = listOf(
+        "долар" to "USD", "usd" to "USD", "євро" to "EUR", "eur" to "EUR", "злот" to "PLN", "pln" to "PLN",
+        "гривн" to "UAH", "грн" to "UAH", "uah" to "UAH", "фунт" to "GBP", "gbp" to "GBP", "франк" to "CHF"
+    )
+
+    /** Знаходить у фразі валюти (у порядку появи) і число; одна валюта = у гривні. */
+    private fun currencyCall(t: String): String? {
+        val found = CURRENCIES.mapNotNull { (key, code) -> t.indexOf(key).takeIf { it >= 0 }?.let { it to code } }
+            .sortedBy { it.first }.map { it.second }.distinct()
+        if (found.isEmpty()) return null
+        val from = found[0]
+        val to = if (found.size >= 2) found[1] else if (from == "UAH") "USD" else "UAH"
+        if (from == to) return null
+        val amount = Regex("(\\d+(?:[.,]\\d+)?)").find(t)?.value ?: "1"
+        return """convertCurrency(amount="$amount", from="$from", to="$to")"""
+    }
+
     suspend fun tryHandle(raw: String): String? {
         val t = raw.lowercase().trim().trimEnd('.', '!', '?', ',', ' ')
         if (t.isBlank()) return null
@@ -53,12 +70,20 @@ class FastRouter(private val runTool: suspend (String) -> String) {
             Regex("заряд|батаре").containsMatchIn(t) && Regex("скільки|який|рівень|відсот").containsMatchIn(t) ->
                 "getBattery()"
 
-            // Погода: «погода», «погода у Львові»
-            Regex("^(яка\\s+)?погода").containsMatchIn(t) && words.size <= 5 -> {
-                val city = Regex("(?:в|у|для)\\s+([\\p{L}-]+)").find(t)?.groupValues?.get(1)
-                // Місцевий відмінок («Львові») → звертаємось до погодного сервісу як є; невідоме місто лишаємо моделі
-                if (city == null) """getWeather(city="")""" else null
+            // Погода: «погода», «яка погода у Львові»
+            Regex("погода").containsMatchIn(t) && words.size <= 7 -> {
+                val city = Regex("(?:в|у|для|по)\\s+([\\p{L}-]+)").find(t)?.groupValues?.get(1) ?: ""
+                """getWeather(city="${q(city)}")"""
             }
+
+            // Камера
+            Regex("селфі").containsMatchIn(t) -> """openCamera(mode="selfie")"""
+            Regex("запиши відео|зніми відео|відео з камери").containsMatchIn(t) -> """openCamera(mode="video")"""
+            Regex("зроби фото|сфотографуй|зроби знімок|відкрий камеру|запусти камеру").containsMatchIn(t) -> """openCamera(mode="photo")"""
+
+            // Валюта: «курс долара», «скільки 100 доларів у гривнях», «переведи 50 євро в злоті»
+            Regex("курс|переведи|конвертуй|скільки.*(долар|євро|злот|гривн|фунт)").containsMatchIn(t) && currencyCall(t) != null ->
+                currencyCall(t)
 
             // Навігація: «прокладі маршрут до Львова»
             Regex("^(прокладі|побудуй|веди|навігація|маршрут)").containsMatchIn(t) ->

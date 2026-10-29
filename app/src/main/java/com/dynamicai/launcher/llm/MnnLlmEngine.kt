@@ -97,6 +97,14 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
             }
         }
 
+        // Нативна бібліотека не ловить винятків nlohmann::json: поле неправильного типу = SIGABRT і краш усього лаунчера.
+        // Тому спершу перевіряємо конфіги тут і повертаємо зрозумілу помилку.
+        validateConfigs(modelDir)?.let { err ->
+            lastError = err
+            Log.e(TAG, "Config check failed: $err")
+            return@withContext false
+        }
+
         // Логуємо вміст папки моделі
         Log.e(TAG, "=== Файли в ${modelDir.absolutePath} ===")
         try {
@@ -280,6 +288,42 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
             Log.e(TAG, lastError, t)
             if (buffer.isNotEmpty()) buffer.toString() else null
         }
+    }
+
+    /** Повертає опис проблеми або null, якщо конфіги виглядають коректно. Також логує їх вміст для діагностики. */
+    private fun validateConfigs(modelDir: File): String? {
+        val stringKeys = listOf(
+            "llm_model", "llm_weight", "tokenizer_file", "model_type", "attention_type", "attention_mask",
+            "prompt_template", "system_prompt", "assistant_prompt_template", "user_prompt_template",
+            "chat_template", "bos", "eos"
+        )
+        for (name in listOf("config.json", "llm_config.json")) {
+            val f = File(modelDir, name)
+            if (!f.exists()) {
+                if (name == "llm_config.json") return "Немає $name — завантажте модель повторно"
+                continue
+            }
+            val text = try { f.readText() } catch (t: Throwable) { return "$name не читається: ${t.message}" }
+            Log.e(TAG, "$name (${f.length()} bytes): ${text.take(1500).replace("\n", " ")}")
+            val obj = try { org.json.JSONObject(text) } catch (t: Throwable) {
+                return "$name пошкоджений (не JSON) — завантажте модель повторно"
+            }
+            fun check(o: org.json.JSONObject, path: String): String? {
+                val keys = o.keys()
+                while (keys.hasNext()) {
+                    val k = keys.next()
+                    val v = o.opt(k)
+                    if (k in stringKeys && v != null && v !is String) {
+                        return "$name: поле «$path$k» має бути рядком, а є ${if (v == org.json.JSONObject.NULL) "null" else v.javaClass.simpleName}"
+                    }
+                    if (k in stringKeys && v == org.json.JSONObject.NULL) return "$name: поле «$path$k» = null"
+                    if (v is org.json.JSONObject) check(v, "$path$k.")?.let { return it }
+                }
+                return null
+            }
+            check(obj, "")?.let { return it }
+        }
+        return null
     }
 
     fun close() {

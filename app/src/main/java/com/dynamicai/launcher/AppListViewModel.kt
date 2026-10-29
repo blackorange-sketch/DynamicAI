@@ -813,7 +813,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 if (!targetDir.exists()) targetDir.mkdirs()
 
                 targetDir.listFiles()?.forEach { f ->
-                    if (f.name.endsWith(".opencl.weight") || f.name == "mnn_cachefile.bin") f.delete()
+                    if (f.name.endsWith(".opencl.weight") || f.name.endsWith(".static") || f.name == "mnn_cachefile.bin") f.delete()
                 }
 
                 val isGemma = modelId.contains("gemma", ignoreCase = true)
@@ -835,6 +835,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 if (isGemma) {
                     files["audio.mnn"] = 100_000L
+                    files["audio.mnn.weight"] = 100_000_000L
+                    // Gemma 4: per-layer embeddings (1.37 ГБ) — без цього файлу MNN падає нативно
+                    files["ple_embeddings_int4.bin"] = 1_000_000_000L
                 }
                 val correctUrl = "https://huggingface.co/taobao-mnn/$repoName/resolve/main"
                 val downloader = ModelDownloader(getApplication())

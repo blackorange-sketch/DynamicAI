@@ -81,6 +81,15 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
             Log.e(TAG, lastError)
             return@withContext false
         }
+        if (modelDir.name.contains("gemma", ignoreCase = true)) {
+            val missing = listOf("ple_embeddings_int4.bin", "audio.mnn.weight", "visual.mnn.weight")
+                .filter { !File(modelDir, it).exists() }
+            if (missing.isNotEmpty()) {
+                lastError = "Gemma: бракує файлів $missing — завантажте модель повторно"
+                Log.e(TAG, lastError)
+                return@withContext false
+            }
+        }
 
         // Логуємо вміст папки моделі
         Log.e(TAG, "=== Файли в ${modelDir.absolutePath} ===")
@@ -111,7 +120,8 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
         try {
             val mode = overrides?.opt("clean_cache") as? Boolean
             val all = modelDir.listFiles().orEmpty()
-            val ocl = all.filter { it.name.endsWith(".opencl.weight") }
+            // *.static — кеш mmap (пара X_0.static + X_sync.static); після краша лишається 1 ГБ + 0 байт → наступний запуск падає
+            val ocl = all.filter { it.name.endsWith(".opencl.weight") || it.name.endsWith(".static") }
             val tune = all.filter { it.name == "mnn_cachefile.bin" }
             val cacheFiles = ocl + tune
             val hasWeight = ocl.any { !it.name.contains("_sync") && it.length() > 0 }

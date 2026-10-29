@@ -106,17 +106,24 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
 
         // OpenCL-кеш (mnn_cachefile.bin / *.opencl.weight) за замовчуванням ЗБЕРІГАЄМО — він прискорює prefill.
         // Видаляємо лише якщо файл > 256 МБ. "clean_cache": true — видаляти завжди, false — ніколи.
+        // УВАГА: файли кешу працюють парою (X_0.opencl.weight + X_sync.opencl.weight). Видаляти їх можна
+        // ТІЛЬКИ разом, інакше MNN вважає кеш валідним і мапить порожній файл → краш у Llm::forwardRaw.
         try {
             val mode = overrides?.opt("clean_cache") as? Boolean
-            modelDir.listFiles()?.forEach { f ->
-                if (f.name.endsWith(".opencl.weight") || f.name == "mnn_cachefile.bin") {
-                    val tooBig = f.length() > 256L * 1024 * 1024
-                    if (mode != false && (mode == true || tooBig)) {
-                        val deleted = f.delete()
-                        Log.e("MNN_CLEANUP", "🗑️ ${if (deleted) "Deleted" else "Failed to delete"} ${f.name} (${f.length()} bytes)")
-                    } else {
-                        Log.e("MNN_CLEANUP", "Keep ${f.name} (${f.length()} bytes)")
-                    }
+            val all = modelDir.listFiles().orEmpty()
+            val ocl = all.filter { it.name.endsWith(".opencl.weight") }
+            val tune = all.filter { it.name == "mnn_cachefile.bin" }
+            val cacheFiles = ocl + tune
+            val orphanSync = ocl.any { it.name.contains("_sync") } &&
+                ocl.none { !it.name.contains("_sync") && it.length() > 0 }
+            val total = cacheFiles.sumOf { it.length() }
+            val clean = mode == true || orphanSync || (mode != false && total > 4L * 1024 * 1024 * 1024)
+            Log.e("MNN_CLEANUP", "cache files=${cacheFiles.map { "${it.name}:${it.length()}" }} orphanSync=$orphanSync clean=$clean")
+            if (clean) {
+                cacheFiles.forEach { f ->
+                    val len = f.length()
+                    val deleted = f.delete()
+                    Log.e("MNN_CLEANUP", "🗑️ ${if (deleted) "Deleted" else "Failed to delete"} ${f.name} ($len bytes)")
                 }
             }
         } catch (t: Throwable) {

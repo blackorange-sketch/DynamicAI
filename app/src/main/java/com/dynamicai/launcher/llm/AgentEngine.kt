@@ -32,7 +32,12 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         "flipCoin() -> Підкинути монетку.",
         "rollDice() -> Кинути кубик.",
         "randomNumber(min: Int, max: Int) -> Випадкове число.",
-        "runMacro(name: String) -> Запустити збережений макрос."
+        "runMacro(name: String) -> Запустити збережений макрос.",
+        "tapText(text: String) -> Натиснути кнопку/елемент з цим текстом на екрані.",
+        "scrollScreen(direction: String) -> Прокрутити екран: 'down' або 'up'.",
+        "systemAction(action: String) -> Системна дія: home, back, recents, notifications, quick, lock, screenshot.",
+        "typeText(text: String) -> Ввести текст у поле на екрані.",
+        "getNews() -> Останні заголовки новин."
     )
 
     /** Ключові слова (корені) для вибору інструментів: у промпт потрапляють лише релевантні — він коротший у рази. */
@@ -72,7 +77,12 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         "readScreen" to listOf("екран", "прочитай"),
         "callInTelegram" to listOf("telegram", "телеграм"),
         "callInInstagram" to listOf("instagram", "інстаграм"),
-        "runMacro" to listOf("макрос")
+        "runMacro" to listOf("макрос"),
+        "tapText" to listOf("натисни", "тапни", "клікни", "кнопк"),
+        "scrollScreen" to listOf("прокрут", "вниз", "вгору"),
+        "systemAction" to listOf("назад", "додому", "недавн", "останні додатки", "шторк", "заблокуй", "скріншот"),
+        "typeText" to listOf("введи", "надрукуй"),
+        "getNews" to listOf("новин", "заголовк")
     )
 
     private val allToolLines: List<Pair<String, String>> by lazy {
@@ -219,6 +229,32 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         return sanitized.toDouble()
     }
 
+    private fun needAccessibility() = "Спочатку увімкніть сервіс доступності (DynamicAI Automation) у налаштуваннях Android."
+
+    /** Заголовки новин з RSS (пробуємо кілька джерел по черзі). */
+    private suspend fun fetchNews(): String = withContext(Dispatchers.IO) {
+        val feeds = listOf(
+            "https://feeds.bbci.co.uk/ukrainian/rss.xml",
+            "https://www.pravda.com.ua/rss/",
+            "https://www.ukrinform.ua/rss/block-lastnews"
+        )
+        for (url in feeds) {
+            try {
+                val conn = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = 6000; readTimeout = 6000
+                    setRequestProperty("User-Agent", "DynamicAI/1.0")
+                }
+                val body = conn.inputStream.bufferedReader().use { it.readText() }
+                conn.disconnect()
+                val titles = Regex("<item>.*?<title>(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?</title>", RegexOption.DOT_MATCHES_ALL)
+                    .findAll(body).map { it.groupValues[1].trim().replace(Regex("&[a-z#0-9]+;"), " ") }
+                    .filter { it.isNotBlank() }.take(5).toList()
+                if (titles.isNotEmpty()) return@withContext "Головні новини: " + titles.joinToString(". ") + "."
+            } catch (_: Throwable) {}
+        }
+        "Не вдалося отримати новини."
+    }
+
     private fun trimNum(d: Double): String = if (d == d.toLong().toDouble()) d.toLong().toString() else d.toString()
 
     /** Курс валют з відкритого API (без ключа). */
@@ -356,6 +392,38 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                             "Сьогодні від ${st.tempMin}° до ${st.tempMax}°."
                     } else "Не вдалося отримати погоду${if (city.isNotEmpty()) " для «$city»" else ""}."
                 }
+                toolCall.startsWith("tapText") -> {
+                    if (!com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) needAccessibility()
+                    else {
+                        val text = getArg(toolCall, "text")
+                        val ok = com.dynamicai.launcher.accessibility.AppAutomationService.clickText(text) ||
+                            com.dynamicai.launcher.accessibility.AppAutomationService.clickDescription(text)
+                        if (ok) "Натиснув «$text»." else "Не знайшов на екрані «$text»."
+                    }
+                }
+                toolCall.startsWith("scrollScreen") -> {
+                    if (!com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) needAccessibility()
+                    else {
+                        val down = getArg(toolCall, "direction").lowercase() != "up"
+                        if (com.dynamicai.launcher.accessibility.AppAutomationService.scroll(down)) "Прокрутив ${if (down) "вниз" else "вгору"}."
+                        else "На екрані немає чого прокручувати."
+                    }
+                }
+                toolCall.startsWith("systemAction") -> {
+                    if (!com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) needAccessibility()
+                    else {
+                        val a = getArg(toolCall, "action").lowercase()
+                        if (com.dynamicai.launcher.accessibility.AppAutomationService.systemAction(a)) "Виконано: $a." else "Не вдалося виконати: $a."
+                    }
+                }
+                toolCall.startsWith("typeText") -> {
+                    if (!com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) needAccessibility()
+                    else {
+                        val text = getArg(toolCall, "text")
+                        if (com.dynamicai.launcher.accessibility.AppAutomationService.typeText(text)) "Ввів текст." else "Не знайшов поле для вводу."
+                    }
+                }
+                toolCall.startsWith("getNews") -> fetchNews()
                 toolCall.startsWith("openCamera") -> {
                     val mode = getArg(toolCall, "mode")
                     val action = if (mode == "video") android.provider.MediaStore.INTENT_ACTION_VIDEO_CAMERA

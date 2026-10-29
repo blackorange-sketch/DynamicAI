@@ -98,6 +98,21 @@ class FastRouter(private val runTool: suspend (String) -> String) {
             Regex("^(запиши|створи нотатку|нотатка|додай нотатку)\\s+").containsMatchIn(t) ->
                 """takeNote(text="${q(t.replace(Regex("^(запиши|створи нотатку|нотатка|додай нотатку)\\s+"), ""))}")"""
 
+            // Системні дії та взаємодія з екраном (потрібен сервіс доступності)
+            Regex("новини|головні новини|що нового в світі").containsMatchIn(t) && words.size <= 5 -> "getNews()"
+            Regex("(відкрий|покажи)\\s+(останні|недавні)\\s+(додатки|програми)|недавні додатки").containsMatchIn(t) ->
+                """systemAction(action="recents")"""
+            Regex("(відкрий|опусти|покажи)\\s+(сповіщення|шторку)").containsMatchIn(t) -> """systemAction(action="notifications")"""
+            Regex("заблокуй\\s+(екран|телефон)").containsMatchIn(t) -> """systemAction(action="lock")"""
+            Regex("^(натисни|тапни|клікни)\\s+назад|^назад$|^поверни(сь)?\\s+назад").containsMatchIn(t) -> """systemAction(action="back")"""
+            Regex("^прокрут\\p{L}*\\s+(вниз|далі)|^прокрут\\p{L}*$").containsMatchIn(t) -> """scrollScreen(direction="down")"""
+            Regex("^прокрут\\p{L}*\\s+(вгору|вверх)").containsMatchIn(t) -> """scrollScreen(direction="up")"""
+            Regex("^(натисни|тапни|клікни)\\s+(на\\s+)?(.+)$").containsMatchIn(t) ->
+                Regex("^(натисни|тапни|клікни)\\s+(на\\s+)?(.+)$").find(t)?.groupValues?.get(3)
+                    ?.trim()?.trim('«', '»')?.takeIf { it.isNotBlank() }?.let { """tapText(text="${q(it)}")""" }
+            Regex("^(введи|надрукуй)\\s+(.+)$").containsMatchIn(t) ->
+                Regex("^(введи|надрукуй)\\s+(.+)$").find(t)?.groupValues?.get(2)?.let { """typeText(text="${q(it)}")""" }
+
             // Додаток: «відкрий телеграм» (до 4 слів — довші фрази, імовірно, складніші)
             Regex("^(відкрий|відкрити|запусти|запустити|відкрити додаток)\\s+").containsMatchIn(t) && words.size <= 5 -> {
                 val name = t.replace(Regex("^(відкрий|відкрити|запусти|запустити)\\s+(додаток\\s+|програму\\s+)?"), "")

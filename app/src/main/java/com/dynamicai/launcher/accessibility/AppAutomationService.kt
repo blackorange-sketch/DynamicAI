@@ -19,6 +19,9 @@ class AppAutomationService : AccessibilityService() {
         fun getScreenText(): String = instance?.readScreenText() ?: ""
         fun typeText(text: String): Boolean = instance?.inputText(text) ?: false
         fun pressBack(): Boolean = instance?.goBack() ?: false
+        /** home | recents | notifications | quick | lock | screenshot | back */
+        fun systemAction(name: String): Boolean = instance?.runGlobal(name) ?: false
+        fun scroll(forward: Boolean): Boolean = instance?.scrollFirst(forward) ?: false
     }
 
     override fun onServiceConnected() {
@@ -166,5 +169,33 @@ class AppAutomationService : AccessibilityService() {
 
     private fun goBack(): Boolean {
         return performGlobalAction(GLOBAL_ACTION_BACK)
+    }
+
+    fun runGlobal(name: String): Boolean = when (name) {
+        "home" -> performGlobalAction(GLOBAL_ACTION_HOME)
+        "back" -> performGlobalAction(GLOBAL_ACTION_BACK)
+        "recents" -> performGlobalAction(GLOBAL_ACTION_RECENTS)
+        "notifications" -> performGlobalAction(GLOBAL_ACTION_NOTIFICATIONS)
+        "quick" -> performGlobalAction(GLOBAL_ACTION_QUICK_SETTINGS)
+        "lock" -> performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN)
+        "screenshot" -> performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
+        else -> false
+    }
+
+    /** Прокручує перший прокручуваний елемент на екрані (вперед = вниз). */
+    fun scrollFirst(forward: Boolean): Boolean {
+        val root = rootInActiveWindow ?: return false
+        fun find(n: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+            if (n.isScrollable) return n
+            for (i in 0 until n.childCount) {
+                val c = n.getChild(i) ?: continue
+                find(c)?.let { return it }
+            }
+            return null
+        }
+        val target = find(root) ?: return false
+        return target.performAction(
+            if (forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+        )
     }
 }

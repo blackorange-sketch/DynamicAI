@@ -458,7 +458,17 @@ class ChatEngine(
                     ctx
                 } catch (e: Exception) { "" }
             } else ""
-            val base = if (facts.isNotBlank())
+            // «Що на екрані?»: передаємо моделі текст екрана (сервіс доступності)
+            val screenAsk = Regex("(що|про що)\\s+(там\\s+)?(на|в|у)\\s+(цьому\\s+)?(екрані|вікні)|прочитай\\s+(екран|це)|підсумуй\\s+(екран|це|сторінку)|переказуй\\s+екран")
+                .containsMatchIn(question.lowercase())
+            val screenText = if (screenAsk && com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled())
+                com.dynamicai.launcher.accessibility.AppAutomationService.getScreenText().take(2500) else ""
+            if (screenAsk && screenText.isBlank() && !com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
+                return "Щоб бачити екран, увімкніть сервіс доступності (DynamicAI Automation) у налаштуваннях Android."
+            }
+            val base = if (screenText.isNotBlank())
+                "Текст на екрані користувача:\n$screenText\n\nПитання: $question\nВідповідай за цим текстом."
+            else if (facts.isNotBlank())
                 "Дані з Вікіпедії:\n${facts.take(1500)}\n\nПитання: $question\nВідповідай за цими даними, не вигадуй. Якщо даних недостатньо — так і скажи."
             else question
             val q = if (settings.answerStyle == "short") base + "\n(Відповідай коротко: 1–3 речення.)" else base

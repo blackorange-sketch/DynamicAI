@@ -153,6 +153,10 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 override fun onEndOfSpeech() {}
                 override fun onError(error: Int) {
                     voiceState = VoiceState.IDLE
+                    if (com.dynamicai.launcher.voice.OfflineSpeech.isMissingLanguage(error)) {
+                        android.widget.Toast.makeText(ctx, com.dynamicai.launcher.voice.OfflineSpeech.HINT, android.widget.Toast.LENGTH_LONG).show()
+                        return
+                    }
                     // Перезапускаємо мікрофон ТІЛЬКИ якщо екран активний
                     if (shouldListen.value) {
                         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
@@ -179,6 +183,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, com.dynamicai.launcher.voice.OfflineSpeech.preferOffline(ctx))
         }
         recognizer?.startListening(intent)
     }

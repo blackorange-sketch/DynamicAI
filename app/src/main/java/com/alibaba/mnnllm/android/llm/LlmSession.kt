@@ -58,9 +58,11 @@ class LlmSession(
         return try {
             val merged = org.json.JSONObject()
                 .put("backend_type", backendType)
-                .put("thread_num", 4)
-                .put("precision", "normal")
-                .put("memory", "normal")
+                // Виміряно на Qwen3.5 0.8B (OpenCL): thread_num=66 (buffer + швидкий тюнінг) → prefill ~0.25 с,
+                // precision/memory "low" → у 2-3 рази швидше за "normal". Для CPU: 4 потоки.
+                .put("thread_num", if (backendType == "opencl") 66 else 4)
+                .put("precision", "low")
+                .put("memory", "low")
                 .put("max_new_tokens", maxNewTokens)
                 .put("use_mmap", true)
                 .put("is_visual", false)

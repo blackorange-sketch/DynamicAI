@@ -104,6 +104,8 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
     override suspend fun streamComplete(prompt: String, onToken: (String) -> Unit): String? = withContext(Dispatchers.IO) {
         lastUsedAt = System.currentTimeMillis()
         val e = engine ?: return@withContext null
+        val t0 = System.currentTimeMillis()
+        var firstTokenAt = 0L
         try {
             // Створюємо SamplerConfig з низькою температурою
             val samplerConfig = com.google.ai.edge.litertlm.SamplerConfig(
@@ -126,17 +128,21 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
                     // LiteRT-LM підтримує стрімінг
                     val fullText = StringBuilder()
                     val callback = { text: String ->
+                        if (firstTokenAt == 0L) firstTokenAt = System.currentTimeMillis()
                         fullText.append(text)
                         onToken(text)
                         Unit
                     }
                     asyncMethod.invoke(conversation, prompt, callback)
+                    val now = System.currentTimeMillis()
+                    Log.e(TAG, "⏱ stream: firstToken=${if (firstTokenAt > 0) firstTokenAt - t0 else -1}ms total=${now - t0}ms chars=${fullText.length}")
                     return@withContext fullText.toString()
                 } else {
                     // Fallback: без стрімінгу
                     val message = conversation.sendMessage(prompt)
                     val result = extractText(message) ?: message?.toString() ?: ""
                     if (result.isNotBlank()) onToken(result)
+                    Log.e(TAG, "⏱ sendMessage (no stream): total=${System.currentTimeMillis() - t0}ms chars=${result.length}")
                     return@withContext result
                 }
             }
@@ -158,9 +164,11 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
             val conversationConfig = com.google.ai.edge.litertlm.ConversationConfig(
                 samplerConfig = samplerConfig
             )
+            val tc0 = System.currentTimeMillis()
             e.createConversation(conversationConfig).use { conversation ->
                 // LiteRT-LM сам застосовує chat template з metadata моделі
                 val message = conversation.sendMessage(prompt)
+                Log.e(TAG, "⏱ complete: total=${System.currentTimeMillis() - tc0}ms")
                 if (message == null) {
                     lastError = "sendMessage → null"
                     return@withContext null

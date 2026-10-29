@@ -104,13 +104,19 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
             null
         }
 
-        // Видаляємо застарілі OpenCL кеші, які роздувають пам'ять до гігабайтів
-        // (вимкнути: "clean_cache": false в mnn_overrides.json)
+        // OpenCL-кеш (mnn_cachefile.bin / *.opencl.weight) за замовчуванням ЗБЕРІГАЄМО — він прискорює prefill.
+        // Видаляємо лише якщо файл > 256 МБ. "clean_cache": true — видаляти завжди, false — ніколи.
         try {
-            if (overrides?.optBoolean("clean_cache", true) != false) modelDir.listFiles()?.forEach { f ->
+            val mode = overrides?.opt("clean_cache") as? Boolean
+            modelDir.listFiles()?.forEach { f ->
                 if (f.name.endsWith(".opencl.weight") || f.name == "mnn_cachefile.bin") {
-                    val deleted = f.delete()
-                    Log.e("MNN_CLEANUP", "🗑️ ${if (deleted) "Deleted" else "Failed to delete"} ${f.name} (${f.length()} bytes)")
+                    val tooBig = f.length() > 256L * 1024 * 1024
+                    if (mode != false && (mode == true || tooBig)) {
+                        val deleted = f.delete()
+                        Log.e("MNN_CLEANUP", "🗑️ ${if (deleted) "Deleted" else "Failed to delete"} ${f.name} (${f.length()} bytes)")
+                    } else {
+                        Log.e("MNN_CLEANUP", "Keep ${f.name} (${f.length()} bytes)")
+                    }
                 }
             }
         } catch (t: Throwable) {
@@ -129,7 +135,11 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
         // Мапимо вибір з UI → MNN backend_type + fallback
         val backends = when (currentSettings.llmBackend) {
             "gpu" -> listOf("opencl")
-            "cpu" -> listOf("cpu")
+            "cpu" -> if (modelDir.name.contains("qwen3.5", ignoreCase = true)) {
+                // У поточній збірці MNN Qwen3.5 на CPU дає порожню відповідь або "!!!!" — беремо OpenCL
+                Log.e(TAG, "⚠️ Qwen3.5 на CPU не підтримується в цій збірці MNN → opencl")
+                listOf("opencl")
+            } else listOf("cpu")
             // QNN видалено (не працює на SM8550) — NPU fallback на auto
             "npu" -> listOf("opencl", "cpu")
             "auto", "" -> listOf("opencl", "cpu")

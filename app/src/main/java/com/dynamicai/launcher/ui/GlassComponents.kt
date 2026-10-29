@@ -1,17 +1,23 @@
 package com.dynamicai.launcher.ui
 
 import com.dynamicai.launcher.ui.theme.AppTheme
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import com.dynamicai.launcher.ui.theme.AppDims
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -64,11 +70,16 @@ fun GlassCircleIcon(
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 20.dp,
+    cornerRadius: Dp = AppDims.radiusM,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val elevation = AppTheme.colors.elevation
     Column(
         modifier = modifier
+            // Світла тема: м'яка тінь, щоб картки відділялись від фону
+            .then(if (elevation > 0.dp) Modifier.shadow(elevation, RoundedCornerShape(cornerRadius), clip = false) else Modifier)
+            // Картка плавно змінює висоту, коли додається/зникає вміст (статус моделі, помилки тощо)
+            .animateContentSize()
             .clip(RoundedCornerShape(cornerRadius))
             .background(
                 // Темний фон, як у решті деталей лаунчера (наприклад, панель пошуку)
@@ -148,11 +159,21 @@ fun GlassButton(
  */
 @Composable
 fun GlassSectionHeader(text: String) {
+    // Прибираємо початкові емодзі («🤖 ШІ» → «ШІ»): однаковий стиль без піктограм-емодзі
+    val clean = text.dropWhile { !it.isLetterOrDigit() }.ifBlank { text }
     Text(
-        text.uppercase(),
+        clean.uppercase(),
         color = AppTheme.colors.accent,
         fontSize = 11.sp,
         letterSpacing = 1.5.sp,
         modifier = Modifier.padding(start = 8.dp, top = 20.dp, bottom = 8.dp)
     )
+}
+
+/** Єдина кнопка закриття для всіх екранів (замість текстового «✕»). */
+@Composable
+fun GlassCloseButton(onClick: () -> Unit, modifier: Modifier = Modifier, tint: Color = AppTheme.colors.textSecondary) {
+    IconButton(onClick = onClick, modifier = modifier) {
+        Icon(Icons.Default.Close, contentDescription = "Закрити", tint = tint)
+    }
 }

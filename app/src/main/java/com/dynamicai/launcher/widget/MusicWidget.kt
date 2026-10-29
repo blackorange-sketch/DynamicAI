@@ -78,7 +78,7 @@ fun SmallContent(
         verticalAlignment = Alignment.CenterVertically
     ) {
         CtrlBtn("⏮") { sendMediaKey(audioManager, KeyEvent.KEYCODE_MEDIA_PREVIOUS) }
-        CtrlBtn(if (isPlaying) "⏸" else "▶️", main = true) {
+        CtrlBtn(if (isPlaying) "⏸" else "▶", main = true) {
             handlePlayPause(context, audioManager, isPlaying, scope, onPlayStateChange)
         }
         CtrlBtn("⏭") { sendMediaKey(audioManager, KeyEvent.KEYCODE_MEDIA_NEXT) }
@@ -108,7 +108,7 @@ fun MediumContent(
 
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
             CtrlBtn("⏮") { sendMediaKey(audioManager, KeyEvent.KEYCODE_MEDIA_PREVIOUS) }
-            CtrlBtn(if (isPlaying) "⏸" else "▶️", main = true) {
+            CtrlBtn(if (isPlaying) "⏸" else "▶", main = true) {
                 handlePlayPause(context, audioManager, isPlaying, scope, onPlayStateChange)
             }
             CtrlBtn("⏭") { sendMediaKey(audioManager, KeyEvent.KEYCODE_MEDIA_NEXT) }
@@ -164,7 +164,7 @@ fun LargeContent(
         ) {
             CtrlBtn("⏮") { sendMediaKey(audioManager, KeyEvent.KEYCODE_MEDIA_PREVIOUS) }
             Spacer(Modifier.width(20.dp))
-            CtrlBtn(if (isPlaying) "⏸" else "▶️", main = true) {
+            CtrlBtn(if (isPlaying) "⏸" else "▶", main = true) {
                 handlePlayPause(context, audioManager, isPlaying, scope, onPlayStateChange)
             }
             Spacer(Modifier.width(20.dp))

@@ -6,7 +6,15 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.dynamicai.launcher.ui.theme.AppDims
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,28 +46,27 @@ fun SettingsMenuScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Налаштування", color = AppTheme.colors.textPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text("✕", color = AppTheme.colors.textSecondary, fontSize = 24.sp,
-                    modifier = Modifier.padding(8.dp).clickable(onClick = onClose))
+                GlassCloseButton(onClick = onClose)
             }
             Spacer(Modifier.height(24.dp))
 
-            CategoryCard("🤖", "ШІ та Голос", "LLM, TTS, Ранковий брифінг", AppTheme.colors.accentDark) { onCategorySelected("ai") }
+            CategoryCard(Icons.Default.Face, "ШІ та Голос", "LLM, TTS, Ранковий брифінг", AppTheme.colors.accentDark) { onCategorySelected("ai") }
             Spacer(Modifier.height(12.dp))
-            CategoryCard("🎨", "Вигляд", "Фон, Док, Розміри, Стиль", AppTheme.colors.pink) { onCategorySelected("appearance") }
+            CategoryCard(Icons.Default.Edit, "Вигляд", "Фон, Док, Розміри, Стиль", AppTheme.colors.pink) { onCategorySelected("appearance") }
             Spacer(Modifier.height(12.dp))
-            CategoryCard("🧩", "Модулі та Інструменти", "Wild Rift, OCR, Погода, Нотатки", AppTheme.colors.purple) { onCategorySelected("tools") }
+            CategoryCard(Icons.Default.Build, "Модулі та Інструменти", "Wild Rift, OCR, Погода, Нотатки", AppTheme.colors.purple) { onCategorySelected("tools") }
             Spacer(Modifier.height(12.dp))
-            CategoryCard("⚙️", "Система", "Shizuku, Дозволи, Bluetooth, Док", AppTheme.colors.success) { onCategorySelected("system") }
+            CategoryCard(Icons.Default.Settings, "Система", "Shizuku, Дозволи, Bluetooth, Док", AppTheme.colors.success) { onCategorySelected("system") }
         }
     }
 }
 
 @Composable
-private fun CategoryCard(icon: String, title: String, subtitle: String, color: Color, onClick: () -> Unit) {
+private fun CategoryCard(icon: ImageVector, title: String, subtitle: String, color: Color, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(AppDims.radiusM))
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
@@ -76,7 +83,7 @@ private fun CategoryCard(icon: String, title: String, subtitle: String, color: C
                         AppTheme.colors.glassBorder.copy(alpha = 0.3f)
                     )
                 ),
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(AppDims.radiusM)
             )
             .clickable(onClick = onClick)
             .padding(20.dp),
@@ -85,7 +92,7 @@ private fun CategoryCard(icon: String, title: String, subtitle: String, color: C
         Box(
             modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(color.copy(alpha = 0.2f)),
             contentAlignment = Alignment.Center
-        ) { Text(icon, fontSize = 24.sp) }
+        ) { Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(26.dp)) }
         Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)

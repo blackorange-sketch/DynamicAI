@@ -1,6 +1,14 @@
 package com.dynamicai.launcher.ui.theme
 
+import android.content.Context
+import android.os.Build
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -49,8 +57,31 @@ data class AppColors(
     val backdropStart: Color,
     val backdropEnd: Color,
     // Світла тема? (для системних елементів Material)
-    val isDark: Boolean = true
+    val isDark: Boolean = true,
+    // Тінь карток: у світлій темі «скло» без тіні виглядає пласко
+    val elevation: Dp = 0.dp
 )
+
+/** Єдині розміри інтерфейсу: використовуйте їх замість «магічних» чисел. */
+object AppDims {
+    // Радіуси
+    val radiusS = 12.dp
+    val radiusM = 20.dp
+    val radiusL = 28.dp
+    // Відступи
+    val spaceXS = 4.dp
+    val spaceS = 8.dp
+    val spaceM = 12.dp
+    val spaceL = 16.dp
+    val spaceXL = 24.dp
+    // Шрифти
+    val textCaption = 11.sp
+    val textSmall = 12.sp
+    val textBody = 14.sp
+    val textBodyLarge = 16.sp
+    val textTitle = 20.sp
+    val textHeadline = 24.sp
+}
 
 // 1. Темна (базова, як зараз)
 val GlassDarkTheme = AppColors(
@@ -91,12 +122,13 @@ val GlassLightTheme = AppColors(
     danger = Color(0xFFD32F2F),
     purple = Color(0xFF7B1FA2),
     pink = Color(0xFFC2185B),
-    glassBorder = Color.Black.copy(alpha = 0.08f),
-    glassBackground = Color(0xCCFFFFFF),
-    glassBackgroundAlt = Color(0xE6F0F0F0),
+    glassBorder = Color.Black.copy(alpha = 0.10f),
+    glassBackground = Color(0xF2FFFFFF),
+    glassBackgroundAlt = Color(0xE6F3F3F6),
     backdropStart = Color(0xFFE8E8EC),
     backdropEnd = Color(0xFFF5F5F7),
-    isDark = false
+    isDark = false,
+    elevation = 3.dp
 )
 
 // 3. AMOLED (чистий чорний)
@@ -184,6 +216,43 @@ fun appColorsFor(themeId: String): AppColors = when (themeId) {
     else -> GlassDarkTheme
 }
 
+/** Тема Material You: кольори з шпалер (Android 12+). На старих версіях — темна тема. */
+private fun dynamicAppColors(ctx: Context, dark: Boolean): AppColors {
+    val s = if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
+    val fixed = if (dark) GlassDarkTheme else GlassLightTheme
+    return AppColors(
+        background = s.background,
+        surface = s.surfaceContainer,
+        textPrimary = s.onSurface,
+        textSecondary = s.onSurface.copy(alpha = 0.7f),
+        textMuted = s.onSurfaceVariant,
+        accent = s.primary,
+        accentLight = s.secondary,
+        accentDark = s.primaryContainer,
+        success = fixed.success,
+        successLight = fixed.successLight,
+        warning = fixed.warning,
+        danger = fixed.danger,
+        purple = s.tertiary,
+        pink = fixed.pink,
+        glassBorder = s.onSurface.copy(alpha = 0.14f),
+        glassBackground = s.surfaceContainer.copy(alpha = 0.92f),
+        glassBackgroundAlt = s.surfaceContainerLow.copy(alpha = 0.85f),
+        backdropStart = s.surfaceContainerHigh,
+        backdropEnd = s.surface,
+        isDark = dark,
+        elevation = if (dark) 0.dp else 3.dp
+    )
+}
+
+@Composable
+private fun resolveAppColors(themeId: String): AppColors {
+    if (themeId != "glass_dynamic" || Build.VERSION.SDK_INT < 31) return appColorsFor(themeId)
+    val ctx = LocalContext.current
+    val dark = isSystemInDarkTheme()
+    return remember(ctx, dark) { dynamicAppColors(ctx, dark) }
+}
+
 /**
  * Єдина точка входу теми. Обгортає і наші кольори (AppTheme.colors), і MaterialTheme,
  * тож усі екрани, діалоги та оверлеї виглядають однаково.
@@ -195,8 +264,8 @@ fun DynamicAITheme(
     backgroundOverride: Color? = null,
     content: @Composable () -> Unit
 ) {
-    val colors = appColorsFor(themeId)
-    val scheme = remember(themeId, backgroundOverride) { colors.toMaterialScheme(backgroundOverride) }
+    val colors = resolveAppColors(themeId)
+    val scheme = remember(colors, backgroundOverride) { colors.toMaterialScheme(backgroundOverride) }
     CompositionLocalProvider(
         LocalAppColors provides colors,
         LocalContentColor provides colors.textPrimary

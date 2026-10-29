@@ -70,7 +70,7 @@ fun NotesWidget(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "📝 Нотатки",
+                "Нотатки",
                 color = AppTheme.colors.textPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,

@@ -443,7 +443,7 @@ internal fun BluetoothTestRow() {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         if (!hasPermission) {
             Text(
-                "❌ Потрібен дозвіл Bluetooth",
+                "Потрібен дозвіл Bluetooth",
                 color = AppTheme.colors.danger, fontSize = 12.sp
             )
             Spacer(Modifier.height(6.dp))

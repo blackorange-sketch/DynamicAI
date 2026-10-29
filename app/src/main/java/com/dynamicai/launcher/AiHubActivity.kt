@@ -245,7 +245,7 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                             onCancel = { }
                         )
                     }
-                    ActionChip("🎙️ Розмова", AppTheme.colors.pink) {
+                    ActionChip("Розмова", AppTheme.colors.pink) {
                         try {
                             val app = vm.getApplication<android.app.Application>()
                             app.startActivity(android.content.Intent(app, com.dynamicai.launcher.VoiceChatActivity::class.java).apply {
@@ -256,7 +256,7 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                         }
                         onClose()
                     }
-                    ActionChip("🎮 Wild Rift", AppTheme.colors.purple) {
+                    ActionChip("Wild Rift", AppTheme.colors.purple) {
                         try {
                             val app = vm.getApplication<android.app.Application>()
                             app.startActivity(android.content.Intent(app, com.dynamicai.launcher.WildRiftAdvisorActivity::class.java).apply {

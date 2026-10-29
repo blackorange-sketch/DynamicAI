@@ -61,8 +61,8 @@ fun ModuleManagerScreen(onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("🧩 Модулі", color = AppTheme.colors.textPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text("✕", color = AppTheme.colors.textSecondary, fontSize = 24.sp, modifier = Modifier.padding(8.dp).clickable(onClick = onClose))
+                Text("Модулі", color = AppTheme.colors.textPrimary, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                GlassCloseButton(onClick = onClose)
             }
             Spacer(Modifier.height(16.dp))
 

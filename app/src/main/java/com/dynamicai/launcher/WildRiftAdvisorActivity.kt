@@ -90,7 +90,7 @@ fun WildRiftAdvisorScreen(vm: AppListViewModel, onClose: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButtonBack(onClose)
             Spacer(Modifier.width(8.dp))
-            Text("🎮 Wild Rift — поради", color = AppTheme.colors.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("Wild Rift — поради", color = AppTheme.colors.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         }
         
         Spacer(Modifier.height(8.dp))

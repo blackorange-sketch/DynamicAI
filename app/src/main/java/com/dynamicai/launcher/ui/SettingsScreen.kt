@@ -282,6 +282,13 @@ fun SettingsScreen(
                     ThemeChip("AMOLED", "glass_amoled", settings.appTheme) { onSettingsChange(settings.copy(appTheme = it)) }
                     ThemeChip("Океан", "glass_ocean", settings.appTheme) { onSettingsChange(settings.copy(appTheme = it)) }
                 }
+                // Material You: кольори з шпалер (Android 12+)
+                if (android.os.Build.VERSION.SDK_INT >= 31) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ThemeChip("Material You (з шпалер)", "glass_dynamic", settings.appTheme) { onSettingsChange(settings.copy(appTheme = it)) }
+                    }
+                }
             }
         }
         
@@ -761,7 +768,7 @@ fun SettingsScreen(
                 Spacer(Modifier.height(8.dp))
 
                 val stateText = when {
-                    llmRestarting -> "⏳ " + llmStatus.ifBlank { "Перезапуск…" }
+                    llmRestarting -> "… " + llmStatus.ifBlank { "Перезапуск…" }
                     llmReadyNow -> "● Рушій працює"
                     else -> "○ Рушій вимкнений (завантажиться при першому запиті)"
                 }
@@ -802,7 +809,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("🧪 MNN Models", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text("MNN моделі", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                         TextButton(onClick = { vm.clearMnnCache() }) {
                             Text("Очистити кеш", color = AppTheme.colors.danger, fontSize = 11.sp)
                         }
@@ -1018,7 +1025,7 @@ fun SettingsScreen(
                     )
                 }
                 Text(
-                    "⚠️ Потребує постійного слухання — буде додано у наступній версії",
+                    "Потребує постійного слухання — буде додано у наступній версії",
                     color = AppTheme.colors.textSecondary,
                     fontSize = 10.sp,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
@@ -1060,7 +1067,7 @@ fun SettingsScreen(
                     },
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("💾 Записати у файли", color = AppTheme.colors.accent)
+                    Text("Зберегти", color = AppTheme.colors.accent)
                 }
             }
         }

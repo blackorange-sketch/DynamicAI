@@ -1,6 +1,7 @@
 package com.dynamicai.launcher.llm
 
 import android.util.Log
+import com.dynamicai.launcher.command.Command as C
 
 /**
  * Chat-режим: LLM + Web Search (RAG).
@@ -420,7 +421,6 @@ class ChatEngine(
     }
 
     private suspend fun commandRoute(question: String, apps: List<com.dynamicai.launcher.model.AppInfo>): String? {
-        val C = com.dynamicai.launcher.command.Command
         val cmd = try { commandParser.parse(question) } catch (e: Exception) { return null }
         // Ці типи або не прості, або обробляються окремо (пошук, питання, переклад, нотатки) — лишаємо моделі
         fun blocked(c: com.dynamicai.launcher.command.Command) =

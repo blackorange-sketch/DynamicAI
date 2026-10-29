@@ -859,28 +859,23 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 // Вимикаємо зір для Qwen/Gemma, щоб MNN не вантажив visual.mnn
                 try {
                     val configFile = java.io.File(targetDir, "config.json")
-                    if (configFile.exists() && (modelId.contains("qwen3.5") || modelId.contains("gemma"))) {
+                    if (configFile.exists()) {
                         val json = org.json.JSONObject(configFile.readText())
                         json.put("is_visual", false)
                         json.put("is_mrope", false)
+                        json.put("system_prompt_template", "")
                         configFile.writeText(json.toString())
-                        android.util.Log.e("MNN_CONFIG", "Disabled vision in config.json for $modelId")
+                        android.util.Log.e("MNN_CONFIG", "Patched config.json for $modelId")
                     }
-                    // Видаляємо jinja шаблон, який ламає C++ рушій
+                    // Видаляємо jinja та ставимо порожній системний промпт
                     val llmConfigFile = java.io.File(targetDir, "llm_config.json")
                     if (llmConfigFile.exists()) {
                         val jsonLlm = org.json.JSONObject(llmConfigFile.readText())
-                        if (jsonLlm.has("jinja")) {
-                            jsonLlm.remove("jinja")
-                        }
-                        if (jsonLlm.has("system_prompt_template")) {
-                            jsonLlm.remove("system_prompt_template")
-                        }
-                        if (jsonLlm.has("user_prompt_template")) {
-                            jsonLlm.put("user_prompt_template", "<|im_start|>user\n%s<|im_end|>\n<|im_start|>assistant\n")
-                        }
+                        jsonLlm.remove("jinja")
+                        jsonLlm.put("system_prompt_template", "")
+                        jsonLlm.put("user_prompt_template", "<|im_start|>user\n%s<|im_end|>\n<|im_start|>assistant\n")
                         llmConfigFile.writeText(jsonLlm.toString())
-                        android.util.Log.e("MNN_CONFIG", "Removed jinja and system prompt from llm_config.json for $modelId")
+                        android.util.Log.e("MNN_CONFIG", "Patched llm_config.json for $modelId")
                     }
                 } catch (e: Exception) {
                     android.util.Log.e("MNN_CONFIG", "Failed to patch config: ${e.message}")

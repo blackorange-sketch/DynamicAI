@@ -6,7 +6,7 @@ import java.io.File
 object PromptManager {
     private const val TAG = "PromptManager"
     
-    private val DEFAULT_MNN = "<|im_end|>\n<|im_start|>user\n{{question}}<|im_end|>\n<|im_start|>assistant\n"
+    private val DEFAULT_MNN = "{{question}}"
     private val DEFAULT_LITERT = "<start_of_turn>user\n{{question}}<end_of_turn>\n<start_of_turn>model\n"
     
     private fun mnnFile(ctx: Context) = File(ctx.filesDir, "prompts/mnn.txt")

@@ -872,9 +872,15 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                         val jsonLlm = org.json.JSONObject(llmConfigFile.readText())
                         if (jsonLlm.has("jinja")) {
                             jsonLlm.remove("jinja")
-                            llmConfigFile.writeText(jsonLlm.toString())
-                            android.util.Log.e("MNN_CONFIG", "Removed jinja template from llm_config.json for $modelId")
                         }
+                        if (jsonLlm.has("system_prompt_template")) {
+                            jsonLlm.remove("system_prompt_template")
+                        }
+                        if (jsonLlm.has("user_prompt_template")) {
+                            jsonLlm.put("user_prompt_template", "<|im_start|>user\n%s<|im_end|>\n<|im_start|>assistant\n")
+                        }
+                        llmConfigFile.writeText(jsonLlm.toString())
+                        android.util.Log.e("MNN_CONFIG", "Removed jinja and system prompt from llm_config.json for $modelId")
                     }
                 } catch (e: Exception) {
                     android.util.Log.e("MNN_CONFIG", "Failed to patch config: ${e.message}")

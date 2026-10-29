@@ -199,44 +199,38 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             }
     }
 
+    // Системний жест «назад»: один обробник із пріоритетом як у порядку відображення екранів,
+    // щоб верхній екран закривався першим (раніше «назад» з макросів/нотаток закривав усі налаштування).
+    val anyOverlay = showWeatherDetail || showNotesScreen || showMacroManager || showFolderManager ||
+        showRecent || showDockEditor || showWallpaper || showSettings
+    BackHandler(enabled = anyOverlay) {
+        when {
+            showWeatherDetail -> showWeatherDetail = false
+            showNotesScreen -> showNotesScreen = false
+            showMacroManager -> showMacroManager = false
+            showFolderManager -> showFolderManager = false
+            showRecent -> showRecent = false
+            showDockEditor -> showDockEditor = false
+            showWallpaper -> showWallpaper = false
+            showSettings -> {
+                // Із розділу — назад до меню налаштувань, із меню — закрити налаштування
+                if (currentSettingsCategory != null) currentSettingsCategory = null else showSettings = false
+            }
+        }
+    }
+    LaunchedEffect(showSettings) { if (!showSettings) currentSettingsCategory = null }
     // Поглинач back — на головному екрані back нічого не робить
-    BackHandler(enabled = !showDockEditor && !showWallpaper && !showSettings &&
-            openFolder == null && !drawerOpen && !searchMode && query.isBlank() &&
+    BackHandler(enabled = !anyOverlay && openFolder == null && !drawerOpen && !searchMode && query.isBlank() &&
             selectedTabFolderId == null) {
         // нічого не робимо
     }
-
-    BackHandler(enabled = showFolderManager) {
-        showFolderManager = false
-    }
-    BackHandler(enabled = showMacroManager) {
-        showMacroManager = false
-    }
-    BackHandler(enabled = showNotesScreen) {
-        showNotesScreen = false
-    }
-    BackHandler(enabled = !showFolderManager && showRecent) {
-        showRecent = false
-    }
-    BackHandler(enabled = !showRecent && showWeatherDetail) {
-        showWeatherDetail = false
-    }
-    BackHandler(enabled = !showWeatherDetail && showDockEditor) {
-        showDockEditor = false
-    }
-    BackHandler(enabled = !showDockEditor && showWallpaper) {
-        showWallpaper = false
-    }
-    BackHandler(enabled = !showWallpaper && showSettings) {
-        showSettings = false
-    }
-    BackHandler(enabled = !showSettings && openFolder != null) {
+    BackHandler(enabled = !anyOverlay && openFolder != null) {
         openFolder = null
     }
-    BackHandler(enabled = !showSettings && openFolder == null && drawerOpen) {
+    BackHandler(enabled = !anyOverlay && openFolder == null && drawerOpen) {
         drawerOpen = false
     }
-    BackHandler(enabled = !showSettings && openFolder == null && !drawerOpen && (searchMode || query.isNotBlank())) {
+    BackHandler(enabled = !anyOverlay && openFolder == null && !drawerOpen && (searchMode || query.isNotBlank())) {
         try { focusManager.clearFocus() } catch (_: Throwable) {}
         query = ""
         searchMode = false
@@ -560,6 +554,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     onOpenFolderManager = { showFolderManager = true },
                     onOpenMacroManager = { showMacroManager = true },
                     onOpenNotes = { showNotesScreen = true },
+                    onTestLlm = { prompt -> if (vm.ensureLlmLoaded()) vm.chatEngine.simpleAnswer(prompt) else null },
                     llmDownloaded = vm.downloader.isDownloaded,
                     llmReady = llmReady,
                     versionName = BuildConfig.VERSION_NAME,

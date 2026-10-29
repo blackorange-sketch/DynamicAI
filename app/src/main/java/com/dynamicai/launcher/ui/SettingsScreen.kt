@@ -793,6 +793,22 @@ fun SettingsScreen(
                         }
                     }
                 }
+                Spacer(Modifier.height(10.dp))
+                Text("Макс. довжина відповіді (токени, застосується після перезапуску рушія)", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(128, 256, 512, 1024).forEach { n ->
+                        LlmBackendChip(n.toString(), n.toString(), settings.maxResponseTokens.toString()) {
+                            onSettingsChange(settings.copy(maxResponseTokens = it.toInt()))
+                        }
+                    }
+                }
+                SwitchRow(
+                    label = "Завантажувати модель у фоні при старті",
+                    checked = settings.llmPreload,
+                    icon = Icons.Default.Settings,
+                    tint = AppTheme.colors.accent
+                ) { onSettingsChange(settings.copy(llmPreload = it)) }
                 Spacer(Modifier.height(8.dp))
 
                 val stateText = when {

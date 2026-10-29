@@ -703,6 +703,15 @@ fun LiquidChip(label: String, color: Color, onClick: () -> Unit) {
     }
 }
 
+/** Обрізає відповідь приблизно до maxTokens (≈1,7 символа на токен для кирилиці) по межі речення. */
+fun limitAnswer(text: String, maxTokens: Int): String {
+    val maxChars = (maxTokens * 2).coerceAtLeast(200)
+    if (text.length <= maxChars) return text
+    val cut = text.take(maxChars)
+    val end = cut.lastIndexOfAny(charArrayOf('.', '!', '?', '…', '\n'))
+    return if (end > maxChars / 3) cut.substring(0, end + 1).trim() else cut.trim() + "…"
+}
+
 fun processQuery(
     text: String, history: String, vm: AppListViewModel, scope: kotlinx.coroutines.CoroutineScope,
     onStateChange: (VoiceState) -> Unit, onMessage: (ChatMessage) -> Unit, stopListening: () -> Unit
@@ -722,11 +731,13 @@ fun processQuery(
             // для LiteRT (Gemma) — з агентними інструментами
             // Налаштування «Режим агента» вимкнено — теж простий чат (короткий промпт, зручно для діагностики GPU)
             val useAgent = vm.settings.value.useAgent
-            val answer = if (vm.currentModelId.startsWith("mnn-") || !useAgent) {
+            val rawAnswer = if (vm.currentModelId.startsWith("mnn-") || !useAgent) {
                 vm.chatEngine.simpleAnswer(text)
             } else {
                 vm.chatEngine.answerWithAgent(text, history)
             }
+            // Довга відповідь не влазить у повідомлення і довго озвучується — обрізаємо за реченням
+            val answer = limitAnswer(rawAnswer, vm.settings.value.maxResponseTokens)
             stopListening() // Примусово вимикаємо мікрофон, щоб не зчитав TTS
 
             // Службові відповіді рушія — показуємо як помилку з кнопкою, а не озвучуємо

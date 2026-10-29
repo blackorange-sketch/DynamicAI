@@ -214,7 +214,7 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
                     modelId = modelDir.name,
                     configDir = modelDir,
                     backendType = backend,
-                    maxNewTokens = 512,
+                    maxNewTokens = currentSettings.maxResponseTokens.coerceIn(32, 2048),
                     overrides = overrides
                 )
                 val ok = s.load()

@@ -359,6 +359,13 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         _history.value = historyStorage.get()
         refresh()
         startLlmAutoUnload()
+        // Фонове завантаження моделі: перший запит не чекатиме ~15 с на старт рушія
+        if (settingsStorage.load().llmPreload) {
+            viewModelScope.launch {
+                kotlinx.coroutines.delay(4000)
+                try { ensureLlmLoaded() } catch (t: Throwable) { android.util.Log.e("LLM_DEBUG", "preload failed: ${t.message}") }
+            }
+        }
         android.util.Log.d("APPINIT", "init done")
     }
 

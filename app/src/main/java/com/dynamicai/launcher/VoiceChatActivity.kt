@@ -721,6 +721,21 @@ fun processQuery(
     onMessage(ChatMessage("status", "Думаю…"))
     return scope.launch {
         try {
+            // Прості команди (ліхтарик, відкрити додаток, будильник…) — миттєво, без моделі
+            if (vm.settings.value.fastCommands) {
+                val fast = try { vm.chatEngine.tryFastRoute(text) } catch (e: Exception) { null }
+                if (fast != null) {
+                    onMessage(ChatMessage("assistant", fast))
+                    onStateChange(VoiceState.SPEAKING)
+                    vm.tts.speakWithCallback(fast) {
+                        kotlinx.coroutines.MainScope().launch {
+                            kotlinx.coroutines.delay(400)
+                            onStateChange(VoiceState.LISTENING)
+                        }
+                    }
+                    return@launch
+                }
+            }
             if (!vm.ensureLlmLoaded()) {
                 onMessage(ChatMessage("error", "Модель не завантажилась. Перезапустіть рушій або оберіть іншу модель зверху.", "restart"))
                 onStateChange(VoiceState.SPEAKING)

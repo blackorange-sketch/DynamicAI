@@ -136,6 +136,9 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         return sanitized.toDouble()
     }
 
+    /** Прямий виклик інструмента (для FastRouter, без LLM). */
+    suspend fun runTool(toolCall: String): String = withContext(Dispatchers.IO) { executeTool(toolCall) }
+
     private fun getArg(toolCall: String, key: String): String {
         return Regex("""${key}="([^"]+)"""").find(toolCall)?.groupValues?.get(1) ?: ""
     }

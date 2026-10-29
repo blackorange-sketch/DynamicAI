@@ -811,6 +811,12 @@ fun SettingsScreen(
                     LlmBackendChip("Звичайно", "normal", settings.answerStyle) { onSettingsChange(settings.copy(answerStyle = it)) }
                 }
                 SwitchRow(
+                    label = "Швидкі команди без моделі (ліхтарик, додатки, будильник…)",
+                    checked = settings.fastCommands,
+                    icon = Icons.Default.Settings,
+                    tint = AppTheme.colors.success
+                ) { onSettingsChange(settings.copy(fastCommands = it)) }
+                SwitchRow(
                     label = "Завантажувати модель у фоні при старті",
                     checked = settings.llmPreload,
                     icon = Icons.Default.Settings,

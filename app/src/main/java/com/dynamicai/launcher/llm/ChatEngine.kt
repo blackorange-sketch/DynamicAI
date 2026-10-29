@@ -331,6 +331,11 @@ class ChatEngine(
 
 
     /** Простий чат без агента та інструментів — для маленьких моделей (MNN Qwen 1.5B/0.6B). */
+    private val fastRouter by lazy { FastRouter { agentEngine.runTool(it) } }
+
+    /** Проста команда телефону без LLM (null — це не проста команда). */
+    suspend fun tryFastRoute(question: String): String? = fastRouter.tryHandle(question)
+
     suspend fun simpleAnswer(question: String): String {
         if (!llm.isReady) return "LLM не активна"
         return try {

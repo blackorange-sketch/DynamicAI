@@ -51,6 +51,7 @@ data class LauncherSettings(
     val litertMtp: String = "default",         // "default" | "on" | "off"
     val litertSeparateCache: Boolean = false,
     val maxResponseTokens: Int = 256,          // ліміт довжини відповіді (MNN: токени; усі: обрізання за реченням)
+    val voiceEngine: String = "google",         // "google" | "auto" (Vosk без мережі) | "vosk"
     val answerLanguage: String = "uk",         // "uk" | "auto" (мова питання) | "en"
     val answerStyle: String = "short",         // "short" | "normal": чи просити модель відповідати коротко
     val autoSearch: Boolean = true,            // для фактичних питань спершу шукати у Вікіпедії
@@ -111,6 +112,7 @@ class SettingsStorage(context: Context) {
             litertMtp = prefs.getString("litertMtp", "default") ?: "default",
             litertSeparateCache = prefs.getBoolean("litertSeparateCache", false),
             maxResponseTokens = prefs.getInt("maxResponseTokens", 256),
+            voiceEngine = prefs.getString("voiceEngine", "google") ?: "google",
             answerLanguage = prefs.getString("answerLanguage", "uk") ?: "uk",
             answerStyle = prefs.getString("answerStyle", "short") ?: "short",
             autoSearch = prefs.getBoolean("autoSearch", true),
@@ -168,6 +170,7 @@ class SettingsStorage(context: Context) {
             .putString("litertMtp", s.litertMtp)
             .putBoolean("litertSeparateCache", s.litertSeparateCache)
             .putInt("maxResponseTokens", s.maxResponseTokens)
+            .putString("voiceEngine", s.voiceEngine)
             .putString("answerLanguage", s.answerLanguage)
             .putString("answerStyle", s.answerStyle)
             .putBoolean("autoSearch", s.autoSearch)

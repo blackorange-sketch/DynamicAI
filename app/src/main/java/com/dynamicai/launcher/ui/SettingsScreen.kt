@@ -804,6 +804,8 @@ fun SettingsScreen(
                     }
                 }
                 Spacer(Modifier.height(10.dp))
+                VoskSettingsBlock(settings, onSettingsChange)
+                Spacer(Modifier.height(10.dp))
                 Text("Мова відповіді", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1224,3 +1226,52 @@ private fun RowScope.LlmBackendChip(label: String, backendId: String, current: S
 /** 1_436_000_000 -> "1.4 ГБ", 614_000_000 -> "614 МБ" */
 private fun formatModelSize(bytes: Long): String =
     if (bytes >= 1_000_000_000L) "%.1f ГБ".format(bytes / 1_000_000_000.0) else "${bytes / 1_000_000} МБ"
+
+
+/** Розпізнавання голосу: Google (онлайн) або Vosk (офлайн, українська). Модель завантажується тут же. */
+@Composable
+private fun VoskSettingsBlock(settings: LauncherSettings, onSettingsChange: (LauncherSettings) -> Unit) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var installed by remember { mutableStateOf(com.dynamicai.launcher.voice.VoskEngine.isInstalled(ctx)) }
+    var status by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+
+    Text("Розпізнавання голосу", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+    Spacer(Modifier.height(4.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        LlmBackendChip("Google", "google", settings.voiceEngine) { onSettingsChange(settings.copy(voiceEngine = it)) }
+        LlmBackendChip("Авто", "auto", settings.voiceEngine) { onSettingsChange(settings.copy(voiceEngine = it)) }
+        LlmBackendChip("Vosk офлайн", "vosk", settings.voiceEngine) { onSettingsChange(settings.copy(voiceEngine = it)) }
+    }
+    Spacer(Modifier.height(4.dp))
+    Text(
+        "Авто: Google з інтернетом, Vosk без нього. Vosk працює повністю на телефоні (українська модель ~140 МБ).",
+        color = AppTheme.colors.textSecondary, fontSize = 11.sp
+    )
+    Spacer(Modifier.height(6.dp))
+    if (installed) {
+        Text("Модель Vosk встановлено", color = AppTheme.colors.success, fontSize = 12.sp)
+        TextButton(onClick = {
+            com.dynamicai.launcher.voice.VoskEngine.delete(ctx)
+            installed = false
+            status = ""
+            if (settings.voiceEngine != "google") onSettingsChange(settings.copy(voiceEngine = "google"))
+        }) { Text("Видалити модель") }
+    } else {
+        Button(enabled = !busy, onClick = {
+            busy = true
+            status = "Початок завантаження…"
+            scope.launch {
+                val err = com.dynamicai.launcher.voice.VoskEngine.download(ctx) { msg -> status = msg }
+                busy = false
+                if (err == null) {
+                    installed = true
+                    status = ""
+                    if (settings.voiceEngine == "google") onSettingsChange(settings.copy(voiceEngine = "auto"))
+                } else status = "Помилка: $err"
+            }
+        }) { Text(if (busy) "Завантаження…" else "Завантажити модель Vosk (~140 МБ)") }
+        if (status.isNotBlank()) Text(status, color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+    }
+}

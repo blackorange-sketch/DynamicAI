@@ -103,8 +103,10 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     val listState = rememberLazyListState()
     var recognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
     val shouldListen = remember { mutableStateOf(true) }
+    var voskSession by remember { mutableStateOf<com.dynamicai.launcher.voice.VoskEngine.Session?>(null) }
 
     fun stopListening() {
+        try { voskSession?.stop() } catch (_: Exception) {}
         try {
             recognizer?.stopListening()
             recognizer?.cancel()
@@ -137,6 +139,30 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
 
     fun startListening() {
         if (!shouldListen.value) return
+        voskSession?.stop()
+        voskSession = null
+        val voiceMode = com.dynamicai.launcher.data.SettingsStorage(ctx).load().voiceEngine
+        if (com.dynamicai.launcher.voice.VoskEngine.shouldUse(ctx, voiceMode)) {
+            recognizer?.destroy()
+            recognizer = null
+            voskSession = com.dynamicai.launcher.voice.VoskEngine.Session(
+                ctx,
+                onReady = { voiceState = VoiceState.LISTENING },
+                onPartial = { if (voiceState == VoiceState.SPEAKING) { vm.tts.stop(); voiceState = VoiceState.LISTENING } },
+                onResult = { text -> sendQuery(text) },
+                onError = {
+                    voiceState = VoiceState.IDLE
+                    if (shouldListen.value) {
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            if (shouldListen.value && voiceState == VoiceState.IDLE) {
+                                try { startListening() } catch (_: Exception) {}
+                            }
+                        }, 1500)
+                    }
+                }
+            ).also { it.start() }
+            return
+        }
         if (!SpeechRecognizer.isRecognitionAvailable(ctx)) return
         recognizer?.destroy()
         recognizer = SpeechRecognizer.createSpeechRecognizer(ctx).apply {
@@ -208,6 +234,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 }
                 Lifecycle.Event.ON_PAUSE -> {
                     shouldListen.value = false
+                    try { voskSession?.stop() } catch (_: Exception) {}
                     try {
                         recognizer?.stopListening()
                         recognizer?.cancel()
@@ -216,6 +243,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 Lifecycle.Event.ON_DESTROY -> {
                     shouldListen.value = false
                     try { recognizer?.destroy() } catch (_: Exception) {}
+                    try { voskSession?.stop() } catch (_: Exception) {}
                     recognizer = null
                 }
                 else -> {}

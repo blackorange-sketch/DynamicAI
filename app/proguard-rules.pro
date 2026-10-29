@@ -89,3 +89,8 @@
 -keep class org.mozilla.javascript.** { *; }
 -keep class org.jsoup.** { *; }
 -keep class org.schabi.newpipe.extractor.** { *; }
+
+-keep class org.vosk.** { *; }
+-keep class com.sun.jna.** { *; }
+-dontwarn java.awt.**
+-dontwarn com.sun.jna.**

@@ -784,6 +784,17 @@ fun SettingsScreen(
                 HorizontalDivider(color = AppTheme.colors.glassBorder)
                 Spacer(Modifier.height(8.dp))
 
+                Text("Вивантажувати модель з пам'яті після простою", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("3 хв" to 3, "15 хв" to 15, "60 хв" to 60, "Ніколи" to 0).forEach { (label, min) ->
+                        LlmBackendChip(label, min.toString(), settings.llmUnloadMinutes.toString()) {
+                            onSettingsChange(settings.copy(llmUnloadMinutes = it.toInt()))
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+
                 val stateText = when {
                     llmRestarting -> "… " + llmStatus.ifBlank { "Перезапуск…" }
                     llmReadyNow -> "● Рушій працює"

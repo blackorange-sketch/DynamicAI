@@ -19,7 +19,7 @@ object ModelRepository {
     val AVAILABLE_MODELS = listOf(
         LlmModel(
             id = "gemma-4-E2B-cpu",
-            name = "Gemma 4 E2B (CPU)",
+            name = "Gemma 4 E2B",
             supportedBackends = listOf("CPU", "GPU"),
             url = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
             sizeBytes = 1_800_000_000L,
@@ -27,7 +27,7 @@ object ModelRepository {
         ),
         LlmModel(
             id = "gemma-4-E2B-gpu",
-            name = "Gemma 4 E2B (GPU)",
+            name = "Gemma 4 E2B (GPU-збірка, експериментальна)",
             supportedBackends = listOf("GPU"),
             url = "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it-gpu.litertlm",
             sizeBytes = 2_008_000_000L,

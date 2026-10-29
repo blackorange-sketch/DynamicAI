@@ -153,7 +153,8 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 try {
                     if (llm.isReady && llm.lastUsedAt > 0) {
                         val idle = System.currentTimeMillis() - llm.lastUsedAt
-                        if (idle > 3 * 60_000L) {
+                        val limitMin = settings.value.llmUnloadMinutes
+                        if (limitMin > 0 && idle > limitMin * 60_000L) {
                             android.util.Log.e("LlmUnload", "Auto-unloading LLM after ${idle / 1000}s idle")
                             llm.close()
                             _llmReady.value = false

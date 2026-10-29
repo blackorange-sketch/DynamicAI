@@ -20,6 +20,89 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
     private val deepLink = DeepLinkEngine(context)
     private val messengerCaller = MessengerCaller(context)
 
+    /** Хук підтвердження небезпечних дій (дзвінок у месенджері). Встановлює ChatEngine: зберігає дію й просить «так/ні». */
+    var confirmHook: ((String, suspend () -> String) -> String)? = null
+
+    private val extraToolLines = listOf(
+        "openCamera(mode: String) -> Камера: 'photo', 'selfie' або 'video'.",
+        "convertCurrency(amount: Number, from: String, to: String) -> Курс і конвертація валют (USD, EUR, PLN, UAH).",
+        "readScreen() -> Прочитати текст, що зараз на екрані.",
+        "callInTelegram(contactName: String) -> Дзвінок у Telegram (потрібне підтвердження).",
+        "callInInstagram(contactName: String) -> Дзвінок в Instagram (потрібне підтвердження).",
+        "flipCoin() -> Підкинути монетку.",
+        "rollDice() -> Кинути кубик.",
+        "randomNumber(min: Int, max: Int) -> Випадкове число.",
+        "runMacro(name: String) -> Запустити збережений макрос."
+    )
+
+    /** Ключові слова (корені) для вибору інструментів: у промпт потрапляють лише релевантні — він коротший у рази. */
+    private val toolKeywords: Map<String, List<String>> = mapOf(
+        "openApp" to listOf("відкр", "запуст", "open", "додат", "програм"),
+        "closeApp" to listOf("закри", "згорн", "головн"),
+        "searchGoogle" to listOf("гугл", "google", "в гугл"),
+        "playYouTube" to listOf("youtube", "ютуб"),
+        "playMusic" to listOf("музик", "пісн", "трек", "заграй", "включи"),
+        "dialNumber" to listOf("набер", "номер", "подзвон", "зателеф"),
+        "sendSms" to listOf("смс", "sms", "повідомл"),
+        "setAlarm" to listOf("будильн", "збуд"),
+        "addCalendarEvent" to listOf("календар", "подію", "зустріч"),
+        "getWeather" to listOf("погод", "дощ", "температур", "сніг"),
+        "navigateTo" to listOf("маршрут", "навігац", "дорог", "доїха"),
+        "toggleFlashlight" to listOf("ліхтар"),
+        "setBrightness" to listOf("яскрав"),
+        "takeNote" to listOf("нотат", "запиши", "запам"),
+        "readNotes" to listOf("нотат", "прочитай"),
+        "getWildRiftAdvice" to listOf("wild", "rift", "чемпіон", "вайлд"),
+        "searchWeb" to listOf("знайди", "пошук", "інтернет", "хто", "що таке", "коли", "новин"),
+        "toggleWifi" to listOf("wifi", "wi-fi", "вайфай", "вай-фай"),
+        "toggleBluetooth" to listOf("bluetooth", "блютуз"),
+        "copyToClipboard" to listOf("скопі", "буфер"),
+        "calculate" to listOf("порахуй", "скільки буде", "обчисл", "помнож", "ділит"),
+        "openUrl" to listOf("сайт", "http", "посилан"),
+        "createNotification" to listOf("сповіщ"),
+        "getTime" to listOf("час", "дат", "годин", "число"),
+        "getBattery" to listOf("заряд", "батаре"),
+        "setVolume" to listOf("гучн", "звук"),
+        "getDeviceInfo" to listOf("пристр", "мереж", "інформац"),
+        "openCamera" to listOf("камер", "фото", "селфі", "відео"),
+        "convertCurrency" to listOf("курс", "валют", "долар", "євро", "гривн", "злот"),
+        "flipCoin" to listOf("монет"),
+        "rollDice" to listOf("кубик"),
+        "randomNumber" to listOf("випадков"),
+        "readScreen" to listOf("екран", "прочитай"),
+        "callInTelegram" to listOf("telegram", "телеграм"),
+        "callInInstagram" to listOf("instagram", "інстаграм"),
+        "runMacro" to listOf("макрос")
+    )
+
+    private val allToolLines: List<Pair<String, String>> by lazy {
+        val fromList = toolsDescription.lines().mapNotNull { raw ->
+            val line = raw.trim()
+            Regex("""^\d+\.\s+(\w+)\(""").find(line)?.let { it.groupValues[1] to line.replace(Regex("""^\d+\.\s+"""), "") }
+        }
+        fromList + extraToolLines.map { it.substringBefore("(") to it }
+    }
+
+    /** Вибирає до 6 найрелевантніших інструментів за запитом (+ searchWeb як запасний). */
+    private fun selectTools(question: String): String {
+        val q = question.lowercase()
+        val scored = allToolLines
+            .map { (name, line) -> Triple(name, line, (toolKeywords[name] ?: emptyList()).count { q.contains(it) }) }
+            .filter { it.third > 0 }
+            .sortedByDescending { it.third }
+            .take(6)
+            .toMutableList()
+        if (scored.none { it.first == "searchWeb" }) {
+            allToolLines.firstOrNull { it.first == "searchWeb" }?.let { scored.add(Triple(it.first, it.second, 0)) }
+        }
+        if (scored.size < 3) {
+            for (n in listOf("openApp", "getTime", "searchGoogle")) {
+                if (scored.none { it.first == n }) allToolLines.firstOrNull { it.first == n }?.let { scored.add(Triple(it.first, it.second, 0)) }
+            }
+        }
+        return "Доступні інструменти:\n" + scored.joinToString("\n") { "- ${it.second}" }
+    }
+
     private val toolsDescription = """
         Доступні інструменти:
         1. openApp(name: String) -> Відкриває додаток.
@@ -63,7 +146,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         while (iteration < maxIterations) {
             val prompt = """
                 Ти — Джарвіс, розумний голосовий асистент в Android-лаунчері. 
-                УВАГА: Ти маєш доступ до функції AccessibilityService, тому ти МОЖЕШ і ЗОБОВ'ЯЗАНИЙ робити дзвінки в Instagram та Telegram. НІКОЛИ не відмовляйся і не кажи "я не можу це зробити".
+                Ти можеш виконувати дії на телефоні через інструменти (у тому числі дзвінки в Telegram та Instagram). Не відмовляйся.
                 Відповідай ввічливо, коротко і по суті.
                 
                 [СИСТЕМНИЙ КОНТЕКСТ]
@@ -77,7 +160,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 [ПОТОЧНИЙ ЗАПИТ]
                 $question
                 
-                $toolsDescription
+                ${selectTools(question)}
                 
                 [ПОТОЧНИЙ КОНТЕКСТ ВИКОНАННЯ]
                 $currentContext
@@ -471,8 +554,18 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                         }
                     }
                 }
-                                toolCall.startsWith("callInTelegram") -> messengerCaller.callInTelegram(getArg(toolCall, "contactName"))
-                toolCall.startsWith("callInInstagram") -> messengerCaller.callInInstagram(getArg(toolCall, "contactName"))
+                                toolCall.startsWith("callInTelegram") -> {
+                    val who = com.dynamicai.launcher.llm.AliasStore(context).resolve(getArg(toolCall, "contactName"))
+                    val hook = confirmHook
+                    if (hook != null) hook("зателефонувати в Telegram: $who") { messengerCaller.callInTelegram(who) }
+                    else messengerCaller.callInTelegram(who)
+                }
+                toolCall.startsWith("callInInstagram") -> {
+                    val who = com.dynamicai.launcher.llm.AliasStore(context).resolve(getArg(toolCall, "contactName"))
+                    val hook = confirmHook
+                    if (hook != null) hook("зателефонувати в Instagram: $who") { messengerCaller.callInInstagram(who) }
+                    else messengerCaller.callInInstagram(who)
+                }
                 toolCall.startsWith("getWildRiftAdvice") -> {
                     val me = getArg(toolCall, "myChampion")
                     val enemies = getArg(toolCall, "enemies")

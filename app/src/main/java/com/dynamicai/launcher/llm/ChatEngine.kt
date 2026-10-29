@@ -356,17 +356,70 @@ class ChatEngine(
 
     private val commandParser by lazy { com.dynamicai.launcher.command.CommandParser() }
 
+    // ===== Підтвердження небезпечних дій («так» / «ні» наступною фразою) =====
+    private var pendingAction: Pair<String, suspend () -> String>? = null
+
+    init {
+        agentEngine.confirmHook = { desc, action ->
+            pendingAction = desc to action
+            "Підтвердіть: $desc. Скажіть «так» або «ні»."
+        }
+    }
+
+    private val YES = Regex("^(так|ага|підтверджую|давай|гаразд|добре|роби|виконуй|звісно|авжеж|ок|окей)(?!\\p{L}).*")
+    private val NO = Regex("^(ні|не треба|скасуй|скасувати|відміна|стоп|не роби|не потрібно)(?!\\p{L}).*")
+    private val REMEMBER = Regex("^запам.?ятай,?\\s+(?:що\\s+)?(.+?)\\s+(?:це|є|—|-|=)\\s+(.+)$")
+
+    private fun findContact(contacts: List<com.dynamicai.launcher.suggestion.ContactInfo>, name: String): com.dynamicai.launcher.suggestion.ContactInfo? {
+        val n = name.lowercase().trim()
+        contacts.firstOrNull { it.name.lowercase().contains(n) }?.let { return it }
+        val stems = n.split(Regex("\\s+")).filter { it.isNotBlank() }.map { AliasStore.stem(it) }
+        if (stems.isEmpty()) return null
+        return contacts.firstOrNull { c -> val cn = c.name.lowercase(); stems.all { cn.contains(it) } }
+    }
+
+    /** «Зателефонуй мамі»: псевдонім → контакт → набір номера (користувач сам натискає виклик). */
+    private suspend fun callContact(rawName: String): String {
+        val name = AliasStore(context).resolve(rawName)
+        if (name.any { it.isDigit() } && name.count { it.isDigit() } >= 5) {
+            return dial(name)
+        }
+        val contacts = try { com.dynamicai.launcher.suggestion.ContactRepository(context).loadAll() } catch (e: Exception) { emptyList() }
+        val c = findContact(contacts, name)
+        val number = c?.phones?.firstOrNull()
+        if (c == null || number == null) return "Контакт «$rawName» не знайдено. Можна сказати: «запам'ятай, що $rawName — це Ім'я Прізвище»."
+        return dial(number, c.name)
+    }
+
+    private fun dial(number: String, label: String? = null): String = try {
+        context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:" + android.net.Uri.encode(number)))
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        "Набираю ${label ?: number}. Натисніть виклик."
+    } catch (e: Exception) { "Не вдалося відкрити набір номера." }
+
     /**
      * Проста команда телефону без LLM (null — це не проста команда).
      * Спершу канонічний CommandParser/CommandExecutor проєкту (таймери, нагадування, дзвінки, медіа, перемикачі,
      * калькулятор…), потім FastRouter (погода, навігація, камера, валюта, YouTube, нотатки).
      */
     suspend fun tryFastRoute(question: String, apps: List<com.dynamicai.launcher.model.AppInfo> = emptyList()): String? {
+        val t = question.lowercase().trim().trimEnd('.', '!', '?', ',', ' ')
+        // Відповідь на запит підтвердження
+        pendingAction?.let { (_, action) ->
+            pendingAction = null
+            if (YES.matches(t)) return try { action() } catch (e: Exception) { "Не вдалося виконати: ${e.message}" }
+            if (NO.matches(t)) return "Скасовано."
+        }
+        // «Запам'ятай, що мама — це Олена Іванівна»
+        REMEMBER.find(t)?.let { m ->
+            AliasStore(context).put(m.groupValues[1], m.groupValues[2])
+            return "Запам'ятав: ${m.groupValues[1]} — це ${m.groupValues[2]}."
+        }
         commandRoute(question, apps)?.let { return it }
         return fastRouter.tryHandle(question)
     }
 
-    private fun commandRoute(question: String, apps: List<com.dynamicai.launcher.model.AppInfo>): String? {
+    private suspend fun commandRoute(question: String, apps: List<com.dynamicai.launcher.model.AppInfo>): String? {
         val C = com.dynamicai.launcher.command.Command
         val cmd = try { commandParser.parse(question) } catch (e: Exception) { return null }
         // Ці типи або не прості, або обробляються окремо (пошук, питання, переклад, нотатки) — лишаємо моделі
@@ -374,6 +427,8 @@ class ChatEngine(
             c is C.Unknown || c is C.Raw || c is C.AskQuestion || c is C.WebSearch || c is C.OpenNotes ||
                 c is C.TranslateScreen || c is C.TranslateText
         if (blocked(cmd)) return null
+        // Дзвінок за іменем: парсер набирає ім'я як номер, тому шукаємо контакт самі
+        if (cmd is C.Call) return callContact(cmd.name)
         if (cmd is C.Compound && cmd.steps.any { blocked(it) }) return null
         val executor = com.dynamicai.launcher.command.CommandExecutorProvider.get(context)
         val result = try { executor.execute(cmd, apps) } catch (e: Exception) {

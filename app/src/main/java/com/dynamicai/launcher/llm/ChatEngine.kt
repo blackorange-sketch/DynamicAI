@@ -487,7 +487,23 @@ class ChatEngine(
         return "Створити макрос «${draft.macro.name}»? Скажіть «так» або «ні».\n\n${draft.preview}"
     }
 
-    suspend fun simpleAnswer(question: String, onToken: ((String) -> Unit)? = null): String {
+    private val FOLLOW_UP = Regex("(^|\\s)(він|вона|воно|вони|його|її|їх|йому|їй|ним|нею|нього|неї|цього|цьому|цей|ця|це|ті|там|тут|тоді|ще|інші|інший|детальніше|докладніше|далі|продовжуй|продовж|повтори|а\\s+як|а\\s+що|а\\s+скільки|а\\s+коли|а\\s+де|а\\s+чому)(\\s|$|[?.!,])")
+
+    /** Чи залежить питання від попередньої розмови (займенники, «а скільки…», дуже коротке). */
+    private fun isFollowUp(question: String): Boolean {
+        val t = question.lowercase().trim()
+        return t.split(Regex("\\s+")).size <= 3 || FOLLOW_UP.containsMatchIn(t)
+    }
+
+    /** Стискає історію діалогу до кількох останніх реплік (мала модель + кирилиця = дорогий префіл). */
+    private fun compactHistory(history: String): String {
+        val lines = history.lines().filter { it.isNotBlank() }.takeLast(6).map { it.take(220) }
+        var out = lines.joinToString("\n")
+        if (out.length > 750) out = out.takeLast(750).substringAfter('\n', out.takeLast(750))
+        return out
+    }
+
+    suspend fun simpleAnswer(question: String, onToken: ((String) -> Unit)? = null, history: String = ""): String {
         if (!llm.isReady) return "LLM не активна"
         macroFlow(question)?.let { return it }
         return try {
@@ -495,9 +511,14 @@ class ChatEngine(
             val settings = com.dynamicai.launcher.data.SettingsStorage(context).load()
             // «Коротко»: додається до питання, а не до шаблону, тож власні промпти з налаштувань лишаються недоторканими
             // Фактичні питання («хто такий…», «коли народився…»): спершу дані з Вікіпедії — мала модель вигадує дати й імена
-            val facts = if (settings.autoSearch && looksFactual(question)) {
+            // Пам'ять діалогу: додаємо лише коли питання залежить від попередніх реплік
+            val followUp = history.isNotBlank() && isFollowUp(question)
+            val prevUser = history.lines().lastOrNull { it.startsWith("Користувач:") }?.removePrefix("Користувач:")?.trim().orEmpty()
+            // «А скільки йому років?» → шукаємо за темою попереднього питання
+            val searchText = if (followUp && prevUser.isNotBlank()) "$prevUser. $question" else question
+            val facts = if (settings.autoSearch && looksFactual(question.removePrefix("а ").removePrefix("і ").removePrefix("ну "))) {
                 try {
-                    val ctx = gatherFacts(question)
+                    val ctx = gatherFacts(searchText)
                     Log.e(TAG, "🔎 auto-search for '$question': ${ctx.length} chars")
                     ctx
                 } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { "" }
@@ -510,11 +531,12 @@ class ChatEngine(
             if (screenAsk && screenText.isBlank() && !com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
                 return "Щоб бачити екран, увімкніть сервіс доступності (DynamicAI Automation) у налаштуваннях Android."
             }
-            val base = if (screenText.isNotBlank())
+            val baseCore = if (screenText.isNotBlank())
                 "Текст на екрані користувача:\n$screenText\n\nПитання: $question\nВідповідай за цим текстом."
             else if (facts.isNotBlank())
                 "Дані з інтернету:\n${facts.take(2300)}\n\nПитання: $question\nВідповідай за цими даними, не вигадуй. Якщо даних недостатньо — так і скажи."
             else question
+            val base = if (followUp) "Попередня розмова (для контексту):\n${compactHistory(history)}\n\n" + baseCore else baseCore
             val langHint = when (settings.answerLanguage) {
                 "en" -> "\n(Answer in English.)"
                 "auto" -> "\n(Відповідай мовою питання.)"

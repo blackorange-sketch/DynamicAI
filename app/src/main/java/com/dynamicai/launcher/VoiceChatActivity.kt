@@ -848,7 +848,7 @@ fun processQuery(
             }
 
             val rawAnswer = if (simple) {
-                vm.chatEngine.simpleAnswer(text) { token -> splitter.feed(token) }
+                vm.chatEngine.simpleAnswer(text, { token -> splitter.feed(token) }, history)
             } else {
                 vm.chatEngine.answerWithAgent(text, history)
             }

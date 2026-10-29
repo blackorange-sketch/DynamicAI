@@ -866,8 +866,18 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                         configFile.writeText(json.toString())
                         android.util.Log.e("MNN_CONFIG", "Disabled vision in config.json for $modelId")
                     }
+                    // Видаляємо jinja шаблон, який ламає C++ рушій
+                    val llmConfigFile = java.io.File(targetDir, "llm_config.json")
+                    if (llmConfigFile.exists()) {
+                        val jsonLlm = org.json.JSONObject(llmConfigFile.readText())
+                        if (jsonLlm.has("jinja")) {
+                            jsonLlm.remove("jinja")
+                            llmConfigFile.writeText(jsonLlm.toString())
+                            android.util.Log.e("MNN_CONFIG", "Removed jinja template from llm_config.json for $modelId")
+                        }
+                    }
                 } catch (e: Exception) {
-                    android.util.Log.e("MNN_CONFIG", "Failed to patch config.json: ${e.message}")
+                    android.util.Log.e("MNN_CONFIG", "Failed to patch config: ${e.message}")
                 }
                 
                 _downloadTrigger.value = (_downloadTrigger.value ?: 0) + 1

@@ -81,7 +81,7 @@ class LlmSession(
         try {
             // submitNative синхронний — повертає метрики (prefill_time, decode_len тощо).
             // Текст генерується через listener.onProgress().
-            val metrics = submitNative(nativePtr, "\n\n$prompt", keepHistory, listener)
+            val metrics = submitNative(nativePtr, prompt, keepHistory, listener)
             Log.e(TAG, "submitNative metrics: $metrics")
         } catch (t: Throwable) {
             Log.e(TAG, "generate failed: ${t.message}", t)

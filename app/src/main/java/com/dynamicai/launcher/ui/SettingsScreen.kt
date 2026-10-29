@@ -821,7 +821,7 @@ fun SettingsScreen(
                     LlmBackendChip("Звичайно", "normal", settings.answerStyle) { onSettingsChange(settings.copy(answerStyle = it)) }
                 }
                 SwitchRow(
-                    label = "Автопошук у Вікіпедії для фактичних питань",
+                    label = "Автопошук в інтернеті (Вікіпедія + веб) для питань про світ",
                     checked = settings.autoSearch,
                     icon = Icons.Default.Settings,
                     tint = AppTheme.colors.accent

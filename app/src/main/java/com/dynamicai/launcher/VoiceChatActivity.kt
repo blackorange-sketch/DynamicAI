@@ -103,6 +103,8 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     val listState = rememberLazyListState()
     var recognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
     val shouldListen = remember { mutableStateOf(true) }
+    var lastSentText by remember { mutableStateOf("") }
+    var lastSentAt by remember { mutableStateOf(0L) }
     var voskSession by remember { mutableStateOf<com.dynamicai.launcher.voice.VoskEngine.Session?>(null) }
 
     fun stopListening() {
@@ -119,6 +121,10 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     /** Відправляє запит моделі. addUserMessage=false — для повтору останнього запиту. */
     fun sendQuery(text: String, addUserMessage: Boolean = true) {
         if (text.isBlank()) return
+        // Подвійний виклик (напр. розпізнавач віддав результат двічі) — ігноруємо
+        val now = System.currentTimeMillis()
+        if (addUserMessage && text == lastSentText && now - lastSentAt < 2000) return
+        if (addUserMessage) { lastSentText = text; lastSentAt = now }
         if (addUserMessage) ChatHistoryManager.addMessage("user", text)
         val historyStr = messages
             .filter { it.role == "user" || it.role == "assistant" }

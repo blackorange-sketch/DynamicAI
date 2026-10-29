@@ -35,6 +35,38 @@ class WebSearchRepository {
         return@withContext searchWikipedia(query)
     }
 
+    /** Пошук у вебі через DuckDuckGo (html-версія, без ключів): заголовки й уривки перших результатів. */
+    suspend fun searchWeb(query: String, limit: Int = 4): String = withContext(Dispatchers.IO) {
+        try {
+            val encoded = URLEncoder.encode(query, "UTF-8")
+            val conn = (URL("https://html.duckduckgo.com/html/?q=$encoded&kl=ua-uk").openConnection() as HttpURLConnection).apply {
+                connectTimeout = 6_000
+                readTimeout = 7_000
+                setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36")
+                setRequestProperty("Accept-Language", "uk,en;q=0.8")
+            }
+            val html = conn.inputStream.bufferedReader().use { it.readText() }
+            conn.disconnect()
+            fun clean(s: String) = android.text.Html.fromHtml(s, android.text.Html.FROM_HTML_MODE_LEGACY).toString()
+                .replace(Regex("\\s+"), " ").trim()
+            val titles = Regex("class=\"result__a\"[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL).findAll(html).map { clean(it.groupValues[1]) }.toList()
+            val snippets = Regex("class=\"result__snippet\"[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL).findAll(html).map { clean(it.groupValues[1]) }.toList()
+            val out = snippets.indices.take(limit).mapNotNull { i ->
+                val sn = snippets[i].takeIf { it.length > 20 } ?: return@mapNotNull null
+                val title = titles.getOrNull(i)
+                val prefix = if (title != null) title + ": " else ""
+                "• " + prefix + sn.take(300)
+            }
+            lastError = "Web OK: ${out.size} results"
+            out.joinToString("\n")
+        } catch (t: Throwable) {
+            if (t is kotlinx.coroutines.CancellationException) throw t
+            lastError = "Web failed: ${t.message}"
+            Log.e(TAG, "Web search failed", t)
+            ""
+        }
+    }
+
     private suspend fun searchJoke(): SearchResult = withContext(Dispatchers.IO) {
         val jokes = listOf(
             "Програміст ставить на ніч два склянки: одну з водою (якщо захоче пити), а другу порожню (якщо не захоче).",

@@ -333,12 +333,32 @@ class ChatEngine(
 
     /** Простий чат без агента та інструментів — для маленьких моделей (MNN Qwen 1.5B/0.6B). */
     /** Чи схоже питання на запит факту (хто/коли/де/скільки/що таке…), для якого Вікіпедія корисна. */
+    private val NO_SEARCH = Regex("^(привіт|вітаю|добрий\\s+(день|ранок|вечір)|дякую|дякуй|добре|гаразд|ок\\b|як\\s+справи|як\\s+ти\\b|хто\\s+ти\\b|як\\s+тебе|напиши|склади|придумай|переклади|порахуй|скільки\\s+буде|розкажи\\s+(жарт|анекдот)|жарт|анекдот|виправ|перефразуй|поясни\\s+(цей|мені\\s+цей)\\s+код)")
+    private val EXPLICIT_SEARCH = Regex("в\\s+інтернеті|в\\s+інеті|у\\s+мережі|в\\s+гугл|погугли|пошукай|знайди\\s+(інформацію|в)|загугли")
+    private val CURRENT_DATA = Regex("зараз|сьогодні|вчора|завтра|востаннє|останн|новин|курс|ціна|ціни|скільки\\s+коштує|вийшов|вийде|рейтинг|найкращ|топ\\b|20(2[4-9]|3\\d)")
+
+    /** Чи варто шукати в інтернеті: майже кожне питання про світ, окрім балачок, перекладів і творчих запитів. */
     private fun looksFactual(question: String): Boolean {
         val t = question.lowercase().trim().trimEnd('?', '.', '!', ' ')
-        if (t.split(Regex("\\s+")).size > 14) return false
-        // Поточні дані (новини, курси, «зараз») у Вікіпедії не знайти
-        if (Regex("зараз|сьогодні|вчора|завтра|новин|курс|ціна|погода").containsMatchIn(t)) return false
-        return Regex("^(хто|коли|де|скільки|що\\s+таке|що\\s+за|який|яка|яке|які|чому|звідки|з\\s+чого|як\\s+називається|розкажи\\s+про|поясни)(?!\\p{L})").containsMatchIn(t)
+        if (EXPLICIT_SEARCH.containsMatchIn(t)) return true
+        if (NO_SEARCH.containsMatchIn(t)) return false
+        val words = t.split(Regex("\\s+")).size
+        if (words > 20 || words < 2) return false
+        if (CURRENT_DATA.containsMatchIn(t)) return true
+        val interrogative = Regex("^(хто|коли|де|скільки|що|який|яка|яке|які|чому|навіщо|звідки|куди|як|чи|розкажи|поясни|порадь|підкажи|поясни|що\\s+таке)(?!\\p{L})").containsMatchIn(t)
+        return interrogative || question.trimEnd().endsWith("?")
+    }
+
+    /** Збирає контекст: Вікіпедія (сутності) + вебпошук (свіжі дані й усе, чого немає у Вікіпедії). */
+    private suspend fun gatherFacts(question: String): String {
+        val query = searchQueryFrom(question)
+        val wiki = try { webSearch.toContext(webSearch.search(query)) } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e; ""
+        }
+        val needWeb = EXPLICIT_SEARCH.containsMatchIn(question.lowercase()) ||
+            CURRENT_DATA.containsMatchIn(question.lowercase()) || wiki.length < 200
+        val web = if (needWeb) webSearch.searchWeb(query) else ""
+        return listOf(wiki.take(1100), web.take(1100)).filter { it.isNotBlank() }.joinToString("\n\n")
     }
 
     private val SEARCH_STOP = setOf(
@@ -454,10 +474,10 @@ class ChatEngine(
             // Фактичні питання («хто такий…», «коли народився…»): спершу дані з Вікіпедії — мала модель вигадує дати й імена
             val facts = if (settings.autoSearch && looksFactual(question)) {
                 try {
-                    val ctx = webSearch.toContext(webSearch.search(searchQueryFrom(question)))
+                    val ctx = gatherFacts(question)
                     Log.e(TAG, "🔎 auto-search for '$question': ${ctx.length} chars")
                     ctx
-                } catch (e: Exception) { "" }
+                } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { "" }
             } else ""
             // «Що на екрані?»: передаємо моделі текст екрана (сервіс доступності)
             val screenAsk = Regex("(що|про що)\\s+(там\\s+)?(на|в|у)\\s+(цьому\\s+)?(екрані|вікні)|прочитай\\s+(екран|це)|підсумуй\\s+(екран|це|сторінку)|переказуй\\s+екран")
@@ -470,7 +490,7 @@ class ChatEngine(
             val base = if (screenText.isNotBlank())
                 "Текст на екрані користувача:\n$screenText\n\nПитання: $question\nВідповідай за цим текстом."
             else if (facts.isNotBlank())
-                "Дані з Вікіпедії:\n${facts.take(1500)}\n\nПитання: $question\nВідповідай за цими даними, не вигадуй. Якщо даних недостатньо — так і скажи."
+                "Дані з інтернету:\n${facts.take(2300)}\n\nПитання: $question\nВідповідай за цими даними, не вигадуй. Якщо даних недостатньо — так і скажи."
             else question
             val langHint = when (settings.answerLanguage) {
                 "en" -> "\n(Answer in English.)"
@@ -502,6 +522,7 @@ class ChatEngine(
             Log.d(TAG, "simpleAnswer: prompt len=${prompt.length}, response=${response?.take(100)}")
             response?.trim() ?: "LLM не відповіла"
         } catch (t: Throwable) {
+            if (t is kotlinx.coroutines.CancellationException) throw t
             Log.e(TAG, "simpleAnswer failed", t)
             "Помилка: ${t.message}"
         }

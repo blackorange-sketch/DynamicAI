@@ -669,6 +669,15 @@ fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
         targetValue = if (voiceState == VoiceState.IDLE) 0.08f else 0.28f,
         animationSpec = tween(900), label = "ripple"
     )
+    // Зовнішнє кільце й орбітальні точки плавно з'являються/зникають зі зміною стану
+    val outerAlpha by animateFloatAsState(
+        targetValue = if (voiceState == VoiceState.IDLE) 0.08f else 0.3f,
+        animationSpec = tween(1200), label = "outer"
+    )
+    val orbitAlpha by animateFloatAsState(
+        targetValue = if (voiceState == VoiceState.IDLE) 0.25f else 1f,
+        animationSpec = tween(1200), label = "orbit"
+    )
     val core = AppTheme.colors.textPrimary
 
     Canvas(modifier = modifier) {
@@ -688,9 +697,14 @@ fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
         // 2. Хвилі: назовні, коли говорить/думає; досередини, коли слухає
         for (j in 0 until 3) {
             val p = ((phase * 8f) + j / 3f) % 1f
-            val r = if (voiceState == VoiceState.LISTENING) baseRadius * (2.1f - 1.2f * p) else baseRadius * (0.9f + 1.4f * p)
+            // Плавна поява і зникнення: огинаюча sin²(πp) — на початку й наприкінці хвиля непомітна
+            val sp = kotlin.math.sin(Math.PI * p).toFloat()
+            val env = sp * sp
+            // easeInOut для радіуса: хвиля рухається м'яко, без ривків
+            val e = p * p * (3f - 2f * p)
+            val r = if (voiceState == VoiceState.LISTENING) baseRadius * (2.1f - 1.2f * e) else baseRadius * (0.9f + 1.4f * e)
             drawCircle(
-                color = primaryColor.copy(alpha = rippleAlpha * (1f - p) * (1f - p)),
+                color = primaryColor.copy(alpha = rippleAlpha * env),
                 radius = r, center = center,
                 style = Stroke(width = 1.5.dp.toPx())
             )
@@ -712,7 +726,7 @@ fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
         }
         drawPath(blobPath(baseRadius * 1.15f, 0f, 1f), primaryColor.copy(alpha = 0.75f), style = Stroke(width = 2.dp.toPx()))
         drawPath(blobPath(baseRadius * 1.35f, 2f, -1f), primaryColor.copy(alpha = 0.45f), style = Stroke(width = 1.5.dp.toPx()))
-        drawPath(blobPath(baseRadius * 1.55f, 4f, 1f), primaryColor.copy(alpha = 0.25f), style = Stroke(width = 1.dp.toPx()))
+        drawPath(blobPath(baseRadius * 1.55f, 4f, 1f), primaryColor.copy(alpha = outerAlpha * (0.8f + 0.2f * kotlin.math.sin(a * 2f))), style = Stroke(width = 1.dp.toPx()))
 
         // 4. Ядро (пульсуюче світло)
         drawCircle(
@@ -727,8 +741,8 @@ fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
         for (d in 0 until 3) {
             val ang = a * (if (voiceState == VoiceState.THINKING) 3f else 1f) + d * 2.0943952f
             val pos = androidx.compose.ui.geometry.Offset(center.x + baseRadius * 1.9f * cos(ang), center.y + baseRadius * 1.9f * sin(ang))
-            drawCircle(color = primaryColor.copy(alpha = 0.35f), radius = 7.dp.toPx(), center = pos)
-            drawCircle(color = core.copy(alpha = 0.9f), radius = 2.5.dp.toPx(), center = pos)
+            drawCircle(color = primaryColor.copy(alpha = 0.35f * orbitAlpha), radius = 7.dp.toPx(), center = pos)
+            drawCircle(color = core.copy(alpha = 0.9f * orbitAlpha), radius = 2.5.dp.toPx(), center = pos)
         }
     }
 }

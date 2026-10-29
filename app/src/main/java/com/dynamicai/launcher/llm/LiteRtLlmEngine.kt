@@ -2,9 +2,12 @@ package com.dynamicai.launcher.llm
 
 import android.content.Context
 import android.util.Log
+import com.google.ai.edge.litertlm.ActivationDataType
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
+import com.google.ai.edge.litertlm.ExperimentalApi
+import com.google.ai.edge.litertlm.ExperimentalFlags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -27,6 +30,49 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
     private var currentSettings: com.dynamicai.launcher.data.LauncherSettings =
         com.dynamicai.launcher.data.LauncherSettings()
 
+    /**
+     * Експериментальні параметри GPU без перезбірки. Файл (необов'язковий):
+     *   <externalFilesDir>/litert_overrides.json
+     *   {"activation":"FLOAT32","mtp":false,"separate_cache":true,"clear_cache":true}
+     * activation: "FLOAT32" | "FLOAT16" | відсутнє = за замовчуванням бібліотеки
+     * mtp: true/false = примусово вмикає/вимикає speculative decoding; відсутнє = за замовчуванням
+     * separate_cache: окрема папка кешу для комбінації модель+точність+mtp (старий кеш не впливає)
+     * clear_cache: очистити цю папку кешу перед запуском
+     */
+    private data class LiteRtOverrides(
+        val activation: String? = null,
+        val mtp: Boolean? = null,
+        val separateCache: Boolean = false,
+        val clearCache: Boolean = false
+    )
+
+    private fun readOverrides(): LiteRtOverrides {
+        return try {
+            val f = File(context.getExternalFilesDir(null), "litert_overrides.json")
+            if (!f.exists()) return LiteRtOverrides()
+            val o = org.json.JSONObject(f.readText())
+            LiteRtOverrides(
+                activation = o.optString("activation", "").uppercase().ifBlank { null },
+                mtp = if (o.has("mtp")) o.optBoolean("mtp") else null,
+                separateCache = o.optBoolean("separate_cache", false),
+                clearCache = o.optBoolean("clear_cache", false)
+            ).also { Log.e("LITERT_CFG", "litert_overrides.json: $it") }
+        } catch (t: Throwable) {
+            Log.e("LITERT_CFG", "litert_overrides.json read failed: ${t.message}")
+            LiteRtOverrides()
+        }
+    }
+
+    @OptIn(ExperimentalApi::class)
+    private fun applySpeculativeDecoding(enabled: Boolean) {
+        try {
+            ExperimentalFlags.enableSpeculativeDecoding = enabled
+            Log.e("LITERT_CFG", "enableSpeculativeDecoding=$enabled")
+        } catch (t: Throwable) {
+            Log.e("LITERT_CFG", "enableSpeculativeDecoding failed: ${t.message}")
+        }
+    }
+
     suspend fun initialize(modelFile: File): Boolean = withContext(Dispatchers.IO) {
         if (_isReady) return@withContext true
         if (!modelFile.exists()) {
@@ -45,11 +91,40 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
 
         // Спроба 1: GPU (через системний OpenCL, з дозволами в маніфесті)
         attempts.add("Backend.GPU()" to {
-            val config = EngineConfig(
-                modelPath = modelFile.absolutePath,
-                backend = Backend.GPU(),
-                cacheDir = context.cacheDir.path
-            )
+            val ov = readOverrides()
+            ov.mtp?.let { applySpeculativeDecoding(it) }
+            val cachePath = if (ov.separateCache) {
+                val tag = "litert_${modelFile.nameWithoutExtension}_${ov.activation ?: "default"}_mtp${ov.mtp ?: "default"}"
+                File(context.cacheDir, tag).also {
+                    if (ov.clearCache) it.deleteRecursively()
+                    it.mkdirs()
+                }.path
+            } else {
+                if (ov.clearCache) {
+                    context.cacheDir.listFiles()?.forEach { f -> if (f.name.startsWith("litert_")) f.deleteRecursively() }
+                }
+                context.cacheDir.path
+            }
+            Log.e("LITERT_CFG", "GPU: activation=${ov.activation ?: "default"} mtp=${ov.mtp ?: "default"} cacheDir=$cachePath model=${modelFile.name}")
+            val config = when (ov.activation) {
+                "FLOAT32" -> EngineConfig(
+                    modelPath = modelFile.absolutePath,
+                    backend = Backend.GPU(),
+                    activationDataType = ActivationDataType.FLOAT32,
+                    cacheDir = cachePath
+                )
+                "FLOAT16" -> EngineConfig(
+                    modelPath = modelFile.absolutePath,
+                    backend = Backend.GPU(),
+                    activationDataType = ActivationDataType.FLOAT16,
+                    cacheDir = cachePath
+                )
+                else -> EngineConfig(
+                    modelPath = modelFile.absolutePath,
+                    backend = Backend.GPU(),
+                    cacheDir = cachePath
+                )
+            }
             val e = Engine(config)
             e.initialize()
             engine = e

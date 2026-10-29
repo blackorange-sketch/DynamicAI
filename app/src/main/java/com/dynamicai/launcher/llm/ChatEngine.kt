@@ -436,6 +436,8 @@ class ChatEngine(
             AliasStore(context).put(m.groupValues[1], m.groupValues[2])
             return "Запам'ятав: ${m.groupValues[1]} — це ${m.groupValues[2]}."
         }
+        // Прохання створити макрос віддаємо моделі (macroFlow), а не парсеру команд
+        if (MacroBuilder.looksLikeRequest(question)) return null
         // Власні макроси: назва або тригер, сказані повністю («доброї ночі», «режим роботи»)
         try {
             com.dynamicai.launcher.macro.MacroStorage(context).matchUtterance(t)?.let { m ->
@@ -472,8 +474,22 @@ class ChatEngine(
         }
     }
 
+    /** «Зроби макрос…» / «коли …, вмикай …»: модель складає макрос, користувач підтверджує. */
+    private suspend fun macroFlow(question: String): String? {
+        if (!MacroBuilder.looksLikeRequest(question)) return null
+        val draft = try { MacroBuilder.build(context, llm, question) } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e; null
+        } ?: return "Не вдалося скласти макрос із цього опису. Спробуйте простіше або створіть його вручну в розділі «Макроси»."
+        pendingAction = "створити макрос" to {
+            MacroBuilder.save(context, draft.macro)
+            "Макрос «${draft.macro.name}» створено. Відредагувати його можна в розділі «Макроси»."
+        }
+        return "Створити макрос «${draft.macro.name}»? Скажіть «так» або «ні».\n\n${draft.preview}"
+    }
+
     suspend fun simpleAnswer(question: String, onToken: ((String) -> Unit)? = null): String {
         if (!llm.isReady) return "LLM не активна"
+        macroFlow(question)?.let { return it }
         return try {
             val isMnn = llm.isMnn
             val settings = com.dynamicai.launcher.data.SettingsStorage(context).load()
@@ -537,6 +553,7 @@ class ChatEngine(
 
     suspend fun answerWithAgent(question: String, history: String = ""): String {
         if (!llm.isReady) return "LLM не активна"
+        macroFlow(question)?.let { return it }
         return try {
             // Використовуємо наш власний AgentEngine, який вже написаний і працює
             agentEngine.processWithTools(question)

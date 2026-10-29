@@ -66,6 +66,17 @@ class FastRouter(private val runTool: suspend (String) -> String) {
             // Сценарій «музика в авто»
             Regex("(музик|плейліст|ютуб\\s*мюзік|youtube\\s*music).*\\s(в|у)\\s+(машин|авто)|режим\\s+авто|я\\s+(в|у)\\s+(машин|авто)|поїхали").containsMatchIn(t) -> "carMode()"
 
+            // Режим польоту, «Не турбувати», мобільні дані, режим дзвінка
+            Regex("режим\\s+польоту|авіарежим|літаковий").containsMatchIn(t) && (on || off) ->
+                """setAirplane(state="${if (off) "off" else "on"}")"""
+            Regex("не\\s+турбувати").containsMatchIn(t) && (on || off) ->
+                """setDnd(state="${if (off) "off" else "on"}")"""
+            Regex("мобільн\\p{L}*\\s+(інтернет|дані)|передач\\p{L}*\\s+даних").containsMatchIn(t) && (on || off) ->
+                """setMobileData(state="${if (off) "off" else "on"}")"""
+            Regex("^(тихий режим|беззвучний режим|без звуку|вимкни звук|режим тиші)$").containsMatchIn(t) -> """setRingerMode(mode="silent")"""
+            Regex("^(режим вібрації|вібро|вібро режим|тільки вібрація)$").containsMatchIn(t) -> """setRingerMode(mode="vibrate")"""
+            Regex("^(звичайний режим|увімкни звук|включи звук|нормальний режим)$").containsMatchIn(t) -> """setRingerMode(mode="normal")"""
+
             // Керування плеєром
             Regex("^(наступн\\p{L}*|далі|перемкни)\\s*(трек|пісню|композицію)?$|наступн\\p{L}*\\s+(трек|пісн\\p{L}*|композиц\\p{L}*)").containsMatchIn(t) -> """mediaKey(key="next")"""
             Regex("(попередн\\p{L}*|минул\\p{L}*)\\s+(трек|пісн\\p{L}*|композиц\\p{L}*)").containsMatchIn(t) -> """mediaKey(key="prev")"""

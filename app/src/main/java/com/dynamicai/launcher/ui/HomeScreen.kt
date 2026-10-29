@@ -520,7 +520,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
 
     if (showSettings) {
-        if (currentSettingsCategory == null) {
+        androidx.compose.animation.Crossfade(targetState = currentSettingsCategory, label = "settingsNav") { category ->
+        if (category == null) {
             SettingsMenuScreen(
                 onCategorySelected = { currentSettingsCategory = it },
                 onClose = { showSettings = false },
@@ -560,12 +561,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     llmDownloaded = vm.downloader.isDownloaded,
                     llmReady = llmReady,
                     versionName = BuildConfig.VERSION_NAME,
-                    initialCategory = currentSettingsCategory,
+                    initialCategory = category,
                     onBackToMenu = { currentSettingsCategory = null },
                     onClose = { showSettings = false }
                 )
             }
         }
+        }  // Crossfade
         return@DynamicAITheme
     }
 
@@ -600,7 +602,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 scaleX = s
                 scaleY = s
             }
-            .background(Color.Black.copy(alpha = settings.backgroundAlphaPercent / 100f))
+            .background(AppTheme.colors.background.copy(alpha = settings.backgroundAlphaPercent / 100f))
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = {

@@ -93,7 +93,7 @@ fun SettingsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = settings.backgroundAlphaPercent / 100f))
+            .background(AppTheme.colors.background.copy(alpha = settings.backgroundAlphaPercent / 100f))
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 12.dp)
@@ -114,6 +114,22 @@ fun SettingsScreen(
         }
 
         val ctx = LocalContext.current
+        // initialCategory: "ai" | "ai:assistant" | "ai:models" | "ai:voice" | "tools" | "appearance" | "system" | null (усе)
+        val cat = initialCategory?.substringBefore(':')
+        var aiTab by remember { mutableStateOf(initialCategory?.substringAfter(':', "")?.ifBlank { null } ?: "models") }
+        val showAssistant = initialCategory == null || (cat == "ai" && aiTab == "assistant")
+        val showModels = initialCategory == null || (cat == "ai" && aiTab == "models")
+        val showVoice = initialCategory == null || (cat == "ai" && aiTab == "voice")
+        if (cat == "ai") {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                LlmBackendChip("Асистент", "assistant", aiTab) { aiTab = it }
+                LlmBackendChip("Моделі", "models", aiTab) { aiTab = it }
+                LlmBackendChip("Голос", "voice", aiTab) { aiTab = it }
+            }
+        }
     val bgScope = androidx.compose.runtime.rememberCoroutineScope()
     val bgPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
@@ -132,7 +148,7 @@ fun SettingsScreen(
         var modelFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("all") }
         LaunchedEffect(Unit) { installedApps = AppRepository(ctx).loadCached() }
 
-        if (initialCategory == null || initialCategory == "tools") {
+        if (initialCategory == null || cat == "tools") {
         GlassSectionHeader("Застосунки за замовчуванням")
         GlassCard {
             AppPickerRow("Музика", settings.defaultMusicApp, installedApps, Icons.Default.PlayArrow, Color(0xFF1DB954)) {
@@ -188,7 +204,7 @@ fun SettingsScreen(
             )
         }
 
-        if (initialCategory == null || initialCategory == "tools") {
+        if (initialCategory == null || cat == "tools") {
         GlassSectionHeader("Нотатки")
         GlassCard {
             Row(
@@ -206,7 +222,7 @@ fun SettingsScreen(
         }
         }
 
-        if (initialCategory == null || initialCategory == "tools") {
+        if (initialCategory == null || cat == "tools") {
         GlassSectionHeader("Макроси")
         GlassCard {
             Row(
@@ -225,9 +241,9 @@ fun SettingsScreen(
         }
 
         // ==== Погода ====
-        if (initialCategory == null || initialCategory == "tools") {
+        if (initialCategory == null || cat == "tools") {
         GlassSectionHeader("🧩 Віджети та Інструменти")
-        if (initialCategory == null || initialCategory == "tools") {
+        if (initialCategory == null || cat == "tools") {
         GlassCard {
             Row(
                 modifier = Modifier
@@ -266,9 +282,9 @@ fun SettingsScreen(
         }
 
         // ==== Фон лаунчера ====
-        if (initialCategory == null || initialCategory == "appearance") {
+        if (initialCategory == null || cat == "appearance") {
         GlassSectionHeader("🎨 Зовнішній вигляд")
-        if (initialCategory == null || initialCategory == "appearance") {
+        if (initialCategory == null || cat == "appearance") {
         GlassCard {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Стиль інтерфейсу", color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
@@ -353,7 +369,7 @@ fun SettingsScreen(
         }
 
         // ==== Розміри ====
-        if (initialCategory == null || initialCategory == "appearance") {
+        if (initialCategory == null || cat == "appearance") {
         GlassSectionHeader("Розміри")
         GlassCard {
             SizeSliderRow(
@@ -388,7 +404,7 @@ fun SettingsScreen(
         }
 
         // ==== Вигляд ====
-        if (initialCategory == null || initialCategory == "appearance") {
+        if (initialCategory == null || cat == "appearance") {
         GlassSectionHeader("Вигляд")
         GlassCard {
             SwitchRow("Показувати кнопку Recent", settings.showRecentButton, Icons.Default.Menu, AppTheme.colors.purple) {
@@ -407,7 +423,7 @@ fun SettingsScreen(
         }
 
         // ==== Плаваючий док ====
-        if (initialCategory == null || initialCategory == "appearance") {
+        if (initialCategory == null || cat == "appearance") {
         GlassSectionHeader("Плаваючий док")
         GlassCard {
             if (!overlayPermissionGranted) {
@@ -463,7 +479,7 @@ fun SettingsScreen(
         }
 
         // ==== Енергозбереження ====
-        if (initialCategory == null || initialCategory == "system") {
+        if (initialCategory == null || cat == "system") {
         GlassSectionHeader("Енергозбереження")
         GlassCard {
             SwitchRow("Пауза при вимкненому екрані", settings.wpPauseOnScreenOff, Icons.Default.Star, AppTheme.colors.textMuted) {
@@ -480,13 +496,13 @@ fun SettingsScreen(
         }
 
         // ==== Дії ====
-        if (initialCategory == null || initialCategory == "system") {
+        if (initialCategory == null || cat == "system") {
         GlassSectionHeader("⚙️ Система")
-        if (initialCategory == null || initialCategory == "system") {
+        if (initialCategory == null || cat == "system") {
         GlassSectionHeader("Shizuku")
         ShizukuTestRow()
 
-        if (initialCategory == null || initialCategory == "system") {
+        if (initialCategory == null || cat == "system") {
         GlassSectionHeader("Дії")
         GlassCard {
             ActionRow("Оновити контакти", Icons.Default.Person, AppTheme.colors.success, onRefreshContacts)
@@ -498,7 +514,7 @@ fun SettingsScreen(
         }
 
         // ==== LLM ====
-        if (initialCategory == null || initialCategory == "system") {
+        if (initialCategory == null || cat == "system") {
         GlassSectionHeader("Дозволи")
         GlassCard {
             val ctx = LocalContext.current
@@ -545,14 +561,14 @@ fun SettingsScreen(
         }
         }
 
-        if (initialCategory == null || initialCategory == "system") {
+        if (initialCategory == null || cat == "system") {
         GlassSectionHeader("Bluetooth")
         BluetoothTestRow()
 
 
-        if (initialCategory == null || initialCategory == "ai") {
+        if (showAssistant) {
         GlassSectionHeader("🤖 ШІ та Асистент")
-                if (initialCategory == null || initialCategory == "ai") {
+                if (showAssistant) {
                 GlassSectionHeader("🫧 Плаваючий асистент")
         GlassCard {
             val prefs = remember { ctx.getSharedPreferences("floating_orb", android.content.Context.MODE_PRIVATE) }
@@ -603,7 +619,7 @@ fun SettingsScreen(
         }
         }
 
-                if (initialCategory == null || initialCategory == "ai") {
+                if (showAssistant) {
                 GlassSectionHeader("🌅 Ранковий брифінг")
         GlassCard {
             val wakeDetector = remember { WakeUpDetector(ctx) }
@@ -645,7 +661,8 @@ fun SettingsScreen(
         }
                 }
 
-        if (initialCategory == null || initialCategory == "ai") {
+        if (initialCategory == null || cat == "ai") {
+        if (showModels) {
         // Перемикач рушія
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
@@ -945,7 +962,11 @@ fun SettingsScreen(
                     HorizontalDivider(color = AppTheme.colors.textPrimary.copy(alpha = 0.1f), modifier = Modifier.padding(top = 8.dp))
                 }
             }
-// Toggle завжди видно
+}  // LiteRT GlassCard
+            }  // if (showModels)
+            if (showVoice) {
+            GlassCard {
+            // Toggle завжди видно
             SwitchRow(
                 label = "Озвучувати відповіді (TTS)",
                 checked = settings.useTts,
@@ -1032,6 +1053,9 @@ fun SettingsScreen(
                 )
             }
             
+}  // GlassCard (voice)
+            }  // if (showVoice)
+            if (showModels) {
                         GlassSectionHeader("Промпти для рушіїв (файли)")
         GlassCard {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -1072,7 +1096,10 @@ fun SettingsScreen(
             }
         }
 
-SwitchRow(
+}  // if (showModels): prompts
+            if (showAssistant) {
+            GlassCard {
+            SwitchRow(
                 label = "Використовувати LLM для команд",
                 checked = settings.useLlm,
                 icon = Icons.Default.Settings,
@@ -1085,6 +1112,7 @@ SwitchRow(
                 LlmTestRow(onTest = onTestLlm)
             }
         }
+            }  // if (showAssistant)
         }
 
         Spacer(Modifier.height(16.dp))

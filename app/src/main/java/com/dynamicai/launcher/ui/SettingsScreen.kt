@@ -827,8 +827,13 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("MNN моделі", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        TextButton(onClick = { vm.clearMnnCache() }) {
-                            Text("Очистити кеш", color = AppTheme.colors.danger, fontSize = 11.sp)
+                        Row {
+                            TextButton(onClick = { try { com.dynamicai.launcher.CrashDiagnostics.share(ctx) } catch (_: Throwable) {} }) {
+                                Text("Лог", color = AppTheme.colors.accent, fontSize = 11.sp)
+                            }
+                            TextButton(onClick = { vm.clearMnnCache() }) {
+                                Text("Очистити кеш", color = AppTheme.colors.danger, fontSize = 11.sp)
+                            }
                         }
                     }
                     Spacer(Modifier.height(8.dp))

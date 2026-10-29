@@ -289,21 +289,8 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
             .fillMaxSize()
             .background(AppTheme.colors.backdropEnd)
     ) {
-        // Делікатні скляні плями на фоні (Liquid Glass)
-        val _vcAccentGlow = AppTheme.colors.accent
-        val _vcPinkGlow = AppTheme.colors.pink
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            drawCircle(
-                brush = Brush.radialGradient(listOf(_vcAccentGlow.copy(alpha = 0.05f), Color.Transparent)),
-                radius = 800f,
-                center = androidx.compose.ui.geometry.Offset(size.width * 0.8f, size.height * 0.2f)
-            )
-            drawCircle(
-                brush = Brush.radialGradient(listOf(_vcPinkGlow.copy(alpha = 0.05f), Color.Transparent)),
-                radius = 800f,
-                center = androidx.compose.ui.geometry.Offset(size.width * 0.2f, size.height * 0.8f)
-            )
-        }
+        // Жива аврора + частинки на фоні; колір залежить від стану (слухає / думає / говорить)
+        AuroraBackground(voiceState = voiceState, modifier = Modifier.fillMaxSize())
 
         // JARVIS Орб на задньому плані
         JarvisOrb(
@@ -607,124 +594,142 @@ private fun MessageBubble(msg: ChatMessage, maxWidth: androidx.compose.ui.unit.D
     }
 }
 
+private fun stateColor(voiceState: VoiceState, c: com.dynamicai.launcher.ui.theme.AppColors): Color = when (voiceState) {
+    VoiceState.LISTENING -> c.successLight
+    VoiceState.SPEAKING -> c.pink
+    VoiceState.THINKING -> c.accentLight
+    else -> c.accent
+}
+
 @Composable
-fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "jarvis")
-    
-    val primaryColor by animateColorAsState(
-        targetValue = when (voiceState) {
-            VoiceState.LISTENING -> AppTheme.colors.successLight
-            VoiceState.SPEAKING -> AppTheme.colors.pink
-            VoiceState.THINKING -> AppTheme.colors.accentLight
-            else -> AppTheme.colors.accent
-        },
-        animationSpec = tween(1000),
-        label = "color"
+fun AuroraBackground(voiceState: VoiceState, modifier: Modifier = Modifier) {
+    val tr = rememberInfiniteTransition(label = "aurora")
+    val phase by tr.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(24000, easing = LinearEasing), RepeatMode.Restart), label = "phase"
     )
-
-    // Швидкості обертання для трьох кілець
-    val rot1 by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(8000, easing = LinearEasing), RepeatMode.Restart), label = "rot1"
-    )
-    val rot2 by infiniteTransition.animateFloat(
-        initialValue = 360f, targetValue = 0f,
-        animationSpec = infiniteRepeatable(tween(11000, easing = LinearEasing), RepeatMode.Restart), label = "rot2"
-    )
-    val rot3 by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(15000, easing = LinearEasing), RepeatMode.Restart), label = "rot3"
-    )
-    
-    val pulse by infiniteTransition.animateFloat(
-        initialValue = 0.9f, targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse"
-    )
-
-    val _jarvisTextPrimary = AppTheme.colors.textPrimary
-    val _jarvisTextMuted = AppTheme.colors.textMuted
+    val stateTint by animateColorAsState(stateColor(voiceState, AppTheme.colors), tween(1200), label = "auroraTint")
+    val second = AppTheme.colors.accent
+    val third = AppTheme.colors.pink
+    val dust = AppTheme.colors.textPrimary
     Canvas(modifier = modifier) {
-        val center = this.center
-        // Зменшуємо базовий радіус, щоб кільця точно влазили в екран
-        val baseRadius = size.minDimension * 0.22f
+        val w = size.width
+        val h = size.height
+        val a = (2.0 * Math.PI * phase).toFloat()
+        fun blob(color: Color, cx: Float, cy: Float, r: Float, alpha: Float) {
+            val c = androidx.compose.ui.geometry.Offset(cx, cy)
+            drawCircle(brush = Brush.radialGradient(listOf(color.copy(alpha = alpha), Color.Transparent), center = c, radius = r), radius = r, center = c)
+        }
+        blob(stateTint, w * (0.5f + 0.35f * cos(a)), h * (0.35f + 0.2f * sin(2f * a)), w * 0.95f, 0.17f)
+        blob(second, w * (0.5f + 0.4f * sin(a)), h * (0.72f + 0.12f * cos(a)), w * 0.8f, 0.12f)
+        blob(third, w * (0.5f + 0.3f * cos(2f * a + 1f)), h * (0.5f + 0.3f * sin(a + 2f)), w * 0.7f, 0.08f)
 
-        // 1. Зовнішнє світіння (Halo)
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(primaryColor.copy(alpha = 0.15f), Color.Transparent),
-                center = center,
-                radius = baseRadius * 2.5f
-            ),
-            radius = baseRadius * 2.5f,
-            center = center
-        )
-
-        // 2. Ядро (Пульсуюче світло)
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    _jarvisTextPrimary.copy(alpha = 0.9f),
-                    primaryColor.copy(alpha = 0.6f),
-                    Color.Transparent
-                ),
-                center = center,
-                radius = baseRadius * 0.8f * pulse
-            ),
-            radius = baseRadius * 0.8f * pulse,
-            center = center
-        )
-
-        // 3. Перше кільце (горизонтальне)
-        rotate(rot1, center) {
-            drawOval(
-                color = primaryColor.copy(alpha = 0.8f),
-                topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 1.3f, center.y - baseRadius * 0.25f),
-                size = androidx.compose.ui.geometry.Size(baseRadius * 2.6f, baseRadius * 0.5f),
-                style = Stroke(width = 2.dp.toPx())
+        // Повільні частинки, що пливуть угору й мерехтять
+        for (i in 0 until 32) {
+            val k = 1 + i % 3
+            val sx = ((i * 7919) % 1000) / 1000f
+            val sy = ((i * 104729) % 1000) / 1000f
+            val y = (((sy - phase * k) % 1f) + 1f) % 1f
+            val x = sx + 0.02f * sin(a * k + i)
+            val tw = 0.5f + 0.5f * sin(a * (2 + i % 3) + i)
+            val tint = if (i % 4 == 0) stateTint else dust
+            drawCircle(
+                color = tint.copy(alpha = 0.06f + 0.2f * tw),
+                radius = (0.8f + (i % 3) * 0.7f).dp.toPx(),
+                center = androidx.compose.ui.geometry.Offset(x * w, y * h)
             )
         }
+    }
+}
 
-        // 4. Друге кільце (нахилене 60 градусів)
-        rotate(rot2 + 60f, center) {
-            drawOval(
-                color = primaryColor.copy(alpha = 0.6f),
-                topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 1.2f, center.y - baseRadius * 0.35f),
-                size = androidx.compose.ui.geometry.Size(baseRadius * 2.4f, baseRadius * 0.7f),
+@Composable
+fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
+    val tr = rememberInfiniteTransition(label = "jarvis")
+    val primaryColor by animateColorAsState(stateColor(voiceState, AppTheme.colors), tween(1000), label = "color")
+
+    val phase by tr.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(24000, easing = LinearEasing), RepeatMode.Restart), label = "phase"
+    )
+    val pulse by tr.animateFloat(
+        initialValue = 0.92f, targetValue = 1.12f,
+        animationSpec = infiniteRepeatable(tween(1600, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse"
+    )
+    // Амплітуда «дихання» контуру: спокійно в очікуванні, жвавіше коли говорить
+    val wobble by animateFloatAsState(
+        targetValue = when (voiceState) {
+            VoiceState.SPEAKING -> 0.09f
+            VoiceState.THINKING -> 0.06f
+            VoiceState.LISTENING -> 0.045f
+            else -> 0.025f
+        },
+        animationSpec = tween(900), label = "wobble"
+    )
+    val rippleAlpha by animateFloatAsState(
+        targetValue = if (voiceState == VoiceState.IDLE) 0.08f else 0.28f,
+        animationSpec = tween(900), label = "ripple"
+    )
+    val core = AppTheme.colors.textPrimary
+
+    Canvas(modifier = modifier) {
+        val center = this.center
+        val baseRadius = size.minDimension * 0.22f
+        val a = (2.0 * Math.PI * phase).toFloat()
+
+        // 1. Зовнішнє світіння
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(primaryColor.copy(alpha = 0.18f), Color.Transparent),
+                center = center, radius = baseRadius * 2.8f
+            ),
+            radius = baseRadius * 2.8f, center = center
+        )
+
+        // 2. Хвилі: назовні, коли говорить/думає; досередини, коли слухає
+        for (j in 0 until 3) {
+            val p = ((phase * 8f) + j / 3f) % 1f
+            val r = if (voiceState == VoiceState.LISTENING) baseRadius * (2.1f - 1.2f * p) else baseRadius * (0.9f + 1.4f * p)
+            drawCircle(
+                color = primaryColor.copy(alpha = rippleAlpha * (1f - p) * (1f - p)),
+                radius = r, center = center,
                 style = Stroke(width = 1.5.dp.toPx())
             )
         }
 
-        // 5. Третє кільце (нахилене 120 градусів)
-        rotate(rot3 + 120f, center) {
-            drawOval(
-                color = primaryColor.copy(alpha = 0.4f),
-                topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 1.1f, center.y - baseRadius * 0.3f),
-                size = androidx.compose.ui.geometry.Size(baseRadius * 2.2f, baseRadius * 0.6f),
-                style = Stroke(width = 1.dp.toPx())
-            )
+        // 3. Живі органічні кільця (хвилястий контур)
+        fun blobPath(radius: Float, ph: Float, dir: Float): androidx.compose.ui.graphics.Path {
+            val path = androidx.compose.ui.graphics.Path()
+            val steps = 96
+            for (n in 0..steps) {
+                val th = (n.toFloat() / steps) * 2f * Math.PI.toFloat()
+                val r = radius * (1f + wobble * sin(3f * th + dir * 2f * a + ph) + wobble * 0.6f * sin(5f * th - dir * 3f * a + ph * 2f))
+                val x = center.x + r * cos(th)
+                val y = center.y + r * sin(th)
+                if (n == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+            path.close()
+            return path
         }
+        drawPath(blobPath(baseRadius * 1.15f, 0f, 1f), primaryColor.copy(alpha = 0.75f), style = Stroke(width = 2.dp.toPx()))
+        drawPath(blobPath(baseRadius * 1.35f, 2f, -1f), primaryColor.copy(alpha = 0.45f), style = Stroke(width = 1.5.dp.toPx()))
+        drawPath(blobPath(baseRadius * 1.55f, 4f, 1f), primaryColor.copy(alpha = 0.25f), style = Stroke(width = 1.dp.toPx()))
 
-        // 6. Скляний блік (тонка дуга для об'єму)
-        drawArc(
-            color = _jarvisTextMuted,
-            startAngle = 200f,
-            sweepAngle = 80f,
-            useCenter = false,
-            topLeft = androidx.compose.ui.geometry.Offset(center.x - baseRadius * 0.9f, center.y - baseRadius * 0.9f),
-            size = androidx.compose.ui.geometry.Size(baseRadius * 1.8f, baseRadius * 1.8f),
-            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
-        )
-
-        // 7. Зовнішнє пунктирне коло (рамка)
+        // 4. Ядро (пульсуюче світло)
         drawCircle(
-            color = primaryColor.copy(alpha = 0.2f),
-            radius = baseRadius * 1.6f,
-            center = center,
-            style = Stroke(
-                width = 1.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 12f), 0f)
-            )
+            brush = Brush.radialGradient(
+                colors = listOf(core.copy(alpha = 0.95f), primaryColor.copy(alpha = 0.65f), Color.Transparent),
+                center = center, radius = baseRadius * 0.85f * pulse
+            ),
+            radius = baseRadius * 0.85f * pulse, center = center
         )
+
+        // 5. Три світні точки, що обертаються навколо
+        for (d in 0 until 3) {
+            val ang = a * (if (voiceState == VoiceState.THINKING) 3f else 1f) + d * 2.0943952f
+            val pos = androidx.compose.ui.geometry.Offset(center.x + baseRadius * 1.9f * cos(ang), center.y + baseRadius * 1.9f * sin(ang))
+            drawCircle(color = primaryColor.copy(alpha = 0.35f), radius = 7.dp.toPx(), center = pos)
+            drawCircle(color = core.copy(alpha = 0.9f), radius = 2.5.dp.toPx(), center = pos)
+        }
     }
 }
 

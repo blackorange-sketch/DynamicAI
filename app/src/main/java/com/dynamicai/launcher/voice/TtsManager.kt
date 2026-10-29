@@ -64,6 +64,30 @@ class TtsManager(private val context: Context) {
 
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
+    private var currentLocale: Locale? = null
+
+    /** Голос відповідає мові тексту: за налаштуванням «Мова відповіді» або за самим текстом (кирилиця → українська). */
+    private fun ensureLocale(text: String) {
+        val engine = tts ?: return
+        val mode = try { settingsStorage.load().answerLanguage } catch (_: Throwable) { "uk" }
+        val letters = text.count { it.isLetter() }
+        val cyr = text.count { it in 'а'..'я' || it in 'А'..'Я' || it in "іїєґІЇЄҐ" }
+        val target = when {
+            mode == "uk" -> Locale("uk", "UA")
+            mode == "en" -> Locale.US
+            letters == 0 || cyr * 3 >= letters -> Locale("uk", "UA")
+            else -> Locale.US
+        }
+        if (target != currentLocale) {
+            try {
+                val r = engine.setLanguage(target)
+                if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    Log.w(TAG, "Locale $target not supported by TTS")
+                } else currentLocale = target
+            } catch (t: Throwable) { Log.e(TAG, "setLanguage failed", t) }
+        }
+    }
+
     /** Налаштування «Озвучувати відповіді» — єдина точка перевірки для всіх викликів TTS. */
     private fun enabled(): Boolean = try { settingsStorage.load().useTts } catch (_: Throwable) { true }
 
@@ -106,6 +130,7 @@ class TtsManager(private val context: Context) {
     fun speakChunk(text: String): Boolean {
         if (text.isBlank() || !ready || !enabled()) return false
         val engine = tts ?: return false
+        ensureLocale(text)
         synchronized(streamLock) { streamPending++ }
         val id = synchronized(streamLock) { "stream_${streamCounter++}" }
         val r = try { engine.speak(text, TextToSpeech.QUEUE_ADD, null, id) } catch (t: Throwable) { TextToSpeech.ERROR }
@@ -175,6 +200,7 @@ class TtsManager(private val context: Context) {
             })
 
             Log.d(TAG, "Executing speak: $text")
+            ensureLocale(text)
             val result = tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, id)
             
             if (result == TextToSpeech.ERROR) {
@@ -198,6 +224,7 @@ class TtsManager(private val context: Context) {
             return
         }
         try {
+            ensureLocale(text)
             val result = tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "dynamicai_${System.currentTimeMillis()}")
             if (result == TextToSpeech.ERROR) Log.e(TAG, "speak returned ERROR")
             else Log.d(TAG, "Speak command sent: $text")

@@ -804,6 +804,14 @@ fun SettingsScreen(
                     }
                 }
                 Spacer(Modifier.height(10.dp))
+                Text("Мова відповіді", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LlmBackendChip("Українська", "uk", settings.answerLanguage) { onSettingsChange(settings.copy(answerLanguage = it)) }
+                    LlmBackendChip("Як у питанні", "auto", settings.answerLanguage) { onSettingsChange(settings.copy(answerLanguage = it)) }
+                    LlmBackendChip("English", "en", settings.answerLanguage) { onSettingsChange(settings.copy(answerLanguage = it)) }
+                }
+                Spacer(Modifier.height(10.dp))
                 Text("Стиль відповіді", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -7,12 +7,14 @@ object PromptManager {
     private const val TAG = "PromptManager"
     
     // Обидва рушії самі застосовують chat template моделі, тому в промпті лише інструкція і питання.
-    private const val PERSONA = "Ти — голосовий асистент Джарвіс. Відповідай українською мовою, зрозуміло й по суті."
+    // Мова відповіді НЕ вписана в промпт: її додає код за налаштуванням «Мова відповіді».
+    private const val PERSONA = "Ти — голосовий асистент Джарвіс. Відповідай зрозуміло й по суті."
     private val DEFAULT_MNN = "$PERSONA\n\n{{question}}"
     private val DEFAULT_LITERT = "$PERSONA\n\n{{question}}"
     // Попередні типові значення: якщо у файлі саме вони (користувач нічого не міняв) — оновлюємо до нових
     private val OLD_DEFAULTS = setOf(
         "{{question}}",
+        "Ти — голосовий асистент Джарвіс. Відповідай українською мовою, зрозуміло й по суті.\n\n{{question}}",
         "<start_of_turn>user\n{{question}}<end_of_turn>\n<start_of_turn>model"
     )
     

@@ -471,7 +471,12 @@ class ChatEngine(
             else if (facts.isNotBlank())
                 "Дані з Вікіпедії:\n${facts.take(1500)}\n\nПитання: $question\nВідповідай за цими даними, не вигадуй. Якщо даних недостатньо — так і скажи."
             else question
-            val q = if (settings.answerStyle == "short") base + "\n(Відповідай коротко: 1–3 речення.)" else base
+            val langHint = when (settings.answerLanguage) {
+                "en" -> "\n(Answer in English.)"
+                "auto" -> "\n(Відповідай мовою питання.)"
+                else -> "\n(Відповідай українською мовою.)"
+            }
+            val q = base + langHint + (if (settings.answerStyle == "short") "\n(Відповідай коротко: 1–3 речення.)" else "")
 
             // Беремо шаблон з файлу (не з SharedPreferences — надійніше)
             val template = if (isMnn) {

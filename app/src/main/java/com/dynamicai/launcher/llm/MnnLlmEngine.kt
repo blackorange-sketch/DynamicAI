@@ -130,6 +130,19 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
             Log.e("MNN_CLEANUP", "Cleanup failed: ${t.message}")
         }
 
+        // libmnnllmapp.so шукає лише tokenizer.txt, а Gemma постачається як tokenizer.mtok.
+        // Експеримент: копія під ім'ям tokenizer.txt (спрацює, якщо libMNN визначає формат за вмістом).
+        try {
+            val txt = File(modelDir, "tokenizer.txt")
+            val mtok = File(modelDir, "tokenizer.mtok")
+            if (!txt.exists() && mtok.exists()) {
+                mtok.copyTo(txt)
+                Log.e(TAG, "tokenizer.mtok → tokenizer.txt copied (${txt.length()} bytes)")
+            }
+        } catch (t: Throwable) {
+            Log.e(TAG, "tokenizer copy failed: ${t.message}")
+        }
+
         // Звільняємо попередній engine
         try { session?.release() } catch (_: Throwable) {}
         session = null

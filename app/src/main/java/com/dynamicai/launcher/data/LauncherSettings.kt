@@ -51,6 +51,7 @@ data class LauncherSettings(
     val litertMtp: String = "default",         // "default" | "on" | "off"
     val litertSeparateCache: Boolean = false,
     val maxResponseTokens: Int = 256,          // ліміт довжини відповіді (MNN: токени; усі: обрізання за реченням)
+    val carBtName: String = "",                  // назва Bluetooth-пристрою авто для сценарію «музика в авто»
     val voiceEngine: String = "google",         // "google" | "auto" (Vosk без мережі) | "vosk"
     val answerLanguage: String = "uk",         // "uk" | "auto" (мова питання) | "en"
     val answerStyle: String = "short",         // "short" | "normal": чи просити модель відповідати коротко
@@ -112,6 +113,7 @@ class SettingsStorage(context: Context) {
             litertMtp = prefs.getString("litertMtp", "default") ?: "default",
             litertSeparateCache = prefs.getBoolean("litertSeparateCache", false),
             maxResponseTokens = prefs.getInt("maxResponseTokens", 256),
+            carBtName = prefs.getString("carBtName", "") ?: "",
             voiceEngine = prefs.getString("voiceEngine", "google") ?: "google",
             answerLanguage = prefs.getString("answerLanguage", "uk") ?: "uk",
             answerStyle = prefs.getString("answerStyle", "short") ?: "short",
@@ -170,6 +172,7 @@ class SettingsStorage(context: Context) {
             .putString("litertMtp", s.litertMtp)
             .putBoolean("litertSeparateCache", s.litertSeparateCache)
             .putInt("maxResponseTokens", s.maxResponseTokens)
+            .putString("carBtName", s.carBtName)
             .putString("voiceEngine", s.voiceEngine)
             .putString("answerLanguage", s.answerLanguage)
             .putString("answerStyle", s.answerStyle)

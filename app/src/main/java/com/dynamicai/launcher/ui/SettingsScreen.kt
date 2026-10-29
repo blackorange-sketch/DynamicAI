@@ -806,6 +806,8 @@ fun SettingsScreen(
                 Spacer(Modifier.height(10.dp))
                 VoskSettingsBlock(settings, onSettingsChange)
                 Spacer(Modifier.height(10.dp))
+                CarModeSettingsBlock(settings, onSettingsChange)
+                Spacer(Modifier.height(10.dp))
                 Text("Мова відповіді", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1273,5 +1275,34 @@ private fun VoskSettingsBlock(settings: LauncherSettings, onSettingsChange: (Lau
             }
         }) { Text(if (busy) "Завантаження…" else "Завантажити модель Vosk (~140 МБ)") }
         if (status.isNotBlank()) Text(status, color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+    }
+}
+
+
+/** Сценарій «включи музику в машині»: вибір Bluetooth-пристрою авто. */
+@Composable
+private fun CarModeSettingsBlock(settings: LauncherSettings, onSettingsChange: (LauncherSettings) -> Unit) {
+    val ctx = LocalContext.current
+    var devices by remember { mutableStateOf<List<String>>(emptyList()) }
+    var loaded by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        devices = try { com.dynamicai.launcher.system.BluetoothManager(ctx).getPairedDevices().map { it.name } } catch (_: Throwable) { emptyList() }
+        loaded = true
+    }
+    Text("Авто (команда «включи музику в машині»)", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+    Spacer(Modifier.height(2.dp))
+    Text(
+        "Інтернет → Bluetooth → підключення до авто → YouTube Music → Play. Вимкнення режиму польоту й мобільних даних працює через Shizuku.",
+        color = AppTheme.colors.textSecondary, fontSize = 11.sp
+    )
+    Spacer(Modifier.height(4.dp))
+    if (loaded && devices.isEmpty()) {
+        Text("Спарених пристроїв немає або не надано дозвіл Bluetooth", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+    }
+    devices.forEach { d ->
+        val selected = settings.carBtName == d
+        TextButton(onClick = { onSettingsChange(settings.copy(carBtName = if (selected) "" else d)) }) {
+            Text((if (selected) "✓ " else "") + d, color = if (selected) AppTheme.colors.successLight else AppTheme.colors.textPrimary)
+        }
     }
 }

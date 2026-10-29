@@ -59,6 +59,9 @@ class FastRouter(private val runTool: suspend (String) -> String) {
             Regex("bluetooth|блютуз|блютус").containsMatchIn(t) && (on || off) ->
                 """toggleBluetooth(state="${if (off) "off" else "on"}")"""
 
+            // Сценарій «музика в авто»
+            Regex("(музик|плейліст|ютуб\\s*мюзік|youtube\\s*music).*\\s(в|у)\\s+(машин|авто)|режим\\s+авто|я\\s+(в|у)\\s+(машин|авто)|поїхали").containsMatchIn(t) -> "carMode()"
+
             // Керування плеєром
             Regex("^(наступн\\p{L}*|далі|перемкни)\\s*(трек|пісню|композицію)?$|наступн\\p{L}*\\s+(трек|пісн\\p{L}*|композиц\\p{L}*)").containsMatchIn(t) -> """mediaKey(key="next")"""
             Regex("(попередн\\p{L}*|минул\\p{L}*)\\s+(трек|пісн\\p{L}*|композиц\\p{L}*)").containsMatchIn(t) -> """mediaKey(key="prev")"""

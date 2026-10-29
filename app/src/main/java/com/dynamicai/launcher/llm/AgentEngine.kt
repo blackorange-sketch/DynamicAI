@@ -33,6 +33,10 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         "rollDice() -> Кинути кубик.",
         "randomNumber(min: Int, max: Int) -> Випадкове число.",
         "runMacro(name: String) -> Запустити збережений макрос.",
+        "carMode() -> Музика в авто: інтернет, Bluetooth до машини, YouTube Music, відтворення.",
+        "ensureInternet() -> Вимкнути режим польоту і ввімкнути мобільний інтернет, якщо мережі немає.",
+        "connectBluetooth(name: String) -> Увімкнути Bluetooth і підключитися до пристрою (порожньо — до збереженого авто).",
+        "playYouTubeMusic() -> Відкрити YouTube Music і почати відтворення.",
         "tapText(text: String) -> Натиснути кнопку/елемент з цим текстом на екрані.",
         "scrollScreen(direction: String) -> Прокрутити екран: 'down' або 'up'.",
         "systemAction(action: String) -> Системна дія: home, back, recents, notifications, quick, lock, screenshot.",
@@ -78,6 +82,10 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         "callInTelegram" to listOf("telegram", "телеграм"),
         "callInInstagram" to listOf("instagram", "інстаграм"),
         "runMacro" to listOf("макрос"),
+        "carMode" to listOf("в машині", "в авто", "у машині", "режим авто"),
+        "ensureInternet" to listOf("інтернет", "режим польоту"),
+        "connectBluetooth" to listOf("підключи", "блютуз", "bluetooth"),
+        "playYouTubeMusic" to listOf("youtube music", "ютуб мюзік", "музик"),
         "tapText" to listOf("натисни", "тапни", "клікни", "кнопк"),
         "scrollScreen" to listOf("прокрут", "вниз", "вгору"),
         "systemAction" to listOf("назад", "додому", "недавн", "останні додатки", "шторк", "заблокуй", "скріншот"),
@@ -454,6 +462,10 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                     context.startActivity(intent)
                     "Будую маршрут до: $dest"
                 }
+                toolCall.startsWith("carMode") -> com.dynamicai.launcher.llm.CarMode(context).run()
+                toolCall.startsWith("ensureInternet") -> com.dynamicai.launcher.llm.CarMode(context).ensureInternet()
+                toolCall.startsWith("connectBluetooth") -> com.dynamicai.launcher.llm.CarMode(context).connectBluetooth(getArg(toolCall, "name"))
+                toolCall.startsWith("playYouTubeMusic") -> com.dynamicai.launcher.llm.CarMode(context).playYouTubeMusic()
                 toolCall.startsWith("mediaKey") -> {
                     val key = getArg(toolCall, "key")
                     val code = when (key) {

@@ -145,6 +145,10 @@ fun MacroEditorDialog(
         "Гучність 100%" to "TOOL_CALL: setVolume(level=100)",
         "Яскравість 30%" to "TOOL_CALL: setBrightness(percent=30)",
         "Музика" to "TOOL_CALL: playMusic(query=\"музика\")",
+        "Є інтернет (вимкнути політ)" to "TOOL_CALL: ensureInternet()",
+        "Bluetooth до авто" to "TOOL_CALL: connectBluetooth(name=\"\")",
+        "YouTube Music: грати" to "TOOL_CALL: playYouTubeMusic()",
+        "Весь сценарій «в авто»" to "TOOL_CALL: carMode()",
         "Будильник 7:00" to "TOOL_CALL: setAlarm(hour=7, minute=0, message=\"Прокидайся\")",
         "Нотатка" to "TOOL_CALL: takeNote(text=\"Текст\")"
     )

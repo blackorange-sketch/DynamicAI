@@ -436,6 +436,13 @@ class ChatEngine(
             AliasStore(context).put(m.groupValues[1], m.groupValues[2])
             return "Запам'ятав: ${m.groupValues[1]} — це ${m.groupValues[2]}."
         }
+        // Власні макроси: назва або тригер, сказані повністю («доброї ночі», «режим роботи»)
+        try {
+            com.dynamicai.launcher.macro.MacroStorage(context).findByName(t)?.let { m ->
+                val macroName = m.name.replace('"', ' ')
+                return agentEngine.runTool("runMacro(name=\"" + macroName + "\")")
+            }
+        } catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e }
         if (fastRouter.isToggleOrMedia(question)) fastRouter.tryHandle(question)?.let { return it }
         commandRoute(question, apps)?.let { return it }
         return fastRouter.tryHandle(question)

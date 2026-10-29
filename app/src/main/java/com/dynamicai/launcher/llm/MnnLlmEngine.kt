@@ -114,11 +114,14 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
             val ocl = all.filter { it.name.endsWith(".opencl.weight") }
             val tune = all.filter { it.name == "mnn_cachefile.bin" }
             val cacheFiles = ocl + tune
-            val orphanSync = ocl.any { it.name.contains("_sync") } &&
-                ocl.none { !it.name.contains("_sync") && it.length() > 0 }
-            val total = cacheFiles.sumOf { it.length() }
-            val clean = mode == true || orphanSync || (mode != false && total > 4L * 1024 * 1024 * 1024)
-            Log.e("MNN_CLEANUP", "cache files=${cacheFiles.map { "${it.name}:${it.length()}" }} orphanSync=$orphanSync clean=$clean")
+            val hasWeight = ocl.any { !it.name.contains("_sync") && it.length() > 0 }
+            val hasSync = ocl.any { it.name.contains("_sync") }
+            // Пара неповна (маркер без ваг АБО ваги без маркера — залишок після краша) → кеш невалідний
+            val orphanSync = hasWeight != hasSync
+            // За замовчуванням ЧИСТИМО кеш при кожному запуску (перевірено: працює стабільно, завантаження 1–3 с).
+            // "clean_cache": false в mnn_overrides.json — зберігати кеш (прискорює завантаження, але ризик після краша).
+            val clean = mode != false || orphanSync
+            Log.e("MNN_CLEANUP", "cache files=${cacheFiles.map { "${it.name}:${it.length()}" }} orphan=$orphanSync clean=$clean")
             if (clean) {
                 cacheFiles.forEach { f ->
                     val len = f.length()

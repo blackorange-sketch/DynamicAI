@@ -416,6 +416,7 @@ class ChatEngine(
             AliasStore(context).put(m.groupValues[1], m.groupValues[2])
             return "Запам'ятав: ${m.groupValues[1]} — це ${m.groupValues[2]}."
         }
+        if (fastRouter.isToggleOrMedia(question)) fastRouter.tryHandle(question)?.let { return it }
         commandRoute(question, apps)?.let { return it }
         return fastRouter.tryHandle(question)
     }

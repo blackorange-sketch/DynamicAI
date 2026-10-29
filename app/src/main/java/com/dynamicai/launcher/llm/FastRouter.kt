@@ -34,6 +34,15 @@ class FastRouter(private val runTool: suspend (String) -> String) {
         return """convertCurrency(amount="$amount", from="$from", to="$to")"""
     }
 
+    /** Перемикачі й плеєр — їх краще виконувати тут, бо парсер лише «перемикає» без урахування вкл/викл. */
+    fun isToggleOrMedia(raw: String): Boolean {
+        val t = raw.lowercase()
+        val toggle = Regex("ліхтар|wi-?fi|вай-?фай|bluetooth|блютуз|блютус").containsMatchIn(t) &&
+            (ON.containsMatchIn(t) || OFF.containsMatchIn(t))
+        val media = Regex("(наступн|попередн|минул)\\p{L}*\\s+(трек|пісн|композиц)|^\\s*(пауза|далі)\\s*$").containsMatchIn(t)
+        return toggle || media
+    }
+
     suspend fun tryHandle(raw: String): String? {
         val t = raw.lowercase().trim().trimEnd('.', '!', '?', ',', ' ')
         if (t.isBlank()) return null
@@ -49,6 +58,12 @@ class FastRouter(private val runTool: suspend (String) -> String) {
                 """toggleWifi(state="${if (off) "off" else "on"}")"""
             Regex("bluetooth|блютуз|блютус").containsMatchIn(t) && (on || off) ->
                 """toggleBluetooth(state="${if (off) "off" else "on"}")"""
+
+            // Керування плеєром
+            Regex("^(наступн\\p{L}*|далі|перемкни)\\s*(трек|пісню|композицію)?$|наступн\\p{L}*\\s+(трек|пісн\\p{L}*|композиц\\p{L}*)").containsMatchIn(t) -> """mediaKey(key="next")"""
+            Regex("(попередн\\p{L}*|минул\\p{L}*)\\s+(трек|пісн\\p{L}*|композиц\\p{L}*)").containsMatchIn(t) -> """mediaKey(key="prev")"""
+            Regex("^(пауза|постав на паузу|зупини музику|зупини відтворення|вимкни музику)$").containsMatchIn(t) -> """mediaKey(key="pause")"""
+            Regex("^(продовж\\p{L}*|відтвор\\p{L}*|play|увімкни музику|включи музику|запусти музику)$").containsMatchIn(t) -> """mediaKey(key="play")"""
 
             // Яскравість / гучність з числом
             Regex("яскравість").containsMatchIn(t) ->

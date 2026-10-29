@@ -454,6 +454,19 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                     context.startActivity(intent)
                     "Будую маршрут до: $dest"
                 }
+                toolCall.startsWith("mediaKey") -> {
+                    val key = getArg(toolCall, "key")
+                    val code = when (key) {
+                        "next" -> android.view.KeyEvent.KEYCODE_MEDIA_NEXT
+                        "prev" -> android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS
+                        "pause" -> android.view.KeyEvent.KEYCODE_MEDIA_PAUSE
+                        else -> android.view.KeyEvent.KEYCODE_MEDIA_PLAY
+                    }
+                    val am = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
+                    am.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, code))
+                    am.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, code))
+                    when (key) { "next" -> "Наступний трек"; "prev" -> "Попередній трек"; "pause" -> "Пауза"; else -> "Відтворюю" }
+                }
                 toolCall.startsWith("toggleFlashlight") -> {
                     val state = getArg(toolCall, "state").lowercase() == "on"
                     val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
@@ -494,17 +507,44 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                                 toolCall.startsWith("toggleWifi") -> {
                     val state = getArg(toolCall, "state").lowercase() == "on"
                     val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
-                    @Suppress("DEPRECATION")
-                    wifiManager.isWifiEnabled = state
-                    "Wi-Fi ${if (state) "увімкнено" else "вимкнено"}"
+                    val label = "Wi-Fi ${if (state) "увімкнено" else "вимкнено"}"
+                    if (shizuku.isShizukuAvailable() && shizuku.hasPermission()) {
+                        shizuku.execShell("svc wifi ${if (state) "enable" else "disable"}")
+                        label
+                    } else {
+                        @Suppress("DEPRECATION")
+                        val ok = try { wifiManager.setWifiEnabled(state) } catch (_: Throwable) { false }
+                        if (ok) label else {
+                            // Android 10+ забороняє зміну Wi-Fi звичайним додаткам: відкриваємо панель налаштувань
+                            try {
+                                context.startActivity(Intent(Settings.Panel.ACTION_WIFI).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                            } catch (_: Throwable) {}
+                            "Не можу змінити Wi-Fi напряму (запустіть Shizuku і дайте дозвіл). Відкрив панель Wi-Fi."
+                        }
+                    }
                 }
                 toolCall.startsWith("toggleBluetooth") -> {
                     val state = getArg(toolCall, "state").lowercase() == "on"
-                    val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager
-                    val adapter = bluetoothManager.adapter
-                    @Suppress("DEPRECATION")
-                    if (state) adapter?.enable() else adapter?.disable()
-                    "Bluetooth ${if (state) "увімкнено" else "вимкнено"}"
+                    val label = "Bluetooth ${if (state) "увімкнено" else "вимкнено"}"
+                    if (shizuku.isShizukuAvailable() && shizuku.hasPermission()) {
+                        shizuku.execShell("svc bluetooth ${if (state) "enable" else "disable"}")
+                        label
+                    } else {
+                        val granted = android.os.Build.VERSION.SDK_INT < 31 ||
+                            context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                        val ok = granted && try {
+                            val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager).adapter
+                            @Suppress("DEPRECATION", "MissingPermission")
+                            if (state) adapter?.enable() == true else adapter?.disable() == true
+                        } catch (_: Throwable) { false }
+                        if (ok) label else {
+                            try {
+                                context.startActivity(Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                            } catch (_: Throwable) {}
+                            if (granted) "Не вдалося змінити Bluetooth напряму. Відкрив налаштування."
+                            else "Немає дозволу Bluetooth (Налаштування → Система → Bluetooth) або запустіть Shizuku. Відкрив налаштування."
+                        }
+                    }
                 }
                 toolCall.startsWith("copyToClipboard") -> {
                     val text = getArg(toolCall, "text")

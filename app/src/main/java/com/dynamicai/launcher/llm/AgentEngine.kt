@@ -535,8 +535,9 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 toolCall.startsWith("searchWeb") -> {
                     val query = getArg(toolCall, "query")
                     val webSearch = com.dynamicai.launcher.llm.WebSearchRepository()
-                    val result = webSearch.search(query)
-                    val text = webSearch.toContext(result)
+                    val wiki = webSearch.toContext(webSearch.search(query))
+                    val web = webSearch.searchWeb(query)
+                    val text = listOf(wiki.take(900), web.take(1200)).filter { it.isNotBlank() }.joinToString("\n\n")
                     if (text.isNotBlank()) text else "Не знайдено інформації."
                 }
                                 toolCall.startsWith("toggleWifi") -> {

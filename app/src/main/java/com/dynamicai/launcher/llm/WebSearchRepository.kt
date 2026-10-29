@@ -35,36 +35,84 @@ class WebSearchRepository {
         return@withContext searchWikipedia(query)
     }
 
-    /** Пошук у вебі через DuckDuckGo (html-версія, без ключів): заголовки й уривки перших результатів. */
-    suspend fun searchWeb(query: String, limit: Int = 4): String = withContext(Dispatchers.IO) {
-        try {
-            val encoded = URLEncoder.encode(query, "UTF-8")
-            val conn = (URL("https://html.duckduckgo.com/html/?q=$encoded&kl=ua-uk").openConnection() as HttpURLConnection).apply {
-                connectTimeout = 6_000
-                readTimeout = 7_000
-                setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36")
-                setRequestProperty("Accept-Language", "uk,en;q=0.8")
-            }
-            val html = conn.inputStream.bufferedReader().use { it.readText() }
-            conn.disconnect()
-            fun clean(s: String) = android.text.Html.fromHtml(s, android.text.Html.FROM_HTML_MODE_LEGACY).toString()
-                .replace(Regex("\\s+"), " ").trim()
-            val titles = Regex("class=\"result__a\"[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL).findAll(html).map { clean(it.groupValues[1]) }.toList()
-            val snippets = Regex("class=\"result__snippet\"[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL).findAll(html).map { clean(it.groupValues[1]) }.toList()
-            val out = snippets.indices.take(limit).mapNotNull { i ->
-                val sn = snippets[i].takeIf { it.length > 20 } ?: return@mapNotNull null
-                val title = titles.getOrNull(i)
-                val prefix = if (title != null) title + ": " else ""
-                "• " + prefix + sn.take(300)
-            }
-            lastError = "Web OK: ${out.size} results"
-            out.joinToString("\n")
-        } catch (t: Throwable) {
-            if (t is kotlinx.coroutines.CancellationException) throw t
-            lastError = "Web failed: ${t.message}"
-            Log.e(TAG, "Web search failed", t)
-            ""
+    private val MOBILE_UA = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36"
+
+    private fun fetch(url: String): String {
+        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 6_000
+            readTimeout = 7_000
+            instanceFollowRedirects = true
+            setRequestProperty("User-Agent", MOBILE_UA)
+            setRequestProperty("Accept-Language", "uk,en;q=0.8")
         }
+        try {
+            val code = conn.responseCode
+            if (code !in 200..299) throw java.io.IOException("HTTP $code")
+            return conn.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            conn.disconnect()
+        }
+    }
+
+    private fun cleanHtml(s: String): String =
+        android.text.Html.fromHtml(s, android.text.Html.FROM_HTML_MODE_LEGACY).toString().replace(Regex("\\s+"), " ").trim()
+
+    private fun formatResults(titles: List<String>, snippets: List<String>, limit: Int): List<String> =
+        snippets.indices.take(limit).mapNotNull { i ->
+            val sn = snippets[i].takeIf { it.length > 20 } ?: return@mapNotNull null
+            val title = titles.getOrNull(i)
+            val prefix = if (title != null) title + ": " else ""
+            "• " + prefix + sn.take(300)
+        }
+
+    private fun ddg(q: String, limit: Int): List<String> {
+        val html = fetch("https://html.duckduckgo.com/html/?q=$q&kl=ua-uk")
+        val titles = Regex("class=\"result__a\"[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL).findAll(html).map { cleanHtml(it.groupValues[1]) }.toList()
+        val snippets = Regex("class=\"result__snippet\"[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL).findAll(html).map { cleanHtml(it.groupValues[1]) }.toList()
+        return formatResults(titles, snippets, limit)
+    }
+
+    /** Bing у форматі RSS: працює без ключа і зазвичай не вимагає капчі. */
+    private fun bing(q: String, limit: Int): List<String> {
+        val xml = fetch("https://www.bing.com/search?q=$q&format=rss&setlang=uk&mkt=uk-UA")
+        val items = Regex("<item>(.*?)</item>", RegexOption.DOT_MATCHES_ALL).findAll(xml).map { it.groupValues[1] }.toList()
+        val titles = items.map { cleanHtml(Regex("<title>(.*?)</title>", RegexOption.DOT_MATCHES_ALL).find(it)?.groupValues?.get(1) ?: "") }
+        val snippets = items.map { cleanHtml(Regex("<description>(.*?)</description>", RegexOption.DOT_MATCHES_ALL).find(it)?.groupValues?.get(1) ?: "") }
+        return formatResults(titles, snippets, limit)
+    }
+
+    /** Google News RSS: свіжі заголовки з датою (концерти, події, новини). */
+    private fun news(q: String, limit: Int): List<String> {
+        val xml = fetch("https://news.google.com/rss/search?q=$q&hl=uk&gl=UA&ceid=UA:uk")
+        val items = Regex("<item>(.*?)</item>", RegexOption.DOT_MATCHES_ALL).findAll(xml).map { it.groupValues[1] }.toList()
+        return items.take(limit).mapNotNull { it0 ->
+            val title = cleanHtml(Regex("<title>(.*?)</title>", RegexOption.DOT_MATCHES_ALL).find(it0)?.groupValues?.get(1) ?: "")
+            val date = Regex("<pubDate>(.*?)</pubDate>", RegexOption.DOT_MATCHES_ALL).find(it0)?.groupValues?.get(1)?.take(16) ?: ""
+            if (title.length < 10) null else "• " + title + (if (date.isNotBlank()) " ($date)" else "")
+        }
+    }
+
+    /** Пошук у вебі: DuckDuckGo → Bing RSS → Google News RSS (перше джерело, що дало результат). */
+    suspend fun searchWeb(query: String, limit: Int = 5): String = withContext(Dispatchers.IO) {
+        val q = URLEncoder.encode(query, "UTF-8")
+        val sources = listOf<Pair<String, (String, Int) -> List<String>>>("ddg" to ::ddg, "bing" to ::bing, "news" to ::news)
+        val errors = StringBuilder()
+        for ((name, fn) in sources) {
+            try {
+                val r = fn(q, limit)
+                if (r.isNotEmpty()) {
+                    lastError = "Web[$name] OK: ${r.size} results"
+                    return@withContext r.joinToString("\n")
+                }
+                errors.append("$name: empty; ")
+            } catch (t: Throwable) {
+                if (t is kotlinx.coroutines.CancellationException) throw t
+                errors.append("$name: ${t.message}; ")
+            }
+        }
+        lastError = "Web failed: $errors"
+        Log.e(TAG, "Web search failed: $errors")
+        ""
     }
 
     private suspend fun searchJoke(): SearchResult = withContext(Dispatchers.IO) {

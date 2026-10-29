@@ -362,7 +362,7 @@ class ChatEngine(
     }
 
     private val SEARCH_STOP = setOf(
-        "хто", "такий", "така", "таке", "такі", "що", "коли", "де", "скільки", "розкажи", "про", "поясни", "народився",
+        "хто", "такий", "така", "таке", "такі", "що", "коли", "де", "скільки", "розкажи", "про", "поясни", "народився", "і", "а", "чи", "мені", "пошукай", "знайди", "інтернеті", "інеті", "мережі", "гугл", "загугли", "погугли", "наступний", "наступна", "найближчий", "найближча",
         "народилась", "народилася", "помер", "померла", "був", "була", "є", "це", "мені", "будь", "ласка", "який", "яка", "яке", "які"
     )
 
@@ -519,10 +519,14 @@ class ChatEngine(
             val facts = if (settings.autoSearch && looksFactual(question.removePrefix("а ").removePrefix("і ").removePrefix("ну "))) {
                 try {
                     val ctx = gatherFacts(searchText)
-                    Log.e(TAG, "🔎 auto-search for '$question': ${ctx.length} chars")
+                    Log.e(TAG, "🔎 auto-search for '$question': ${ctx.length} chars; ${webSearch.lastError}")
                     ctx
                 } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { "" }
             } else ""
+            // Явне «пошукай в інтернеті», а результатів немає — чесно кажемо, а не даємо моделі вигадувати
+            if (settings.autoSearch && facts.isBlank() && EXPLICIT_SEARCH.containsMatchIn(question.lowercase()) && looksFactual(question)) {
+                return "Не вдалося отримати результати пошуку: перевірте інтернет і спробуйте ще раз (${webSearch.lastError.take(80)})."
+            }
             // «Що на екрані?»: передаємо моделі текст екрана (сервіс доступності)
             val screenAsk = Regex("(що|про що)\\s+(там\\s+)?(на|в|у)\\s+(цьому\\s+)?(екрані|вікні)|прочитай\\s+(екран|це)|підсумуй\\s+(екран|це|сторінку)|переказуй\\s+екран")
                 .containsMatchIn(question.lowercase())

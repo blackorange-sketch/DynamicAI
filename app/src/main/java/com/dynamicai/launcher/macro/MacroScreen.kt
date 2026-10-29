@@ -32,7 +32,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /** Шаблон кроку: {0}, {1} у template замінюються значеннями полів. */
-private data class StepSpec(val label: String, val template: String, val params: List<Pair<String, String>> = emptyList())
+private data class StepSpec(val label: String, val template: String, val params: List<Pair<String, String>> = emptyList(), val desc: String = "")
 
 private val STEP_CATALOG: List<Pair<String, List<StepSpec>>> = listOf(
     "Мережа" to listOf(
@@ -104,23 +104,31 @@ private val STEP_CATALOG: List<Pair<String, List<StepSpec>>> = listOf(
     )
 )
 
-private val TRIGGER_CATALOG = listOf(
-    StepSpec("🔌 Зарядку підключено", "charging_start"),
-    StepSpec("🔌 Зарядку відключено", "charging_stop"),
-    StepSpec("🪫 Батарея нижче N %", "battery_low:{0}", listOf("Відсоток" to "20")),
-    StepSpec("🔵 Bluetooth підключився", "bt_connected:{0}", listOf("Назва пристрою (порожньо — будь-який)" to "")),
-    StepSpec("🔵 Bluetooth відключився", "bt_disconnected:{0}", listOf("Назва пристрою (порожньо — будь-який)" to "")),
-    StepSpec("📶 Wi-Fi підключено", "wifi_connected"),
-    StepSpec("📶 Wi-Fi відключено", "wifi_disconnected"),
-    StepSpec("🎧 Навушники підключено", "headset_plugged"),
-    StepSpec("🎧 Навушники відключено", "headset_unplugged"),
-    StepSpec("📱 Екран увімкнено", "screen_on"),
-    StepSpec("📱 Екран вимкнено", "screen_off"),
-    StepSpec("🔓 Телефон розблоковано", "unlock"),
-    StepSpec("✈ Режим польоту увімкнено", "airplane_on"),
-    StepSpec("✈ Режим польоту вимкнено", "airplane_off"),
-    StepSpec("⏰ За часом", "time:{0}:{1}:{2}", listOf("Година" to "7", "Хвилини" to "30", "Дні 1=Пн…7=Нд (порожньо — щодня)" to "12345")),
-    StepSpec("🚀 Запуск телефону", "boot")
+private val TRIGGER_GROUPS: List<Pair<String, List<StepSpec>>> = listOf(
+    "🔋 Живлення" to listOf(
+        StepSpec("🔌 Зарядку підключено", "charging_start", desc = "Коли ви вставили зарядний кабель або поставили на бездротову зарядку"),
+        StepSpec("🔌 Зарядку відключено", "charging_stop", desc = "Коли зарядку відключили"),
+        StepSpec("🪫 Батарея нижче N %", "battery_low:{0}", listOf("Відсоток" to "20"), "Спрацює один раз, коли заряд опуститься нижче вказаного рівня")
+    ),
+    "📡 Зв'язок" to listOf(
+        StepSpec("🔵 Bluetooth підключився", "bt_connected:{0}", listOf("Назва пристрою (порожньо — будь-який)" to ""), "Коли телефон з'єднався з Bluetooth-пристроєм: авто, колонка, навушники"),
+        StepSpec("🔵 Bluetooth відключився", "bt_disconnected:{0}", listOf("Назва пристрою (порожньо — будь-який)" to ""), "Коли з'єднання з пристроєм обірвалось"),
+        StepSpec("📶 Wi-Fi підключено", "wifi_connected", desc = "Коли телефон підключився до Wi-Fi"),
+        StepSpec("📶 Wi-Fi відключено", "wifi_disconnected", desc = "Коли Wi-Fi зник або вимкнувся"),
+        StepSpec("✈ Режим польоту увімкнено", "airplane_on", desc = "Коли ввімкнули режим польоту"),
+        StepSpec("✈ Режим польоту вимкнено", "airplane_off", desc = "Коли вимкнули режим польоту")
+    ),
+    "📱 Пристрій" to listOf(
+        StepSpec("🎧 Навушники підключено", "headset_plugged", desc = "Дротові або USB-навушники вставлено"),
+        StepSpec("🎧 Навушники відключено", "headset_unplugged", desc = "Дротові або USB-навушники вийнято"),
+        StepSpec("📱 Екран увімкнено", "screen_on", desc = "Коли засвітився екран"),
+        StepSpec("📱 Екран вимкнено", "screen_off", desc = "Коли екран погас"),
+        StepSpec("🔓 Телефон розблоковано", "unlock", desc = "Після розблокування екрана")
+    ),
+    "⏰ Час і система" to listOf(
+        StepSpec("⏰ За часом", "time:{0}:{1}:{2}", listOf("Година" to "7", "Хвилини" to "30", "Дні 1=Пн…7=Нд (порожньо — щодня)" to "12345"), "Щодня або в обрані дні тижня в заданий час"),
+        StepSpec("🚀 Запуск телефону", "boot", desc = "Після перезавантаження телефону")
+    )
 )
 
 private fun describeTrigger(t: String): String {
@@ -166,7 +174,7 @@ private fun describeStep(step: String): String {
 }
 
 @Composable
-fun MacroScreen(onClose: () -> Unit) {
+fun MacroScreen(onClose: () -> Unit, carBtName: String = "", onCarChange: (String) -> Unit = {}) {
     val ctx = LocalContext.current
     val storage = remember { MacroStorage(ctx) }
     var macros by remember { mutableStateOf(storage.get()) }
@@ -178,6 +186,7 @@ fun MacroScreen(onClose: () -> Unit) {
     var showEditor by remember { mutableStateOf(false) }
     var editingMacro by remember { mutableStateOf<Macro?>(null) }
     var autoOn by remember { mutableStateOf(storage.autoEnabled()) }
+    var showCarPicker by remember { mutableStateOf(false) }
     fun syncService() = com.dynamicai.launcher.macro.MacroTriggerService.sync(ctx.applicationContext)
 
     Box(
@@ -208,6 +217,21 @@ fun MacroScreen(onClose: () -> Unit) {
                 color = AppTheme.colors.textSecondary, fontSize = 12.sp
             )
             Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
+                    .clickable { showCarPicker = true }.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("🚗", fontSize = 20.sp)
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Моє авто (Bluetooth)", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+                    Text(if (carBtName.isBlank()) "Не вибрано — тап, щоб обрати пристрій" else carBtName,
+                        color = if (carBtName.isBlank()) AppTheme.colors.warning else AppTheme.colors.successLight, fontSize = 12.sp)
+                }
+                Text("›", color = AppTheme.colors.textSecondary, fontSize = 20.sp)
+            }
+            Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable {
                 autoOn = !autoOn
                 storage.setAutoEnabled(autoOn)
@@ -273,8 +297,9 @@ fun MacroScreen(onClose: () -> Unit) {
         }
 
         if (showEditor) {
-            MacroEditorDialog(
+            MacroEditorScreen(
                 macro = editingMacro,
+                carBtName = carBtName,
                 onDismiss = { showEditor = false },
                 onSave = { saved ->
                     storage.add(saved)
@@ -282,6 +307,14 @@ fun MacroScreen(onClose: () -> Unit) {
                     showEditor = false
                     syncService()
                 }
+            )
+        }
+
+        if (showCarPicker) {
+            BtDevicePickerDialog(
+                title = "🚗 Bluetooth-пристрій авто", current = carBtName, anyLabel = "Не вибрано",
+                onPick = { onCarChange(it); showCarPicker = false },
+                onDismiss = { showCarPicker = false }
             )
         }
 
@@ -329,9 +362,99 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
     ) { Text(label, color = AppTheme.colors.textPrimary, fontSize = 12.sp) }
 }
 
+internal fun pairedBtNames(ctx: android.content.Context): List<String> = try {
+    if (android.os.Build.VERSION.SDK_INT >= 31 &&
+        ctx.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != android.content.pm.PackageManager.PERMISSION_GRANTED
+    ) emptyList()
+    else com.dynamicai.launcher.system.BluetoothManager(ctx).getPairedDevices().map { it.name }.distinct()
+} catch (_: Throwable) { emptyList() }
+
+/** Вибір Bluetooth-пристрою (зі спарених). Порожній результат = «будь-який». */
 @Composable
-fun MacroEditorDialog(
+fun BtDevicePickerDialog(title: String, current: String, anyLabel: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    var names by remember { mutableStateOf(pairedBtNames(ctx)) }
+    val permLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { names = pairedBtNames(ctx) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = AppTheme.colors.backdropStart,
+        title = { Text(title, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()).heightIn(max = 380.dp)) {
+                if (names.isEmpty()) {
+                    Text("Спарених пристроїв не знайдено або не надано дозвіл Bluetooth. Спаруйте авто в налаштуваннях Android і дайте дозвіл.",
+                        color = AppTheme.colors.textSecondary, fontSize = 13.sp)
+                    TextButton(onClick = { permLauncher.launch(android.Manifest.permission.BLUETOOTH_CONNECT) }) {
+                        Text("Дозволити Bluetooth", color = AppTheme.colors.successLight)
+                    }
+                }
+                names.forEach { n ->
+                    Text((if (n == current) "✓ " else "") + n,
+                        color = if (n == current) AppTheme.colors.successLight else AppTheme.colors.textPrimary, fontSize = 15.sp,
+                        modifier = Modifier.fillMaxWidth().clickable { onPick(n) }.padding(vertical = 10.dp))
+                }
+                Text(anyLabel, color = AppTheme.colors.textSecondary, fontSize = 14.sp,
+                    modifier = Modifier.fillMaxWidth().clickable { onPick("") }.padding(vertical = 10.dp))
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Закрити", color = AppTheme.colors.textSecondary) } }
+    )
+}
+
+/** Повноекранний вибір із групами; список завжди прокручується. */
+@Composable
+private fun PickerScreen(title: String, groups: List<Pair<String, List<StepSpec>>>, onPick: (StepSpec) -> Unit, onClose: () -> Unit) {
+    androidx.activity.compose.BackHandler(onBack = onClose)
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AppTheme.colors.backdropStart, AppTheme.colors.backdropEnd)))) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("←", color = AppTheme.colors.textPrimary, fontSize = 24.sp, modifier = Modifier.clickable(onClick = onClose).padding(end = 16.dp))
+                Text(title, color = AppTheme.colors.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            }
+            LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 24.dp)) {
+                groups.forEach { (group, specs) ->
+                    item(key = "h_$group") {
+                        Text(group, color = AppTheme.colors.accent, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(top = 16.dp, bottom = 6.dp))
+                    }
+                    items(specs, key = { group + it.label }) { spec ->
+                        Column(
+                            Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(12.dp))
+                                .background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
+                                .clickable { onPick(spec) }.padding(12.dp)
+                        ) {
+                            Text(spec.label, color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+                            val d = spec.desc.ifBlank { spec.template.replace("{0}", "…").replace("{1}", "…").replace("{2}", "…") }
+                            Text(d, color = AppTheme.colors.textMuted, fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditorSection(title: String, hint: String = "", content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().padding(vertical = 6.dp).clip(RoundedCornerShape(16.dp))
+            .background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
+            .border(0.5.dp, AppTheme.colors.glassBorder.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
+            .padding(14.dp)
+    ) {
+        Text(title, color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        if (hint.isNotBlank()) Text(hint, color = AppTheme.colors.textMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp, bottom = 6.dp))
+        content()
+    }
+}
+
+@Composable
+fun MacroEditorScreen(
     macro: Macro?,
+    carBtName: String,
     onDismiss: () -> Unit,
     onSave: (Macro) -> Unit
 ) {
@@ -343,10 +466,10 @@ fun MacroEditorDialog(
     var stopOnError by remember { mutableStateOf(macro?.stopOnError ?: false) }
     var constraints by remember { mutableStateOf(macro?.constraints ?: "") }
     val triggers = remember { mutableStateListOf<String>().apply { addAll(macro?.triggers ?: emptyList()) } }
-    var pendingTrigger by remember { mutableStateOf<StepSpec?>(null) }
-    var showTriggerPicker by remember { mutableStateOf(false) }
     val steps = remember { mutableStateListOf<String>().apply { addAll(macro?.steps ?: emptyList()) } }
-    var category by remember { mutableStateOf(STEP_CATALOG.first().first) }
+    var showTriggerPicker by remember { mutableStateOf(false) }
+    var showStepPicker by remember { mutableStateOf(false) }
+    var pendingTrigger by remember { mutableStateOf<StepSpec?>(null) }
     var pendingSpec by remember { mutableStateOf<StepSpec?>(null) }
     var editIndex by remember { mutableStateOf(-1) }
     var rawStep by remember { mutableStateOf("") }
@@ -354,232 +477,224 @@ fun MacroEditorDialog(
     val iconOptions = listOf("⚡", "🏢", "🚗", "🎬", "🌙", "🏠", "🎮", "🎵", "☕", "💼", "🌞", "🚀")
     val colorOptions = listOf(0xFF2196F3, 0xFF4CAF50, 0xFFFF9800, 0xFF9C27B0, 0xFFE91E63, 0xFF00BCD4)
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth(0.96f),
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-        containerColor = AppTheme.colors.backdropStart,
-        title = { Text(if (macro == null) "Новий макрос" else "Редагувати макрос", color = AppTheme.colors.textPrimary) },
-        text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState()).heightIn(max = 560.dp)) {
-                LabeledField("Назва", name, "Наприклад: Їду на роботу") { name = it }
-                LabeledField("Голосові фрази-тригери (через кому)", trigger, "їду на роботу, режим роботи") { trigger = it }
+    androidx.activity.compose.BackHandler(onBack = onDismiss)
+    val canSave = name.isNotBlank() && steps.isNotEmpty()
 
-                Spacer(Modifier.height(6.dp))
-                Text("Іконка", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
-                Spacer(Modifier.height(4.dp))
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    iconOptions.forEach { ic ->
-                        Box(
-                            modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp))
-                                .background(if (icon == ic) AppTheme.colors.successLight.copy(alpha = 0.3f) else AppTheme.colors.textPrimary.copy(alpha = 0.05f))
-                                .clickable { icon = ic },
-                            contentAlignment = Alignment.Center
-                        ) { Text(ic, fontSize = 20.sp) }
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AppTheme.colors.backdropStart, AppTheme.colors.backdropEnd)))) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("←", color = AppTheme.colors.textPrimary, fontSize = 24.sp, modifier = Modifier.clickable(onClick = onDismiss).padding(end = 16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(if (macro == null) "Новий макрос" else "Редагування", color = AppTheme.colors.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("Подій: ${triggers.size} · кроків: ${steps.size}", color = AppTheme.colors.textMuted, fontSize = 11.sp)
+                }
+                Text("Зберегти", color = if (canSave) AppTheme.colors.successLight else AppTheme.colors.textMuted, fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable(enabled = canSave) {
+                        val base = macro ?: Macro(id = java.util.UUID.randomUUID().toString(), name = name, steps = emptyList())
+                        onSave(base.copy(
+                            name = name.trim(), icon = icon, colorHex = colorHex, trigger = trigger.trim(),
+                            steps = steps.map { it.trim() }.filter { it.isNotBlank() }, delayMs = delayMs, stopOnError = stopOnError,
+                            triggers = triggers.toList(), constraints = constraints.trim()
+                        ))
+                    }.padding(8.dp))
+            }
+            if (!canSave) Text("Щоб зберегти: вкажіть назву й додайте хоча б один крок", color = AppTheme.colors.textMuted, fontSize = 11.sp)
+
+            LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 32.dp)) {
+                item {
+                    EditorSection("Основне") {
+                        LabeledField("Назва", name, "Наприклад: Їду на роботу") { name = it }
+                        Text("Іконка", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            iconOptions.forEach { ic ->
+                                Box(
+                                    modifier = Modifier.size(36.dp).clip(RoundedCornerShape(8.dp))
+                                        .background(if (icon == ic) AppTheme.colors.successLight.copy(alpha = 0.3f) else AppTheme.colors.textPrimary.copy(alpha = 0.05f))
+                                        .clickable { icon = ic },
+                                    contentAlignment = Alignment.Center
+                                ) { Text(ic, fontSize = 20.sp) }
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Text("Колір", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            colorOptions.forEach { c ->
+                                Box(
+                                    modifier = Modifier.size(28.dp).clip(RoundedCornerShape(50)).background(Color(c))
+                                        .border(if (colorHex == c) 2.dp else 0.dp, AppTheme.colors.textPrimary, RoundedCornerShape(50))
+                                        .clickable { colorHex = c }
+                                )
+                            }
+                        }
                     }
                 }
-
-                Spacer(Modifier.height(10.dp))
-                Text("Колір", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
-                Spacer(Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    colorOptions.forEach { c ->
-                        Box(
-                            modifier = Modifier.size(28.dp).clip(RoundedCornerShape(50))
-                                .background(Color(c))
-                                .border(if (colorHex == c) 2.dp else 0.dp, AppTheme.colors.textPrimary, RoundedCornerShape(50))
-                                .clickable { colorHex = c }
-                        )
+                item {
+                    EditorSection("🎙 Голосовий запуск", "Скажіть будь-яку з цих фраз — і макрос запуститься. Назва макросу теж працює.") {
+                        LabeledField("Фрази через кому", trigger, "їду на роботу, режим роботи") { trigger = it }
                     }
                 }
-
-                Spacer(Modifier.height(10.dp))
-                Text("Пауза між кроками", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
-                Spacer(Modifier.height(4.dp))
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf(0L to "0", 500L to "0.5 с", 900L to "0.9 с", 2000L to "2 с", 3000L to "3 с", 5000L to "5 с").forEach { (ms, lbl) ->
-                        Chip(lbl, delayMs == ms) { delayMs = ms }
+                item {
+                    EditorSection("⚙ Автозапуск за подіями", "Макрос спрацює сам, коли станеться будь-яка з подій нижче.") {
+                        if (triggers.isEmpty()) Text("Подій ще немає", color = AppTheme.colors.textMuted, fontSize = 12.sp)
+                        triggers.forEachIndexed { i, t ->
+                            Row(
+                                Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(8.dp))
+                                    .background(AppTheme.colors.textPrimary.copy(alpha = 0.06f)).padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(describeTrigger(t), color = AppTheme.colors.textPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                                Text("✕", color = AppTheme.colors.danger, fontSize = 16.sp, modifier = Modifier.clickable { triggers.removeAt(i) }.padding(horizontal = 6.dp))
+                            }
+                        }
+                        TextButton(onClick = { showTriggerPicker = true }) { Text("+ Додати подію", color = AppTheme.colors.successLight, fontSize = 13.sp) }
+                        if (triggers.isNotEmpty()) {
+                            LabeledField("Умови автозапуску (через кому, усі мають виконуватись)", constraints, "time>08:00, time<22:00, charging") { constraints = it }
+                            Text("Умови: ${MacroRunner.CONDITIONS}", color = AppTheme.colors.textMuted, fontSize = 11.sp)
+                        }
                     }
                 }
-                Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { stopOnError = !stopOnError }.padding(vertical = 4.dp)) {
-                    Text(if (stopOnError) "☑" else "☐", color = AppTheme.colors.successLight, fontSize = 20.sp)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Зупинитись, якщо крок завершився помилкою", color = AppTheme.colors.textPrimary, fontSize = 13.sp)
-                }
-
-                Spacer(Modifier.height(14.dp))
-                Text("Автозапуск за подіями (${triggers.size})", color = AppTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                Text("Макрос спрацює сам, коли станеться будь-яка з цих подій.", color = AppTheme.colors.textMuted, fontSize = 11.sp)
-                triggers.forEachIndexed { i, t ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)
-                            .clip(RoundedCornerShape(8.dp)).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(describeTrigger(t), color = AppTheme.colors.textPrimary, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                        Text("✕", color = AppTheme.colors.danger, fontSize = 15.sp, modifier = Modifier.clickable { triggers.removeAt(i) }.padding(horizontal = 6.dp))
+                item {
+                    EditorSection("▶ Що робити (кроки)", "Виконуються по черзі згори вниз. Тап по кроку — редагувати текст.") {
+                        if (steps.isEmpty()) Text("Кроків ще немає", color = AppTheme.colors.textMuted, fontSize = 12.sp)
+                        steps.forEachIndexed { i, s ->
+                            Row(
+                                Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(8.dp))
+                                    .background(AppTheme.colors.textPrimary.copy(alpha = 0.06f)).padding(horizontal = 8.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("${i + 1}.", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                                Spacer(Modifier.width(6.dp))
+                                Text(describeStep(s), color = AppTheme.colors.textPrimary, fontSize = 12.sp,
+                                    modifier = Modifier.weight(1f).clickable { editIndex = i; rawStep = s })
+                                Text("↑", color = AppTheme.colors.accent, fontSize = 18.sp, modifier = Modifier.clickable(enabled = i > 0) {
+                                    val t = steps[i]; steps[i] = steps[i - 1]; steps[i - 1] = t
+                                }.padding(horizontal = 6.dp))
+                                Text("↓", color = AppTheme.colors.accent, fontSize = 18.sp, modifier = Modifier.clickable(enabled = i < steps.size - 1) {
+                                    val t = steps[i]; steps[i] = steps[i + 1]; steps[i + 1] = t
+                                }.padding(horizontal = 6.dp))
+                                Text("⧉", color = AppTheme.colors.accent, fontSize = 16.sp, modifier = Modifier.clickable { steps.add(i + 1, s) }.padding(horizontal = 6.dp))
+                                Text("✕", color = AppTheme.colors.danger, fontSize = 15.sp, modifier = Modifier.clickable { steps.removeAt(i) }.padding(horizontal = 6.dp))
+                            }
+                        }
+                        Row {
+                            TextButton(onClick = { showStepPicker = true }) { Text("+ Додати крок", color = AppTheme.colors.successLight, fontSize = 13.sp) }
+                            TextButton(onClick = { editIndex = -2; rawStep = "" }) { Text("+ Свій крок", color = AppTheme.colors.accent, fontSize = 13.sp) }
+                        }
                     }
                 }
-                TextButton(onClick = { showTriggerPicker = true }) {
-                    Text("+ Додати подію-тригер", color = AppTheme.colors.successLight, fontSize = 12.sp)
-                }
-                if (triggers.isNotEmpty()) {
-                    LabeledField("Умови автозапуску (через кому, усі мають виконуватись)", constraints, "time>08:00, time<22:00, charging") { constraints = it }
-                    Text("Умови: ${MacroRunner.CONDITIONS}", color = AppTheme.colors.textMuted, fontSize = 11.sp)
-                }
-
-                Spacer(Modifier.height(14.dp))
-                Text("Кроки (${steps.size})", color = AppTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                steps.forEachIndexed { i, s ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)
-                            .clip(RoundedCornerShape(8.dp)).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("${i + 1}.", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
-                        Spacer(Modifier.width(6.dp))
-                        Text(describeStep(s), color = AppTheme.colors.textPrimary, fontSize = 12.sp,
-                            modifier = Modifier.weight(1f).clickable { editIndex = i; rawStep = s })
-                        Text("↑", color = AppTheme.colors.accent, fontSize = 18.sp, modifier = Modifier.clickable(enabled = i > 0) {
-                            val t = steps[i]; steps[i] = steps[i - 1]; steps[i - 1] = t
-                        }.padding(horizontal = 6.dp))
-                        Text("↓", color = AppTheme.colors.accent, fontSize = 18.sp, modifier = Modifier.clickable(enabled = i < steps.size - 1) {
-                            val t = steps[i]; steps[i] = steps[i + 1]; steps[i + 1] = t
-                        }.padding(horizontal = 6.dp))
-                        Text("⧉", color = AppTheme.colors.accent, fontSize = 16.sp, modifier = Modifier.clickable { steps.add(i + 1, s) }.padding(horizontal = 6.dp))
-                        Text("✕", color = AppTheme.colors.danger, fontSize = 15.sp, modifier = Modifier.clickable { steps.removeAt(i) }.padding(horizontal = 6.dp))
+                item {
+                    EditorSection("Параметри виконання") {
+                        Text("Пауза між кроками", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                        Spacer(Modifier.height(4.dp))
+                        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(0L to "0", 500L to "0.5 с", 900L to "0.9 с", 2000L to "2 с", 3000L to "3 с", 5000L to "5 с").forEach { (ms, lbl) ->
+                                Chip(lbl, delayMs == ms) { delayMs = ms }
+                            }
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { stopOnError = !stopOnError }.padding(vertical = 4.dp)) {
+                            Text(if (stopOnError) "☑" else "☐", color = AppTheme.colors.successLight, fontSize = 20.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Зупинитись, якщо крок завершився помилкою", color = AppTheme.colors.textPrimary, fontSize = 13.sp)
+                        }
                     }
-                }
-                if (steps.isNotEmpty()) Text("Тап по кроку — редагувати текст", color = AppTheme.colors.textMuted, fontSize = 11.sp)
-
-                Spacer(Modifier.height(12.dp))
-                Text("Додати крок", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
-                Spacer(Modifier.height(4.dp))
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    STEP_CATALOG.forEach { (cat, _) -> Chip(cat, category == cat) { category = cat } }
-                }
-                Spacer(Modifier.height(4.dp))
-                STEP_CATALOG.first { it.first == category }.second.forEach { spec ->
-                    Text(
-                        "+ ${spec.label}",
-                        color = AppTheme.colors.accent,
-                        fontSize = 13.sp,
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            if (spec.params.isEmpty()) steps.add(spec.template) else pendingSpec = spec
-                        }.padding(vertical = 6.dp)
-                    )
-                }
-                Spacer(Modifier.height(6.dp))
-                TextButton(onClick = { editIndex = -2; rawStep = "" }) {
-                    Text("+ Свій крок (текстом)", color = AppTheme.colors.successLight, fontSize = 12.sp)
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                if (name.isNotBlank() && steps.isNotEmpty()) {
-                    val base = macro ?: Macro(id = java.util.UUID.randomUUID().toString(), name = name, steps = emptyList())
-                    onSave(base.copy(
-                        name = name.trim(), icon = icon, colorHex = colorHex, trigger = trigger.trim(),
-                        steps = steps.map { it.trim() }.filter { it.isNotBlank() }, delayMs = delayMs, stopOnError = stopOnError,
-                        triggers = triggers.toList(), constraints = constraints.trim()
-                    ))
-                }
-            }) { Text("Зберегти", color = AppTheme.colors.successLight) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
-    )
+        }
 
-    // Вибір тригера
-    if (showTriggerPicker) {
-        AlertDialog(
-            onDismissRequest = { showTriggerPicker = false },
-            containerColor = AppTheme.colors.backdropStart,
-            title = { Text("Подія-тригер", color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState()).heightIn(max = 420.dp)) {
-                    TRIGGER_CATALOG.forEach { spec ->
-                        Text(spec.label, color = AppTheme.colors.accent, fontSize = 14.sp,
-                            modifier = Modifier.fillMaxWidth().clickable {
-                                showTriggerPicker = false
-                                if (spec.params.isEmpty()) triggers.add(spec.template) else pendingTrigger = spec
-                            }.padding(vertical = 8.dp))
+        if (showTriggerPicker) PickerScreen("Оберіть подію", TRIGGER_GROUPS, onPick = { spec ->
+            showTriggerPicker = false
+            if (spec.params.isEmpty()) triggers.add(spec.template) else pendingTrigger = spec
+        }, onClose = { showTriggerPicker = false })
+
+        if (showStepPicker) PickerScreen("Оберіть дію", STEP_CATALOG, onPick = { spec ->
+            showStepPicker = false
+            if (spec.params.isEmpty()) steps.add(spec.template) else pendingSpec = spec
+        }, onClose = { showStepPicker = false })
+
+        // Параметри тригера; для Bluetooth — вибір зі спарених пристроїв
+        pendingTrigger?.let { spec ->
+            if (spec.template.startsWith("bt_")) {
+                BtDevicePickerDialog(
+                    title = spec.label, current = carBtName,
+                    anyLabel = "Будь-який пристрій",
+                    onPick = { picked -> triggers.add(spec.template.replace("{0}", picked.replace(":", ""))); pendingTrigger = null },
+                    onDismiss = { pendingTrigger = null }
+                )
+            } else {
+                val values = remember(spec) { mutableStateListOf<String>().apply { addAll(spec.params.map { it.second }) } }
+                AlertDialog(
+                    onDismissRequest = { pendingTrigger = null },
+                    containerColor = AppTheme.colors.backdropStart,
+                    title = { Text(spec.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
+                    text = { Column(Modifier.verticalScroll(rememberScrollState())) { spec.params.forEachIndexed { i, p -> LabeledField(p.first, values[i]) { values[i] = it } } } },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            var t = spec.template
+                            values.forEachIndexed { i, v -> t = t.replace("{$i}", v.trim().replace(":", "")) }
+                            triggers.add(t)
+                            pendingTrigger = null
+                        }) { Text("Додати", color = AppTheme.colors.successLight) }
+                    },
+                    dismissButton = { TextButton(onClick = { pendingTrigger = null }) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
+                )
+            }
+        }
+
+        // Параметри кроку; для підключення Bluetooth — вибір пристрою
+        pendingSpec?.let { spec ->
+            if (spec.template.startsWith("connectBluetooth")) {
+                BtDevicePickerDialog(
+                    title = spec.label, current = carBtName,
+                    anyLabel = if (carBtName.isNotBlank()) "🚗 Моє авто ($carBtName)" else "Авто з налаштувань",
+                    onPick = { picked -> steps.add("connectBluetooth(name=\"" + picked.replace("\"", "") + "\")"); pendingSpec = null },
+                    onDismiss = { pendingSpec = null }
+                )
+            } else {
+                val values = remember(spec) { mutableStateListOf<String>().apply { addAll(spec.params.map { it.second }) } }
+                AlertDialog(
+                    onDismissRequest = { pendingSpec = null },
+                    containerColor = AppTheme.colors.backdropStart,
+                    title = { Text(spec.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
+                    text = { Column(Modifier.verticalScroll(rememberScrollState())) { spec.params.forEachIndexed { i, p -> LabeledField(p.first, values[i]) { values[i] = it } } } },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            var t = spec.template
+                            values.forEachIndexed { i, v -> t = t.replace("{$i}", v.replace("\"", "")) }
+                            steps.add(t.trim())
+                            pendingSpec = null
+                        }) { Text("Додати", color = AppTheme.colors.successLight) }
+                    },
+                    dismissButton = { TextButton(onClick = { pendingSpec = null }) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
+                )
+            }
+        }
+
+        if (editIndex != -1) {
+            AlertDialog(
+                onDismissRequest = { editIndex = -1 },
+                containerColor = AppTheme.colors.backdropStart,
+                title = { Text(if (editIndex == -2) "Свій крок" else "Редагувати крок", color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
+                text = {
+                    Column {
+                        LabeledField("Крок", rawStep, "toggleWifi(state=\"on\")  |  WAIT: 3  |  IF: online ? carMode()") { rawStep = it }
+                        Text("Службові: WAIT: сек · WAIT_UNTIL: умова сек · IF: умова ? крок · IF_NOT: умова ? крок · SAY: текст · SET: ім'я=значення · REPEAT: N ? крок.\nУмови: ${MacroRunner.CONDITIONS}",
+                            color = AppTheme.colors.textMuted, fontSize = 11.sp)
                     }
-                }
-            },
-            confirmButton = {},
-            dismissButton = { TextButton(onClick = { showTriggerPicker = false }) { Text("Закрити", color = AppTheme.colors.textSecondary) } }
-        )
-    }
-    pendingTrigger?.let { spec ->
-        val values = remember(spec) { mutableStateListOf<String>().apply { addAll(spec.params.map { it.second }) } }
-        AlertDialog(
-            onDismissRequest = { pendingTrigger = null },
-            containerColor = AppTheme.colors.backdropStart,
-            title = { Text(spec.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
-            text = { Column(Modifier.verticalScroll(rememberScrollState())) { spec.params.forEachIndexed { i, p -> LabeledField(p.first, values[i]) { values[i] = it } } } },
-            confirmButton = {
-                TextButton(onClick = {
-                    var t = spec.template
-                    values.forEachIndexed { i, v -> t = t.replace("{$i}", v.trim().replace(":", "")) }
-                    triggers.add(t)
-                    pendingTrigger = null
-                }) { Text("Додати", color = AppTheme.colors.successLight) }
-            },
-            dismissButton = { TextButton(onClick = { pendingTrigger = null }) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
-        )
-    }
-
-    // Параметри нового кроку
-    pendingSpec?.let { spec ->
-        val values = remember(spec) { mutableStateListOf<String>().apply { addAll(spec.params.map { it.second }) } }
-        AlertDialog(
-            onDismissRequest = { pendingSpec = null },
-            containerColor = AppTheme.colors.backdropStart,
-            title = { Text(spec.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    spec.params.forEachIndexed { i, p -> LabeledField(p.first, values[i]) { values[i] = it } }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    var t = spec.template
-                    values.forEachIndexed { i, v -> t = t.replace("{$i}", v.replace("\"", "")) }
-                    steps.add(t.trim())
-                    pendingSpec = null
-                }) { Text("Додати", color = AppTheme.colors.successLight) }
-            },
-            dismissButton = { TextButton(onClick = { pendingSpec = null }) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
-        )
-    }
-
-    // Текстове редагування / власний крок
-    if (editIndex != -1) {
-        AlertDialog(
-            onDismissRequest = { editIndex = -1 },
-            containerColor = AppTheme.colors.backdropStart,
-            title = { Text(if (editIndex == -2) "Свій крок" else "Редагувати крок", color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
-            text = {
-                Column {
-                    LabeledField("Крок", rawStep, "toggleWifi(state=\"on\")  |  WAIT: 3  |  IF: online ? carMode()") { rawStep = it }
-                    Text("Службові: WAIT: сек · WAIT_UNTIL: умова сек · IF: умова ? крок · IF_NOT: умова ? крок · SAY: текст.\nУмови: ${MacroRunner.CONDITIONS}",
-                        color = AppTheme.colors.textMuted, fontSize = 11.sp)
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    if (rawStep.isNotBlank()) {
-                        if (editIndex >= 0) steps[editIndex] = rawStep.trim() else steps.add(rawStep.trim())
-                    }
-                    editIndex = -1
-                }) { Text("OK", color = AppTheme.colors.successLight) }
-            },
-            dismissButton = { TextButton(onClick = { editIndex = -1 }) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
-        )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (rawStep.isNotBlank()) {
+                            if (editIndex >= 0) steps[editIndex] = rawStep.trim() else steps.add(rawStep.trim())
+                        }
+                        editIndex = -1
+                    }) { Text("OK", color = AppTheme.colors.successLight) }
+                },
+                dismissButton = { TextButton(onClick = { editIndex = -1 }) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
+            )
+        }
     }
 }
 

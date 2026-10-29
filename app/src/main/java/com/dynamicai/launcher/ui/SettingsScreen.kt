@@ -564,6 +564,12 @@ fun SettingsScreen(
         if (initialCategory == null || cat == "system") {
         GlassSectionHeader("Bluetooth")
         BluetoothTestRow()
+        GlassSectionHeader("🚗 Авто")
+        GlassCard {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                CarModeSettingsBlock(settings, onSettingsChange)
+            }
+        }
 
 
         if (showAssistant) {
@@ -805,8 +811,6 @@ fun SettingsScreen(
                 }
                 Spacer(Modifier.height(10.dp))
                 VoskSettingsBlock(settings, onSettingsChange)
-                Spacer(Modifier.height(10.dp))
-                CarModeSettingsBlock(settings, onSettingsChange)
                 Spacer(Modifier.height(10.dp))
                 Text("Мова відповіді", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(4.dp))
@@ -1282,27 +1286,23 @@ private fun VoskSettingsBlock(settings: LauncherSettings, onSettingsChange: (Lau
 /** Сценарій «включи музику в машині»: вибір Bluetooth-пристрою авто. */
 @Composable
 private fun CarModeSettingsBlock(settings: LauncherSettings, onSettingsChange: (LauncherSettings) -> Unit) {
-    val ctx = LocalContext.current
-    var devices by remember { mutableStateOf<List<String>>(emptyList()) }
-    var loaded by remember { mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        devices = try { com.dynamicai.launcher.system.BluetoothManager(ctx).getPairedDevices().map { it.name } } catch (_: Throwable) { emptyList() }
-        loaded = true
-    }
-    Text("Авто (команда «включи музику в машині»)", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+    var showPicker by remember { mutableStateOf(false) }
+    Text("Bluetooth-пристрій авто", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
     Spacer(Modifier.height(2.dp))
     Text(
-        "Інтернет → Bluetooth → підключення до авто → YouTube Music → Play. Вимкнення режиму польоту й мобільних даних працює через Shizuku.",
+        "Використовується в команді «включи музику в машині» та у макросах («Моє авто»): інтернет → Bluetooth → підключення → YouTube Music → Play. Режим польоту й мобільні дані вимикаються через Shizuku.",
         color = AppTheme.colors.textSecondary, fontSize = 11.sp
     )
-    Spacer(Modifier.height(4.dp))
-    if (loaded && devices.isEmpty()) {
-        Text("Спарених пристроїв немає або не надано дозвіл Bluetooth", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+    Spacer(Modifier.height(6.dp))
+    TextButton(onClick = { showPicker = true }) {
+        Text(if (settings.carBtName.isBlank()) "Обрати пристрій…" else "✓ ${settings.carBtName} — змінити",
+            color = if (settings.carBtName.isBlank()) AppTheme.colors.warning else AppTheme.colors.successLight)
     }
-    devices.forEach { d ->
-        val selected = settings.carBtName == d
-        TextButton(onClick = { onSettingsChange(settings.copy(carBtName = if (selected) "" else d)) }) {
-            Text((if (selected) "✓ " else "") + d, color = if (selected) AppTheme.colors.successLight else AppTheme.colors.textPrimary)
-        }
+    if (showPicker) {
+        com.dynamicai.launcher.macro.BtDevicePickerDialog(
+            title = "🚗 Bluetooth-пристрій авто", current = settings.carBtName, anyLabel = "Не вибрано",
+            onPick = { onSettingsChange(settings.copy(carBtName = it)); showPicker = false },
+            onDismiss = { showPicker = false }
+        )
     }
 }

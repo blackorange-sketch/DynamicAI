@@ -456,7 +456,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
 
     if (showMacroManager) {
-        com.dynamicai.launcher.macro.MacroScreen(onClose = { showMacroManager = false })
+        com.dynamicai.launcher.macro.MacroScreen(
+            onClose = { showMacroManager = false },
+            carBtName = settings.carBtName,
+            onCarChange = { vm.updateSettings(settings.copy(carBtName = it)) }
+        )
         return@DynamicAITheme
     }
 

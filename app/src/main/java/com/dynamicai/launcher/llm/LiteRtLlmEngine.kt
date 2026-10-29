@@ -198,10 +198,19 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
                 if (asyncMethod != null) {
                     // LiteRT-LM підтримує стрімінг
                     val fullText = StringBuilder()
+                    // Ліміт довжини: ≈2 символи на токен. Після перевищення зупиняємо розмову (якщо API це дозволяє)
+                    val maxChars = currentSettings.maxResponseTokens.coerceIn(32, 4096) * 2
+                    var stopped = false
                     val callback = { text: String ->
-                        if (firstTokenAt == 0L) firstTokenAt = System.currentTimeMillis()
-                        fullText.append(text)
-                        onToken(text)
+                        if (!stopped) {
+                            if (firstTokenAt == 0L) firstTokenAt = System.currentTimeMillis()
+                            fullText.append(text)
+                            onToken(text)
+                            if (fullText.length >= maxChars) {
+                                stopped = true
+                                cancelConversation(conversation)
+                            }
+                        }
                         Unit
                     }
                     asyncMethod.invoke(conversation, prompt, callback)
@@ -223,6 +232,22 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
             // Fallback на звичайний complete
             return@withContext complete(prompt)
         }
+    }
+
+    /** Намагається перервати генерацію через рефлексію (назва методу залежить від версії LiteRT-LM). */
+    private fun cancelConversation(conversation: Any) {
+        for (name in listOf("cancelProcess", "cancel", "stop", "interrupt")) {
+            try {
+                conversation.javaClass.methods.firstOrNull { it.name == name && it.parameterTypes.isEmpty() }?.let {
+                    it.invoke(conversation)
+                    Log.e(TAG, "✂️ Генерацію перервано через $name()")
+                    return
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "cancel via $name failed: ${t.message}")
+            }
+        }
+        Log.e(TAG, "✂️ Метод скасування не знайдено — відповідь буде лише обрізана")
     }
 
     override suspend fun complete(prompt: String): String? = withContext(Dispatchers.IO) {

@@ -803,6 +803,13 @@ fun SettingsScreen(
                         }
                     }
                 }
+                Spacer(Modifier.height(10.dp))
+                Text("Стиль відповіді", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LlmBackendChip("Коротко (1–3 речення)", "short", settings.answerStyle) { onSettingsChange(settings.copy(answerStyle = it)) }
+                    LlmBackendChip("Звичайно", "normal", settings.answerStyle) { onSettingsChange(settings.copy(answerStyle = it)) }
+                }
                 SwitchRow(
                     label = "Завантажувати модель у фоні при старті",
                     checked = settings.llmPreload,

@@ -51,6 +51,7 @@ data class LauncherSettings(
     val litertMtp: String = "default",         // "default" | "on" | "off"
     val litertSeparateCache: Boolean = false,
     val maxResponseTokens: Int = 256,          // ліміт довжини відповіді (MNN: токени; усі: обрізання за реченням)
+    val answerStyle: String = "short",         // "short" | "normal": чи просити модель відповідати коротко
     val llmPreload: Boolean = false,           // завантажувати модель у фоні при старті лаунчера
     val llmUnloadMinutes: Int = 3,             // 0 = ніколи не вивантажувати
     // Голосовий чат: true = агент з інструментами (довгий промпт ~1000+ токенів), false = простий чат (короткий промпт)
@@ -107,6 +108,7 @@ class SettingsStorage(context: Context) {
             litertMtp = prefs.getString("litertMtp", "default") ?: "default",
             litertSeparateCache = prefs.getBoolean("litertSeparateCache", false),
             maxResponseTokens = prefs.getInt("maxResponseTokens", 256),
+            answerStyle = prefs.getString("answerStyle", "short") ?: "short",
             llmPreload = prefs.getBoolean("llmPreload", false),
             llmUnloadMinutes = prefs.getInt("llmUnloadMinutes", 3),
             useAgent = prefs.getBoolean("useAgent", true)
@@ -160,6 +162,7 @@ class SettingsStorage(context: Context) {
             .putString("litertMtp", s.litertMtp)
             .putBoolean("litertSeparateCache", s.litertSeparateCache)
             .putInt("maxResponseTokens", s.maxResponseTokens)
+            .putString("answerStyle", s.answerStyle)
             .putBoolean("llmPreload", s.llmPreload)
             .putInt("llmUnloadMinutes", s.llmUnloadMinutes)
             .putBoolean("useAgent", s.useAgent)

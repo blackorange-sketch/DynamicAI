@@ -335,7 +335,10 @@ class ChatEngine(
         if (!llm.isReady) return "LLM не активна"
         return try {
             val isMnn = llm.isMnn
-            
+            val settings = com.dynamicai.launcher.data.SettingsStorage(context).load()
+            // «Коротко»: додається до питання, а не до шаблону, тож власні промпти з налаштувань лишаються недоторканими
+            val q = if (settings.answerStyle == "short") question + "\n(Відповідай коротко: 1–3 речення.)" else question
+
             // Беремо шаблон з файлу (не з SharedPreferences — надійніше)
             val template = if (isMnn) {
                 com.dynamicai.launcher.llm.PromptManager.loadMnn(context)
@@ -345,11 +348,14 @@ class ChatEngine(
             Log.e("MNN_PROMPT", "Template from file (isMnn=$isMnn): ${template.replace("\n", "\\n")}")
             // LiteRT сам застосовує chat template (Conversation API). Старий шаблон за замовчуванням з
             // <start_of_turn> дав би подвійне обгортання — у цьому випадку шлемо чисте питання.
-            val prompt = if (!isMnn && template.contains("<start_of_turn>")) question
-                         else template.replace("{{question}}", question)
+            val prompt = if (!isMnn && template.contains("<start_of_turn>")) q
+                         else template.replace("{{question}}", q)
             Log.e("MNN_PROMPT", "Final prompt (${prompt.length} chars): ${prompt.replace("\n", "\\n")}")
             
-            val response = llm.complete(prompt)
+            // LiteRT: стрім з ліміту довжини (зупиняє генерацію раніше); якщо порожньо — звичайний виклик
+            val response = if (!isMnn) {
+                llm.streamComplete(prompt) { }?.takeIf { it.isNotBlank() } ?: llm.complete(prompt)
+            } else llm.complete(prompt)
             Log.d(TAG, "simpleAnswer: prompt len=${prompt.length}, response=${response?.take(100)}")
             response?.trim() ?: "LLM не відповіла"
         } catch (t: Throwable) {

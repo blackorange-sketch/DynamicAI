@@ -343,7 +343,10 @@ class ChatEngine(
                 com.dynamicai.launcher.llm.PromptManager.loadLitert(context)
             }
             Log.e("MNN_PROMPT", "Template from file (isMnn=$isMnn): ${template.replace("\n", "\\n")}")
-            val prompt = template.replace("{{question}}", question)
+            // LiteRT сам застосовує chat template (Conversation API). Старий шаблон за замовчуванням з
+            // <start_of_turn> дав би подвійне обгортання — у цьому випадку шлемо чисте питання.
+            val prompt = if (!isMnn && template.contains("<start_of_turn>")) question
+                         else template.replace("{{question}}", question)
             Log.e("MNN_PROMPT", "Final prompt (${prompt.length} chars): ${prompt.replace("\n", "\\n")}")
             
             val response = llm.complete(prompt)

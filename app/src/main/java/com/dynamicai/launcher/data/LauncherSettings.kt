@@ -49,7 +49,9 @@ data class LauncherSettings(
     // LiteRT GPU (експериментальні): точність активацій, speculative decoding, окремий кеш
     val litertActivation: String = "default",  // "default" | "float32" | "float16"
     val litertMtp: String = "default",         // "default" | "on" | "off"
-    val litertSeparateCache: Boolean = false
+    val litertSeparateCache: Boolean = false,
+    // Голосовий чат: true = агент з інструментами (довгий промпт ~1000+ токенів), false = простий чат (короткий промпт)
+    val useAgent: Boolean = true
 )
 
 class SettingsStorage(context: Context) {
@@ -100,7 +102,8 @@ class SettingsStorage(context: Context) {
             appTheme = prefs.getString("appTheme", "glass_dark") ?: "glass_dark",
             litertActivation = prefs.getString("litertActivation", "default") ?: "default",
             litertMtp = prefs.getString("litertMtp", "default") ?: "default",
-            litertSeparateCache = prefs.getBoolean("litertSeparateCache", false)
+            litertSeparateCache = prefs.getBoolean("litertSeparateCache", false),
+            useAgent = prefs.getBoolean("useAgent", true)
     )
 
     fun save(s: LauncherSettings) {
@@ -150,6 +153,7 @@ class SettingsStorage(context: Context) {
             .putString("litertActivation", s.litertActivation)
             .putString("litertMtp", s.litertMtp)
             .putBoolean("litertSeparateCache", s.litertSeparateCache)
+            .putBoolean("useAgent", s.useAgent)
             .putLong("updatedAt", System.currentTimeMillis())
             .commit()
     }

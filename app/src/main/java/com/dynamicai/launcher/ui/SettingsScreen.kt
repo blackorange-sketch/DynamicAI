@@ -744,6 +744,12 @@ fun SettingsScreen(
                     LlmBackendChip("Вимк.", "off", settings.litertMtp) { onSettingsChange(settings.copy(litertMtp = it)) }
                 }
                 SwitchRow(
+                    label = "Режим агента в голосовому чаті (довгий промпт)",
+                    checked = settings.useAgent,
+                    icon = Icons.Default.Settings,
+                    tint = AppTheme.colors.purple
+                ) { onSettingsChange(settings.copy(useAgent = it)) }
+                SwitchRow(
                     label = "Окремий кеш для кожної комбінації",
                     checked = settings.litertSeparateCache,
                     icon = Icons.Default.Settings,

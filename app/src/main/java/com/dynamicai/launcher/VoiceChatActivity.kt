@@ -504,7 +504,9 @@ fun processQuery(
             }
             // Для MNN-моделей використовуємо простий чат (без агента)
             // для LiteRT (Gemma) — з агентними інструментами
-            val answer = if (vm.currentModelId.startsWith("mnn-")) {
+            // Налаштування «Режим агента» вимкнено — теж простий чат (короткий промпт, зручно для діагностики GPU)
+            val useAgent = vm.settings.value.useAgent
+            val answer = if (vm.currentModelId.startsWith("mnn-") || !useAgent) {
                 vm.chatEngine.simpleAnswer(text)
             } else {
                 vm.chatEngine.answerWithAgent(text, history)

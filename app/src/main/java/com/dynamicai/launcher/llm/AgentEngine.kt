@@ -462,6 +462,15 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                     context.startActivity(intent)
                     "Будую маршрут до: $dest"
                 }
+                toolCall.startsWith("vibrate") -> com.dynamicai.launcher.macro.MacroTools(context).vibrate(getArg(toolCall, "ms").toLongOrNull() ?: 300L)
+                toolCall.startsWith("setRingerMode") -> com.dynamicai.launcher.macro.MacroTools(context).setRingerMode(getArg(toolCall, "mode"))
+                toolCall.startsWith("setDnd") -> com.dynamicai.launcher.macro.MacroTools(context).setDnd(getArg(toolCall, "state") == "on")
+                toolCall.startsWith("setMobileData") -> com.dynamicai.launcher.macro.MacroTools(context).setMobileData(getArg(toolCall, "state") == "on")
+                toolCall.startsWith("setAirplane") -> com.dynamicai.launcher.macro.MacroTools(context).setAirplane(getArg(toolCall, "state") == "on")
+                toolCall.startsWith("shell") -> com.dynamicai.launcher.macro.MacroTools(context).shell(getArg(toolCall, "cmd"))
+                toolCall.startsWith("httpGet") -> com.dynamicai.launcher.macro.MacroTools(context).httpGet(getArg(toolCall, "url"))
+                toolCall.startsWith("notify") -> com.dynamicai.launcher.macro.MacroTools(context).notify(getArg(toolCall, "title"), getArg(toolCall, "text"))
+                toolCall.startsWith("speak") -> com.dynamicai.launcher.macro.MacroTools(context).speak(getArg(toolCall, "text"))
                 toolCall.startsWith("carMode") -> com.dynamicai.launcher.llm.CarMode(context).run()
                 toolCall.startsWith("ensureInternet") -> com.dynamicai.launcher.llm.CarMode(context).ensureInternet()
                 toolCall.startsWith("connectBluetooth") -> com.dynamicai.launcher.llm.CarMode(context).connectBluetooth(getArg(toolCall, "name"))

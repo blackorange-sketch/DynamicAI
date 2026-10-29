@@ -20,7 +20,8 @@ import java.util.Calendar
 class MacroRunner(
     private val context: Context,
     private val exec: suspend (String) -> String,
-    private val say: (String) -> Unit = {}
+    private val say: (String) -> Unit = {},
+    private val vars: MutableMap<String, String> = mutableMapOf()
 ) {
     data class Progress(val index: Int, val total: Int, val step: String)
     private data class StepResult(val text: String, val failed: Boolean = false)
@@ -30,7 +31,8 @@ class MacroRunner(
         private val FAIL_PREFIXES = listOf("Помилка", "Не вдалося", "Немає", "Не можу", "Таймаут", "Не знайдено", "Не встановлено")
         fun isControl(step: String): Boolean {
             val s = step.trim()
-            return s.startsWith("WAIT:") || s.startsWith("WAIT_UNTIL:") || s.startsWith("IF:") || s.startsWith("IF_NOT:") || s.startsWith("SAY:")
+            return s.startsWith("WAIT:") || s.startsWith("WAIT_UNTIL:") || s.startsWith("IF:") || s.startsWith("IF_NOT:") ||
+                s.startsWith("SAY:") || s.startsWith("SET:") || s.startsWith("REPEAT:")
         }
     }
 
@@ -49,9 +51,45 @@ class MacroRunner(
         return log.toString().trim()
     }
 
+    /** Підставляє {змінні}: свої (SET), {last} — результат попереднього кроку, {time}, {date}, {battery}, {trigger}, {device}. */
+    private fun substitute(s: String): String {
+        if (!s.contains('{')) return s
+        return Regex("\\{(\\w+)\\}").replace(s) { m ->
+            val k = m.groupValues[1]
+            vars[k] ?: when (k) {
+                "time" -> java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
+                "date" -> java.text.SimpleDateFormat("d MMMM", java.util.Locale("uk", "UA")).format(java.util.Date())
+                "battery" -> try { (context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY).toString() } catch (_: Throwable) { "?" }
+                else -> m.value
+            }
+        }
+    }
+
     private suspend fun runStep(raw: String): StepResult {
-        val s = raw.trim()
+        val s = substitute(raw.trim())
         when {
+            s.startsWith("SET:") -> {
+                val body = s.removePrefix("SET:").trim()
+                val eq = body.indexOf('=')
+                if (eq <= 0) return StepResult("Помилка: SET потребує імя=значення", true)
+                val k = body.substring(0, eq).trim()
+                val v = body.substring(eq + 1).trim()
+                vars[k] = v
+                return StepResult("$k = $v")
+            }
+            s.startsWith("REPEAT:") -> {
+                val body = s.removePrefix("REPEAT:").trim()
+                val q = body.indexOf('?')
+                if (q < 0) return StepResult("Помилка: у REPEAT немає «?»", true)
+                val n = (body.substring(0, q).trim().toIntOrNull() ?: 1).coerceIn(1, 50)
+                val inner = body.substring(q + 1).trim()
+                var last = StepResult("")
+                repeat(n) { i ->
+                    last = runStep(inner)
+                    if (i < n - 1) delay(400)
+                }
+                return StepResult("×$n: ${last.text}", last.failed)
+            }
             s.startsWith("WAIT_UNTIL:") -> {
                 val parts = s.removePrefix("WAIT_UNTIL:").trim().split(Regex("\\s+"), limit = 2)
                 val cond = parts[0]
@@ -74,9 +112,16 @@ class MacroRunner(
                 val q = body.indexOf('?')
                 if (q < 0) return StepResult("Помилка: у IF немає «?»", true)
                 val cond = body.substring(0, q).trim()
-                val inner = body.substring(q + 1).trim()
+                val rest = body.substring(q + 1).trim()
+                val elseAt = rest.indexOf(" || ")
+                val thenStep = if (elseAt >= 0) rest.substring(0, elseAt).trim() else rest
+                val elseStep = if (elseAt >= 0) rest.substring(elseAt + 4).trim() else ""
                 val ok = check(cond) != negate
-                return if (ok) runStep(inner) else StepResult("Пропущено (${if (negate) "НЕ " else ""}$cond)")
+                return when {
+                    ok -> runStep(thenStep)
+                    elseStep.isNotBlank() -> runStep(elseStep)
+                    else -> StepResult("Пропущено (${if (negate) "НЕ " else ""}$cond)")
+                }
             }
             s.startsWith("SAY:") -> {
                 val t = s.removePrefix("SAY:").trim()
@@ -85,6 +130,7 @@ class MacroRunner(
             }
         }
         val res = exec(normalize(s))
+        vars["last"] = res.take(500)
         return StepResult(res, FAIL_PREFIXES.any { res.startsWith(it) })
     }
 
@@ -97,7 +143,7 @@ class MacroRunner(
         return s
     }
 
-    private fun check(condition: String): Boolean {
+    fun check(condition: String): Boolean {
         val c = condition.trim().lowercase()
         return try {
             when {

@@ -15,5 +15,6 @@ class BootReceiver : BroadcastReceiver() {
                 FloatingDockService.start(context)
             }
         } catch (_: Throwable) {}
+        try { com.dynamicai.launcher.macro.MacroTriggerService.sync(context, fromBoot = true) } catch (_: Throwable) {}
     }
 }

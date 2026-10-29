@@ -50,7 +50,8 @@ private val STEP_CATALOG: List<Pair<String, List<StepSpec>>> = listOf(
         StepSpec("Пошук на YouTube", "playYouTube(query=\"{0}\")", listOf("Запит" to "")),
         StepSpec("Відкрити посилання", "openUrl(url=\"{0}\")", listOf("URL" to "https://")),
         StepSpec("Маршрут", "navigateTo(destination=\"{0}\")", listOf("Куди" to "")),
-        StepSpec("Камера", "openCamera(mode=\"photo\")")
+        StepSpec("Камера", "openCamera(mode=\"photo\")"),
+        StepSpec("HTTP-запит (GET)", "httpGet(url=\"{0}\")", listOf("URL" to "https://"))
     ),
     "Медіа" to listOf(
         StepSpec("Плеєр: Play", "mediaKey(key=\"play\")"),
@@ -63,6 +64,17 @@ private val STEP_CATALOG: List<Pair<String, List<StepSpec>>> = listOf(
         StepSpec("Ліхтарик увімкнути", "toggleFlashlight(state=\"on\")"),
         StepSpec("Ліхтарик вимкнути", "toggleFlashlight(state=\"off\")"),
         StepSpec("Яскравість, %", "setBrightness(percent=\"{0}\")", listOf("Рівень 0–100" to "50")),
+        StepSpec("Не турбувати: увімкнути", "setDnd(state=\"on\")"),
+        StepSpec("Не турбувати: вимкнути", "setDnd(state=\"off\")"),
+        StepSpec("Режим дзвінка", "setRingerMode(mode=\"{0}\")", listOf("normal, vibrate або silent" to "vibrate")),
+        StepSpec("Мобільні дані: увімкнути", "setMobileData(state=\"on\")"),
+        StepSpec("Мобільні дані: вимкнути", "setMobileData(state=\"off\")"),
+        StepSpec("Режим польоту: увімкнути", "setAirplane(state=\"on\")"),
+        StepSpec("Режим польоту: вимкнути", "setAirplane(state=\"off\")"),
+        StepSpec("Вібрація", "vibrate(ms=\"{0}\")", listOf("Мілісекунд" to "400")),
+        StepSpec("Сповіщення", "notify(title=\"{0}\", text=\"{1}\")", listOf("Заголовок" to "DynamicAI", "Текст" to "")),
+        StepSpec("Озвучити текст", "speak(text=\"{0}\")", listOf("Текст (можна {time}, {battery}, {last})" to "")),
+        StepSpec("Shell-команда (Shizuku)", "shell(cmd=\"{0}\")", listOf("Команда" to "")),
         StepSpec("Будильник", "setAlarm(hour=\"{0}\", minute=\"{1}\", message=\"{2}\")", listOf("Година" to "7", "Хвилини" to "0", "Підпис" to "Будильник")),
         StepSpec("Нотатка", "takeNote(text=\"{0}\")", listOf("Текст" to "")),
         StepSpec("Системна дія", "systemAction(action=\"{0}\")", listOf("home, back, recents, notifications, lock, screenshot" to "home")),
@@ -81,13 +93,63 @@ private val STEP_CATALOG: List<Pair<String, List<StepSpec>>> = listOf(
         StepSpec("⌛ Чекати умову", "WAIT_UNTIL: {0} {1}", listOf("Умова: ${MacroRunner.CONDITIONS}" to "online", "Макс. секунд" to "15")),
         StepSpec("❓ Якщо умова — виконати крок", "IF: {0} ? {1}", listOf("Умова: ${MacroRunner.CONDITIONS}" to "online", "Крок" to "playYouTubeMusic()")),
         StepSpec("❓ Якщо НЕ умова — виконати крок", "IF_NOT: {0} ? {1}", listOf("Умова: ${MacroRunner.CONDITIONS}" to "online", "Крок" to "ensureInternet()")),
-        StepSpec("💬 Повідомлення", "SAY: {0}", listOf("Текст" to "")),
+        StepSpec("↔ Якщо умова — A, інакше — B", "IF: {0} ? {1} || {2}", listOf("Умова: ${MacroRunner.CONDITIONS}" to "charging", "Крок A" to "SAY: Заряджається", "Крок B" to "SAY: Не заряджається")),
+        StepSpec("🔁 Повторити N разів", "REPEAT: {0} ? {1}", listOf("Разів" to "3", "Крок" to "vibrate(ms=\"300\")")),
+        StepSpec("📦 Змінна (SET)", "SET: {0}={1}", listOf("Ім'я" to "city", "Значення" to "Київ")),
+        StepSpec("💬 Повідомлення", "SAY: {0}", listOf("Текст (можна {time}, {battery}, {last}, {device})" to "")),
         StepSpec("Запустити інший макрос", "runMacro(name=\"{0}\")", listOf("Назва макросу" to ""))
     ),
     "Сценарії" to listOf(
         StepSpec("🚗 Музика в авто (усе разом)", "carMode()")
     )
 )
+
+private val TRIGGER_CATALOG = listOf(
+    StepSpec("🔌 Зарядку підключено", "charging_start"),
+    StepSpec("🔌 Зарядку відключено", "charging_stop"),
+    StepSpec("🪫 Батарея нижче N %", "battery_low:{0}", listOf("Відсоток" to "20")),
+    StepSpec("🔵 Bluetooth підключився", "bt_connected:{0}", listOf("Назва пристрою (порожньо — будь-який)" to "")),
+    StepSpec("🔵 Bluetooth відключився", "bt_disconnected:{0}", listOf("Назва пристрою (порожньо — будь-який)" to "")),
+    StepSpec("📶 Wi-Fi підключено", "wifi_connected"),
+    StepSpec("📶 Wi-Fi відключено", "wifi_disconnected"),
+    StepSpec("🎧 Навушники підключено", "headset_plugged"),
+    StepSpec("🎧 Навушники відключено", "headset_unplugged"),
+    StepSpec("📱 Екран увімкнено", "screen_on"),
+    StepSpec("📱 Екран вимкнено", "screen_off"),
+    StepSpec("🔓 Телефон розблоковано", "unlock"),
+    StepSpec("✈ Режим польоту увімкнено", "airplane_on"),
+    StepSpec("✈ Режим польоту вимкнено", "airplane_off"),
+    StepSpec("⏰ За часом", "time:{0}:{1}:{2}", listOf("Година" to "7", "Хвилини" to "30", "Дні 1=Пн…7=Нд (порожньо — щодня)" to "12345")),
+    StepSpec("🚀 Запуск телефону", "boot")
+)
+
+private fun describeTrigger(t: String): String {
+    val kind = t.substringBefore(':')
+    val arg = t.substringAfter(':', "")
+    return when (kind) {
+        "charging_start" -> "🔌 Зарядку підключено"
+        "charging_stop" -> "🔌 Зарядку відключено"
+        "battery_low" -> "🪫 Батарея нижче $arg%"
+        "bt_connected" -> "🔵 Bluetooth підключився" + (if (arg.isNotBlank()) ": $arg" else "")
+        "bt_disconnected" -> "🔵 Bluetooth відключився" + (if (arg.isNotBlank()) ": $arg" else "")
+        "wifi_connected" -> "📶 Wi-Fi підключено"
+        "wifi_disconnected" -> "📶 Wi-Fi відключено"
+        "headset_plugged" -> "🎧 Навушники підключено"
+        "headset_unplugged" -> "🎧 Навушники відключено"
+        "screen_on" -> "📱 Екран увімкнено"
+        "screen_off" -> "📱 Екран вимкнено"
+        "unlock" -> "🔓 Розблоковано"
+        "airplane_on" -> "✈ Політ увімкнено"
+        "airplane_off" -> "✈ Політ вимкнено"
+        "time" -> {
+            val p = arg.split(':')
+            "⏰ ${p.getOrNull(0)?.padStart(2, '0')}:${p.getOrNull(1)?.padStart(2, '0')}" +
+                (p.getOrNull(2)?.takeIf { it.isNotBlank() && it != "1234567" }?.let { " (дні $it)" } ?: "")
+        }
+        "boot" -> "🚀 Запуск телефону"
+        else -> t
+    }
+}
 
 private fun describeStep(step: String): String {
     val s = step.trim().removePrefix("TOOL_CALL:").trim()
@@ -97,6 +159,8 @@ private fun describeStep(step: String): String {
         s.startsWith("IF_NOT:") -> "❓ Якщо НЕ " + s.removePrefix("IF_NOT:").trim().replace("?", "→")
         s.startsWith("IF:") -> "❓ Якщо " + s.removePrefix("IF:").trim().replace("?", "→")
         s.startsWith("SAY:") -> "💬 " + s.removePrefix("SAY:").trim()
+        s.startsWith("SET:") -> "📦 " + s.removePrefix("SET:").trim()
+        s.startsWith("REPEAT:") -> "🔁 " + s.removePrefix("REPEAT:").trim().replace("?", "разів →")
         else -> "▶ $s"
     }
 }
@@ -113,6 +177,8 @@ fun MacroScreen(onClose: () -> Unit) {
     var resultLog by remember { mutableStateOf<String?>(null) }
     var showEditor by remember { mutableStateOf(false) }
     var editingMacro by remember { mutableStateOf<Macro?>(null) }
+    var autoOn by remember { mutableStateOf(storage.autoEnabled()) }
+    fun syncService() = com.dynamicai.launcher.macro.MacroTriggerService.sync(ctx.applicationContext)
 
     Box(
         modifier = Modifier
@@ -141,7 +207,17 @@ fun MacroScreen(onClose: () -> Unit) {
                 "Макрос можна запускати голосом: скажіть його назву або фразу-тригер, або «запусти макрос …».",
                 color = AppTheme.colors.textSecondary, fontSize = 12.sp
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable {
+                autoOn = !autoOn
+                storage.setAutoEnabled(autoOn)
+                syncService()
+            }.padding(vertical = 4.dp)) {
+                Text(if (autoOn) "☑" else "☐", color = AppTheme.colors.successLight, fontSize = 20.sp)
+                Spacer(Modifier.width(8.dp))
+                Text("Автозапуск за подіями (служба у фоні)", color = AppTheme.colors.textPrimary, fontSize = 13.sp)
+            }
+            Spacer(Modifier.height(8.dp))
 
             if (macros.isEmpty()) {
                 Text("Натисни +, щоб створити свій перший макрос", color = AppTheme.colors.textSecondary, fontSize = 14.sp)
@@ -172,6 +248,11 @@ fun MacroScreen(onClose: () -> Unit) {
                             }
                         },
                         onStop = { runJob?.cancel() },
+                        onToggleEnabled = {
+                            storage.add(macro.copy(enabled = !macro.enabled))
+                            macros = storage.get()
+                            syncService()
+                        },
                         onEdit = {
                             editingMacro = macro
                             showEditor = true
@@ -184,6 +265,7 @@ fun MacroScreen(onClose: () -> Unit) {
                         onDelete = {
                             storage.delete(macro.id)
                             macros = storage.get()
+                            syncService()
                         }
                     )
                 }
@@ -198,6 +280,7 @@ fun MacroScreen(onClose: () -> Unit) {
                     storage.add(saved)
                     macros = storage.get()
                     showEditor = false
+                    syncService()
                 }
             )
         }
@@ -258,6 +341,10 @@ fun MacroEditorDialog(
     var trigger by remember { mutableStateOf(macro?.trigger ?: "") }
     var delayMs by remember { mutableStateOf(macro?.delayMs ?: 900L) }
     var stopOnError by remember { mutableStateOf(macro?.stopOnError ?: false) }
+    var constraints by remember { mutableStateOf(macro?.constraints ?: "") }
+    val triggers = remember { mutableStateListOf<String>().apply { addAll(macro?.triggers ?: emptyList()) } }
+    var pendingTrigger by remember { mutableStateOf<StepSpec?>(null) }
+    var showTriggerPicker by remember { mutableStateOf(false) }
     val steps = remember { mutableStateListOf<String>().apply { addAll(macro?.steps ?: emptyList()) } }
     var category by remember { mutableStateOf(STEP_CATALOG.first().first) }
     var pendingSpec by remember { mutableStateOf<StepSpec?>(null) }
@@ -322,6 +409,28 @@ fun MacroEditorDialog(
                 }
 
                 Spacer(Modifier.height(14.dp))
+                Text("Автозапуск за подіями (${triggers.size})", color = AppTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Text("Макрос спрацює сам, коли станеться будь-яка з цих подій.", color = AppTheme.colors.textMuted, fontSize = 11.sp)
+                triggers.forEachIndexed { i, t ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)
+                            .clip(RoundedCornerShape(8.dp)).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(describeTrigger(t), color = AppTheme.colors.textPrimary, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                        Text("✕", color = AppTheme.colors.danger, fontSize = 15.sp, modifier = Modifier.clickable { triggers.removeAt(i) }.padding(horizontal = 6.dp))
+                    }
+                }
+                TextButton(onClick = { showTriggerPicker = true }) {
+                    Text("+ Додати подію-тригер", color = AppTheme.colors.successLight, fontSize = 12.sp)
+                }
+                if (triggers.isNotEmpty()) {
+                    LabeledField("Умови автозапуску (через кому, усі мають виконуватись)", constraints, "time>08:00, time<22:00, charging") { constraints = it }
+                    Text("Умови: ${MacroRunner.CONDITIONS}", color = AppTheme.colors.textMuted, fontSize = 11.sp)
+                }
+
+                Spacer(Modifier.height(14.dp))
                 Text("Кроки (${steps.size})", color = AppTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 steps.forEachIndexed { i, s ->
                     Row(
@@ -375,13 +484,54 @@ fun MacroEditorDialog(
                     val base = macro ?: Macro(id = java.util.UUID.randomUUID().toString(), name = name, steps = emptyList())
                     onSave(base.copy(
                         name = name.trim(), icon = icon, colorHex = colorHex, trigger = trigger.trim(),
-                        steps = steps.map { it.trim() }.filter { it.isNotBlank() }, delayMs = delayMs, stopOnError = stopOnError
+                        steps = steps.map { it.trim() }.filter { it.isNotBlank() }, delayMs = delayMs, stopOnError = stopOnError,
+                        triggers = triggers.toList(), constraints = constraints.trim()
                     ))
                 }
             }) { Text("Зберегти", color = AppTheme.colors.successLight) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
     )
+
+    // Вибір тригера
+    if (showTriggerPicker) {
+        AlertDialog(
+            onDismissRequest = { showTriggerPicker = false },
+            containerColor = AppTheme.colors.backdropStart,
+            title = { Text("Подія-тригер", color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()).heightIn(max = 420.dp)) {
+                    TRIGGER_CATALOG.forEach { spec ->
+                        Text(spec.label, color = AppTheme.colors.accent, fontSize = 14.sp,
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                showTriggerPicker = false
+                                if (spec.params.isEmpty()) triggers.add(spec.template) else pendingTrigger = spec
+                            }.padding(vertical = 8.dp))
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showTriggerPicker = false }) { Text("Закрити", color = AppTheme.colors.textSecondary) } }
+        )
+    }
+    pendingTrigger?.let { spec ->
+        val values = remember(spec) { mutableStateListOf<String>().apply { addAll(spec.params.map { it.second }) } }
+        AlertDialog(
+            onDismissRequest = { pendingTrigger = null },
+            containerColor = AppTheme.colors.backdropStart,
+            title = { Text(spec.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
+            text = { Column(Modifier.verticalScroll(rememberScrollState())) { spec.params.forEachIndexed { i, p -> LabeledField(p.first, values[i]) { values[i] = it } } } },
+            confirmButton = {
+                TextButton(onClick = {
+                    var t = spec.template
+                    values.forEachIndexed { i, v -> t = t.replace("{$i}", v.trim().replace(":", "")) }
+                    triggers.add(t)
+                    pendingTrigger = null
+                }) { Text("Додати", color = AppTheme.colors.successLight) }
+            },
+            dismissButton = { TextButton(onClick = { pendingTrigger = null }) { Text("Скасувати", color = AppTheme.colors.textSecondary) } }
+        )
+    }
 
     // Параметри нового кроку
     pendingSpec?.let { spec ->
@@ -436,7 +586,7 @@ fun MacroEditorDialog(
 @Composable
 fun MacroCard(
     macro: Macro, isRunning: Boolean, progress: String,
-    onRun: () -> Unit, onStop: () -> Unit, onEdit: () -> Unit, onDuplicate: () -> Unit, onDelete: () -> Unit
+    onRun: () -> Unit, onStop: () -> Unit, onToggleEnabled: () -> Unit, onEdit: () -> Unit, onDuplicate: () -> Unit, onDelete: () -> Unit
 ) {
     val color = Color(macro.colorHex)
     Row(
@@ -453,12 +603,16 @@ fun MacroCard(
         Column(modifier = Modifier.weight(1f).clickable(enabled = !isRunning, onClick = onEdit)) {
             Text(macro.name, color = AppTheme.colors.textPrimary, fontSize = 16.sp, fontWeight = FontWeight.Medium)
             val sub = if (isRunning) progress else
-                "${macro.steps.size} кроків" + (if (macro.trigger.isNotBlank()) " · 🎙 ${macro.trigger}" else "") + " · тап — редагувати"
+                "${macro.steps.size} кроків" + (if (macro.trigger.isNotBlank()) " · 🎙 ${macro.trigger}" else "") +
+                    (if (macro.triggers.isNotEmpty()) " · ⚙ ${macro.triggers.size} подій" else "") + " · тап — редагувати"
             Text(sub, color = if (isRunning) color else AppTheme.colors.textSecondary, fontSize = 11.sp, maxLines = 2)
         }
         if (isRunning) {
             Text("⏹", fontSize = 20.sp, modifier = Modifier.clickable(onClick = onStop).padding(8.dp))
         } else {
+            if (macro.triggers.isNotEmpty()) {
+                Text(if (macro.enabled) "🔔" else "🔕", fontSize = 18.sp, modifier = Modifier.clickable(onClick = onToggleEnabled).padding(6.dp))
+            }
             Text("▶️", fontSize = 20.sp, modifier = Modifier.clickable(onClick = onRun).padding(8.dp))
             Text("⧉", fontSize = 18.sp, color = AppTheme.colors.accent, modifier = Modifier.clickable(onClick = onDuplicate).padding(6.dp))
             Text("🗑️", fontSize = 18.sp, modifier = Modifier.padding(4.dp).clickable { onDelete() })

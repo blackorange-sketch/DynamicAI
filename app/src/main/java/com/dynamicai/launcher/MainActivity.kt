@@ -135,6 +135,8 @@ class MainActivity : ComponentActivity() {
                     val on = com.dynamicai.launcher.data.SettingsStorage(appCtx).load().wakeWordEnabled
                     if (on) com.dynamicai.launcher.voice.WakeWordService.start(appCtx)
                 }
+                // Автозапуск макросів за подіями (якщо є макроси з тригерами)
+                com.dynamicai.launcher.macro.MacroTriggerService.sync(appCtx)
             }
 
             val settings by vm.settings.collectAsStateWithLifecycle()

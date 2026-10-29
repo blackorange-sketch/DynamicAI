@@ -25,7 +25,10 @@ class MacroStorage(context: Context) {
                     trigger = o.optString("trigger", ""),
                     steps = steps,
                     delayMs = o.optLong("delayMs", 900L),
-                    stopOnError = o.optBoolean("stopOnError", false)
+                    stopOnError = o.optBoolean("stopOnError", false),
+                    triggers = o.optJSONArray("triggers")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList(),
+                    constraints = o.optString("constraints", ""),
+                    enabled = o.optBoolean("enabled", true)
                 )
             }
         } catch (_: Exception) { emptyList() }
@@ -50,6 +53,10 @@ class MacroStorage(context: Context) {
     }
 
     fun remove(id: String) = save(get().filterNot { it.id == id })
+
+    /** Глобальний вимикач автозапуску макросів за подіями. */
+    fun autoEnabled(): Boolean = prefs.getBoolean("auto_enabled", true)
+    fun setAutoEnabled(on: Boolean) { prefs.edit().putBoolean("auto_enabled", on).apply() }
 
     private fun phrases(m: Macro): List<String> =
         m.trigger.split(',', ';').map { it.trim().lowercase() }.filter { it.isNotBlank() }
@@ -77,6 +84,9 @@ class MacroStorage(context: Context) {
             o.put("trigger", m.trigger)
             o.put("delayMs", m.delayMs)
             o.put("stopOnError", m.stopOnError)
+            o.put("constraints", m.constraints)
+            o.put("enabled", m.enabled)
+            o.put("triggers", JSONArray().also { a -> m.triggers.forEach { a.put(it) } })
             val stepsArr = JSONArray()
             m.steps.forEach { stepsArr.put(it) }
             o.put("steps", stepsArr)

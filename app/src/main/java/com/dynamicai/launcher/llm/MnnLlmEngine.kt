@@ -156,13 +156,14 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
         Log.e(TAG, "currentModelName=$currentModelName")
 
         // Мапимо вибір з UI → MNN backend_type + fallback
-        val backends = when (currentSettings.llmBackend) {
+        val isGemma = modelDir.name.contains("gemma", ignoreCase = true)
+        val backends = if (isGemma) {
+            // Gemma 4 на OpenCL не працює навіть в офіційному MNN Chat 0.8.3 → лише CPU
+            Log.e(TAG, "ℹ️ Gemma → backend cpu (OpenCL не підтримується в цій збірці MNN)")
+            listOf("cpu")
+        } else when (currentSettings.llmBackend) {
             "gpu" -> listOf("opencl")
-            "cpu" -> if (modelDir.name.contains("qwen3.5", ignoreCase = true)) {
-                // У поточній збірці MNN Qwen3.5 на CPU дає порожню відповідь або "!!!!" — беремо OpenCL
-                Log.e(TAG, "⚠️ Qwen3.5 на CPU не підтримується в цій збірці MNN → opencl")
-                listOf("opencl")
-            } else listOf("cpu")
+            "cpu" -> listOf("cpu")
             // QNN видалено (не працює на SM8550) — NPU fallback на auto
             "npu" -> listOf("opencl", "cpu")
             "auto", "" -> listOf("opencl", "cpu")

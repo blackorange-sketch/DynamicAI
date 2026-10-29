@@ -64,7 +64,8 @@ class LlmSession(
                 .put("precision", "low")
                 .put("memory", "low")
                 .put("max_new_tokens", maxNewTokens)
-                .put("use_mmap", true)
+                // Офіційний MNN Chat тримає use_mmap=false; зі справжнім mmap бібліотека падає / видає "!!!!"
+                .put("use_mmap", false)
                 .put("is_visual", false)
             overrides?.let { o ->
                 val keys = o.keys()
@@ -79,7 +80,14 @@ class LlmSession(
                 }
             }
             val mergedConfig = merged.toString()
-            val configJson = """{"is_r1":false,"mmap_dir":"${configDir.absolutePath}","keep_history":false,"use_mmap":true,"is_visual":false}"""
+            val useMmap = merged.optBoolean("use_mmap", false)
+            val configJsonObj = org.json.JSONObject()
+                .put("is_r1", false)
+                .put("keep_history", false)
+                .put("use_mmap", useMmap)
+                .put("is_visual", false)
+            if (useMmap) configJsonObj.put("mmap_dir", configDir.absolutePath)
+            val configJson = configJsonObj.toString()
             Log.e(TAG, "initNative: configPath=${configDir.absolutePath}")
             Log.e(TAG, "mergedConfig=$mergedConfig")
             Log.e(TAG, "configJson=$configJson")

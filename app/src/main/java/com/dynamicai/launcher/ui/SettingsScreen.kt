@@ -938,43 +938,59 @@ fun SettingsScreen(
             }
             
                         GlassSectionHeader("Промпти для рушіїв (файли)")
-            GlassCard {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    var mnnText by remember { mutableStateOf(com.dynamicai.launcher.llm.PromptManager.loadMnn(ctx)) }
-                    var litertText by remember { mutableStateOf(com.dynamicai.launcher.llm.PromptManager.loadLitert(ctx)) }
+        GlassCard {
+            Column(modifier = Modifier.padding(16.dp)) {
+                val localCtx = androidx.compose.ui.platform.LocalContext.current
+                var mnnText by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.dynamicai.launcher.llm.PromptManager.loadMnn(localCtx)) }
+                var litertText by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.dynamicai.launcher.llm.PromptManager.loadLitert(localCtx)) }
 
-                    Text("MNN Prompt ({{question}} — підстановка питання)", color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                    Text("Формат Qwen: <|im_start|>user...<|im_end|>", color = AppTheme.colors.textSecondary, fontSize = 10.sp, modifier = Modifier.padding(bottom = 4.dp))
-                    androidx.compose.foundation.text.BasicTextField(
-                        value = mnnText,
-                        onValueChange = { mnnText = it },
-                        textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 12.sp),
-                        modifier = Modifier.fillMaxWidth().height(100.dp).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f), RoundedCornerShape(8.dp)).padding(8.dp)
-                    )
-                    
-                    Spacer(Modifier.height(16.dp))
-                    
-                    Text("LiteRT Prompt (для Gemma)", color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                    Text("Формат Gemma: <start_of_turn>user...<end_of_turn>", color = AppTheme.colors.textSecondary, fontSize = 10.sp, modifier = Modifier.padding(bottom = 4.dp))
-                    androidx.compose.foundation.text.BasicTextField(
-                        value = litertText,
-                        onValueChange = { litertText = it },
-                        textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 12.sp),
-                        modifier = Modifier.fillMaxWidth().height(100.dp).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f), RoundedCornerShape(8.dp)).padding(8.dp)
-                    )
-                    
-                    Spacer(Modifier.height(12.dp))
-                    TextButton(
-                        onClick = {
-                            com.dynamicai.launcher.llm.PromptManager.saveMnn(ctx, mnnText)
-                            com.dynamicai.launcher.llm.PromptManager.saveLitert(ctx, litertText)
-                        },
-                        modifier = Modifier.align(Alignment.End)
-                    ) {
-                        Text("💾 Записати у файли", color = AppTheme.colors.accent)
-                    }
+                Text("MNN Prompt ({{question}})", color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text("Формат Qwen: <|im_start|>user...<|im_end|>", color = AppTheme.colors.textSecondary, fontSize = 10.sp, modifier = Modifier.padding(bottom = 4.dp))
+                androidx.compose.foundation.text.BasicTextField(
+                    value = mnnText,
+                    onValueChange = { mnnText = it },
+                    textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 12.sp),
+                    modifier = Modifier.fillMaxWidth().height(100.dp).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f), RoundedCornerShape(8.dp)).padding(8.dp)
+                )
+                
+                Spacer(Modifier.height(16.dp))
+                
+                Text("LiteRT Prompt (для Gemma)", color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                Text("Формат Gemma: <start_of_turn>user...<end_of_turn>", color = AppTheme.colors.textSecondary, fontSize = 10.sp, modifier = Modifier.padding(bottom = 4.dp))
+                androidx.compose.foundation.text.BasicTextField(
+                    value = litertText,
+                    onValueChange = { litertText = it },
+                    textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 12.sp),
+                    modifier = Modifier.fillMaxWidth().height(100.dp).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f), RoundedCornerShape(8.dp)).padding(8.dp)
+                )
+                
+                Spacer(Modifier.height(12.dp))
+                TextButton(
+                    onClick = {
+                        com.dynamicai.launcher.llm.PromptManager.saveMnn(localCtx, mnnText)
+                        com.dynamicai.launcher.llm.PromptManager.saveLitert(localCtx, litertText)
+                    },
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text("💾 Записати у файли", color = AppTheme.colors.accent)
                 }
-            }        }
+            }
+        }
+
+SwitchRow(
+                label = "Використовувати LLM для команд",
+                checked = settings.useLlm,
+                icon = Icons.Default.Settings,
+                tint = AppTheme.colors.purple
+            ) {
+                onSettingsChange(settings.copy(useLlm = it))
+            }
+
+            if (llmReady) {
+                LlmTestRow(onTest = onTestLlm)
+            }
+        }
+        }
 
         Spacer(Modifier.height(16.dp))
         Text(

@@ -10,11 +10,6 @@ data class LauncherSettings(
     val showSearchBar: Boolean = true,
     val showRecentButton: Boolean = true,
     val useLlm: Boolean = true,
-    val mnnPrompt: String = "<|im_start|>user
-{{question}}<|im_end|>
-<|im_start|>assistant
-",
-    val litertPrompt: String = "<start_of_turn>user\n{{question}}<end_of_turn>\n<start_of_turn>model\n",
     val useTts: Boolean = true,
     val ttsSpeed: Float = 1.0f,
     val ttsPitch: Float = 1.0f,

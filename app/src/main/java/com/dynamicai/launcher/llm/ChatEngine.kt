@@ -582,7 +582,7 @@ class ChatEngine(
         macroFlow(question)?.let { return it }
         return try {
             // Використовуємо наш власний AgentEngine, який вже написаний і працює
-            agentEngine.processWithTools(question)
+            agentEngine.processWithTools(question, compactHistory(history))
         } catch (t: Throwable) {
             android.util.Log.e("ChatEngine", "Agent error", t)
             "Помилка агента: ${t.message}"

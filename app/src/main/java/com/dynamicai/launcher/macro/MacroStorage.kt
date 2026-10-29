@@ -20,9 +20,12 @@ class MacroStorage(context: Context) {
                 Macro(
                     id = o.getString("id"),
                     name = o.getString("name"),
+                    icon = o.optString("icon", "⚡"),
+                    colorHex = o.optLong("colorHex", 0xFF2196F3),
                     trigger = o.optString("trigger", ""),
                     steps = steps,
-                    delayMs = o.optLong("delayMs", 900L)
+                    delayMs = o.optLong("delayMs", 900L),
+                    stopOnError = o.optBoolean("stopOnError", false)
                 )
             }
         } catch (_: Exception) { emptyList() }
@@ -48,11 +51,19 @@ class MacroStorage(context: Context) {
 
     fun remove(id: String) = save(get().filterNot { it.id == id })
 
+    private fun phrases(m: Macro): List<String> =
+        m.trigger.split(',', ';').map { it.trim().lowercase() }.filter { it.isNotBlank() }
+
     fun findByName(name: String): Macro? {
         val n = name.trim().lowercase()
-        return get().firstOrNull {
-            it.name.lowercase() == n || (it.trigger.isNotBlank() && it.trigger.lowercase() == n)
-        }
+        return get().firstOrNull { it.name.lowercase() == n || n in phrases(it) }
+    }
+
+    /** Фраза користувача → макрос: точний збіг назви/тригера, або тригер з 2+ слів міститься у фразі. */
+    fun matchUtterance(text: String): Macro? {
+        val t = text.trim().lowercase().trimEnd('.', '!', '?', ',', ' ')
+        findByName(t)?.let { return it }
+        return get().firstOrNull { m -> phrases(m).any { it.split(' ').size >= 2 && t.contains(it) } }
     }
 
     private fun save(list: List<Macro>) {
@@ -61,8 +72,11 @@ class MacroStorage(context: Context) {
             val o = JSONObject()
             o.put("id", m.id)
             o.put("name", m.name)
+            o.put("icon", m.icon)
+            o.put("colorHex", m.colorHex)
             o.put("trigger", m.trigger)
             o.put("delayMs", m.delayMs)
+            o.put("stopOnError", m.stopOnError)
             val stepsArr = JSONArray()
             m.steps.forEach { stepsArr.put(it) }
             o.put("steps", stepsArr)

@@ -59,6 +59,10 @@ class FastRouter(private val runTool: suspend (String) -> String) {
             Regex("bluetooth|блютуз|блютус").containsMatchIn(t) && (on || off) ->
                 """toggleBluetooth(state="${if (off) "off" else "on"}")"""
 
+            // Власний макрос за назвою: «запусти макрос Доброї ночі»
+            Regex("^(запусти|виконай|включи)\\s+макрос\\s+(.+)$").containsMatchIn(t) ->
+                Regex("^(запусти|виконай|включи)\\s+макрос\\s+(.+)$").find(t)?.groupValues?.get(2)?.let { """runMacro(name="${q(it)}")""" }
+
             // Сценарій «музика в авто»
             Regex("(музик|плейліст|ютуб\\s*мюзік|youtube\\s*music).*\\s(в|у)\\s+(машин|авто)|режим\\s+авто|я\\s+(в|у)\\s+(машин|авто)|поїхали").containsMatchIn(t) -> "carMode()"
 

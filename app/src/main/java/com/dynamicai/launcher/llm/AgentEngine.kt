@@ -635,13 +635,8 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                     if (macro == null) {
                         "Макрос '$name' не знайдено."
                     } else {
-                        // Запускаємо кроки макросу послідовно
-                        var lastResult = ""
-                        for (step in macro.steps) {
-                            lastResult = executeTool(step) // Рекурсивний виклик
-                            kotlinx.coroutines.delay(macro.delayMs)
-                        }
-                        "Макрос '${macro.name}' виконано. Останній результат: $lastResult"
+                        val log = com.dynamicai.launcher.macro.MacroRunner(context, { executeTool(it) }).run(macro)
+                        "Макрос «${macro.name}» виконано:\n$log"
                     }
                 }
                                 toolCall.startsWith("openTelegramChat") -> deepLink.openTelegramChat(getArg(toolCall, "contactName"))

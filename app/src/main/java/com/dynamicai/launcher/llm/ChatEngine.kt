@@ -438,7 +438,7 @@ class ChatEngine(
         }
         // Власні макроси: назва або тригер, сказані повністю («доброї ночі», «режим роботи»)
         try {
-            com.dynamicai.launcher.macro.MacroStorage(context).findByName(t)?.let { m ->
+            com.dynamicai.launcher.macro.MacroStorage(context).matchUtterance(t)?.let { m ->
                 val macroName = m.name.replace('"', ' ')
                 return agentEngine.runTool("runMacro(name=\"" + macroName + "\")")
             }

@@ -716,6 +716,69 @@ fun SettingsScreen(
         }
 
 
+        // === LiteRT GPU (експериментальні) + керування рушієм ===
+        val llmRestarting by vm.llmRestarting.collectAsStateWithLifecycle()
+        val llmReadyNow by vm.llmReady.collectAsStateWithLifecycle()
+        val llmStatus by vm.llmStatusText.collectAsStateWithLifecycle()
+        GlassCard {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("LiteRT GPU (експериментально)", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "Якщо Gemma на GPU видає нісенітниці, спробуйте FLOAT32 і вимкнений MTP. Після змін перезапустіть рушій.",
+                    color = AppTheme.colors.textMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp)
+                )
+                Spacer(Modifier.height(10.dp))
+                Text("Точність активацій", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LlmBackendChip("За замовч.", "default", settings.litertActivation) { onSettingsChange(settings.copy(litertActivation = it)) }
+                    LlmBackendChip("FLOAT32", "float32", settings.litertActivation) { onSettingsChange(settings.copy(litertActivation = it)) }
+                    LlmBackendChip("FLOAT16", "float16", settings.litertActivation) { onSettingsChange(settings.copy(litertActivation = it)) }
+                }
+                Spacer(Modifier.height(10.dp))
+                Text("Speculative decoding (MTP)", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LlmBackendChip("За замовч.", "default", settings.litertMtp) { onSettingsChange(settings.copy(litertMtp = it)) }
+                    LlmBackendChip("Увімк.", "on", settings.litertMtp) { onSettingsChange(settings.copy(litertMtp = it)) }
+                    LlmBackendChip("Вимк.", "off", settings.litertMtp) { onSettingsChange(settings.copy(litertMtp = it)) }
+                }
+                SwitchRow(
+                    label = "Окремий кеш для кожної комбінації",
+                    checked = settings.litertSeparateCache,
+                    icon = Icons.Default.Settings,
+                    tint = AppTheme.colors.accent
+                ) { onSettingsChange(settings.copy(litertSeparateCache = it)) }
+
+                Spacer(Modifier.height(8.dp))
+                HorizontalDivider(color = AppTheme.colors.glassBorder)
+                Spacer(Modifier.height(8.dp))
+
+                val stateText = when {
+                    llmRestarting -> "⏳ " + llmStatus.ifBlank { "Перезапуск…" }
+                    llmReadyNow -> "● Рушій працює"
+                    else -> "○ Рушій вимкнений (завантажиться при першому запиті)"
+                }
+                Text(
+                    stateText,
+                    color = if (llmReadyNow && !llmRestarting) AppTheme.colors.success else AppTheme.colors.textSecondary,
+                    fontSize = 12.sp
+                )
+                if (!llmRestarting && llmStatus.isNotBlank()) {
+                    Text(llmStatus, color = AppTheme.colors.textMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(enabled = !llmRestarting, onClick = { vm.restartLlmEngine(clearGpuCache = false) }) {
+                        Text("Перезапустити рушій", color = AppTheme.colors.accent, fontSize = 12.sp)
+                    }
+                    TextButton(enabled = !llmRestarting, onClick = { vm.restartLlmEngine(clearGpuCache = true) }) {
+                        Text("+ очистити кеш GPU", color = AppTheme.colors.danger, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+
         // === MNN Models ===
         if (modelFilter == "all" || modelFilter == "mnn") {
             // Список і розміри беремо з ModelRepository (єдине джерело правди)

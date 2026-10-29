@@ -45,7 +45,11 @@ data class LauncherSettings(
     val defaultEmail: String = "",
     val defaultMaps: String = "",
     val defaultCamera: String = "",
-    val appTheme: String = "glass_dark" // "glass_dark" | "glass_light"
+    val appTheme: String = "glass_dark", // "glass_dark" | "glass_light"
+    // LiteRT GPU (експериментальні): точність активацій, speculative decoding, окремий кеш
+    val litertActivation: String = "default",  // "default" | "float32" | "float16"
+    val litertMtp: String = "default",         // "default" | "on" | "off"
+    val litertSeparateCache: Boolean = false
 )
 
 class SettingsStorage(context: Context) {
@@ -93,7 +97,10 @@ class SettingsStorage(context: Context) {
         defaultEmail = prefs.getString("defaultEmail", "") ?: "",
         defaultMaps = prefs.getString("defaultMaps", "") ?: "",
         defaultCamera = prefs.getString("defaultCamera", "") ?: "",
-            appTheme = prefs.getString("appTheme", "glass_dark") ?: "glass_dark"
+            appTheme = prefs.getString("appTheme", "glass_dark") ?: "glass_dark",
+            litertActivation = prefs.getString("litertActivation", "default") ?: "default",
+            litertMtp = prefs.getString("litertMtp", "default") ?: "default",
+            litertSeparateCache = prefs.getBoolean("litertSeparateCache", false)
     )
 
     fun save(s: LauncherSettings) {
@@ -140,6 +147,9 @@ class SettingsStorage(context: Context) {
             .putString("defaultMaps", s.defaultMaps)
             .putString("defaultCamera", s.defaultCamera)
             .putString("appTheme", s.appTheme)
+            .putString("litertActivation", s.litertActivation)
+            .putString("litertMtp", s.litertMtp)
+            .putBoolean("litertSeparateCache", s.litertSeparateCache)
             .putLong("updatedAt", System.currentTimeMillis())
             .commit()
     }

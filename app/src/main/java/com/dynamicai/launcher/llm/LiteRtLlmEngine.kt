@@ -16,6 +16,16 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
 
     companion object {
         private const val TAG = "LiteRtLlmEngine"
+
+        /** Видаляє кеші GPU (папки litert_* у cacheDir). Повертає кількість видалених папок. */
+        fun clearGpuCache(context: Context): Int {
+            var n = 0
+            context.cacheDir.listFiles()?.forEach { f ->
+                if (f.name.startsWith("litert_") && f.deleteRecursively()) n++
+            }
+            Log.e("LITERT_CFG", "clearGpuCache: removed $n dirs")
+            return n
+        }
     }
 
     private var engine: Engine? = null
@@ -30,37 +40,28 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
     private var currentSettings: com.dynamicai.launcher.data.LauncherSettings =
         com.dynamicai.launcher.data.LauncherSettings()
 
-    /**
-     * Експериментальні параметри GPU без перезбірки. Файл (необов'язковий):
-     *   <externalFilesDir>/litert_overrides.json
-     *   {"activation":"FLOAT32","mtp":false,"separate_cache":true,"clear_cache":true}
-     * activation: "FLOAT32" | "FLOAT16" | відсутнє = за замовчуванням бібліотеки
-     * mtp: true/false = примусово вмикає/вимикає speculative decoding; відсутнє = за замовчуванням
-     * separate_cache: окрема папка кешу для комбінації модель+точність+mtp (старий кеш не впливає)
-     * clear_cache: очистити цю папку кешу перед запуском
-     */
+    /** Параметри GPU з налаштувань додатка (Налаштування → Локальна LLM → LiteRT GPU). */
     private data class LiteRtOverrides(
-        val activation: String? = null,
-        val mtp: Boolean? = null,
-        val separateCache: Boolean = false,
-        val clearCache: Boolean = false
+        val activation: String? = null,   // "FLOAT32" | "FLOAT16" | null = за замовчуванням бібліотеки
+        val mtp: Boolean? = null,         // null = за замовчуванням
+        val separateCache: Boolean = false
     )
 
     private fun readOverrides(): LiteRtOverrides {
-        return try {
-            val f = File(context.getExternalFilesDir(null), "litert_overrides.json")
-            if (!f.exists()) return LiteRtOverrides()
-            val o = org.json.JSONObject(f.readText())
-            LiteRtOverrides(
-                activation = o.optString("activation", "").uppercase().ifBlank { null },
-                mtp = if (o.has("mtp")) o.optBoolean("mtp") else null,
-                separateCache = o.optBoolean("separate_cache", false),
-                clearCache = o.optBoolean("clear_cache", false)
-            ).also { Log.e("LITERT_CFG", "litert_overrides.json: $it") }
-        } catch (t: Throwable) {
-            Log.e("LITERT_CFG", "litert_overrides.json read failed: ${t.message}")
-            LiteRtOverrides()
-        }
+        val st = currentSettings
+        return LiteRtOverrides(
+            activation = when (st.litertActivation) {
+                "float32" -> "FLOAT32"
+                "float16" -> "FLOAT16"
+                else -> null
+            },
+            mtp = when (st.litertMtp) {
+                "on" -> true
+                "off" -> false
+                else -> null
+            },
+            separateCache = st.litertSeparateCache
+        )
     }
 
     @OptIn(ExperimentalApi::class)
@@ -93,18 +94,13 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         attempts.add("Backend.GPU()" to {
             val ov = readOverrides()
             ov.mtp?.let { applySpeculativeDecoding(it) }
-            val cachePath = if (ov.separateCache) {
-                val tag = "litert_${modelFile.nameWithoutExtension}_${ov.activation ?: "default"}_mtp${ov.mtp ?: "default"}"
-                File(context.cacheDir, tag).also {
-                    if (ov.clearCache) it.deleteRecursively()
-                    it.mkdirs()
-                }.path
+            // Усі кеші LiteRT живуть у папках litert_* (їх легко очистити кнопкою в налаштуваннях)
+            val cacheTag = if (ov.separateCache) {
+                "litert_${modelFile.nameWithoutExtension}_${ov.activation ?: "default"}_mtp${ov.mtp ?: "default"}"
             } else {
-                if (ov.clearCache) {
-                    context.cacheDir.listFiles()?.forEach { f -> if (f.name.startsWith("litert_")) f.deleteRecursively() }
-                }
-                context.cacheDir.path
+                "litert_shared"
             }
+            val cachePath = File(context.cacheDir, cacheTag).also { it.mkdirs() }.path
             Log.e("LITERT_CFG", "GPU: activation=${ov.activation ?: "default"} mtp=${ov.mtp ?: "default"} cacheDir=$cachePath model=${modelFile.name}")
             val config = when (ov.activation) {
                 "FLOAT32" -> EngineConfig(

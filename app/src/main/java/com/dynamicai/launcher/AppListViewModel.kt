@@ -174,6 +174,48 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private val _llmRestarting = MutableStateFlow(false)
+    val llmRestarting: StateFlow<Boolean> = _llmRestarting.asStateFlow()
+
+    /** Короткий статус для UI: результат останнього перезапуску рушія. */
+    private val _llmStatusText = MutableStateFlow("")
+    val llmStatusText: StateFlow<String> = _llmStatusText.asStateFlow()
+
+    /**
+     * Закриває рушій і завантажує його знову з поточними налаштуваннями (backend, точність, MTP...).
+     * @param clearGpuCache також очистити кеш GPU (папки litert_* у cacheDir)
+     */
+    fun restartLlmEngine(clearGpuCache: Boolean = false) {
+        if (_llmRestarting.value) return
+        viewModelScope.launch {
+            _llmRestarting.value = true
+            _llmStatusText.value = "Закриття рушія…"
+            _llmReady.value = false
+            try {
+                withContext(Dispatchers.IO) {
+                    try { llm.close() } catch (t: Throwable) {
+                        android.util.Log.e("LLM_DEBUG", "close failed: ${t.message}")
+                    }
+                    if (clearGpuCache) {
+                        val n = com.dynamicai.launcher.llm.LiteRtLlmEngine.clearGpuCache(getApplication())
+                        _llmStatusText.value = "Кеш GPU очищено ($n)"
+                    }
+                    System.gc()
+                }
+                kotlinx.coroutines.delay(300)
+                _llmStatusText.value = "Завантаження моделі…"
+                val ok = ensureLlmLoaded()
+                _llmStatusText.value = if (ok) "✓ Рушій перезапущено" else "✗ Не вдалося завантажити (див. logcat)"
+            } catch (t: Throwable) {
+                android.util.Log.e("LLM_DEBUG", "restartLlmEngine failed: ${t.message}", t)
+                _llmStatusText.value = "✗ Помилка: ${t.message}"
+                _llmReady.value = false
+            } finally {
+                _llmRestarting.value = false
+            }
+        }
+    }
+
     /** Викликається лениво при першому реальному запиті LLM. */
     suspend fun ensureLlmLoaded(): Boolean {
         if (llm.isReady) return true

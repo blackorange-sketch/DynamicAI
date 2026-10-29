@@ -183,7 +183,7 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
                     if (!progress.isNullOrEmpty()) {
                         buffer.append(progress)
                     }
-                    return true  // продовжити генерацію
+                    return false  // MNN: true = ЗУПИНИТИ генерацію (return true обривав відповідь після 1 токена)
                 }
             })
             Log.e(TAG, "complete: generated ${buffer.length} chars: ${buffer.take(200).map { it.code }.take(20)} text='${buffer.take(200)}'")
@@ -214,7 +214,7 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
                         buffer.append(progress)
                         try { onToken(progress) } catch (_: Throwable) {}
                     }
-                    return true
+                    return false  // true = зупинити генерацію
                 }
             })
             Log.e(TAG, "streamComplete: generated ${buffer.length} chars")

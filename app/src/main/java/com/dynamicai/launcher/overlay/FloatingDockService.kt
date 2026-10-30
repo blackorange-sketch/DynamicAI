@@ -704,7 +704,7 @@ class FloatingDockService : Service() {
                             val translator = com.dynamicai.launcher.ocr.ScreenTranslator(app, llmEngine)
                             val blocks = translator.captureRegionAndTranslate(
                                 rect = rect,
-                                ocrLangs = "ukr+eng",
+                                ocrLangs = "ukr+eng+pol",
                                 targetLang = "uk"
                             )
                             if (blocks.isEmpty()) {

@@ -115,6 +115,14 @@ object ScreenTranslateOverlay {
     }
 }
 
+private fun copyText(ctx: Context, text: String) {
+    try {
+        val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("translation", text))
+        android.widget.Toast.makeText(ctx, "Скопійовано", android.widget.Toast.LENGTH_SHORT).show()
+    } catch (_: Throwable) {}
+}
+
 @Composable
 private fun TranslateContent(
     blocks: List<TranslatedBlock>,
@@ -122,56 +130,100 @@ private fun TranslateContent(
     onCopy: (String) -> Unit,
     onClose: () -> Unit
 ) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var inline by remember { mutableStateOf(true) }
+    val copy: (String) -> Unit = { copyText(ctx, it); onCopy(it) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.35f))
+            .background(Color.Black.copy(alpha = if (inline) 0.18f else 0.45f))
+            .clickable(
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null
+            ) { if (inline) onClose() }
     ) {
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            AppTheme.colors.surface.copy(alpha = 0.93f),
-                            AppTheme.colors.glassBackgroundAlt.copy(alpha = 0.8f)
-                        )
-                    )
-                )
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "${blocks.size} блоків · $targetLang",
-                color = AppTheme.colors.textPrimary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.weight(1f)
-            )
-            Box(
-                contentAlignment = Alignment.Center,
+        if (inline) {
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            blocks.forEach { b ->
+                InlineBlock(b, density, copy)
+            }
+        } else {
+            Column(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(AppTheme.colors.textPrimary.copy(alpha = 0.2f))
-                    .clickable { onClose() }
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(top = 64.dp, bottom = 16.dp, start = 12.dp, end = 12.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("X", color = AppTheme.colors.textPrimary, fontSize = 18.sp)
+                blocks.forEach { b -> BlockCard(b, onCopy = copy) }
             }
         }
 
-        Column(
+        // Плаваюча панель: режим, копіювати все, закрити
+        Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 64.dp, bottom = 16.dp, start = 12.dp, end = 12.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 8.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(AppTheme.colors.surface.copy(alpha = 0.95f))
+                .border(0.5.dp, AppTheme.colors.glassBorder, RoundedCornerShape(24.dp))
+                .padding(horizontal = 6.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            blocks.forEach { b ->
-                BlockCard(b, onCopy = onCopy)
-            }
+            Text(
+                "${blocks.size} · ${targetLang.uppercase()}",
+                color = AppTheme.colors.textSecondary, fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 10.dp)
+            )
+            ToolPill(if (inline) "Список" else "На місці") { inline = !inline }
+            ToolPill("Копіювати все") { copy(blocks.joinToString("\n\n") { it.translatedText }) }
+            ToolPill("✕") { onClose() }
         }
+    }
+}
+
+@Composable
+private fun ToolPill(label: String, onClick: () -> Unit) {
+    Text(
+        label, color = AppTheme.colors.textPrimary, fontSize = 13.sp, maxLines = 1,
+        modifier = Modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(AppTheme.colors.textPrimary.copy(alpha = 0.10f))
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 8.dp)
+    )
+}
+
+/** Переклад поверх оригіналу: рамка за координатами OCR, розмір шрифту підбирається під площу блока. */
+@Composable
+private fun InlineBlock(b: TranslatedBlock, density: androidx.compose.ui.unit.Density, onCopy: (String) -> Unit) {
+    val r = b.bounds
+    val wDp = with(density) { r.width().toDp() }
+    val hDp = with(density) { r.height().toDp() }
+    val area = r.width().toFloat() * r.height().toFloat()
+    val chars = b.translatedText.length.coerceAtLeast(1)
+    val fontPx = kotlin.math.sqrt(area / (chars * 0.62f * 1.3f))
+    val fontSp = with(density) { fontPx.toSp() }.value.coerceIn(10f, 22f)
+    Box(
+        modifier = Modifier
+            .offset { androidx.compose.ui.unit.IntOffset(r.left, r.top) }
+            .width(wDp)
+            .heightIn(min = hDp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(AppTheme.colors.surface.copy(alpha = 0.96f))
+            .clickable { onCopy(b.translatedText) }
+            .padding(horizontal = 4.dp, vertical = 2.dp)
+    ) {
+        Text(
+            b.translatedText,
+            color = AppTheme.colors.textPrimary,
+            fontSize = fontSp.sp,
+            lineHeight = (fontSp * 1.2f).sp
+        )
     }
 }
 

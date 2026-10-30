@@ -671,7 +671,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 ensureLlmLoaded()
                 val translator = com.dynamicai.launcher.ocr.ScreenTranslator(getApplication(), llm)
                 val blocks = translator.captureAndTranslate(
-                    ocrLangs = "ukr+eng",
+                    ocrLangs = "ukr+eng+pol",
                     targetLang = targetLang
                 ) { stage ->
                     _response.value = "🌐 $stage"

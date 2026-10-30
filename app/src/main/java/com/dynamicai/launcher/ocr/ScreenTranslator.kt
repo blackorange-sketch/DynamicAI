@@ -7,6 +7,8 @@ import android.util.Log
 import com.dynamicai.launcher.llm.LlmEngine
 import com.dynamicai.launcher.system.ScreenshotController
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 
 
@@ -47,8 +49,28 @@ class ScreenTranslator(
         "ru" to "російську"
     )
 
+    /** Груба, але швидка і безкоштовна (без ML-моделі) детекція мови тексту. */
+    private fun detectLang(text: String): String {
+        val letters = text.count { it.isLetter() }.coerceAtLeast(1)
+        val cyr = text.count { it.code in 0x0400..0x04FF }
+        if (cyr.toFloat() / letters > 0.5f) {
+            val lower = text.lowercase()
+            val ru = lower.count { it in "ыэъё" }
+            val ukr = lower.count { it in "іїєґ" }
+            return if (ru > ukr) "ru" else "uk"
+        }
+        val lower = text.lowercase()
+        if (lower.any { it in "ąćęłńóśźż" }) return "pl"
+        if (lower.any { it in "äöüß" }) return "de"
+        // Без діакритики — за поширеними службовими словами
+        val words = lower.split(Regex("[^\\p{L}]+")).toSet()
+        if (words.any { it in setOf("nie", "jest", "się", "na", "do", "że", "dla", "jak") } && !words.any { it in setOf("the", "and", "is", "to") }) return "pl"
+        if (words.any { it in setOf("der", "die", "das", "und", "nicht", "ist", "mit") }) return "de"
+        return "en"
+    }
+
     suspend fun captureAndTranslate(
-        ocrLangs: String = "ukr+eng",
+        ocrLangs: String = "ukr+eng+pol",
         targetLang: String = "uk",
         onProgress: (stage: String) -> Unit = {}
     ): List<TranslatedBlock> = withContext(Dispatchers.IO) {
@@ -74,7 +96,7 @@ class ScreenTranslator(
      */
     suspend fun captureRegionAndTranslate(
         rect: android.graphics.Rect,
-        ocrLangs: String = "ukr+eng",
+        ocrLangs: String = "ukr+eng+pol",
         targetLang: String = "uk",
         onProgress: (stage: String) -> Unit = {}
     ): List<TranslatedBlock> = withContext(Dispatchers.IO) {
@@ -150,47 +172,34 @@ class ScreenTranslator(
             Log.e(TAG, "Valid: ${valid.size} lines / ${blocks.size}")
             if (valid.isEmpty()) return@withContext emptyList()
 
-            onProgress("Перекладаю ${valid.size} блоків…")
-            mlkit.downloadModel("en", targetLang)
-            if (targetLang != "uk") mlkit.downloadModel("uk", targetLang)
+            onProgress("Перекладаю ${merged.size} блоків…")
+
+            // Мова кожного блоку визначається за алфавітом/діакритикою; моделі пар качаються лише за потреби
+            val pairs = merged.map { detectLang(it.text) }.filter { it != targetLang }.distinct()
+            for (from in pairs) mlkit.downloadModel(from, targetLang)
+
+            val translated: List<String?> = kotlinx.coroutines.coroutineScope {
+                val cache = java.util.concurrent.ConcurrentHashMap<String, String?>()
+                merged.map { block ->
+                    async {
+                        val from = detectLang(block.text)
+                        if (from == targetLang) null
+                        else cache.getOrPut(block.text) { mlkit.translate(block.text, from, targetLang) }
+                    }
+                }.awaitAll()
+            }
 
             val result = mutableListOf<TranslatedBlock>()
             for ((i, block) in merged.withIndex()) {
-                if (i % 5 == 0) onProgress("Перекладено ${i + 1} / ${merged.size}")
-
-                // Детектор мови: співвідношення кирилиці до всіх літер
-                val totalLetters = block.text.count { it.isLetter() }.coerceAtLeast(1)
-                val cyrLetters = block.text.count { it.code in 0x0400..0x04FF }
-                val cyrRatio = cyrLetters.toFloat() / totalLetters
-                val fromLang = if (cyrRatio > 0.5f) "uk" else "en"
-
-                Log.e(TAG, "Block[$i] cyr=$cyrLetters/$totalLetters (${"%.2f".format(cyrRatio)}) from=$fromLang to=$targetLang text='${block.text.take(40)}'")
-
-                // Якщо fromLang == target — пропускаємо (вже цільовою)
-                if (fromLang == targetLang) {
-                    Log.e(TAG, "Block[$i] SKIP: already $targetLang")
-                    continue
-                }
-
-                val tr = mlkit.translate(block.text, fromLang, targetLang)
-                Log.e(TAG, "Block[$i] translated: '${tr?.take(40) ?: "NULL"}'")
-
-                if (tr.isNullOrBlank()) continue
-                // Координати зсуваємо назад у повний екран
+                val tr = translated[i]
+                if (tr.isNullOrBlank() || tr.equals(block.text, ignoreCase = true)) continue
                 val shifted = android.graphics.Rect(
                     block.bounds.left + left,
                     block.bounds.top + top,
                     block.bounds.right + left,
                     block.bounds.bottom + top
                 )
-                result.add(
-                    TranslatedBlock(
-                        originalText = block.text,
-                        translatedText = tr,
-                        bounds = shifted,
-                        confidence = block.confidence
-                    )
-                )
+                result.add(TranslatedBlock(block.text, tr, shifted, block.confidence))
             }
             Log.e(TAG, "Region translated ${result.size} / ${merged.size}")
             onProgress("Готово")

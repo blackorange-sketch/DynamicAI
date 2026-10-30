@@ -40,9 +40,8 @@ class MlKitTranslator(private val context: Context) {
                     .build()
                     .let { Translation.getClient(it) }
             }
-            val conditions = DownloadConditions.Builder()
-                .requireWifi()
-                .build()
+            // Без requireWifi: раніше на мобільних даних модель не завантажувалась і переклад мовчки не працював
+            val conditions = DownloadConditions.Builder().build()
             suspendCancellableCoroutine { cont ->
                 tr.downloadModelIfNeeded(conditions)
                     .addOnSuccessListener {

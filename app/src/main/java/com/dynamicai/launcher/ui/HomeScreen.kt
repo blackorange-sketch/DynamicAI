@@ -1582,10 +1582,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
         menuApp?.let { app ->
             val inFolder = vm.folderOf(app.packageName)
-            AlertDialog(
-                onDismissRequest = { menuApp = null },
-                title = { Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
-                text = {
+            AppMenuPopup(app = app, anchor = lastTouch, onDismiss = { menuApp = null }) {
                     Column {
                         if (inFolder == null) {
                             MenuItem(if (app.packageName in dockPkgs) "Прибрати з дока" else "Додати в док") {
@@ -1653,13 +1650,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             menuApp = null
                         }
                     }
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { menuApp = null }) { Text("Скасувати", color = AppTheme.colors.textPrimary) }
-                },
-                containerColor = AppTheme.colors.surface
-            )
+            }
         }
     }
 

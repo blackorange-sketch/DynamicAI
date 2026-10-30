@@ -312,6 +312,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                 }
             }
 
+            if (query.isNotBlank()) {
             androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
                 columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(4),
                 modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -319,7 +320,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (rows.isEmpty() && query.isNotBlank()) {
+                if (rows.isEmpty()) {
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
@@ -343,7 +344,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                         is Suggestion.Setting -> SuggestionSettingRow(s) { handleSuggestion(s) }
                         is Suggestion.App -> com.dynamicai.launcher.ui.AppGridItem(
                             app = s.app,
-                            iconSizeDp = settings?.menuIconSizeDp ?: 52,
+                            iconSizeDp = settings?.menuIconSizeDp ?: 56,
                             fontSizeSp = fontSize,
                             onLongClick = { handleSuggestion(s) },
                             onTap = { handleSuggestion(s) }
@@ -352,6 +353,43 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                         is Suggestion.Extra -> com.dynamicai.launcher.ui.SuggestionExtraRow(s) { handleSuggestion(s) }
                     }
                 }
+            }
+            } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
+            ) {
+                if (rows.isEmpty() && query.isNotBlank()) {
+                    item {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Нічого не знайдено за \"$query\"", color = AppTheme.colors.textMuted, fontSize = 16.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text("Спробуй: ліхтарик · wifi · Аня", color = AppTheme.colors.textMuted.copy(alpha = 0.7f), fontSize = 13.sp)
+                        }
+                    }
+                }
+                items(rows, key = { it.stableKey() }) { s ->
+                    when (s) {
+                        is Suggestion.Action -> SuggestionActionRow(s) { handleSuggestion(s) }
+                        is Suggestion.Setting -> SuggestionSettingRow(s) { handleSuggestion(s) }
+                        is Suggestion.App -> AppRow(
+                            app = s.app,
+                            inDock = false,
+                            iconSizeDp = iconSize,
+                            fontSizeSp = fontSize,
+                            showLabel = showLabels,
+                            onClick = { handleSuggestion(s) },
+                            onLongClick = { handleSuggestion(s) },
+                            highlight = query
+                        )
+                        is Suggestion.Contact -> com.dynamicai.launcher.ui.SuggestionContactRow(s) { handleSuggestion(s) }
+                        is Suggestion.Extra -> com.dynamicai.launcher.ui.SuggestionExtraRow(s) { handleSuggestion(s) }
+                    }
+                }
+            }
             }
         }
     }

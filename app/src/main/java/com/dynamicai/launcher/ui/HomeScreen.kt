@@ -172,7 +172,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
     val focusRequester = remember { FocusRequester() }
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
-    val listState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    val listState = rememberLazyListState()
+    val searchGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val drawerGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val scope = rememberCoroutineScope()
     var scrollJob by remember { mutableStateOf<Job?>(null) }
@@ -997,16 +998,17 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     exit = fadeOut(androidx.compose.animation.core.tween(90)),
                     modifier = Modifier.fillMaxSize()
                 ) {
-            // Результати пошуку: додатки — квадратні плитки (як у шторці), решта — рядки на всю ширину
+            if (query.isNotBlank()) {
+            // Набраний запит: додатки — квадратні плитки, решта результатів — рядки на всю ширину
             androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                state = listState,
+                state = searchGridState,
                 columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(4),
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 170.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = if (dockPkgs.isNotEmpty()) 110.dp else 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                if (suggestions.isEmpty() && query.isNotBlank()) {
+                if (suggestions.isEmpty()) {
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
@@ -1054,6 +1056,65 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         )
                     }
                 }
+            }
+            } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = 8.dp,
+                    bottom = if (dockPkgs.isNotEmpty()) 110.dp else 8.dp
+                )
+            ) {
+                if (suggestions.isEmpty() && query.isNotBlank()) {
+                    item {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Нічого не знайдено за \"$query\"", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 16.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Спробуй: ліхтарик · wifi · Аня",
+                                color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted.copy(alpha = 0.7f), fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+                items(suggestions, key = { it.stableKey() }) { s ->
+                  // Без animateItem: при швидкому наборі рядки мають змінюватись різко, а не «пливти»
+                  androidx.compose.foundation.layout.Box {
+                    when (s) {
+                        is Suggestion.Action -> SuggestionActionRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            vm.executeSuggestion(s); closeSearch()
+                        }
+                        is Suggestion.Setting -> SuggestionSettingRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            vm.executeSuggestion(s); closeSearch()
+                        }
+                        is Suggestion.Extra -> SuggestionExtraRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            vm.executeSuggestion(s); closeSearch()
+                        }
+                        is Suggestion.Contact -> SuggestionContactRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            vm.executeSuggestion(s); closeSearch()
+                        }
+                        is Suggestion.App -> AppRow(
+                            app = s.app,
+                            inDock = s.app.packageName in dockPkgs,
+                            iconSizeDp = settings.iconSizeDp,
+                            fontSizeSp = settings.fontSizeSp,
+                            showLabel = settings.showLabels,
+                            onClick = { launchAppWithAnimation(s.app) },
+                            onLongClick = { menuApp = s.app },
+                            highlight = query
+                        )
+                    }
+                  }
+                }
+            }
             }
                 }
             }
@@ -1133,7 +1194,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         }
 
         // Папки над доком
-        if (folders.isNotEmpty() && !listVisible && query.isBlank()) {
+        if (folders.isNotEmpty() && !listVisible && query.isBlank() && !searchMode && !drawerOpen) {
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)

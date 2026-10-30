@@ -43,6 +43,11 @@ import com.dynamicai.launcher.ui.LiquidSearchBar
 import com.dynamicai.launcher.ui.SuggestionActionRow
 import com.dynamicai.launcher.ui.SuggestionSettingRow
 import com.dynamicai.launcher.ui.AppRow
+import com.dynamicai.launcher.ui.iconShape
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.asImageBitmap
 import com.dynamicai.launcher.suggestion.Suggestion
 import com.dynamicai.launcher.suggestion.stableKey
 import kotlinx.coroutines.delay
@@ -187,37 +192,49 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
         try { voiceLauncher.launch(intent) } catch (_: Exception) {}
     }
 
+    val settings = remember { runCatching { com.dynamicai.launcher.data.SettingsStorage(ctx).load() }.getOrNull() }
+    val iconSize = settings?.iconSizeDp ?: 44
+    val fontSize = settings?.fontSizeSp ?: 16
+    val showLabels = settings?.showLabels ?: true
+    val hiddenNow = remember { try { com.dynamicai.launcher.data.HiddenAppsStorage(ctx).get() } catch (_: Throwable) { emptySet() } }
+    // Порожній запит — той самий алфавітний список усіх додатків, що й у пошуку на головному екрані
+    val allApps = remember(apps) {
+        apps.filter { it.packageName !in hiddenNow }.sortedBy { it.label.lowercase() }
+    }
+    val rows: List<Suggestion> = if (query.isBlank()) allApps.map { Suggestion.App(it, 0) } else suggestions
+
+    androidx.compose.runtime.CompositionLocalProvider(
+        com.dynamicai.launcher.ui.LocalIconShape provides (settings?.iconShape ?: "original")
+    ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.4f))
-            .pointerInput(Unit) {
-                detectTapGestures { onClose() }
-            }
+            .pointerInput(Unit) { detectTapGestures { onClose() } }
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
+                .fillMaxSize()
                 .statusBarsPadding()
+                .imePadding()
                 .padding(horizontal = 12.dp, vertical = 12.dp)
                 .pointerInput(Unit) { detectTapGestures { } }
         ) {
-            // Використовуємо той самий LiquidSearchBar
             LiquidSearchBar(
                 query = query,
-                onQueryChange = {
-                    query = it
-                    response = null
+                onQueryChange = { query = it; response = null },
+                onSearch = {
+                    val top = suggestions.firstOrNull()
+                    val strong = top != null && top.score >= 75 && top !is Suggestion.Contact &&
+                        !(top is Suggestion.Extra && (top.kind == "ask" || top.kind == "web"))
+                    if (query.isNotBlank() && strong) handleSuggestion(top!!) else submit(query)
                 },
-                onSearch = { submit(query) },
                 onVoice = { startVoice() },
                 onClose = onClose,
                 focusRequester = focusRequester,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
             )
 
-            // Помилки команд — коротким тостом замість постійного синього тексту
             LaunchedEffect(response) {
                 response?.let {
                     android.widget.Toast.makeText(ctx, it, android.widget.Toast.LENGTH_SHORT).show()
@@ -225,42 +242,94 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                 }
             }
 
-            // Список підказок — glass-картка
-            if (suggestions.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                androidx.compose.foundation.layout.Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp))
-                        .background(AppTheme.colors.surface.copy(alpha = 0.94f))
-                        .padding(vertical = 6.dp)
-                ) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 400.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp)
-                    ) {
-                        items(suggestions, key = { it.stableKey() }) { s ->
-                            when (s) {
-                                is Suggestion.Action -> SuggestionActionRow(s) { handleSuggestion(s) }
-                                is Suggestion.Setting -> SuggestionSettingRow(s) { handleSuggestion(s) }
-                                is Suggestion.App -> AppRow(
-                                    app = s.app,
-                                    inDock = false,
-                                    iconSizeDp = 44,
-                                    fontSizeSp = 16,
-                                    showLabel = true,
-                                    onClick = { handleSuggestion(s) },
-                                    onLongClick = { handleSuggestion(s) }
-                                )
-                                is Suggestion.Contact -> com.dynamicai.launcher.ui.SuggestionContactRow(s) { handleSuggestion(s) }
-                                is Suggestion.Extra -> com.dynamicai.launcher.ui.SuggestionExtraRow(s) { handleSuggestion(s) }
-                            }
+            // Часті додатки та історія — як на головному екрані
+            if (query.isBlank()) {
+                var historyTick by remember { mutableStateOf(0) }
+                val history = remember(historyTick) { com.dynamicai.launcher.suggestion.SearchHistory.get(ctx) }
+                val frequent = remember(apps) {
+                    com.dynamicai.launcher.suggestion.AppUsage.top(ctx, 6).mapNotNull { pkg -> apps.firstOrNull { it.packageName == pkg } }
+                }
+                if (frequent.isNotEmpty()) {
+                    Text("Часті", color = AppTheme.colors.textSecondary, fontSize = 11.sp,
+                        modifier = Modifier.padding(start = 10.dp, top = 6.dp, bottom = 4.dp))
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        frequent.forEach { a ->
+                            androidx.compose.foundation.Image(
+                                bitmap = (a.bitmap ?: a.icon.toBitmap(96, 96)).asImageBitmap(),
+                                contentDescription = a.label,
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .iconShape()
+                                    .pointerInput(a.packageName) {
+                                        detectTapGestures(onTap = { handleSuggestion(Suggestion.App(a, 0)) })
+                                    }
+                            )
                         }
+                    }
+                }
+                if (history.isNotEmpty()) {
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp, bottom = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        history.forEach { h ->
+                            Text(
+                                "🕘 $h", color = AppTheme.colors.textPrimary, fontSize = 13.sp, maxLines = 1,
+                                modifier = Modifier
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                                    .background(AppTheme.colors.textPrimary.copy(alpha = 0.08f))
+                                    .pointerInput(h) { detectTapGestures { query = h } }
+                                    .padding(horizontal = 12.dp, vertical = 7.dp)
+                            )
+                        }
+                        Text(
+                            "✕", color = AppTheme.colors.textSecondary, fontSize = 13.sp,
+                            modifier = Modifier
+                                .pointerInput(Unit) {
+                                    detectTapGestures { com.dynamicai.launcher.suggestion.SearchHistory.clear(ctx); historyTick++ }
+                                }
+                                .padding(horizontal = 10.dp, vertical = 7.dp)
+                        )
+                    }
+                }
+            }
+
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
+            ) {
+                if (rows.isEmpty() && query.isNotBlank()) {
+                    item {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Нічого не знайдено за \"$query\"", color = AppTheme.colors.textMuted, fontSize = 16.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text("Спробуй: ліхтарик · wifi · Аня", color = AppTheme.colors.textMuted.copy(alpha = 0.7f), fontSize = 13.sp)
+                        }
+                    }
+                }
+                items(rows, key = { it.stableKey() }) { s ->
+                    when (s) {
+                        is Suggestion.Action -> SuggestionActionRow(s) { handleSuggestion(s) }
+                        is Suggestion.Setting -> SuggestionSettingRow(s) { handleSuggestion(s) }
+                        is Suggestion.App -> AppRow(
+                            app = s.app,
+                            inDock = false,
+                            iconSizeDp = iconSize,
+                            fontSizeSp = fontSize,
+                            showLabel = showLabels,
+                            onClick = { handleSuggestion(s) },
+                            onLongClick = { handleSuggestion(s) },
+                            highlight = query
+                        )
+                        is Suggestion.Contact -> com.dynamicai.launcher.ui.SuggestionContactRow(s) { handleSuggestion(s) }
+                        is Suggestion.Extra -> com.dynamicai.launcher.ui.SuggestionExtraRow(s) { handleSuggestion(s) }
                     }
                 }
             }
         }
+    }
     }
 }

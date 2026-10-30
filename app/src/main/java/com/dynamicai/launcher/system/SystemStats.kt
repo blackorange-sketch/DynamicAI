@@ -135,15 +135,22 @@ object SystemStats {
     /** Процеси за завантаженням ЦП (`top`). */
     suspend fun topCpu(ctx: Context): List<ProcRow>? = withContext(Dispatchers.IO) {
         if (!shizukuReady(ctx)) return@withContext null
-        val out = shizuku(ctx).execShell("top -b -n 1 -m 15 2>/dev/null")
+        // Два заміри з паузою 1 с: перший у top показує «сире» значення, другий — реальне навантаження за інтервал
+        val out = shizuku(ctx).execShell("top -b -n 2 -d 1 -m 20 2>/dev/null")
+        // Беремо лише останній блок (після останнього заголовка PID)
+        val lines = out.lines()
+        val lastHeader = lines.indexOfLast { it.trimStart().startsWith("PID") }
+        val body = if (lastHeader >= 0) lines.drop(lastHeader + 1) else lines
         val rows = ArrayList<Triple<String, Double, String>>()
-        out.lineSequence().forEach { l ->
+        body.forEach { l ->
             val t = l.trim().split(Regex("\\s+"))
             if (t.size < 12 || t[0].toIntOrNull() == null) return@forEach
             val cpu = t[8].replace(',', '.').toDoubleOrNull() ?: return@forEach
             val args = t.drop(11).joinToString(" ")
-            if (args == "top" || args.startsWith("sh")) return@forEach
-            rows.add(Triple(args.substringBefore(':'), cpu, t[5]))
+            val cmd = args.substringBefore(' ')
+            // Власні службові команди та потоки ядра не показуємо
+            if (cmd == "top" || cmd == "sh" || cmd == "toybox" || cmd == "logcat" || cmd.startsWith("[")) return@forEach
+            rows.add(Triple(cmd.substringBefore(':'), cpu, t[5]))
         }
         rows.groupBy { it.first }
             .map { (pkg, v) -> Triple(pkg, v.sumOf { it.second }, v.first().third) }

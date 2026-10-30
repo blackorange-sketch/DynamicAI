@@ -162,6 +162,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                             android.util.Log.e("LlmUnload", "Auto-unloading LLM after ${idle / 1000}s idle")
                             llm.close()
                             _llmReady.value = false
+                            MemLog.note(getApplication(), "LLM_UNLOAD idle=${idle / 1000}s")
                         }
                     }
                 } catch (_: Throwable) {}
@@ -244,6 +245,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 val ok = llm.initialize(mnnDir)
                 _llmReady.value = ok
                 android.util.Log.e("LLM_DEBUG", "MNN init: $ok")
+                MemLog.note(getApplication(), "LLM_LOAD ok=$ok")
                 ok
             } catch (t: Throwable) {
                 android.util.Log.e("LLM_DEBUG", "MNN init failed: ${t.message}", t)
@@ -269,6 +271,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         return try {
             val ok = llm.initialize(modelFile)
             _llmReady.value = ok
+            MemLog.note(getApplication(), "LLM_LOAD ok=$ok")
             ok
         } catch (t: Throwable) {
             android.util.Log.e("LLM_DEBUG", "initialize failed: ${t.message}", t)

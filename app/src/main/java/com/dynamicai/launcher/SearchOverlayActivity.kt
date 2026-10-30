@@ -221,9 +221,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
     val rows: List<Suggestion> = if (query.isBlank()) allApps.map { Suggestion.App(it, 0) }
         else (suggestions + webSugg).distinctBy { it.stableKey() }.sortedByDescending { it.score }
 
-    androidx.compose.runtime.CompositionLocalProvider(
-        com.dynamicai.launcher.ui.LocalIconShape provides (settings?.iconShape ?: "original")
-    ) {
+    com.dynamicai.launcher.ui.IconLayoutProvider(settings ?: com.dynamicai.launcher.data.LauncherSettings()) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -317,8 +315,8 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                 columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(4),
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(com.dynamicai.launcher.ui.LocalGridGapH.current.dp),
+                verticalArrangement = Arrangement.spacedBy(com.dynamicai.launcher.ui.LocalGridGapV.current.dp)
             ) {
                 if (rows.isEmpty()) {
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {

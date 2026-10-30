@@ -33,12 +33,19 @@ object CustomBackgroundLoader {
     }
 
     suspend fun clear(ctx: Context) = withContext(Dispatchers.IO) {
+        cachedKey = null; cachedImage = null
         try { File(ctx.filesDir, BG_FILE).delete() } catch (_: Throwable) {}
     }
+
+    // Кеш на рівні процесу: Activity перестворюється часто, а розкодовування великого фото щоразу коштувало сотні МБ пам'яті
+    @Volatile private var cachedKey: String? = null
+    @Volatile private var cachedImage: ImageBitmap? = null
 
     suspend fun loadFromFile(filePath: String, targetWidth: Int = 720): ImageBitmap? =
         withContext(Dispatchers.IO) {
             if (filePath.isBlank()) return@withContext null
+            val key = "$filePath@$targetWidth"
+            if (cachedKey == key) cachedImage?.let { return@withContext it }
             try {
                 val cleanPath = filePath.substringBefore("?v=")
                 val file = File(cleanPath)
@@ -46,7 +53,13 @@ object CustomBackgroundLoader {
                     android.util.Log.w("CustomBg", "file not found: $cleanPath")
                     return@withContext null
                 }
-                val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: run {
+                // Спершу лише розміри, потім декодування з inSampleSize — без повнорозмірного bitmap у пам'яті
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(file.absolutePath, bounds)
+                var sample = 1
+                while (bounds.outWidth / (sample * 2) >= targetWidth) sample *= 2
+                val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+                val bitmap = BitmapFactory.decodeFile(file.absolutePath, opts) ?: run {
                     android.util.Log.w("CustomBg", "decodeFile failed: $cleanPath")
                     return@withContext null
                 }
@@ -57,10 +70,13 @@ object CustomBackgroundLoader {
                         (bitmap.width * scale).toInt(),
                         (bitmap.height * scale).toInt(),
                         true
-                    )
+                    ).also { if (it !== bitmap) bitmap.recycle() }
                 } else bitmap
-                android.util.Log.d("CustomBg", "loaded ${scaled.width}x${scaled.height}")
-                scaled.asImageBitmap()
+                android.util.Log.d("CustomBg", "loaded ${scaled.width}x${scaled.height} sample=$sample")
+                val img = scaled.asImageBitmap()
+                cachedKey = key
+                cachedImage = img
+                img
             } catch (e: Throwable) {
                 android.util.Log.e("CustomBg", "loadFromFile failed: ${e.message}", e)
                 null

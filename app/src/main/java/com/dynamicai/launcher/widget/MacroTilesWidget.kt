@@ -39,8 +39,8 @@ fun MacroTilesWidget(
     val ctx = LocalContext.current
     var macros by remember { mutableStateOf(MacroStorage(ctx).get().filter { it.enabled }) }
     val running by MacroLauncher.running.collectAsState()
-    LaunchedEffect(Unit) {
-        while (true) { macros = MacroStorage(ctx).get().filter { it.enabled }; delay(4000) }
+    com.dynamicai.launcher.ui.LaunchedWhileStarted {
+        while (true) { macros = MacroStorage(ctx).get().filter { it.enabled }; delay(5000) }
     }
     val cols = 3
     val rows = when (size) { "small" -> 1; "large" -> 3; "full" -> 5; else -> 2 }
@@ -98,7 +98,7 @@ fun SmartActionsWidget(
 ) {
     val ctx = LocalContext.current
     var actions by remember { mutableStateOf<List<SmartAction>>(emptyList()) }
-    LaunchedEffect(Unit) {
+    com.dynamicai.launcher.ui.LaunchedWhileStarted {
         while (true) {
             actions = try { ContextActions.build(ctx) } catch (_: Throwable) { emptyList() }
             delay(30_000)
@@ -189,7 +189,7 @@ fun FocusWidget(onLongPress: () -> Unit, modifier: Modifier = Modifier) {
 fun NotificationDigestWidget(onLongPress: () -> Unit, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     var text by remember { mutableStateOf("") }
-    LaunchedEffect(Unit) {
+    com.dynamicai.launcher.ui.LaunchedWhileStarted {
         while (true) {
             text = try { com.dynamicai.launcher.macro.NotificationDigest.build(ctx) } catch (_: Throwable) { "" }
             delay(15_000)

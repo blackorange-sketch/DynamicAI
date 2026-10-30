@@ -38,13 +38,13 @@ fun MusicWidget(size: String, modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
 
     // Періодично перевіряємо стан
-    LaunchedEffect(Unit) {
+    com.dynamicai.launcher.ui.LaunchedWhileStarted {
         while (true) {
             isPlaying = audioManager.isMusicActive
             if (isPlaying && trackArtist == "Натисніть Play") {
                 trackArtist = "Відтворюється"
             }
-            delay(1000)
+            delay(1500)
         }
     }
 

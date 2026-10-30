@@ -42,10 +42,11 @@ fun HomeWidget(
     val haptic = LocalHapticFeedback.current
     var now by remember { mutableStateOf(LocalDateTime.now()) }
 
-    LaunchedEffect(Unit) {
+    // Показуємо лише ГГ:ХХ — оновлюємось раз на хвилину (раніше щосекунди, навіть у фоні)
+    LaunchedWhileStarted {
         while (true) {
             now = LocalDateTime.now()
-            delay(1000)
+            delay(60_000L - (System.currentTimeMillis() % 60_000L) + 50L)
         }
     }
 

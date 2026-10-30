@@ -65,6 +65,13 @@ class AppRepository(private val context: Context) {
         }
     }
 
+    /** Дешевий підпис списку встановлених додатків (без завантаження іконок) — щоб не перезавантажувати все зайвий раз. */
+    suspend fun packageSignature(): Int = withContext(Dispatchers.IO) {
+        val intent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_LAUNCHER) }
+        pm.queryIntentActivities(intent, PackageManager.MATCH_ALL)
+            .joinToString(",") { it.activityInfo?.packageName.orEmpty() }.hashCode()
+    }
+
     suspend fun loadInstalledApps(): List<AppInfo> = withContext(Dispatchers.IO) {
         val intent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)

@@ -372,10 +372,21 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         android.util.Log.d("APPINIT", "init done")
     }
 
+    private var lastPackageSig = 0
+
     fun refreshIfStale() {
         val last = runtimePrefs.getLong("apps_refreshed_at", 0L)
         if (System.currentTimeMillis() - last > 60_000L) {
-            refresh()
+            // Повне перезавантаження (усі іконки) — лише якщо набір додатків справді змінився
+            viewModelScope.launch {
+                val sig = try { repo.packageSignature() } catch (_: Throwable) { 0 }
+                if (sig != 0 && sig == lastPackageSig && _apps.value.isNotEmpty()) {
+                    runtimePrefs.edit().putLong("apps_refreshed_at", System.currentTimeMillis()).apply()
+                } else {
+                    lastPackageSig = sig
+                    refresh()
+                }
+            }
         }
     }
 

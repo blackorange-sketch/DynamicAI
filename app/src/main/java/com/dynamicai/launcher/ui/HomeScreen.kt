@@ -317,7 +317,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
     // Нічний режим «лише годинник» (00:00–06:00)
     var isNightNow by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
+    LaunchedWhileStarted {
         while (true) {
             val h = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
             isNightNow = h in 0..5
@@ -330,7 +330,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
     // Бейджі сповіщень на іконках дока (потрібен доступ до сповіщень)
     var dockBadges by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
-    LaunchedEffect(Unit) {
+    LaunchedWhileStarted {
         while (true) {
             val m = try { com.dynamicai.launcher.macro.NotificationDigest.counts(ctx) } catch (_: Throwable) { emptyMap() }
             if (m != dockBadges) dockBadges = m
@@ -663,7 +663,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 awaitPointerEventScope {
                     while (true) {
                         val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
-                        ev.changes.firstOrNull { it.pressed }?.let { lastTouch = it.position }
+                        ev.changes.firstOrNull { it.pressed && !it.previousPressed }?.let { lastTouch = it.position }
                     }
                 }
             }

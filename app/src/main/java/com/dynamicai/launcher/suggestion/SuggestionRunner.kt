@@ -37,6 +37,10 @@ object SuggestionRunner {
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 )
             } catch (_: Throwable) {}
+            "tgchat" -> {
+                val parts = s.payload.split('|', limit = 2)
+                TelegramIndex.open(app, parts[0], parts.getOrElse(1) { "" })
+            }
             "note" -> return false
         }
         return true

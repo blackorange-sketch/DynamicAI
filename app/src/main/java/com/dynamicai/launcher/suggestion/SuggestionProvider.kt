@@ -221,6 +221,11 @@ class SuggestionProvider(private val context: Context) {
                 .take(2)
                 .forEach { result.add(Suggestion.Extra("chat", "💬", c(it.title), "Розмова · ${fmt.format(java.util.Date(it.ts))}", it.id, 45)) }
         } catch (_: Throwable) {}
+        try {
+            TelegramIndex.search(context, q).forEach { (c, sc) ->
+                result.add(Suggestion.Extra("tgchat", "✈️", c.name, "Telegram · чат", c.pkg + "|" + c.shortcutId, sc.coerceAtMost(120)))
+            }
+        } catch (_: Throwable) {}
         if (q.length >= 2) {
             val enc = android.net.Uri.encode(query.trim())
             result.add(Suggestion.Extra("web", "🌐", "Шукати «${query.trim().take(40)}» в Google", "Браузер", "https://www.google.com/search?q=$enc", 9))

@@ -21,6 +21,12 @@ class MacroNotificationListener : NotificationListenerService() {
             val ex = n.extras
             val title = ex?.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
             val text = ex?.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
+            if (com.dynamicai.launcher.suggestion.TelegramIndex.isTelegram(sbn.packageName)) {
+                val conv = ex?.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE)?.toString()
+                val name = (conv?.takeIf { it.isNotBlank() } ?: title)
+                val generic = Regex("\\d+\\s+(нов|new|повід|messag)", RegexOption.IGNORE_CASE).containsMatchIn(name)
+                if (!generic) com.dynamicai.launcher.suggestion.TelegramIndex.record(this, name, sbn.packageName, n.shortcutId)
+            }
             MacroDispatcher.fire(
                 this, "notification",
                 mapOf("pkg" to sbn.packageName, "app" to AppUtils.labelFor(this, sbn.packageName), "title" to title, "text" to text)

@@ -29,7 +29,8 @@ object WidgetRegistry {
         WidgetType("macro_tiles", "Макроси (плитки)", "⚡"),
         WidgetType("smart_actions", "Розумні пропозиції", "✨"),
         WidgetType("focus", "Режими фокусу", "🎯"),
-        WidgetType("notif_digest", "Підсумок сповіщень", "🔔")
+        WidgetType("notif_digest", "Підсумок сповіщень", "🔔"),
+        WidgetType("system", "Ресурси системи", "📊")
         // майбутні: "calendar", "battery", "quick_actions"
     )
 
@@ -93,5 +94,6 @@ fun RenderPlacedWidget(
         "smart_actions" -> SmartActionsWidget(widget.size, onWidgetLongPress, onOpenVoice, sizeModifier)
         "focus" -> FocusWidget(onWidgetLongPress, sizeModifier)
         "notif_digest" -> NotificationDigestWidget(onWidgetLongPress, sizeModifier)
+        "system" -> SystemWidget(widget.size, onWidgetLongPress, sizeModifier)
     }
 }

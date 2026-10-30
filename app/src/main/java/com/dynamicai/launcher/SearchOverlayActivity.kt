@@ -249,13 +249,12 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
 
-            if (response != null) {
-                Text(
-                    response!!,
-                    color = AppTheme.colors.accent,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
-                )
+            // Помилки команд — коротким тостом замість постійного синього тексту
+            LaunchedEffect(response) {
+                response?.let {
+                    android.widget.Toast.makeText(ctx, it, android.widget.Toast.LENGTH_SHORT).show()
+                    response = null
+                }
             }
 
             // Список підказок — glass-картка

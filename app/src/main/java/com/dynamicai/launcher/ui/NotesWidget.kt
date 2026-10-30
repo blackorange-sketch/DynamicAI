@@ -16,6 +16,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.dynamicai.launcher.widget.widgetCard
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -48,20 +49,7 @@ fun NotesWidget(
     Column(
         modifier = modifier
             .then(if (expanded) Modifier.fillMaxSize() else Modifier.fillMaxWidth())
-            .clip(RoundedCornerShape(22.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        AppTheme.colors.glassBackground.copy(alpha = 0.8f),
-                        AppTheme.colors.glassBackgroundAlt.copy(alpha = 0.67f)
-                    )
-                )
-            )
-            .border(
-                width = 0.5.dp,
-                color = AppTheme.colors.glassBorder,
-                shape = RoundedCornerShape(22.dp)
-            )
+            .widgetCard()
             .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         // Заголовок

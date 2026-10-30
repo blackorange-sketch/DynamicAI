@@ -48,7 +48,7 @@ fun MacroTilesWidget(
     val shown: List<Macro> = if (macros.size >= capacity) macros.take(capacity - 1) else macros
     val cells: List<Macro?> = shown + listOf<Macro?>(null)   // null = плитка «+»
 
-    Column(modifier = modifier) {
+    Column(modifier = modifier.widgetCard().padding(12.dp)) {
         Text("⚡ Макроси", color = AppTheme.colors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
         cells.chunked(cols).forEach { row ->
@@ -112,7 +112,7 @@ fun SmartActionsWidget(
             a.tool.isNotBlank() -> MacroLauncher.runTool(ctx, a.tool, "action:" + a.key)
         }
     }
-    Column(modifier = modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onLongPress() }) }) {
+    Column(modifier = modifier.widgetCard().pointerInput(Unit) { detectTapGestures(onLongPress = { onLongPress() }) }.padding(12.dp)) {
         Text("✨ ${ContextActions.greeting()}", color = AppTheme.colors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp))
         if (size == "large") {
@@ -152,7 +152,7 @@ fun FocusWidget(onLongPress: () -> Unit, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     LaunchedEffect(Unit) { com.dynamicai.launcher.macro.FocusModes.init(ctx) }
     val active by com.dynamicai.launcher.macro.FocusModes.active.collectAsState()
-    Column(modifier = modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onLongPress() }) }) {
+    Column(modifier = modifier.widgetCard().pointerInput(Unit) { detectTapGestures(onLongPress = { onLongPress() }) }.padding(12.dp)) {
         Text(
             "🎯 Фокус" + (com.dynamicai.launcher.macro.FocusModes.find(active)?.let { " · ${it.name}" } ?: ""),
             color = AppTheme.colors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold,
@@ -197,9 +197,7 @@ fun NotificationDigestWidget(onLongPress: () -> Unit, modifier: Modifier = Modif
     }
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(AppTheme.colors.textPrimary.copy(alpha = 0.06f))
-            .border(1.dp, AppTheme.colors.glassBorder.copy(alpha = 0.7f), RoundedCornerShape(18.dp))
+            .widgetCard()
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { com.dynamicai.launcher.macro.MacroTools(ctx).speak(text) },

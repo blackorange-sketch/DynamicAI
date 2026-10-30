@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.dynamicai.launcher.widget.widgetCard
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -57,25 +58,7 @@ fun HomeWidget(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        AppTheme.colors.surface.copy(alpha = 0.94f),
-                        AppTheme.colors.glassBackgroundAlt.copy(alpha = 0.88f)
-                    )
-                )
-            )
-            .border(
-                width = 1.dp,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        AppTheme.colors.textPrimary.copy(alpha = 0.35f),
-                        AppTheme.colors.textPrimary.copy(alpha = 0.08f)
-                    )
-                ),
-                shape = RoundedCornerShape(24.dp)
-            )
+            .widgetCard()
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = {

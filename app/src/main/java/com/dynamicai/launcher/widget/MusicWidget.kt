@@ -49,15 +49,8 @@ fun MusicWidget(size: String, modifier: Modifier = Modifier) {
     }
 
     // Стиль як у інших віджетів (Liquid Glass dark)
-    val glassBrush = Brush.verticalGradient(
-        colors = listOf(AppTheme.colors.glassBackground, AppTheme.colors.glassBackgroundAlt)
-    )
-
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
-            .background(glassBrush)
-            .border(0.5.dp, AppTheme.colors.glassBorder, RoundedCornerShape(24.dp))
+        modifier = modifier.widgetCard()
     ) {
         when (size) {
             "small" -> SmallContent(audioManager, isPlaying, context, scope) { isPlaying = it }

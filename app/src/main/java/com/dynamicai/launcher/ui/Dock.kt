@@ -199,15 +199,6 @@ fun Dock(
                                 onTap = { onLaunch(item) },
                                 onLongPress = { onLongClick(item) }
                             )
-                            // Свайп вгору по іконці — швидке меню додатка
-                            .pointerInput(item.id) {
-                                var total = 0f
-                                detectVerticalDragGestures(
-                                    onDragStart = { total = 0f },
-                                    onDragEnd = { if (total < -40f) onLongClick(item) },
-                                    onDragCancel = { total = 0f }
-                                ) { _, dy -> total += dy }
-                            }
                     ) {
                         Icon(
                             bitmap = it.asImageBitmap(),

@@ -418,7 +418,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         queryJob?.cancel()
         queryJob = viewModelScope.launch {
             // Затримка 70 мс при наборі + обчислення поза головним потоком (раніше — на кожен символ у Main)
-            if (query.isNotBlank()) kotlinx.coroutines.delay(70)
+            if (query.isNotBlank()) kotlinx.coroutines.delay(35)
             val foldersPkgs = _folders.value.flatMap { it.packageNames }.toSet()
             val focusHidden = com.dynamicai.launcher.macro.FocusModes.hiddenFor(com.dynamicai.launcher.macro.FocusModes.active.value, _apps.value)
             val visibleApps = _apps.value.filter {
@@ -495,14 +495,41 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         val app = getApplication<Application>()
         when (s.actionType) {
             ContactAction.APP_DATA -> {
-                val parts = s.target.split('|', limit = 2)
+                val parts = s.target.split('|', limit = 3)
                 val id = parts.getOrNull(0)?.toLongOrNull()
                 val mime = parts.getOrNull(1)
-                val ok = id != null && mime != null && startViewIntent(
-                    android.content.Intent(android.content.Intent.ACTION_VIEW).setDataAndType(
-                        android.content.ContentUris.withAppendedId(android.provider.ContactsContract.Data.CONTENT_URI, id), mime
-                    )
+                val accountPkg = parts.getOrNull(2).orEmpty()
+                val pm = app.packageManager
+                fun viewIntent() = android.content.Intent(android.content.Intent.ACTION_VIEW).setDataAndType(
+                    android.content.ContentUris.withAppendedId(android.provider.ContactsContract.Data.CONTENT_URI, id ?: 0L), mime ?: ""
                 )
+                // Пакет месенджера: тип акаунта синхронізації, інакше перший встановлений з відомих.
+                // Без цього ACTION_VIEW за MIME віддавався будь-якому додатку (наприклад, іншому клієнту).
+                val known = mapOf(
+                    "telegram" to listOf("org.telegram.messenger", "org.telegram.messenger.web", "org.thunderdog.challegram"),
+                    "whatsapp" to listOf("com.whatsapp", "com.whatsapp.w4b"),
+                    "viber" to listOf("com.viber.voip"), "signal" to listOf("org.thoughtcrime.securesms")
+                )
+                val kindPkgs = known.entries.firstOrNull { (_, v) -> accountPkg in v }?.value
+                    ?: known.entries.firstOrNull { (k, _) -> s.actionLabel.startsWith(k, ignoreCase = true) }?.value.orEmpty()
+                val candidates = (listOf(accountPkg) + kindPkgs).filter { it.isNotBlank() }.distinct().filter {
+                    try { pm.getPackageInfo(it, 0); true } catch (_: Throwable) { false }
+                }
+                var ok = false
+                for (p in candidates) {
+                    val i = viewIntent().setPackage(p)
+                    if (id != null && mime != null && i.resolveActivity(pm) != null && startViewIntent(i)) { ok = true; break }
+                }
+                // Запасний варіант для Telegram: чат за номером саме в цьому клієнті
+                if (!ok && s.actionLabel.startsWith("Telegram", ignoreCase = true)) {
+                    val phone = _contacts.value.firstOrNull { it.name == s.name }?.phones?.firstOrNull()
+                    val tgPkg = candidates.firstOrNull()
+                    if (phone != null && tgPkg != null) {
+                        ok = startViewIntent(
+                            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("tg://resolve?phone=${normalizePhone(phone)}")).setPackage(tgPkg)
+                        )
+                    }
+                }
                 handleResult(
                     if (ok) com.dynamicai.launcher.command.CommandResult.Success(s.actionLabel)
                     else com.dynamicai.launcher.command.CommandResult.Error("Не вдалося відкрити: ${s.actionLabel}"),

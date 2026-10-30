@@ -992,10 +992,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             Box(modifier = Modifier.weight(1f)) {
                 androidx.compose.animation.AnimatedVisibility(
                     visible = listVisible || searchMode || query.isNotBlank(),
-                    enter = fadeIn(androidx.compose.animation.core.tween(180)) + androidx.compose.animation.slideInVertically(
-                        androidx.compose.animation.core.spring(dampingRatio = 0.85f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)
-                    ) { it / 12 },
-                    exit = fadeOut(androidx.compose.animation.core.tween(120)),
+                    enter = fadeIn(androidx.compose.animation.core.tween(110)),
+                    exit = fadeOut(androidx.compose.animation.core.tween(90)),
                     modifier = Modifier.fillMaxSize()
                 ) {
             LazyColumn(
@@ -1022,7 +1020,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     }
                 }
                 items(suggestions, key = { it.stableKey() }) { s ->
-                  androidx.compose.foundation.layout.Box(Modifier.animateItem()) {
+                  // Без animateItem: при швидкому наборі рядки мають змінюватись різко, а не «пливти»
+                  androidx.compose.foundation.layout.Box {
                     when (s) {
                         is Suggestion.Action -> SuggestionActionRow(s) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)

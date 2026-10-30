@@ -127,9 +127,9 @@ class SuggestionProvider(private val context: Context) {
                 val video = rows.firstOrNull { it.action == "video" }
                 val chat = rows.firstOrNull { it.action == "chat" }
                 // Точні дії від самого месенджера — дзвінок іде саме тому, хто збережений у ньому
-                if (call != null) add("$label · дзвінок", ContactAction.APP_DATA, "${call.dataId}|${call.mime}", null, d++)
-                if (video != null) add("$label · відео", ContactAction.APP_DATA, "${video.dataId}|${video.mime}", null, d++)
-                if (chat != null) add("$label · чат", ContactAction.APP_DATA, "${chat.dataId}|${chat.mime}", null, d++)
+                if (call != null) add("$label · дзвінок", ContactAction.APP_DATA, "${call.dataId}|${call.mime}|${call.pkg}", null, d++)
+                if (video != null) add("$label · відео", ContactAction.APP_DATA, "${video.dataId}|${video.mime}|${video.pkg}", null, d++)
+                if (chat != null) add("$label · чат", ContactAction.APP_DATA, "${chat.dataId}|${chat.mime}|${chat.pkg}", null, d++)
                 else if (rows.isEmpty() && pkgs.any { installed(it) }) {
                     // Немає синхронізованого запису — відкриваємо чат за номером
                     val type = when (kind) { "telegram" -> ContactAction.TELEGRAM; "whatsapp" -> ContactAction.WHATSAPP

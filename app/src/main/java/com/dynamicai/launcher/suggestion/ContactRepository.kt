@@ -10,7 +10,7 @@ import kotlinx.coroutines.withContext
  * «дзвінок» і «профіль» — їх відкриває ACTION_VIEW на content://…/data/<id> з потрібним MIME.
  * Так дзвінок іде саме тому користувачеві, який збережений у месенджері, без пошуку за іменем.
  */
-data class ContactApp(val kind: String, val action: String, val dataId: Long, val mime: String)  // action: call | video | chat
+data class ContactApp(val kind: String, val action: String, val dataId: Long, val mime: String, val pkg: String = "")  // action: call | video | chat
 
 data class ContactInfo(
     val name: String,
@@ -71,10 +71,11 @@ class ContactRepository(private val context: Context) {
         }
 
         // Дії месенджерів (дзвінок / відеодзвінок / чат), які месенджер сам прописав у контакті
-        try {
+        for (withAcc in listOf(true, false)) try {
             cr.query(
                 ContactsContract.Data.CONTENT_URI,
-                arrayOf(ContactsContract.Data._ID, ContactsContract.Data.CONTACT_ID, ContactsContract.Data.MIMETYPE),
+                if (withAcc) arrayOf(ContactsContract.Data._ID, ContactsContract.Data.CONTACT_ID, ContactsContract.Data.MIMETYPE, ContactsContract.RawContacts.ACCOUNT_TYPE)
+                else arrayOf(ContactsContract.Data._ID, ContactsContract.Data.CONTACT_ID, ContactsContract.Data.MIMETYPE),
                 "${ContactsContract.Data.MIMETYPE} LIKE ? OR ${ContactsContract.Data.MIMETYPE} LIKE ? OR " +
                     "${ContactsContract.Data.MIMETYPE} LIKE ? OR ${ContactsContract.Data.MIMETYPE} LIKE ?",
                 arrayOf("%telegram%", "%whatsapp%", "%viber%", "%thoughtcrime%"),
@@ -84,12 +85,15 @@ class ContactRepository(private val context: Context) {
                     val dataId = c.getLong(0)
                     val contactId = c.getLong(1)
                     val mime = c.getString(2) ?: continue
+                    // Тип акаунта синхронізації = пакет месенджера, який створив запис (відрізняє форки Telegram тощо)
+                    val accountType = if (withAcc) try { c.getString(3).orEmpty() } catch (_: Throwable) { "" } else ""
                     val acc = byId[contactId] ?: continue
                     val kind = kindOf(mime.lowercase()) ?: continue
                     val action = actionOf(mime.lowercase())
-                    if (acc.apps.none { it.kind == kind && it.action == action }) acc.apps.add(ContactApp(kind, action, dataId, mime))
+                    if (acc.apps.none { it.kind == kind && it.action == action }) acc.apps.add(ContactApp(kind, action, dataId, mime, accountType))
                 }
             }
+            break   // успішно — запасний варіант без account_type не потрібен
         } catch (_: Throwable) {}
 
         // Нік в Instagram: IM-запис або посилання/згадка в контакті

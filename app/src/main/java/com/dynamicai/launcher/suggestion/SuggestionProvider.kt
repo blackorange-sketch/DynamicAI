@@ -10,6 +10,34 @@ class SuggestionProvider(private val context: Context) {
 
     private val customStorage = CustomActionStorage(context)
 
+    // Кеш важких сховищ: раніше макроси/нотатки/архів чатів читались і парсились на кожен символ запиту
+    private class Extras(
+        val macros: List<com.dynamicai.launcher.macro.Macro>,
+        val notes: List<com.dynamicai.launcher.note.Note>,
+        val chats: List<com.dynamicai.launcher.overlay.SavedChat>,
+        val at: Long
+    )
+    @Volatile private var extras: Extras? = null
+    private fun extras(): Extras {
+        val e = extras
+        if (e != null && System.currentTimeMillis() - e.at < 4000) return e
+        val macros = try { com.dynamicai.launcher.macro.MacroStorage(context).get() } catch (_: Throwable) { emptyList() }
+        val notes = try { com.dynamicai.launcher.note.NotesStorage(context).get() } catch (_: Throwable) { emptyList() }
+        val chats = try {
+            com.dynamicai.launcher.overlay.ChatArchive.init(context)
+            com.dynamicai.launcher.overlay.ChatArchive.sorted()
+        } catch (_: Throwable) { emptyList() }
+        return Extras(macros, notes, chats, System.currentTimeMillis()).also { extras = it }
+    }
+
+    private val categoryWords = mapOf(
+        "games" to listOf("ігри", "гра", "games", "game"),
+        "social" to listOf("соцмережі", "месенджер", "соцмережа", "social", "chat"),
+        "media" to listOf("музика", "відео", "фото", "медіа", "music", "video", "photo"),
+        "maps" to listOf("карти", "навігація", "maps", "navigation"),
+        "tools" to listOf("інструменти", "робота", "новини", "tools", "news", "office")
+    )
+
     fun build(
         query: String,
         apps: List<AppInfo>,
@@ -137,32 +165,70 @@ class SuggestionProvider(private val context: Context) {
             }
 
         // === 4. Застосунки ===
-        apps
+        val appHits = apps
             .map { it to FuzzyMatcher.score(it.label, q) }
             .filter { it.second >= 35 }
+            .map { (app, score) -> app to (score + AppUsage.boost(context, app.packageName)) }
             .sortedByDescending { it.second }
             .take(8)
-            .forEach { (app, score) ->
-                result.add(Suggestion.App(app, score))
+        appHits.forEach { (app, score) -> result.add(Suggestion.App(app, score)) }
+
+        // Пошук за категорією: «ігри», «музика», «карти»…
+        if (q.length >= 3) {
+            val cat = categoryWords.entries.firstOrNull { (_, words) -> words.any { it.startsWith(q) } }?.key
+            if (cat != null) {
+                val have = appHits.map { it.first.packageName }.toSet()
+                apps.filter { it.category == cat && it.packageName !in have }
+                    .sortedByDescending { AppUsage.count(context, it.packageName) }
+                    .take(6)
+                    .forEach { result.add(Suggestion.App(it, 58 + AppUsage.boost(context, it.packageName) / 2)) }
             }
+        }
+
+        // Калькулятор та конвертер
+        try {
+            val conv = com.dynamicai.launcher.util.UnitConverter.convert(q)
+            if (conv != null) {
+                result.add(Suggestion.Extra("calc", "🔁", "= $conv", "Скопіювати результат", conv, 99))
+            } else if (q.any { it.isDigit() } && q.any { it in "+-*/×÷" } && q.matches(Regex("^[\\d\\s+\\-*/×÷().,]+$"))) {
+                val r = com.dynamicai.launcher.util.Calculator.calculate(q)
+                if (r is com.dynamicai.launcher.util.Calculator.Result.success && !r.value.isNaN() && !r.value.isInfinite()) {
+                    val txt = if (r.value == Math.floor(r.value) && kotlin.math.abs(r.value) < 1e15) r.value.toLong().toString()
+                    else String.format(java.util.Locale.US, "%.6f", r.value).trimEnd('0').trimEnd('.')
+                    result.add(Suggestion.Extra("calc", "🧮", "= $txt", "Скопіювати результат", txt, 99))
+                }
+            }
+        } catch (_: Throwable) {}
+
+        // Фото й відео за назвою файлу (потрібен дозвіл на медіа)
+        if (q.length >= 3) {
+            try {
+                result.addAll(findMedia(q))
+            } catch (_: Throwable) {}
+        }
 
         // === 5. Макроси, нотатки, збережені розмови, «спитати асистента» ===
         try {
-            com.dynamicai.launcher.macro.MacroStorage(context).get().forEach { m ->
+            val ex = extras()
+            ex.macros.forEach { m ->
                 val phrases = m.trigger.split(',').map { it.trim() }.filter { it.isNotBlank() }
                 val best = (listOf(m.name) + phrases).maxOf { FuzzyMatcher.score(it, q) }
                 if (best >= 60) result.add(Suggestion.Extra("macro", m.icon, m.name, "Макрос · запустити", m.id, best))
             }
-            com.dynamicai.launcher.note.NotesStorage(context).get()
+            ex.notes
                 .filter { it.text.contains(q, ignoreCase = true) }.take(2)
                 .forEach { result.add(Suggestion.Extra("note", "📝", it.text.replace("\n", " ").take(60), "Нотатка", it.id, 50)) }
-            com.dynamicai.launcher.overlay.ChatArchive.init(context)
             val fmt = java.text.SimpleDateFormat("d MMM", java.util.Locale("uk", "UA"))
-            com.dynamicai.launcher.overlay.ChatArchive.sorted()
+            ex.chats
                 .filter { c -> c.title.contains(q, ignoreCase = true) || c.messages.any { it.content.contains(q, ignoreCase = true) } }
                 .take(2)
                 .forEach { result.add(Suggestion.Extra("chat", "💬", c(it.title), "Розмова · ${fmt.format(java.util.Date(it.ts))}", it.id, 45)) }
         } catch (_: Throwable) {}
+        if (q.length >= 2) {
+            val enc = android.net.Uri.encode(query.trim())
+            result.add(Suggestion.Extra("web", "🌐", "Шукати «${query.trim().take(40)}» в Google", "Браузер", "https://www.google.com/search?q=$enc", 9))
+            result.add(Suggestion.Extra("web", "▶️", "Шукати в YouTube", "YouTube у браузері або додатку", "https://www.youtube.com/results?search_query=$enc", 8))
+        }
         if (q.length >= 3) {
             result.add(Suggestion.Extra("ask", "🤖", "Спитати асистента: «${query.trim().take(40)}»", "Відповідь текстом і голосом", query.trim(), 10))
         }
@@ -171,6 +237,34 @@ class SuggestionProvider(private val context: Context) {
     }
 
     private fun c(s: String) = s
+
+    private fun findMedia(q: String): List<Suggestion> {
+        val out = mutableListOf<Suggestion>()
+        val sources = listOf(
+            android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI to "🖼",
+            android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI to "🎞"
+        )
+        for ((uri, icon) in sources) {
+            try {
+                context.contentResolver.query(
+                    uri,
+                    arrayOf(android.provider.MediaStore.MediaColumns._ID, android.provider.MediaStore.MediaColumns.DISPLAY_NAME),
+                    "${android.provider.MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?",
+                    arrayOf("%$q%"),
+                    "${android.provider.MediaStore.MediaColumns.DATE_ADDED} DESC"
+                )?.use { c ->
+                    var n = 0
+                    while (c.moveToNext() && n < 2) {
+                        val id = c.getLong(0)
+                        out.add(Suggestion.Extra("file", icon, c.getString(1) ?: "файл", "Файл · відкрити",
+                            android.content.ContentUris.withAppendedId(uri, id).toString(), 40))
+                        n++
+                    }
+                }
+            } catch (_: Throwable) {}
+        }
+        return out
+    }
 
     private fun contactScore(name: String, q: String): Int {
         val n = name.lowercase().trim()

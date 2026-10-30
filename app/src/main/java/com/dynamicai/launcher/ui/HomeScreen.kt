@@ -28,6 +28,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.ui.text.withStyle
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -887,7 +888,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     onQueryChange = { query = it },
                     onFocusChange = { focused -> if (focused) searchMode = true },
                     onSearch = {
-                        if (query.isNotBlank()) {
+                        val top = suggestions.firstOrNull()
+                        // Enter запускає найкращий збіг (крім контактів — щоб випадково не телефонувати, та «спитати/веб»)
+                        val strong = top != null && top.score >= 75 && top !is Suggestion.Contact &&
+                            !(top is Suggestion.Extra && (top.kind == "ask" || top.kind == "web"))
+                        if (query.isNotBlank() && strong) {
+                            vm.executeSuggestion(top!!)
+                            closeSearch()
+                        } else if (query.isNotBlank()) {
                             if (vm.isCommand(query)) {
                                 submit(query)
                             } else {
@@ -904,6 +912,63 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             }
 
             // Відповідь показує лише ResponseOverlay (картка, зникає сама); постійний синій текст прибрано
+
+            // Порожній пошук: часті додатки та історія запитів
+            if (searchMode && query.isBlank()) {
+                var historyTick by remember { mutableStateOf(0) }
+                val history = remember(historyTick, searchMode) { com.dynamicai.launcher.suggestion.SearchHistory.get(ctx) }
+                val frequent = remember(apps, searchMode) {
+                    com.dynamicai.launcher.suggestion.AppUsage.top(ctx, 6).mapNotNull { pkg -> apps.firstOrNull { it.packageName == pkg } }
+                }
+                if (frequent.isNotEmpty()) {
+                    Text("Часті", color = AppTheme.colors.textSecondary, fontSize = 11.sp,
+                        modifier = Modifier.padding(start = 10.dp, top = 6.dp, bottom = 4.dp))
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                        frequent.forEach { a ->
+                            androidx.compose.foundation.Image(
+                                bitmap = (a.bitmap ?: a.icon.toBitmap(96, 96)).asImageBitmap(),
+                                contentDescription = a.label,
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .iconShape()
+                                    .pointerInput(a.packageName) {
+                                        detectTapGestures(
+                                            onTap = { launchAppWithAnimation(a) },
+                                            onLongPress = { menuApp = a }
+                                        )
+                                    }
+                            )
+                        }
+                    }
+                }
+                if (history.isNotEmpty()) {
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp, bottom = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        history.forEach { h ->
+                            Text(
+                                "🕘 $h", color = AppTheme.colors.textPrimary, fontSize = 13.sp, maxLines = 1,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(AppTheme.colors.textPrimary.copy(alpha = 0.08f))
+                                    .pointerInput(h) { detectTapGestures { query = h } }
+                                    .padding(horizontal = 12.dp, vertical = 7.dp)
+                            )
+                        }
+                        Text(
+                            "✕", color = AppTheme.colors.textSecondary, fontSize = 13.sp,
+                            modifier = Modifier
+                                .pointerInput(Unit) {
+                                    detectTapGestures {
+                                        com.dynamicai.launcher.suggestion.SearchHistory.clear(ctx); historyTick++
+                                    }
+                                }
+                                .padding(horizontal = 10.dp, vertical = 7.dp)
+                        )
+                    }
+                }
+            }
 
             Box(modifier = Modifier.weight(1f)) {
                 androidx.compose.animation.AnimatedVisibility(
@@ -960,7 +1025,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             fontSizeSp = settings.fontSizeSp,
                             showLabel = settings.showLabels,
                             onClick = { launchAppWithAnimation(s.app) },
-                            onLongClick = { menuApp = s.app }
+                            onLongClick = { menuApp = s.app },
+                            highlight = query
                         )
                     }
                 }
@@ -1807,7 +1873,8 @@ fun AppRow(
     fontSizeSp: Int,
     showLabel: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    highlight: String = ""
 ) {
     Row(
         modifier = Modifier
@@ -1823,7 +1890,7 @@ fun AppRow(
                 )
             )
             .pointerInput(app.packageName) {
-                detectTapGestures(onTap = { onClick() })
+                detectTapGestures(onTap = { onClick() }, onLongPress = { onLongClick() })
             }
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -1862,11 +1929,22 @@ fun AppRow(
         }
         if (showLabel) {
             Spacer(Modifier.width(14.dp))
-            Text(
-                app.label,
-                color = if (inDock) AppTheme.colors.accent else AppTheme.colors.textPrimary,
-                fontSize = fontSizeSp.sp
-            )
+            val baseColor = if (inDock) AppTheme.colors.accent else AppTheme.colors.textPrimary
+            val hl = AppTheme.colors.accent
+            val labelText = remember(app.label, highlight, baseColor, hl) {
+                val i = if (highlight.isBlank()) -1 else app.label.indexOf(highlight.trim(), ignoreCase = true)
+                androidx.compose.ui.text.buildAnnotatedString {
+                    if (i < 0) append(app.label)
+                    else {
+                        append(app.label.substring(0, i))
+                        withStyle(androidx.compose.ui.text.SpanStyle(color = hl, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)) {
+                            append(app.label.substring(i, i + highlight.trim().length))
+                        }
+                        append(app.label.substring(i + highlight.trim().length))
+                    }
+                }
+            }
+            Text(labelText, color = baseColor, fontSize = fontSizeSp.sp)
         }
     }
 }

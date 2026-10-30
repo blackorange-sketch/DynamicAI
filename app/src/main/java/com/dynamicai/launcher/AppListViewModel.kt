@@ -410,16 +410,25 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private var queryJob: kotlinx.coroutines.Job? = null
+    private var lastQueryText = ""
+
     fun updateQuery(query: String) {
-        viewModelScope.launch {
+        if (query.isNotBlank()) lastQueryText = query
+        queryJob?.cancel()
+        queryJob = viewModelScope.launch {
+            // Затримка 70 мс при наборі + обчислення поза головним потоком (раніше — на кожен символ у Main)
+            if (query.isNotBlank()) kotlinx.coroutines.delay(70)
             val foldersPkgs = _folders.value.flatMap { it.packageNames }.toSet()
             val focusHidden = com.dynamicai.launcher.macro.FocusModes.hiddenFor(com.dynamicai.launcher.macro.FocusModes.active.value, _apps.value)
             val visibleApps = _apps.value.filter {
                 it.packageName !in _hidden.value && it.packageName !in foldersPkgs && it.packageName !in focusHidden
             }
-            _suggestions.value = suggestionProvider.build(
-                query, visibleApps, _contacts.value, executor.flashlightOn.value
-            )
+            val contactsNow = _contacts.value
+            val flash = executor.flashlightOn.value
+            _suggestions.value = withContext(Dispatchers.Default) {
+                suggestionProvider.build(query, visibleApps, contactsNow, flash)
+            }
         }
     }
 
@@ -431,6 +440,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun launch(pkg: String) {
+        try { com.dynamicai.launcher.suggestion.AppUsage.bump(getApplication(), pkg) } catch (_: Throwable) {}
         repo.launchApp(pkg)
     }
 
@@ -441,6 +451,10 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun executeSuggestion(s: Suggestion) {
+        if (lastQueryText.isNotBlank()) {
+            com.dynamicai.launcher.suggestion.SearchHistory.add(getApplication(), lastQueryText)
+            lastQueryText = ""
+        }
         when (s) {
             is Suggestion.App -> launch(s.app.packageName)
             is Suggestion.Action -> {
@@ -602,6 +616,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun executeCommand(text: String) {
         if (text.isBlank()) return
+        com.dynamicai.launcher.suggestion.SearchHistory.add(getApplication(), text)
         val cmd = parser.parse(text)
 
         // Питання → ChatEngine (LLM + Web Search)

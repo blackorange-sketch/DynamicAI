@@ -903,14 +903,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 )
             }
 
-            if (response.isNotBlank()) {
-                Text(
-                    text = response,
-                    color = AppTheme.colors.accent,
-                    fontSize = 14.sp,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                )
-            }
+            // Відповідь показує лише ResponseOverlay (картка, зникає сама); постійний синій текст прибрано
 
             Box(modifier = Modifier.weight(1f)) {
                 androidx.compose.animation.AnimatedVisibility(

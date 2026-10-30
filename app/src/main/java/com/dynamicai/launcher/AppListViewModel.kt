@@ -512,9 +512,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     fun createFolder(name: String, initialPkgs: List<String>): Folder {
         return try {
             val f = folderStorage.create(name, initialPkgs)
-            val all = folderStorage.get()
-            _folders.value = all
-            _response.value = "Папка '${f.name}' створена · всього папок: ${all.size} · застосунків: ${f.packageNames.size}"
+            _folders.value = folderStorage.get()
             updateQuery("")
             f
         } catch (t: Throwable) {

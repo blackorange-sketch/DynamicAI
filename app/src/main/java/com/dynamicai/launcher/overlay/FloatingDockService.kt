@@ -78,18 +78,7 @@ class FloatingDockService : Service() {
             // Авто-приховування дока, поки відкрита клавіатура
             if (isOpen != keyboardUp) {
                 keyboardUp = isOpen
-                try {
-                    if (::rootLayout.isInitialized) {
-                        val hide = isOpen && settings.overlayHideOnKeyboard
-                        rootLayout.animate().cancel()
-                        if (hide) {
-                            rootLayout.animate().alpha(0f).setDuration(150).withEndAction { rootLayout.visibility = View.GONE }.start()
-                        } else {
-                            rootLayout.visibility = View.VISIBLE
-                            rootLayout.animate().alpha(1f).setDuration(200).start()
-                        }
-                    }
-                } catch (_: Throwable) {}
+                updateDockVisibility()
             }
             if (isOpen && expanded) {
                 expanded = false
@@ -106,6 +95,30 @@ class FloatingDockService : Service() {
         }
     }
     private var receiverRegistered = false
+    private var dockHidden = false
+
+    /** Док ховається, коли відкрита клавіатура або (за бажанням) телефон у ландшафті — відео, ігри. */
+    private fun updateDockVisibility() {
+        try {
+            if (!::rootLayout.isInitialized) return
+            val landscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+            val hide = (keyboardUp && settings.overlayHideOnKeyboard) || (landscape && settings.overlayHideInLandscape)
+            if (hide == dockHidden) return
+            dockHidden = hide
+            rootLayout.animate().cancel()
+            if (hide) {
+                rootLayout.animate().alpha(0f).setDuration(150).withEndAction { rootLayout.visibility = View.GONE }.start()
+            } else {
+                rootLayout.visibility = View.VISIBLE
+                rootLayout.animate().alpha(1f).setDuration(200).start()
+            }
+        } catch (_: Throwable) {}
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        updateDockVisibility()
+    }
 
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "updatedAt") {
@@ -113,6 +126,7 @@ class FloatingDockService : Service() {
                 settings = settingsStorage.load()
                 rebuildContent()
                 applyPosition()
+                updateDockVisibility()
                 windowManager.updateViewLayout(rootLayout, params)
                 log("prefs updated")
             } catch (t: Throwable) {
@@ -142,6 +156,7 @@ class FloatingDockService : Service() {
         startForeground(NOTIF_ID, buildNotification())
             windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
             attachDock()
+            updateDockVisibility()
             log("onCreate done")
 
             scope.launch {

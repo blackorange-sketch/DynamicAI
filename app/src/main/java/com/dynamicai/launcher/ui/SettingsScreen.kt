@@ -446,6 +446,9 @@ fun SettingsScreen(
             SwitchRow("Ховати док при відкритій клавіатурі (потрібна служба доступності)", settings.overlayHideOnKeyboard, Icons.Default.Settings, AppTheme.colors.accentDark) {
                 onSettingsChange(settings.copy(overlayHideOnKeyboard = it))
             }
+            SwitchRow("Ховати док у ландшафті (відео, ігри)", settings.overlayHideInLandscape, Icons.Default.Settings, AppTheme.colors.accentDark) {
+                onSettingsChange(settings.copy(overlayHideInLandscape = it))
+            }
             SizeSliderRow(
                 label = "Довжина риски",
                 value = settings.overlayHandleLengthDp,

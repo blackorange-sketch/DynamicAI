@@ -45,6 +45,7 @@ import androidx.compose.runtime.setValue
 class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     companion object {
+        @Volatile private var dockShownOnce = false
         @Volatile private var sharedLlm: HybridLlmEngine? = null
         @Volatile private var sharedChatEngine: ChatEngine? = null
         @Volatile private var sharedDownloader: ModelDownloader? = null
@@ -128,9 +129,10 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val _response = MutableStateFlow("")
     val response: StateFlow<String> = _response.asStateFlow()
 
-    private val _dockAppeared = MutableStateFlow(false)
+    // Статичний прапорець: активність може перестворюватись системою, але анімація появи — лише один раз за процес
+    private val _dockAppeared = MutableStateFlow(dockShownOnce)
     val dockAppeared: StateFlow<Boolean> = _dockAppeared.asStateFlow()
-    fun markDockAppeared() { _dockAppeared.value = true }
+    fun markDockAppeared() { dockShownOnce = true; _dockAppeared.value = true }
 
     private val _openNotesRequest = MutableStateFlow(false)
     val openNotesRequest: StateFlow<Boolean> = _openNotesRequest.asStateFlow()

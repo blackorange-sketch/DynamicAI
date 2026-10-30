@@ -6,6 +6,20 @@ import android.content.Context
 /** Короткий підсумок активних сповіщень (за додатками) — для голосу, чату та макросів. */
 object NotificationDigest {
 
+    /** Кількість активних сповіщень за пакетами (для бейджів на іконках). */
+    fun counts(ctx: Context): Map<String, Int> {
+        val l = MacroNotificationListener.instance ?: return emptyMap()
+        return try {
+            l.activeNotifications
+                .filter {
+                    it.packageName != ctx.packageName &&
+                        it.notification.flags and Notification.FLAG_ONGOING_EVENT == 0 &&
+                        it.notification.flags and Notification.FLAG_GROUP_SUMMARY == 0
+                }
+                .groupingBy { it.packageName }.eachCount()
+        } catch (_: Throwable) { emptyMap() }
+    }
+
     fun build(ctx: Context): String {
         val l = MacroNotificationListener.instance
             ?: return if (!TriggerPermissions.hasNotificationListener(ctx))

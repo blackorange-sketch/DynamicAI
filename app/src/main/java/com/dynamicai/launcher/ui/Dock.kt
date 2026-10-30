@@ -51,6 +51,7 @@ fun Dock(
     onSwipeUp: () -> Unit,
     onLongClick: (DockItem) -> Unit = {},
     appeared: Boolean = true,
+    badges: Map<String, Int> = emptyMap(),
     modifier: Modifier = Modifier
 ) {
 
@@ -198,6 +199,15 @@ fun Dock(
                                 onTap = { onLaunch(item) },
                                 onLongPress = { onLongClick(item) }
                             )
+                            // Свайп вгору по іконці — швидке меню додатка
+                            .pointerInput(item.id) {
+                                var total = 0f
+                                detectVerticalDragGestures(
+                                    onDragStart = { total = 0f },
+                                    onDragEnd = { if (total < -40f) onLongClick(item) },
+                                    onDragCancel = { total = 0f }
+                                ) { _, dy -> total += dy }
+                            }
                     ) {
                         Icon(
                             bitmap = it.asImageBitmap(),
@@ -205,6 +215,24 @@ fun Dock(
                             tint = Color.Unspecified,
                             modifier = Modifier.size(iconSizeDp.dp).iconShape()
                         )
+                        val n = badges[item.id] ?: 0
+                        if (n > 0) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .defaultMinSize(minWidth = 16.dp, minHeight = 16.dp)
+                                    .clip(CircleShape)
+                                    .background(AppTheme.colors.accent)
+                                    .padding(horizontal = 4.dp)
+                            ) {
+                                androidx.compose.material3.Text(
+                                    if (n > 9) "9+" else n.toString(),
+                                    color = Color.White,
+                                    fontSize = androidx.compose.ui.unit.TextUnit(10f, androidx.compose.ui.unit.TextUnitType.Sp)
+                                )
+                            }
+                        }
                     }
                 }
             }

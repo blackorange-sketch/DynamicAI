@@ -310,6 +310,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         if (apps.isNotEmpty()) vm.markDockAppeared()
     }
 
+    // Бейджі сповіщень на іконках дока (потрібен доступ до сповіщень)
+    var dockBadges by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val m = try { com.dynamicai.launcher.macro.NotificationDigest.counts(ctx) } catch (_: Throwable) { emptyMap() }
+            if (m != dockBadges) dockBadges = m
+            kotlinx.coroutines.delay(4000)
+        }
+    }
+
     LaunchedEffect(Unit) {
         android.util.Log.e("HS_LIFE", "LaunchedEffect(Unit) fired — composition restarted or first launch")
         vm.startWeatherAutoRefresh { isScreenOn(ctx) }
@@ -1070,6 +1080,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 },
                 showRecentButton = settings.showRecentButton,
                 appeared = dockAppeared,
+                badges = dockBadges,
                 onSwipeUp = {
                     if (settings.showRecentButton) {
                         // Recent увімкнено — показуємо його

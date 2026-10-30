@@ -139,3 +139,73 @@ fun AppMenuPopup(
         }
     }
 }
+
+
+class MenuTile(val icon: String, val label: String, val action: () -> Unit)
+class MenuItemSpec(val label: String, val action: () -> Unit)
+
+/** Меню довгого натискання на порожньому місці: плитки швидких розділів + текстові дії. */
+@Composable
+fun LauncherMenuPopup(
+    anchor: Offset,
+    onDismiss: () -> Unit,
+    tiles: List<MenuTile>,
+    items: List<MenuItemSpec>
+) {
+    val gap = with(androidx.compose.ui.platform.LocalDensity.current) { 8.dp.roundToPx() }
+    Popup(
+        popupPositionProvider = remember(anchor) { AnchorPositionProvider(anchor, gap) },
+        onDismissRequest = onDismiss,
+        properties = PopupProperties(focusable = true)
+    ) {
+        Column(
+            Modifier
+                .popIn()
+                .width(300.dp)
+                .shadow(18.dp, RoundedCornerShape(26.dp))
+                .clip(RoundedCornerShape(26.dp))
+                .background(AppTheme.colors.surface)
+                .border(0.5.dp, AppTheme.colors.glassBorder, RoundedCornerShape(26.dp))
+                .padding(14.dp)
+        ) {
+            tiles.chunked(3).forEachIndexed { r, row ->
+                Row(
+                    Modifier.fillMaxWidth().padding(top = if (r == 0) 0.dp else 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    row.forEach { t ->
+                        Column(
+                            Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(AppTheme.colors.textPrimary.copy(alpha = 0.07f))
+                                .pressable(scaleDown = 0.93f, haptic = true) { onDismiss(); t.action() }
+                                .padding(vertical = 12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(t.icon, fontSize = 22.sp)
+                            Spacer(Modifier.height(4.dp))
+                            Text(t.label, color = AppTheme.colors.textPrimary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+            if (items.isNotEmpty()) {
+                Box(Modifier.fillMaxWidth().padding(vertical = 10.dp).height(0.5.dp).background(AppTheme.colors.glassBorder))
+                items.forEach { it0 ->
+                    Text(
+                        it0.label,
+                        color = AppTheme.colors.textPrimary,
+                        fontSize = 14.sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onDismiss(); it0.action() }
+                            .padding(horizontal = 6.dp, vertical = 11.dp)
+                    )
+                }
+            }
+        }
+    }
+}

@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -42,11 +43,17 @@ fun Modifier.pressableWithBounds(
         label = "pressScale"
     )
 
+    val dim by animateFloatAsState(
+        targetValue = if (pressed) 0.82f else 1f,
+        animationSpec = androidx.compose.animation.core.tween(90),
+        label = "pressDim"
+    )
     this
         .onGloballyPositioned { coords ->
             bounds = coords.boundsInRoot()
         }
         .scale(scale)
+        .alpha(dim)
         .pointerInput(Unit) {
             detectTapGestures(
                 onPress = {

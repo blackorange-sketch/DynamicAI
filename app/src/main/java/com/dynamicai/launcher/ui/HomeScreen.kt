@@ -316,6 +316,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         if (apps.isNotEmpty()) vm.markDockAppeared()
     }
 
+    // Після першого показу вхідна анімація більше не програється
+    LaunchedEffect(Unit) { kotlinx.coroutines.delay(1200); HomeAnim.played = true }
+
     // Нічний режим «лише годинник» (00:00–06:00)
     var isNightNow by remember { mutableStateOf(false) }
     LaunchedWhileStarted {
@@ -719,6 +722,15 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                // Поки відкрита шторка — головний екран не реагує на дотики (раніше свайпи/тапи проходили крізь неї)
+                .pointerInput(drawerOpen) {
+                    if (drawerOpen) awaitPointerEventScope {
+                        while (true) {
+                            val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                            e.changes.forEach { it.consume() }
+                        }
+                    }
+                }
                 .graphicsLayer {
                     alpha = homeAlpha
                     scaleX = homeScale
@@ -739,6 +751,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     
                     androidx.compose.foundation.pager.HorizontalPager(
                         state = pagerState,
+                        // Перемикання сторінок лише на головному екрані: не у шторці, папці чи пошуку
+                        userScrollEnabled = !drawerOpen && openFolder == null && !searchMode,
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(3f)
@@ -834,9 +848,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                 val s = if (w.group.isNotBlank() && w.size != "full") slots.firstOrNull { it.first().group == w.group } else null
                                 if (s != null) s.add(w) else slots.add(mutableListOf(w))
                             }
-                            slots.forEach { s ->
-                                if (s.size == 1) renderOne(s[0])
-                                else com.dynamicai.launcher.widget.WidgetStack(s) { renderOne(it) }
+                            slots.forEachIndexed { i, s ->
+                                androidx.compose.foundation.layout.Box(Modifier.appearStagger(i)) {
+                                    if (s.size == 1) renderOne(s[0])
+                                    else com.dynamicai.launcher.widget.WidgetStack(s) { renderOne(it) }
+                                }
                             }
                         }
                     }
@@ -872,10 +888,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             androidx.compose.animation.AnimatedVisibility(
                 visible = showSearchField,
                 enter = androidx.compose.animation.expandHorizontally(
-                    animationSpec = androidx.compose.animation.core.tween(260),
+                    animationSpec = androidx.compose.animation.core.tween(320, easing = androidx.compose.animation.core.FastOutSlowInEasing),
                     expandFrom = Alignment.Start
                 ) + androidx.compose.animation.fadeIn(
-                    animationSpec = androidx.compose.animation.core.tween(220, delayMillis = 60)
+                    animationSpec = androidx.compose.animation.core.tween(240, delayMillis = 40)
+                ) + androidx.compose.animation.scaleIn(
+                    initialScale = 0.92f,
+                    animationSpec = androidx.compose.animation.core.tween(320, easing = androidx.compose.animation.core.FastOutSlowInEasing)
                 ),
                 exit = androidx.compose.animation.shrinkHorizontally(
                     animationSpec = androidx.compose.animation.core.tween(200)
@@ -973,8 +992,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             Box(modifier = Modifier.weight(1f)) {
                 androidx.compose.animation.AnimatedVisibility(
                     visible = listVisible || searchMode || query.isNotBlank(),
-                    enter = fadeIn(),
-                    exit = fadeOut(),
+                    enter = fadeIn(androidx.compose.animation.core.tween(180)) + androidx.compose.animation.slideInVertically(
+                        androidx.compose.animation.core.spring(dampingRatio = 0.85f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow)
+                    ) { it / 12 },
+                    exit = fadeOut(androidx.compose.animation.core.tween(120)),
                     modifier = Modifier.fillMaxSize()
                 ) {
             LazyColumn(
@@ -1001,6 +1022,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     }
                 }
                 items(suggestions, key = { it.stableKey() }) { s ->
+                  androidx.compose.foundation.layout.Box(Modifier.animateItem()) {
                     when (s) {
                         is Suggestion.Action -> SuggestionActionRow(s) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -1029,6 +1051,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             highlight = query
                         )
                     }
+                  }
                 }
             }
                 }
@@ -1418,46 +1441,30 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
         // ==== Головне меню (long press на порожньому місці) ====
         if (showMainMenu) {
-            AlertDialog(
-                onDismissRequest = { showMainMenu = false },
-                title = { Text("Меню", color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
-                text = {
-                    Column {
-                        MenuItem("Створити папку") {
-                            newFolderName = ""
-                            newFolderSelection = emptySet()
-                            showMainMenu = false
-                            showNewFolderDialog = true
-                        }
-                        MenuItem("Додати віджет") {
-                            showMainMenu = false
-                            showAddWidgetDialog = true
-                        }
-                        if (pageCount > 1) {
-                            MenuItem("Сторінки (${currentPage + 1}/${pageCount})") {
-                                showMainMenu = false
-                                currentPage = (currentPage + 1) % pageCount
-                            }
-                        }
-                        MenuItem("Оновити контакти") {
-                            vm.loadContacts()
-                            showMainMenu = false
-                        }
-                        MenuItem("Очистити історію команд") {
-                            vm.clearHistory()
-                            showMainMenu = false
-                        }
-                        MenuItem("Налаштування") {
-                            showMainMenu = false
-                            showSettings = true
-                        }
-                    }
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { showMainMenu = false }) { Text("Скасувати", color = AppTheme.colors.textPrimary) }
-                },
-                containerColor = AppTheme.colors.surface
+            LauncherMenuPopup(
+                anchor = lastTouch,
+                onDismiss = { showMainMenu = false },
+                tiles = listOf(
+                    MenuTile("🧩", "Віджети") { showAddWidgetDialog = true },
+                    MenuTile("🖼", "Шпалери") { showWallpaper = true },
+                    MenuTile("⚡", "Макроси") { showMacroManager = true },
+                    MenuTile("📝", "Нотатки") { showNotesScreen = true },
+                    MenuTile("⚓", "Док") { showDockEditor = true },
+                    MenuTile("⚙", "Налаштування") { showSettings = true }
+                ),
+                items = buildList {
+                    add(MenuItemSpec("Створити папку") {
+                        newFolderName = ""
+                        newFolderSelection = emptySet()
+                        showNewFolderDialog = true
+                    })
+                    add(MenuItemSpec("Керування папками") { showFolderManager = true })
+                    if (pageCount > 1) add(MenuItemSpec("Наступна сторінка (${currentPage + 1}/$pageCount)") {
+                        currentPage = (currentPage + 1) % pageCount
+                    })
+                    add(MenuItemSpec("Оновити контакти") { vm.loadContacts() })
+                    add(MenuItemSpec("Очистити історію команд") { vm.clearHistory() })
+                }
             )
         }
 
@@ -1550,6 +1557,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         openFolder?.let { folder ->
             val folderApps = apps.filter { it.packageName in folder.packageNames }
             AlertDialog(
+                modifier = Modifier.popIn(),
                 onDismissRequest = { openFolder = null },
                 title = { Text(folder.name, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
                 text = {
@@ -1889,9 +1897,7 @@ fun AppRow(
                     )
                 )
             )
-            .pointerInput(app.packageName) {
-                detectTapGestures(onTap = { onClick() }, onLongPress = { onLongClick() })
-            }
+            .pressable(scaleDown = 0.97f, haptic = false, onLongPress = onLongClick) { onClick() }
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -12,6 +12,7 @@ class DynamicApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        MemLog.note(this, "APP_START")
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
             override fun onActivityResumed(activity: Activity) {
                 attachKeyboardListener(activity)
@@ -24,11 +25,20 @@ class DynamicApp : Application() {
                     .edit().putBoolean("keyboard_open", false).apply()
             }
 
-            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
+                MemLog.note(this@DynamicApp, "CREATE ${activity.javaClass.simpleName} state=${savedInstanceState != null}")
+            }
             override fun onActivityStarted(activity: Activity) {}
-            override fun onActivityStopped(activity: Activity) {}
+            override fun onActivityStopped(activity: Activity) {
+                MemLog.note(this@DynamicApp, "STOP ${activity.javaClass.simpleName}")
+            }
             override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
-            override fun onActivityDestroyed(activity: Activity) {}
+            override fun onActivityDestroyed(activity: Activity) {
+                MemLog.note(
+                    this@DynamicApp,
+                    "DESTROY ${activity.javaClass.simpleName} config=${activity.isChangingConfigurations} finishing=${activity.isFinishing}"
+                )
+            }
         })
     }
 
@@ -55,5 +65,10 @@ class DynamicApp : Application() {
                 activity.window.decorView.viewTreeObserver.removeOnGlobalLayoutListener(it)
             } catch (_: Throwable) {}
         }
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        MemLog.note(this, "TRIM level=$level")
     }
 }

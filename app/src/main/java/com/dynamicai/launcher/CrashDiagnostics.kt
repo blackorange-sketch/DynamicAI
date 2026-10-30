@@ -16,6 +16,7 @@ object CrashDiagnostics {
 
     fun collect(ctx: Context): String {
         val sb = StringBuilder()
+        sb.append(MemLog.report(ctx))
         val fmt = SimpleDateFormat("MM-dd HH:mm:ss", Locale.US)
         sb.appendLine("=== Причини завершення процесу (останні) ===")
         try {

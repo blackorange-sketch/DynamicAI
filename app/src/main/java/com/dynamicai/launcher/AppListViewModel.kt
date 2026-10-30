@@ -32,6 +32,7 @@ import com.dynamicai.launcher.suggestion.ContactRepository
 import com.dynamicai.launcher.suggestion.ContactAction
 import com.dynamicai.launcher.suggestion.Suggestion
 import com.dynamicai.launcher.suggestion.SuggestionProvider
+import com.dynamicai.launcher.suggestion.stableKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.withLock
@@ -431,6 +432,23 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             val flash = executor.flashlightOn.value
             _suggestions.value = withContext(Dispatchers.Default) {
                 suggestionProvider.build(query, visibleApps, contactsNow, flash)
+            }
+            // Підказки пошуку з інтернету — окремо й пізніше, щоб не гальмувати список (лише якщо ввімкнено)
+            val q = query.trim()
+            if (q.length >= 3 && _settings.value.webSuggest) {
+                kotlinx.coroutines.delay(250)
+                val web = withContext(Dispatchers.IO) {
+                    com.dynamicai.launcher.suggestion.BrowserBridge.webSuggestions(q)
+                }
+                if (web.isNotEmpty()) {
+                    val extra = web.map {
+                        Suggestion.Extra("web", "🔎", it, "Підказка пошуку",
+                            com.dynamicai.launcher.suggestion.BrowserBridge.searchUrl(it), 11)
+                    }
+                    _suggestions.value = (_suggestions.value + extra)
+                        .distinctBy { it.stableKey() }
+                        .sortedByDescending { it.score }
+                }
             }
         }
     }

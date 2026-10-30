@@ -231,6 +231,22 @@ class SuggestionProvider(private val context: Context) {
             result.add(Suggestion.Extra("web", "🌐", "Шукати «${query.trim().take(40)}» в Google", "Браузер", "https://www.google.com/search?q=$enc", 9))
             result.add(Suggestion.Extra("web", "▶️", "Шукати в YouTube", "YouTube у браузері або додатку", "https://www.youtube.com/results?search_query=$enc", 8))
         }
+        if (q.length >= 2) {
+            try {
+                if (com.dynamicai.launcher.data.SettingsStorage(context).load().browserSuggest) {
+                    BrowserBridge.pages(context, query).forEach { p ->
+                        val host = android.net.Uri.parse(p.url).host ?: p.url
+                        val bookmark = p.kind == "bookmark"
+                        result.add(Suggestion.Extra(
+                            "web", if (bookmark) "🔖" else "🕘",
+                            p.title.ifBlank { host }.take(60),
+                            (if (bookmark) "Закладка · " else "Історія · ") + host,
+                            p.url, if (bookmark) 44 else 40
+                        ))
+                    }
+                }
+            } catch (_: Throwable) {}
+        }
         if (q.length >= 3) {
             result.add(Suggestion.Extra("ask", "🤖", "Спитати асистента: «${query.trim().take(40)}»", "Відповідь текстом і голосом", query.trim(), 10))
         }

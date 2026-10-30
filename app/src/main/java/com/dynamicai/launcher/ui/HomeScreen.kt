@@ -1957,6 +1957,7 @@ fun AppRow(
 
 private fun openGoogleSearch(ctx: android.content.Context, query: String) {
     val url = "https://www.google.com/search?q=" + android.net.Uri.encode(query)
+    if (com.dynamicai.launcher.suggestion.BrowserBridge.open(ctx, url)) return
     val viewIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).apply {
         addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
     }

@@ -147,6 +147,11 @@ fun SettingsScreen(
         var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
         var modelFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("all") }
         LaunchedEffect(Unit) { installedApps = AppRepository(ctx).loadCached() }
+        val pagesPermLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            if (!granted) android.widget.Toast.makeText(ctx, "Без дозволу закладки браузера не показуються", android.widget.Toast.LENGTH_LONG).show()
+        }
 
         if (initialCategory == null || cat == "tools") {
         GlassSectionHeader("Застосунки за замовчуванням")
@@ -156,6 +161,19 @@ fun SettingsScreen(
             }
             AppPickerRow("Браузер", settings.defaultBrowser, installedApps, Icons.Default.Search, AppTheme.colors.accentDark) {
                 onSettingsChange(settings.copy(defaultBrowser = it))
+            }
+            SwitchRow("Підказки пошуку з інтернету", settings.webSuggest, Icons.Default.Search, AppTheme.colors.accentDark) {
+                onSettingsChange(settings.copy(webSuggest = it))
+            }
+            SwitchRow("Закладки й історія OperaFast", settings.browserSuggest, Icons.Default.Search, AppTheme.colors.accentDark) { on ->
+                if (on) {
+                    if (!com.dynamicai.launcher.suggestion.BrowserBridge.installed(ctx)) {
+                        android.widget.Toast.makeText(ctx, "OperaFast не встановлено", android.widget.Toast.LENGTH_LONG).show()
+                    } else if (!com.dynamicai.launcher.suggestion.BrowserBridge.hasAccess(ctx)) {
+                        pagesPermLauncher.launch(com.dynamicai.launcher.suggestion.BrowserBridge.PERM)
+                    }
+                }
+                onSettingsChange(settings.copy(browserSuggest = on))
             }
             AppPickerRow("Телефон", settings.defaultDialer, installedApps, Icons.Default.Call, AppTheme.colors.success) {
                 onSettingsChange(settings.copy(defaultDialer = it))

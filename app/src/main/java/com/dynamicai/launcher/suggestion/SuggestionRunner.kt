@@ -26,9 +26,13 @@ object SuggestionRunner {
                 cm.setPrimaryClip(android.content.ClipData.newPlainText("result", s.payload))
                 android.widget.Toast.makeText(app, "Скопійовано: ${s.payload}", android.widget.Toast.LENGTH_SHORT).show()
             }
-            "web" -> try {
-                app.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(s.payload)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            } catch (_: Throwable) {}
+            "web" -> {
+                // YouTube відкриваємо звичайним шляхом (щоб спрацював застосунок), решту — у вибраному браузері
+                val toYoutube = s.payload.contains("youtube.com")
+                if (toYoutube || !BrowserBridge.open(app, s.payload)) try {
+                    app.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(s.payload)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (_: Throwable) {}
+            }
             "file" -> try {
                 val uri = android.net.Uri.parse(s.payload)
                 val mime = app.contentResolver.getType(uri) ?: "*/*"

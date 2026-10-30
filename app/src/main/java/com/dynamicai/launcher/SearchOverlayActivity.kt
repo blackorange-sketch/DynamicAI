@@ -201,7 +201,24 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
     val allApps = remember(apps) {
         apps.filter { it.packageName !in hiddenNow }.sortedBy { it.label.lowercase() }
     }
-    val rows: List<Suggestion> = if (query.isBlank()) allApps.map { Suggestion.App(it, 0) } else suggestions
+    // Підказки пошуку з інтернету (лише якщо ввімкнено в налаштуваннях)
+    var webSugg by remember { mutableStateOf<List<Suggestion>>(emptyList()) }
+    LaunchedEffect(query) {
+        webSugg = emptyList()
+        val q = query.trim()
+        val on = try { com.dynamicai.launcher.data.SettingsStorage(ctx).load().webSuggest } catch (_: Throwable) { false }
+        if (!on || q.length < 3) return@LaunchedEffect
+        delay(250)
+        val web = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.dynamicai.launcher.suggestion.BrowserBridge.webSuggestions(q)
+        }
+        webSugg = web.map {
+            Suggestion.Extra("web", "🔎", it, "Підказка пошуку",
+                com.dynamicai.launcher.suggestion.BrowserBridge.searchUrl(it), 11)
+        }
+    }
+    val rows: List<Suggestion> = if (query.isBlank()) allApps.map { Suggestion.App(it, 0) }
+        else (suggestions + webSugg).distinctBy { it.stableKey() }.sortedByDescending { it.score }
 
     androidx.compose.runtime.CompositionLocalProvider(
         com.dynamicai.launcher.ui.LocalIconShape provides (settings?.iconShape ?: "original")

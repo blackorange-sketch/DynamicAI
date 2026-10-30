@@ -51,6 +51,8 @@ data class LauncherSettings(
     val defaultEmail: String = "",
     val defaultMaps: String = "",
     val defaultCamera: String = "",
+    val webSuggest: Boolean = false,      // підказки пошуку з інтернету (запит йде до Google)
+    val browserSuggest: Boolean = false,  // закладки й історія OperaFast у пошуку
     val appTheme: String = "glass_dark", // "glass_dark" | "glass_light"
     // LiteRT GPU (експериментальні): точність активацій, speculative decoding, окремий кеш
     val litertActivation: String = "default",  // "default" | "float32" | "float16"
@@ -128,6 +130,8 @@ class SettingsStorage(context: Context) {
         defaultEmail = prefs.getString("defaultEmail", "") ?: "",
         defaultMaps = prefs.getString("defaultMaps", "") ?: "",
         defaultCamera = prefs.getString("defaultCamera", "") ?: "",
+        webSuggest = prefs.getBoolean("webSuggest", false),
+        browserSuggest = prefs.getBoolean("browserSuggest", false),
             appTheme = prefs.getString("appTheme", "glass_dark") ?: "glass_dark",
             litertActivation = prefs.getString("litertActivation", "default") ?: "default",
             litertMtp = prefs.getString("litertMtp", "default") ?: "default",
@@ -201,6 +205,8 @@ class SettingsStorage(context: Context) {
             .putString("defaultEmail", s.defaultEmail)
             .putString("defaultMaps", s.defaultMaps)
             .putString("defaultCamera", s.defaultCamera)
+            .putBoolean("webSuggest", s.webSuggest)
+            .putBoolean("browserSuggest", s.browserSuggest)
             .putString("appTheme", s.appTheme)
             .putString("litertActivation", s.litertActivation)
             .putString("litertMtp", s.litertMtp)

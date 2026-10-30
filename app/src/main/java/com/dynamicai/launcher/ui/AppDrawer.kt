@@ -290,7 +290,7 @@ private fun AppGridItem(
             Icon(
                 bitmap = app.bitmap!!.asImageBitmap(),
                 contentDescription = app.label,
-                modifier = Modifier.size(iconSizeDp.dp),
+                modifier = Modifier.size(iconSizeDp.dp).iconShape(),
                 tint = Color.Unspecified
             )
         }

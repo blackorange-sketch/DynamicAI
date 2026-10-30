@@ -447,12 +447,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     val showSearchField = settings.showSearchBar || searchActive
 
     if (showWeatherDetail) {
-        WeatherDetailScreen(
-            state = weather,
-            cityName = settings.cityName,
-            backgroundAlphaPercent = settings.backgroundAlphaPercent,
-            onClose = { showWeatherDetail = false }
-        )
+        ScreenEnter {
+            WeatherDetailScreen(
+                state = weather,
+                cityName = settings.cityName,
+                backgroundAlphaPercent = settings.backgroundAlphaPercent,
+                onClose = { showWeatherDetail = false }
+            )
+        }
         return@DynamicAITheme
     }
 
@@ -469,16 +471,18 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
 
     if (showNotesScreen) {
-        NotesScreen(onClose = { showNotesScreen = false })
+        ScreenEnter { NotesScreen(onClose = { showNotesScreen = false }) }
         return@DynamicAITheme
     }
 
     if (showMacroManager) {
-        com.dynamicai.launcher.macro.MacroScreen(
-            onClose = { showMacroManager = false },
-            carBtName = settings.carBtName,
-            onCarChange = { vm.updateSettings(settings.copy(carBtName = it)) }
-        )
+        ScreenEnter {
+            com.dynamicai.launcher.macro.MacroScreen(
+                onClose = { showMacroManager = false },
+                carBtName = settings.carBtName,
+                onCarChange = { vm.updateSettings(settings.copy(carBtName = it)) }
+            )
+        }
         return@DynamicAITheme
     }
 
@@ -680,7 +684,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 .statusBarsPadding()
                 .padding(start = 16.dp, end = 24.dp)
         ) {
-            Spacer(Modifier.height(8.dp))
+            // Режим однієї руки: весь вміст зсунуто вниз, ближче до великого пальця
+            Spacer(Modifier.height(if (settings.oneHandMode) (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.2f).dp else 8.dp))
 
             if (!searchActive) {
                 if (!listVisible) {
@@ -1792,7 +1797,7 @@ fun AppRow(
             Icon(
                 bitmap = (app.bitmap ?: app.icon.toBitmap(96, 96)).asImageBitmap(),
                 contentDescription = app.label,
-                modifier = Modifier.size(iconSizeDp.dp),
+                modifier = Modifier.size(iconSizeDp.dp).iconShape(),
                 tint = Color.Unspecified
             )
         }

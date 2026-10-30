@@ -564,6 +564,31 @@ fun SettingsScreen(
         if (initialCategory == null || cat == "system") {
         GlassSectionHeader("Bluetooth")
         BluetoothTestRow()
+        GlassSectionHeader("🎨 Вигляд лаунчера")
+        GlassCard {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                SwitchRow("Жива аврора на фоні (більше споживає батарею)", settings.liveAurora, Icons.Default.Star, AppTheme.colors.accent) {
+                    onSettingsChange(settings.copy(liveAurora = it))
+                }
+                SwitchRow("Режим однієї руки (вміст нижче)", settings.oneHandMode, Icons.Default.Settings, AppTheme.colors.success) {
+                    onSettingsChange(settings.copy(oneHandMode = it))
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("Форма іконок додатків", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("Оригінал" to "original", "Коло" to "circle", "Сквірк" to "squircle", "Квадрат" to "square").forEach { (label, id) ->
+                        LlmBackendChip(label, id, settings.iconShape) { onSettingsChange(settings.copy(iconShape = it)) }
+                    }
+                }
+            }
+        }
+        GlassSectionHeader("💾 Резервна копія")
+        GlassCard {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                BackupSettingsBlock()
+            }
+        }
         GlassSectionHeader("👆 Жести")
         GlassCard {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -1410,6 +1435,63 @@ private fun GestureRow(title: String, value: String, onPick: (String) -> Unit) {
             },
             confirmButton = {},
             dismissButton = { TextButton(onClick = { showMacros = false }) { Text("Закрити", color = AppTheme.colors.textSecondary) } }
+        )
+    }
+}
+
+
+/** Експорт/імпорт налаштувань, макросів, нотаток, віджетів і розмов одним файлом. */
+@Composable
+private fun BackupSettingsBlock() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var status by remember { mutableStateOf("") }
+    var askRestart by remember { mutableStateOf(false) }
+    val exportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) status = try {
+            ctx.contentResolver.openOutputStream(uri)?.use { it.write(com.dynamicai.launcher.util.BackupManager.export(ctx).toByteArray(Charsets.UTF_8)) }
+            "✓ Копію збережено"
+        } catch (t: Throwable) { "Помилка збереження: ${t.message}" }
+    }
+    val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val text = ctx.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } ?: ""
+                val n = com.dynamicai.launcher.util.BackupManager.import(ctx, text)
+                status = "✓ Відновлено розділів: $n"
+                askRestart = true
+            } catch (t: Throwable) { status = "Помилка імпорту: ${t.message}" }
+        }
+    }
+    Text(
+        "Зберігає налаштування, макроси, нотатки, віджети, папки, док і історію розмов в один файл. Файл містить і токен пилососа — не діліться ним.",
+        color = AppTheme.colors.textSecondary, fontSize = 11.sp
+    )
+    Spacer(Modifier.height(6.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TextButton(onClick = {
+            exportLauncher.launch("dynamicai-backup-" + java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US).format(java.util.Date()) + ".json")
+        }) { Text("Експортувати", color = AppTheme.colors.successLight) }
+        TextButton(onClick = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }) {
+            Text("Імпортувати", color = AppTheme.colors.accent)
+        }
+    }
+    if (status.isNotBlank()) Text(status, color = AppTheme.colors.textPrimary, fontSize = 12.sp)
+    if (askRestart) {
+        AlertDialog(
+            onDismissRequest = { askRestart = false },
+            containerColor = AppTheme.colors.surface,
+            title = { Text("Копію відновлено", color = AppTheme.colors.textPrimary) },
+            text = { Text("Щоб застосувати зміни, лаунчер потрібно перезапустити. Він запуститься знову автоматично.", color = AppTheme.colors.textSecondary) },
+            confirmButton = {
+                TextButton(onClick = { android.os.Process.killProcess(android.os.Process.myPid()) }) {
+                    Text("Перезапустити", color = AppTheme.colors.accent)
+                }
+            },
+            dismissButton = { TextButton(onClick = { askRestart = false }) { Text("Пізніше", color = AppTheme.colors.textSecondary) } }
         )
     }
 }

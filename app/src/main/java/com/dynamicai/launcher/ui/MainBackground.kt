@@ -32,6 +32,14 @@ fun MainBackground(settings: LauncherSettings) {
         } else null
     }
 
+    // Жива аврора поверх шпалер (за бажанням у налаштуваннях)
+    if (settings.liveAurora) {
+        com.dynamicai.launcher.AuroraBackground(
+            voiceState = com.dynamicai.launcher.VoiceState.IDLE,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+
     // Малюємо ТІЛЬКИ якщо є кастомне фото.
     // Якщо немає — нічого не малюємо, і системні шпалери просвічують крізь прозорий Activity.
     if (customBg != null) {

@@ -149,7 +149,11 @@ class MainActivity : ComponentActivity() {
                 androidx.compose.material3.Surface(color = dynamicBg, modifier = Modifier.fillMaxSize()) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         MainBackground(settings)
-                        HomeScreen(vm = vm, hubEvent = hubEvent.value)
+                        androidx.compose.runtime.CompositionLocalProvider(
+                            com.dynamicai.launcher.ui.LocalIconShape provides settings.iconShape
+                        ) {
+                            HomeScreen(vm = vm, hubEvent = hubEvent.value)
+                        }
                     }
                 }
             }

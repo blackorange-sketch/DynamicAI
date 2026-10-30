@@ -51,6 +51,9 @@ data class LauncherSettings(
     val litertMtp: String = "default",         // "default" | "on" | "off"
     val litertSeparateCache: Boolean = false,
     val maxResponseTokens: Int = 256,          // ліміт довжини відповіді (MNN: токени; усі: обрізання за реченням)
+    val liveAurora: Boolean = false,           // жива аврора на фоні головного екрана
+    val oneHandMode: Boolean = false,          // вміст головного екрана зсунуто вниз
+    val iconShape: String = "original",        // "original" | "circle" | "squircle" | "square"
     val gestureDoubleTap: String = "none",      // "none" | "notifications" | "voice" | "lock" | "macro:<id>"
     val gestureSwipeDown: String = "notifications",
     val vacuumIp: String = "",
@@ -119,6 +122,9 @@ class SettingsStorage(context: Context) {
             litertSeparateCache = prefs.getBoolean("litertSeparateCache", false),
             maxResponseTokens = prefs.getInt("maxResponseTokens", 256),
             carBtName = prefs.getString("carBtName", "") ?: "",
+            liveAurora = prefs.getBoolean("liveAurora", false),
+            oneHandMode = prefs.getBoolean("oneHandMode", false),
+            iconShape = prefs.getString("iconShape", "original") ?: "original",
             gestureDoubleTap = prefs.getString("gestureDoubleTap", "none") ?: "none",
             gestureSwipeDown = prefs.getString("gestureSwipeDown", "notifications") ?: "notifications",
             vacuumIp = prefs.getString("vacuumIp", "") ?: "",
@@ -183,6 +189,9 @@ class SettingsStorage(context: Context) {
             .putBoolean("litertSeparateCache", s.litertSeparateCache)
             .putInt("maxResponseTokens", s.maxResponseTokens)
             .putString("carBtName", s.carBtName)
+            .putBoolean("liveAurora", s.liveAurora)
+            .putBoolean("oneHandMode", s.oneHandMode)
+            .putString("iconShape", s.iconShape)
             .putString("gestureDoubleTap", s.gestureDoubleTap)
             .putString("gestureSwipeDown", s.gestureSwipeDown)
             .putString("vacuumIp", s.vacuumIp)

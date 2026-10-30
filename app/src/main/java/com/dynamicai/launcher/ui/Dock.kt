@@ -203,7 +203,7 @@ fun Dock(
                             bitmap = it.asImageBitmap(),
                             contentDescription = item.label,
                             tint = Color.Unspecified,
-                            modifier = Modifier.size(iconSizeDp.dp)
+                            modifier = Modifier.size(iconSizeDp.dp).iconShape()
                         )
                     }
                 }

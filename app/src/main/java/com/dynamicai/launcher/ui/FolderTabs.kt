@@ -119,7 +119,7 @@ fun FolderTabs(
                             androidx.compose.material3.Icon(
                                 bitmap = app.bitmap!!.asImageBitmap(),
                                 contentDescription = app.label,
-                                modifier = Modifier.size(iconSizeDp.dp),
+                                modifier = Modifier.size(iconSizeDp.dp).iconShape(),
                                 tint = Color.Unspecified
                             )
                         }

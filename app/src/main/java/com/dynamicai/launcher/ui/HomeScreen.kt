@@ -1002,10 +1002,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             // Набраний запит: додатки — квадратні плитки, решта результатів — рядки на всю ширину
             androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
                 state = searchGridState,
-                columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(4),
+                columns = gridCellsForIcons(settings.menuIconSizeDp),
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 8.dp, bottom = if (dockPkgs.isNotEmpty()) 110.dp else 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(LocalGridGapH.current.dp),
+                horizontalArrangement = gridGapH(),
                 verticalArrangement = Arrangement.spacedBy(LocalGridGapV.current.dp)
             ) {
                 if (suggestions.isEmpty()) {

@@ -312,10 +312,10 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
 
             if (query.isNotBlank()) {
             androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(4),
+                columns = com.dynamicai.launcher.ui.gridCellsForIcons(settings?.menuIconSizeDp ?: 56),
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(com.dynamicai.launcher.ui.LocalGridGapH.current.dp),
+                horizontalArrangement = com.dynamicai.launcher.ui.gridGapH(),
                 verticalArrangement = Arrangement.spacedBy(com.dynamicai.launcher.ui.LocalGridGapV.current.dp)
             ) {
                 if (rows.isEmpty()) {

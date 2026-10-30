@@ -2,7 +2,9 @@ package com.dynamicai.launcher.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,6 +23,17 @@ val LocalIconPlatePad = compositionLocalOf { 6 }
 val LocalGridGapH = compositionLocalOf { 4 }
 val LocalGridGapV = compositionLocalOf { 12 }
 val LocalListGap = compositionLocalOf { 6 }
+
+/**
+ * Сітка з клітинками фіксованої ширини: відступ між іконками рівно такий, як у налаштуваннях
+ * (з Adaptive зайве місце розподілялось між клітинками, і відступ «не регулювався»).
+ */
+@Composable
+fun gridCellsForIcons(iconSizeDp: Int): GridCells =
+    GridCells.FixedSize((iconSizeDp + LocalIconPlatePad.current).coerceAtLeast(72).dp)
+
+@Composable
+fun gridGapH(): Arrangement.Horizontal = Arrangement.spacedBy(LocalGridGapH.current.dp, Alignment.CenterHorizontally)
 
 /** Передає налаштування вигляду іконок (форма, підкладка, відступи) усьому дереву. */
 @Composable

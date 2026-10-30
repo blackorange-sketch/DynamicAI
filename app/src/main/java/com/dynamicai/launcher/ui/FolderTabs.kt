@@ -64,9 +64,7 @@ fun FolderTabs(
                 shrinkTowards = Alignment.Bottom
             )
         ) {
-            val cols = remember(iconSizeDp) {
-                GridCells.Adaptive(minSize = (iconSizeDp + 28).dp)
-            }
+            val cols = gridCellsForIcons(iconSizeDp)
             LazyVerticalGrid(
                 columns = cols,
                 modifier = Modifier
@@ -81,38 +79,12 @@ fun FolderTabs(
                     )
                     .padding(vertical = 6.dp),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(LocalGridGapH.current.dp),
+                horizontalArrangement = gridGapH(),
                 verticalArrangement = Arrangement.spacedBy(LocalGridGapV.current.dp)
             ) {
                 gridItems(folderApps, key = { it.packageName }) { app ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .pressable(onTap = { onLaunchApp(app) })
-                            .padding(vertical = 4.dp)
-                    ) {
-                        IconPlate(iconSizeDp) {
-                            androidx.compose.material3.Icon(
-                                bitmap = app.bitmap!!.asImageBitmap(),
-                                contentDescription = app.label,
-                                modifier = Modifier.size(iconSizeDp.dp).iconShape(),
-                                tint = Color.Unspecified
-                            )
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = app.label,
-                            color = AppTheme.colors.textPrimary,
-                            fontSize = (fontSizeSp - 3).coerceAtLeast(10).sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 2.dp)
-                        )
-                    }
+                    // Та сама плитка, що у шторці: однакові підкладка, шрифт і відступи
+                    AppGridItem(app, iconSizeDp, fontSizeSp, onTap = { onLaunchApp(app) })
                 }
             }
         }

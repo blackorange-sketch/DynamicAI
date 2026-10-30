@@ -756,6 +756,9 @@ fun SettingsScreen(
         val llmRestarting by vm.llmRestarting.collectAsStateWithLifecycle()
         val llmReadyNow by vm.llmReady.collectAsStateWithLifecycle()
         val llmStatus by vm.llmStatusText.collectAsStateWithLifecycle()
+        LaunchedEffect(Unit) {
+            while (true) { vm.checkLlmReady(); kotlinx.coroutines.delay(3000) }
+        }
         GlassCard {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("LiteRT GPU (експериментально)", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)

@@ -149,8 +149,10 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         llmUnloadJob?.cancel()
         llmUnloadJob = viewModelScope.launch {
             while (true) {
-                kotlinx.coroutines.delay(60_000L) // перевіряємо кожну хвилину
+                kotlinx.coroutines.delay(20_000L)
                 try {
+                    // Рушій спільний для всіх екранів, а прапорець — у кожної ViewModel окремо: синхронізуємо з реальним станом
+                    if (_llmReady.value != llm.isReady && !_llmRestarting.value) _llmReady.value = llm.isReady
                     if (llm.isReady && llm.lastUsedAt > 0) {
                         val idle = System.currentTimeMillis() - llm.lastUsedAt
                         val limitMin = settings.value.llmUnloadMinutes
@@ -170,11 +172,8 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         // _llmReady = true ТІЛЬКИ якщо engine реально ініціалізований
         if (llm.isReady) {
             _llmReady.value = true
-        } else {
-            // Перевіряємо, чи файл моделі існує, але engine не створюємо
-            val modelExists = downloader.isDownloaded
-            _llmReady.value = false  // поки не ініціалізовано — false
-            android.util.Log.e("LLM_DEBUG", "checkLlmReady: model file exists=$modelExists, engine ready=${llm.isReady}")
+        } else if (!_llmRestarting.value) {
+            _llmReady.value = false
         }
     }
 

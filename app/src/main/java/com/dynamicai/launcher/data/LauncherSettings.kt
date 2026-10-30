@@ -59,6 +59,7 @@ data class LauncherSettings(
     val litertMtp: String = "default",         // "default" | "on" | "off"
     val litertSeparateCache: Boolean = false,
     val maxResponseTokens: Int = 256,          // ліміт довжини відповіді (MNN: токени; усі: обрізання за реченням)
+    val uniformIcons: Boolean = false,         // один розмір іконок у списку, доку та сітці
     val liveAurora: Boolean = false,           // жива аврора на фоні головного екрана
     val oneHandMode: Boolean = false,          // вміст головного екрана зсунуто вниз
     val iconShape: String = "original",        // "original" | "circle" | "squircle" | "square"
@@ -138,6 +139,7 @@ class SettingsStorage(context: Context) {
             litertSeparateCache = prefs.getBoolean("litertSeparateCache", false),
             maxResponseTokens = prefs.getInt("maxResponseTokens", 256),
             carBtName = prefs.getString("carBtName", "") ?: "",
+            uniformIcons = prefs.getBoolean("uniformIcons", false),
             liveAurora = prefs.getBoolean("liveAurora", false),
             oneHandMode = prefs.getBoolean("oneHandMode", false),
             iconShape = prefs.getString("iconShape", "original") ?: "original",
@@ -213,6 +215,7 @@ class SettingsStorage(context: Context) {
             .putBoolean("litertSeparateCache", s.litertSeparateCache)
             .putInt("maxResponseTokens", s.maxResponseTokens)
             .putString("carBtName", s.carBtName)
+            .putBoolean("uniformIcons", s.uniformIcons)
             .putBoolean("liveAurora", s.liveAurora)
             .putBoolean("oneHandMode", s.oneHandMode)
             .putString("iconShape", s.iconShape)

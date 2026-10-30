@@ -1210,7 +1210,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     folders = folders,
                     apps = apps,
                     selectedFolderId = selectedTabFolderId,
-                    iconSizeDp = settings.iconSizeDp,
+                    iconSizeDp = settings.menuIconSizeDp,
                     fontSizeSp = settings.fontSizeSp,
                     onSelectFolder = { folder ->
                         selectedTabFolderId =
@@ -1963,31 +1963,8 @@ fun AppRow(
             .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Glass-рамка навколо іконки
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size((iconSizeDp + 10).dp)
-                .clip(RoundedCornerShape((iconSizeDp / 2 + 5).dp))
-                .background(
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            AppTheme.colors.textPrimary.copy(alpha = 0.08f),
-                            AppTheme.colors.textPrimary.copy(alpha = 0.02f)
-                        )
-                    )
-                )
-                .border(
-                    width = 0.5.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            AppTheme.colors.textPrimary.copy(alpha = 0.2f),
-                            AppTheme.colors.textPrimary.copy(alpha = 0.04f)
-                        )
-                    ),
-                    shape = RoundedCornerShape((iconSizeDp / 2 + 5).dp)
-                )
-        ) {
+        // Єдина підкладка під іконку
+        IconPlate(iconSizeDp) {
             Icon(
                 bitmap = (app.bitmap ?: app.icon.toBitmap(96, 96)).asImageBitmap(),
                 contentDescription = app.label,

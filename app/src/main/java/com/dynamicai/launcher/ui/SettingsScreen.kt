@@ -390,27 +390,44 @@ fun SettingsScreen(
         if (initialCategory == null || cat == "appearance") {
         GlassSectionHeader("Розміри")
         GlassCard {
-            SizeSliderRow(
-                label = "Іконки у списку",
-                value = settings.iconSizeDp,
-                suffix = "dp",
-                values = listOf(28, 32, 40, 48, 56, 64),
-                onChange = { onSettingsChange(settings.copy(iconSizeDp = it)) }
-            )
-            SizeSliderRow(
-                label = "Іконки в доку",
-                value = settings.dockIconSizeDp,
-                suffix = "dp",
-                values = listOf(28, 34, 40, 46, 52, 58, 64),
-                onChange = { onSettingsChange(settings.copy(dockIconSizeDp = it)) }
-            )
-            SizeSliderRow(
-                label = "Іконки в меню (сітка)",
-                value = settings.menuIconSizeDp,
-                suffix = "dp",
-                values = listOf(40, 48, 56, 64, 72, 80),
-                onChange = { onSettingsChange(settings.copy(menuIconSizeDp = it)) }
-            )
+            SwitchRow("Однаковий розмір іконок скрізь", settings.uniformIcons, Icons.Default.Settings, AppTheme.colors.accent) {
+                // При вмиканні всі розміри вирівнюються за розміром у сітці
+                onSettingsChange(
+                    if (it) settings.copy(uniformIcons = true, iconSizeDp = settings.menuIconSizeDp, dockIconSizeDp = settings.menuIconSizeDp)
+                    else settings.copy(uniformIcons = false)
+                )
+            }
+            if (settings.uniformIcons) {
+                SizeSliderRow(
+                    label = "Розмір іконок (список, док, сітка, папки, пошук)",
+                    value = settings.menuIconSizeDp,
+                    suffix = "dp",
+                    values = listOf(32, 40, 48, 56, 64, 72),
+                    onChange = { onSettingsChange(settings.copy(iconSizeDp = it, dockIconSizeDp = it, menuIconSizeDp = it)) }
+                )
+            } else {
+                SizeSliderRow(
+                    label = "Іконки у списку",
+                    value = settings.iconSizeDp,
+                    suffix = "dp",
+                    values = listOf(28, 32, 40, 48, 56, 64),
+                    onChange = { onSettingsChange(settings.copy(iconSizeDp = it)) }
+                )
+                SizeSliderRow(
+                    label = "Іконки в доку",
+                    value = settings.dockIconSizeDp,
+                    suffix = "dp",
+                    values = listOf(28, 34, 40, 46, 52, 58, 64),
+                    onChange = { onSettingsChange(settings.copy(dockIconSizeDp = it)) }
+                )
+                SizeSliderRow(
+                    label = "Іконки в сітці (шторка, папки, пошук)",
+                    value = settings.menuIconSizeDp,
+                    suffix = "dp",
+                    values = listOf(32, 40, 48, 56, 64, 72, 80),
+                    onChange = { onSettingsChange(settings.copy(menuIconSizeDp = it)) }
+                )
+            }
             SizeSliderRow(
                 label = "Розмір шрифту",
                 value = settings.fontSizeSp,

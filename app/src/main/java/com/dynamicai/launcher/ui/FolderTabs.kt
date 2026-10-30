@@ -92,30 +92,7 @@ fun FolderTabs(
                             .pressable(onTap = { onLaunchApp(app) })
                             .padding(vertical = 4.dp)
                     ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size((iconSizeDp + 12).dp)
-                                .clip(RoundedCornerShape((iconSizeDp / 2 + 6).dp))
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        listOf(
-                                            AppTheme.colors.textPrimary.copy(alpha = 0.10f),
-                                            AppTheme.colors.textPrimary.copy(alpha = 0.03f)
-                                        )
-                                    )
-                                )
-                                .border(
-                                    width = 0.5.dp,
-                                    brush = Brush.verticalGradient(
-                                        listOf(
-                                            AppTheme.colors.textPrimary.copy(alpha = 0.22f),
-                                            AppTheme.colors.textPrimary.copy(alpha = 0.05f)
-                                        )
-                                    ),
-                                    shape = RoundedCornerShape((iconSizeDp / 2 + 6).dp)
-                                )
-                        ) {
+                        IconPlate(iconSizeDp) {
                             androidx.compose.material3.Icon(
                                 bitmap = app.bitmap!!.asImageBitmap(),
                                 contentDescription = app.label,

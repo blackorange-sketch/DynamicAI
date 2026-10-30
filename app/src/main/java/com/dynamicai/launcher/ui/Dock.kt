@@ -144,22 +144,7 @@ fun Dock(
                 label = "dockItem$index"
             )
             if (item.isFolder) {
-                Box(
-                    modifier = Modifier
-                        .alpha(itemAlpha)
-                        .size(iconSizeDp.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(
-                                    AppTheme.colors.glassBorder,
-                                    AppTheme.colors.glassBorder.copy(alpha = 0.3f)
-                                )
-                            )
-                        )
-                        .pressable { onLaunch(item) },
-                    contentAlignment = Alignment.Center
-                ) {
+                IconPlate(iconSizeDp, Modifier.alpha(itemAlpha), Modifier.pressable { onLaunch(item) }) {
                     item.bitmap?.let {
                         Icon(
                             bitmap = it.asImageBitmap(),
@@ -171,34 +156,13 @@ fun Dock(
                 }
             } else {
                 item.bitmap?.let {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .alpha(itemAlpha)
-                            .size((iconSizeDp + 8).dp)
-                            .clip(RoundedCornerShape((iconSizeDp / 2 + 4).dp))
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        AppTheme.colors.glassBorder.copy(alpha = 0.5f),
-                                        AppTheme.colors.textPrimary.copy(alpha = 0.02f)
-                                    )
-                                )
-                            )
-                            .border(
-                                width = 0.5.dp,
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        AppTheme.colors.glassBorder,
-                                        AppTheme.colors.textPrimary.copy(alpha = 0.04f)
-                                    )
-                                ),
-                                shape = RoundedCornerShape((iconSizeDp / 2 + 4).dp)
-                            )
-                            .pressable(
-                                onTap = { onLaunch(item) },
-                                onLongPress = { onLongClick(item) }
-                            )
+                    IconPlate(
+                        iconSizeDp,
+                        Modifier.alpha(itemAlpha),
+                        Modifier.pressable(
+                            onTap = { onLaunch(item) },
+                            onLongPress = { onLongClick(item) }
+                        )
                     ) {
                         Icon(
                             bitmap = it.asImageBitmap(),

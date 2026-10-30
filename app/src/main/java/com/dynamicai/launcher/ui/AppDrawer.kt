@@ -275,18 +275,7 @@ internal fun AppGridItem(
                 )
             )
         }
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size((iconSizeDp + 16).dp)
-                .clip(RoundedCornerShape((iconSizeDp / 2 + 8).dp))
-                .background(brush = glassBrush)
-                .border(
-                    width = 0.5.dp,
-                    brush = glassBorderBrush,
-                    shape = RoundedCornerShape((iconSizeDp / 2 + 8).dp)
-                )
-        ) {
+        IconPlate(iconSizeDp) {
             Icon(
                 bitmap = app.bitmap!!.asImageBitmap(),
                 contentDescription = app.label,

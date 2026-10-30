@@ -443,6 +443,9 @@ fun SettingsScreen(
                 values = listOf(28, 34, 40, 46, 52, 58, 64),
                 onChange = { onSettingsChange(settings.copy(overlayIconSizeDp = it)) }
             )
+            SwitchRow("Ховати док при відкритій клавіатурі (потрібна служба доступності)", settings.overlayHideOnKeyboard, Icons.Default.Settings, AppTheme.colors.accentDark) {
+                onSettingsChange(settings.copy(overlayHideOnKeyboard = it))
+            }
             SizeSliderRow(
                 label = "Довжина риски",
                 value = settings.overlayHandleLengthDp,

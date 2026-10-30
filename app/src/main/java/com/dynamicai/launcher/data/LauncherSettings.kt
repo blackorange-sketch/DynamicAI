@@ -22,6 +22,7 @@ data class LauncherSettings(
     val overlayOffsetYPercent: Int = 50,     // 0..100, вертикальний центр дока
     val overlayHandleLengthDp: Int = 140,
     val overlayHandleAlphaPercent: Int = 55,
+    val overlayHideOnKeyboard: Boolean = true,   // ховати плаваючий док при відкритій клавіатурі
     val overlayAutoCollapseMs: Int = 0,      // 0 = вимкнено
     val overlayEdgePaddingDp: Int = 14,      // відступ риски від краю екрана
     val backgroundAlphaPercent: Int = 100,   // 0 = прозорий, 100 = чорний
@@ -93,6 +94,7 @@ class SettingsStorage(context: Context) {
         overlayOffsetYPercent = prefs.getInt("overlayOffsetYPercent", 50),
         overlayHandleLengthDp = prefs.getInt("overlayHandleLengthDp", 140),
         overlayHandleAlphaPercent = prefs.getInt("overlayHandleAlphaPercent", 55),
+        overlayHideOnKeyboard = prefs.getBoolean("overlayHideOnKeyboard", true),
         overlayAutoCollapseMs = prefs.getInt("overlayAutoCollapseMs", 0),
         overlayEdgePaddingDp = prefs.getInt("overlayEdgePaddingDp", 14),
         backgroundAlphaPercent = prefs.getInt("backgroundAlphaPercent", 100),
@@ -160,6 +162,7 @@ class SettingsStorage(context: Context) {
             .putInt("overlayOffsetYPercent", s.overlayOffsetYPercent)
             .putInt("overlayHandleLengthDp", s.overlayHandleLengthDp)
             .putInt("overlayHandleAlphaPercent", s.overlayHandleAlphaPercent)
+            .putBoolean("overlayHideOnKeyboard", s.overlayHideOnKeyboard)
             .putInt("overlayAutoCollapseMs", s.overlayAutoCollapseMs)
             .putInt("overlayEdgePaddingDp", s.overlayEdgePaddingDp)
             .putInt("backgroundAlphaPercent", s.backgroundAlphaPercent)

@@ -28,7 +28,8 @@ class AppAutomationService : AccessibilityService() {
         super.onServiceConnected()
         instance = this
         val info = AccessibilityServiceInfo().apply {
-            eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+            eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
+                AccessibilityEvent.TYPE_WINDOWS_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             flags = AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         }
@@ -36,7 +37,23 @@ class AppAutomationService : AccessibilityService() {
         Log.d(TAG, "Service connected")
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+    @Volatile private var imeVisible = false
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        // Відстежуємо вікно клавіатури в будь-якому додатку → ховаємо плаваючий док
+        val t = event?.eventType ?: return
+        if (t != AccessibilityEvent.TYPE_WINDOWS_CHANGED && t != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        try {
+            val open = windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            if (open != imeVisible) {
+                imeVisible = open
+                sendBroadcast(
+                    android.content.Intent("com.dynamicai.KEYBOARD_STATE_CHANGED")
+                        .setPackage(packageName).putExtra("is_open", open)
+                )
+            }
+        } catch (_: Throwable) {}
+    }
     override fun onInterrupt() {}
     
     override fun onDestroy() {

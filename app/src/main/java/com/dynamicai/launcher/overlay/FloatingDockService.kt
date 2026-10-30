@@ -71,9 +71,26 @@ class FloatingDockService : Service() {
         }
     }
     @Volatile private var expanded = false
+    @Volatile private var keyboardUp = false
     private val keyboardReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(ctx: android.content.Context?, intent: android.content.Intent?) {
             val isOpen = intent?.getBooleanExtra("is_open", false) ?: false
+            // Авто-приховування дока, поки відкрита клавіатура
+            if (isOpen != keyboardUp) {
+                keyboardUp = isOpen
+                try {
+                    if (::rootLayout.isInitialized) {
+                        val hide = isOpen && settings.overlayHideOnKeyboard
+                        rootLayout.animate().cancel()
+                        if (hide) {
+                            rootLayout.animate().alpha(0f).setDuration(150).withEndAction { rootLayout.visibility = View.GONE }.start()
+                        } else {
+                            rootLayout.visibility = View.VISIBLE
+                            rootLayout.animate().alpha(1f).setDuration(200).start()
+                        }
+                    }
+                } catch (_: Throwable) {}
+            }
             if (isOpen && expanded) {
                 expanded = false
                 rebuildContent()

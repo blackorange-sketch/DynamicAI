@@ -59,6 +59,10 @@ data class LauncherSettings(
     val litertMtp: String = "default",         // "default" | "on" | "off"
     val litertSeparateCache: Boolean = false,
     val maxResponseTokens: Int = 256,          // ліміт довжини відповіді (MNN: токени; усі: обрізання за реченням)
+    val iconPlatePadDp: Int = 6,              // підкладка під іконкою (додається до розміру іконки)
+    val gridGapHDp: Int = 4,                  // горизонтальний відступ між іконками в сітці
+    val gridGapVDp: Int = 12,                 // вертикальний відступ між іконками в сітці
+    val listGapDp: Int = 6,                   // відступ між рядками списку
     val uniformIcons: Boolean = false,         // один розмір іконок у списку, доку та сітці
     val liveAurora: Boolean = false,           // жива аврора на фоні головного екрана
     val oneHandMode: Boolean = false,          // вміст головного екрана зсунуто вниз
@@ -139,6 +143,10 @@ class SettingsStorage(context: Context) {
             litertSeparateCache = prefs.getBoolean("litertSeparateCache", false),
             maxResponseTokens = prefs.getInt("maxResponseTokens", 256),
             carBtName = prefs.getString("carBtName", "") ?: "",
+            iconPlatePadDp = prefs.getInt("iconPlatePadDp", 6),
+            gridGapHDp = prefs.getInt("gridGapHDp", 4),
+            gridGapVDp = prefs.getInt("gridGapVDp", 12),
+            listGapDp = prefs.getInt("listGapDp", 6),
             uniformIcons = prefs.getBoolean("uniformIcons", false),
             liveAurora = prefs.getBoolean("liveAurora", false),
             oneHandMode = prefs.getBoolean("oneHandMode", false),
@@ -215,6 +223,10 @@ class SettingsStorage(context: Context) {
             .putBoolean("litertSeparateCache", s.litertSeparateCache)
             .putInt("maxResponseTokens", s.maxResponseTokens)
             .putString("carBtName", s.carBtName)
+            .putInt("iconPlatePadDp", s.iconPlatePadDp)
+            .putInt("gridGapHDp", s.gridGapHDp)
+            .putInt("gridGapVDp", s.gridGapVDp)
+            .putInt("listGapDp", s.listGapDp)
             .putBoolean("uniformIcons", s.uniformIcons)
             .putBoolean("liveAurora", s.liveAurora)
             .putBoolean("oneHandMode", s.oneHandMode)

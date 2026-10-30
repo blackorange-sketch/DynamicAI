@@ -162,8 +162,8 @@ fun AppDrawer(
                     columns = columns,
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(LocalGridGapH.current.dp),
+                    verticalArrangement = Arrangement.spacedBy(LocalGridGapV.current.dp)
                 ) {
                     items(filtered, key = { it.packageName }) { app ->
                         AppGridItem(app, iconSizeDp, fontSizeSp, onLongClick = { onLongClick(app) }) {

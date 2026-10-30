@@ -402,7 +402,7 @@ fun SettingsScreen(
                     label = "Розмір іконок (список, док, сітка, папки, пошук)",
                     value = settings.menuIconSizeDp,
                     suffix = "dp",
-                    values = listOf(32, 40, 48, 56, 64, 72),
+                    values = listOf(28, 32, 36, 40, 44, 48, 52, 56, 64, 72, 80),
                     onChange = { onSettingsChange(settings.copy(iconSizeDp = it, dockIconSizeDp = it, menuIconSizeDp = it)) }
                 )
             } else {
@@ -410,24 +410,52 @@ fun SettingsScreen(
                     label = "Іконки у списку",
                     value = settings.iconSizeDp,
                     suffix = "dp",
-                    values = listOf(28, 32, 40, 48, 56, 64),
+                    values = listOf(28, 32, 36, 40, 44, 48, 52, 56, 64, 72, 80),
                     onChange = { onSettingsChange(settings.copy(iconSizeDp = it)) }
                 )
                 SizeSliderRow(
                     label = "Іконки в доку",
                     value = settings.dockIconSizeDp,
                     suffix = "dp",
-                    values = listOf(28, 34, 40, 46, 52, 58, 64),
+                    values = listOf(28, 32, 36, 40, 44, 48, 52, 56, 64, 72, 80),
                     onChange = { onSettingsChange(settings.copy(dockIconSizeDp = it)) }
                 )
                 SizeSliderRow(
                     label = "Іконки в сітці (шторка, папки, пошук)",
                     value = settings.menuIconSizeDp,
                     suffix = "dp",
-                    values = listOf(32, 40, 48, 56, 64, 72, 80),
+                    values = listOf(28, 32, 36, 40, 44, 48, 52, 56, 64, 72, 80),
                     onChange = { onSettingsChange(settings.copy(menuIconSizeDp = it)) }
                 )
             }
+            SizeSliderRow(
+                label = "Підкладка під іконкою",
+                value = settings.iconPlatePadDp,
+                suffix = "dp",
+                values = listOf(0, 2, 4, 6, 8, 10, 12, 16),
+                onChange = { onSettingsChange(settings.copy(iconPlatePadDp = it)) }
+            )
+            SizeSliderRow(
+                label = "Відступ між іконками по горизонталі",
+                value = settings.gridGapHDp,
+                suffix = "dp",
+                values = listOf(0, 2, 4, 8, 12, 16, 24),
+                onChange = { onSettingsChange(settings.copy(gridGapHDp = it)) }
+            )
+            SizeSliderRow(
+                label = "Відступ між іконками по вертикалі",
+                value = settings.gridGapVDp,
+                suffix = "dp",
+                values = listOf(0, 4, 8, 12, 16, 20, 24, 32),
+                onChange = { onSettingsChange(settings.copy(gridGapVDp = it)) }
+            )
+            SizeSliderRow(
+                label = "Відступ між рядками списку",
+                value = settings.listGapDp,
+                suffix = "dp",
+                values = listOf(0, 2, 4, 6, 8, 12),
+                onChange = { onSettingsChange(settings.copy(listGapDp = it)) }
+            )
             SizeSliderRow(
                 label = "Розмір шрифту",
                 value = settings.fontSizeSp,

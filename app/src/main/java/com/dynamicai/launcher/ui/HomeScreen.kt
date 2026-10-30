@@ -1005,8 +1005,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(4),
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 8.dp, bottom = if (dockPkgs.isNotEmpty()) 110.dp else 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(LocalGridGapH.current.dp),
+                verticalArrangement = Arrangement.spacedBy(LocalGridGapV.current.dp)
             ) {
                 if (suggestions.isEmpty()) {
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
@@ -1949,7 +1949,7 @@ fun AppRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .padding(horizontal = 8.dp, vertical = (LocalListGap.current / 2).dp)
             .clip(RoundedCornerShape(18.dp))
             .background(
                 brush = Brush.verticalGradient(

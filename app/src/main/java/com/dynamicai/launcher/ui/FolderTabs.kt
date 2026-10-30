@@ -81,8 +81,8 @@ fun FolderTabs(
                     )
                     .padding(vertical = 6.dp),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(LocalGridGapH.current.dp),
+                verticalArrangement = Arrangement.spacedBy(LocalGridGapV.current.dp)
             ) {
                 gridItems(folderApps, key = { it.packageName }) { app ->
                     Column(

@@ -220,9 +220,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
     LaunchedEffect(showSettings) { if (!showSettings) currentSettingsCategory = null }
     // Поглинач back — на головному екрані back нічого не робить
-    BackHandler(enabled = !anyOverlay && openFolder == null && !drawerOpen && !searchMode && query.isBlank() &&
-            selectedTabFolderId == null) {
+    // Найнижчий пріоритет (зареєстровано першим): back ніколи не «провалюється» до системи
+    // (на деяких прошивках це відкривало системні «Нещодавні»).
+    BackHandler(enabled = !anyOverlay) {
         // нічого не робимо
+    }
+    // Відкрита вкладка-папка на головному екрані — back закриває її
+    BackHandler(enabled = !anyOverlay && selectedTabFolderId != null && openFolder == null && !drawerOpen && !searchMode) {
+        selectedTabFolderId = null
     }
     BackHandler(enabled = !anyOverlay && openFolder != null) {
         openFolder = null

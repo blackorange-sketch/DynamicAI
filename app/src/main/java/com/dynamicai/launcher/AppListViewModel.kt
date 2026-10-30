@@ -477,94 +477,10 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun normalizePhone(raw: String): String {
-        val d = raw.filter { it.isDigit() }
-        return when {
-            raw.trim().startsWith("+") -> d
-            d.length == 10 && d.startsWith("0") -> "38$d"      // український формат 0XX…
-            d.length == 11 && d.startsWith("80") -> "3$d"
-            else -> d
-        }
-    }
-
-    private fun startViewIntent(intent: android.content.Intent): Boolean = try {
-        getApplication<Application>().startActivity(intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)); true
-    } catch (_: Throwable) { false }
-
     private fun executeContact(s: Suggestion.Contact) {
-        val app = getApplication<Application>()
-        when (s.actionType) {
-            ContactAction.APP_DATA -> {
-                val parts = s.target.split('|', limit = 3)
-                val id = parts.getOrNull(0)?.toLongOrNull()
-                val mime = parts.getOrNull(1)
-                val accountPkg = parts.getOrNull(2).orEmpty()
-                val pm = app.packageManager
-                fun viewIntent() = android.content.Intent(android.content.Intent.ACTION_VIEW).setDataAndType(
-                    android.content.ContentUris.withAppendedId(android.provider.ContactsContract.Data.CONTENT_URI, id ?: 0L), mime ?: ""
-                )
-                // Пакет месенджера: тип акаунта синхронізації, інакше перший встановлений з відомих.
-                // Без цього ACTION_VIEW за MIME віддавався будь-якому додатку (наприклад, іншому клієнту).
-                val known = mapOf(
-                    "telegram" to listOf("org.telegram.messenger", "org.telegram.messenger.web", "org.thunderdog.challegram"),
-                    "whatsapp" to listOf("com.whatsapp", "com.whatsapp.w4b"),
-                    "viber" to listOf("com.viber.voip"), "signal" to listOf("org.thoughtcrime.securesms")
-                )
-                val kindPkgs = known.entries.firstOrNull { (_, v) -> accountPkg in v }?.value
-                    ?: known.entries.firstOrNull { (k, _) -> s.actionLabel.startsWith(k, ignoreCase = true) }?.value.orEmpty()
-                val candidates = (listOf(accountPkg) + kindPkgs).filter { it.isNotBlank() }.distinct().filter {
-                    try { pm.getPackageInfo(it, 0); true } catch (_: Throwable) { false }
-                }
-                var ok = false
-                for (p in candidates) {
-                    val i = viewIntent().setPackage(p)
-                    if (id != null && mime != null && i.resolveActivity(pm) != null && startViewIntent(i)) { ok = true; break }
-                }
-                // Запасний варіант для Telegram: чат за номером саме в цьому клієнті
-                if (!ok && s.actionLabel.startsWith("Telegram", ignoreCase = true)) {
-                    val phone = _contacts.value.firstOrNull { it.name == s.name }?.phones?.firstOrNull()
-                    val tgPkg = candidates.firstOrNull()
-                    if (phone != null && tgPkg != null) {
-                        ok = startViewIntent(
-                            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("tg://resolve?phone=${normalizePhone(phone)}")).setPackage(tgPkg)
-                        )
-                    }
-                }
-                handleResult(
-                    if (ok) com.dynamicai.launcher.command.CommandResult.Success(s.actionLabel)
-                    else com.dynamicai.launcher.command.CommandResult.Error("Не вдалося відкрити: ${s.actionLabel}"),
-                    s.label
-                )
-                return
-            }
-            ContactAction.INSTAGRAM, ContactAction.INSTAGRAM_CALL -> {
-                val isHandle = s.target.matches(Regex("[A-Za-z0-9._]+"))
-                val call = s.actionType == ContactAction.INSTAGRAM_CALL
-                val msg = if (isHandle) {
-                    startViewIntent(
-                        android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://ig.me/m/${s.target}"))
-                            .setPackage("com.instagram.android")
-                    )
-                    if (call) com.dynamicai.launcher.llm.MessengerCaller(app).pressInstagramCall()
-                    else "Відкриваю чат @${s.target}"
-                } else if (call) com.dynamicai.launcher.llm.MessengerCaller(app).callInInstagram(s.target)
-                else { handleResult(executor.execute(com.dynamicai.launcher.command.Command.SearchInApp("insta", s.target), _apps.value), s.label); return }
-                handleResult(com.dynamicai.launcher.command.CommandResult.Success(msg), s.label)
-                return
-            }
-            else -> {}
-        }
-        val cmd = when (s.actionType) {
-            ContactAction.CALL -> com.dynamicai.launcher.command.Command.Call(s.target)
-            ContactAction.SMS -> com.dynamicai.launcher.command.Command.DeepLink("sms", s.target)
-            ContactAction.TELEGRAM -> com.dynamicai.launcher.command.Command.DeepLink("telegram", normalizePhone(s.target))
-            ContactAction.WHATSAPP -> com.dynamicai.launcher.command.Command.DeepLink("whatsapp", normalizePhone(s.target))
-            ContactAction.VIBER -> com.dynamicai.launcher.command.Command.DeepLink("viber", "+" + normalizePhone(s.target))
-            ContactAction.INSTAGRAM, ContactAction.INSTAGRAM_CALL, ContactAction.APP_DATA -> return
-            ContactAction.SIGNAL -> com.dynamicai.launcher.command.Command.DeepLink("signal", s.target)
-            ContactAction.EMAIL -> com.dynamicai.launcher.command.Command.DeepLink("email", s.target)
-        }
-        val result = executor.execute(cmd, _apps.value)
+        val result = com.dynamicai.launcher.suggestion.ContactLauncher.run(
+            getApplication(), s, _contacts.value, _apps.value, executor
+        )
         handleResult(result, s.label)
     }
 

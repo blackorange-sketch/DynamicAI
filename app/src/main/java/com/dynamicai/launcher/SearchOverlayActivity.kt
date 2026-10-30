@@ -91,66 +91,31 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
     var response by remember { mutableStateOf<String?>(null) }
     val focusRequester = remember { FocusRequester() }
 
-    // Підказки — ті самі, що на головному
-    val suggestions: List<Suggestion> = remember(query, apps) {
-        if (query.isBlank() || apps.isEmpty()) emptyList()
-        else {
-            val q = query.lowercase().trim()
-            val result = mutableListOf<Suggestion>()
+    // Підказки — той самий SuggestionProvider, що й на головному екрані (контакти, калькулятор, файли, макроси…)
+    val provider = remember { com.dynamicai.launcher.suggestion.SuggestionProvider(ctx) }
+    var contacts by remember { mutableStateOf<List<com.dynamicai.launcher.suggestion.ContactInfo>>(emptyList()) }
+    var suggestions by remember { mutableStateOf<List<Suggestion>>(emptyList()) }
 
-            // 1. Дії
-            ActionCatalog.all
-                .map { a ->
-                    val best = a.keywords.maxOf { kw -> FuzzyMatcher.score(kw, q) }
-                    a to best
-                }
-                .filter { it.second >= 55 }
-                .sortedByDescending { it.second }
-                .take(4)
-                .forEach { (a, score) ->
-                    result.add(
-                        Suggestion.Action(
-                            id = a.id,
-                            label = a.label,
-                            subtitle = a.subtitle,
-                            command = a.build(),
-                            score = score
-                        )
-                    )
-                }
-
-            // 2. Налаштування
-            SettingsRoutes.all().keys
-                .map { it to FuzzyMatcher.score(it, q) }
-                .filter { it.second >= 60 }
-                .sortedByDescending { it.second }
-                .take(2)
-                .forEach { (route, score) ->
-                    result.add(
-                        Suggestion.Setting(
-                            label = "Налаштування: ${route.replaceFirstChar { it.uppercase() }}",
-                            route = route,
-                            score = score - 5
-                        )
-                    )
-                }
-
-            // 3. Застосунки
-            apps
-                .map { it to FuzzyMatcher.score(it.label, q) }
-                .filter { it.second >= 35 }
-                .sortedByDescending { it.second }
-                .take(8)
-                .forEach { (app, score) ->
-                    result.add(Suggestion.App(app, score))
-                }
-
-            result.sortedByDescending { it.score }
+    LaunchedEffect(query, apps, contacts) {
+        if (query.isBlank() || apps.isEmpty()) { suggestions = emptyList(); return@LaunchedEffect }
+        delay(35)
+        val hidden = try { com.dynamicai.launcher.data.HiddenAppsStorage(ctx).get() } catch (_: Throwable) { emptySet() }
+        val focusHidden = try {
+            com.dynamicai.launcher.macro.FocusModes.hiddenFor(com.dynamicai.launcher.macro.FocusModes.active.value, apps)
+        } catch (_: Throwable) { emptySet<String>() }
+        val visible = apps.filter { it.packageName !in hidden && it.packageName !in focusHidden }
+        suggestions = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            try { provider.build(query, visible, contacts, executor.flashlightOn.value) } catch (_: Throwable) { emptyList() }
         }
     }
 
     LaunchedEffect(Unit) {
         apps = try { repo.loadInstalledApps() } catch (_: Throwable) { emptyList() }
+        if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_CONTACTS) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            contacts = try { com.dynamicai.launcher.suggestion.ContactRepository(ctx).loadAll() } catch (_: Throwable) { emptyList() }
+        }
         delay(120)
         focusRequester.requestFocus()
         keyboard?.show()
@@ -174,8 +139,10 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
     }
 
     fun handleSuggestion(s: Suggestion) {
+        if (query.isNotBlank()) com.dynamicai.launcher.suggestion.SearchHistory.add(ctx, query)
         when (s) {
             is Suggestion.App -> {
+                try { com.dynamicai.launcher.suggestion.AppUsage.bump(ctx, s.app.packageName) } catch (_: Throwable) {}
                 executor.launchApp(s.app)
                 onClose()
             }
@@ -190,7 +157,8 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                 else if (result is CommandResult.Error) response = result.message
             }
             is Suggestion.Contact -> {
-                // Контакти у overlay поки не підтримуються
+                val r = com.dynamicai.launcher.suggestion.ContactLauncher.run(ctx, s, contacts, apps, executor)
+                if (r is CommandResult.Error) response = r.message else onClose()
             }
             is Suggestion.Extra -> {
                 com.dynamicai.launcher.suggestion.SuggestionRunner.run(ctx, s)
@@ -286,7 +254,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                                     onClick = { handleSuggestion(s) },
                                     onLongClick = { handleSuggestion(s) }
                                 )
-                                is Suggestion.Contact -> {}
+                                is Suggestion.Contact -> com.dynamicai.launcher.ui.SuggestionContactRow(s) { handleSuggestion(s) }
                                 is Suggestion.Extra -> com.dynamicai.launcher.ui.SuggestionExtraRow(s) { handleSuggestion(s) }
                             }
                         }

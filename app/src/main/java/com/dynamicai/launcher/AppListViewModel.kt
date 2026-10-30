@@ -477,14 +477,63 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private fun normalizePhone(raw: String): String {
+        val d = raw.filter { it.isDigit() }
+        return when {
+            raw.trim().startsWith("+") -> d
+            d.length == 10 && d.startsWith("0") -> "38$d"      // український формат 0XX…
+            d.length == 11 && d.startsWith("80") -> "3$d"
+            else -> d
+        }
+    }
+
+    private fun startViewIntent(intent: android.content.Intent): Boolean = try {
+        getApplication<Application>().startActivity(intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)); true
+    } catch (_: Throwable) { false }
+
     private fun executeContact(s: Suggestion.Contact) {
+        val app = getApplication<Application>()
+        when (s.actionType) {
+            ContactAction.APP_DATA -> {
+                val parts = s.target.split('|', limit = 2)
+                val id = parts.getOrNull(0)?.toLongOrNull()
+                val mime = parts.getOrNull(1)
+                val ok = id != null && mime != null && startViewIntent(
+                    android.content.Intent(android.content.Intent.ACTION_VIEW).setDataAndType(
+                        android.content.ContentUris.withAppendedId(android.provider.ContactsContract.Data.CONTENT_URI, id), mime
+                    )
+                )
+                handleResult(
+                    if (ok) com.dynamicai.launcher.command.CommandResult.Success(s.actionLabel)
+                    else com.dynamicai.launcher.command.CommandResult.Error("Не вдалося відкрити: ${s.actionLabel}"),
+                    s.label
+                )
+                return
+            }
+            ContactAction.INSTAGRAM, ContactAction.INSTAGRAM_CALL -> {
+                val isHandle = s.target.matches(Regex("[A-Za-z0-9._]+"))
+                val call = s.actionType == ContactAction.INSTAGRAM_CALL
+                val msg = if (isHandle) {
+                    startViewIntent(
+                        android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://ig.me/m/${s.target}"))
+                            .setPackage("com.instagram.android")
+                    )
+                    if (call) com.dynamicai.launcher.llm.MessengerCaller(app).pressInstagramCall()
+                    else "Відкриваю чат @${s.target}"
+                } else if (call) com.dynamicai.launcher.llm.MessengerCaller(app).callInInstagram(s.target)
+                else { handleResult(executor.execute(com.dynamicai.launcher.command.Command.SearchInApp("insta", s.target), _apps.value), s.label); return }
+                handleResult(com.dynamicai.launcher.command.CommandResult.Success(msg), s.label)
+                return
+            }
+            else -> {}
+        }
         val cmd = when (s.actionType) {
             ContactAction.CALL -> com.dynamicai.launcher.command.Command.Call(s.target)
             ContactAction.SMS -> com.dynamicai.launcher.command.Command.DeepLink("sms", s.target)
-            ContactAction.TELEGRAM -> com.dynamicai.launcher.command.Command.SearchInApp("telegram", s.name)
-            ContactAction.WHATSAPP -> com.dynamicai.launcher.command.Command.DeepLink("whatsapp", s.target)
-            ContactAction.VIBER -> com.dynamicai.launcher.command.Command.DeepLink("viber", s.target)
-            ContactAction.INSTAGRAM -> com.dynamicai.launcher.command.Command.SearchInApp("insta", s.name)
+            ContactAction.TELEGRAM -> com.dynamicai.launcher.command.Command.DeepLink("telegram", normalizePhone(s.target))
+            ContactAction.WHATSAPP -> com.dynamicai.launcher.command.Command.DeepLink("whatsapp", normalizePhone(s.target))
+            ContactAction.VIBER -> com.dynamicai.launcher.command.Command.DeepLink("viber", "+" + normalizePhone(s.target))
+            ContactAction.INSTAGRAM, ContactAction.INSTAGRAM_CALL, ContactAction.APP_DATA -> return
             ContactAction.SIGNAL -> com.dynamicai.launcher.command.Command.DeepLink("signal", s.target)
             ContactAction.EMAIL -> com.dynamicai.launcher.command.Command.DeepLink("email", s.target)
         }

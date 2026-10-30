@@ -63,6 +63,21 @@ class MessengerCaller(private val context: Context) {
         return "Спроба зателефонувати в Telegram: $contactName"
     }
 
+    /** Після відкриття чату (ig.me/m/<нік>) натискає кнопку аудіодзвінка через службу доступності. */
+    fun pressInstagramCall(): String {
+        if (!AppAutomationService.isEnabled()) return "Чат відкрито. Увімкніть службу доступності, щоб дзвінок запускався автоматично."
+        val labels = listOf("Audio call", "Voice call", "Аудіодзвінок", "Аудіовиклик", "Голосовий дзвінок", "Call", "Дзвінок")
+        fun attempt(n: Int) {
+            if (n >= 6) return
+            delay(if (n == 0) 2800L else 1200L) {
+                val ok = labels.any { AppAutomationService.clickDescription(it) }
+                if (!ok) attempt(n + 1)
+            }
+        }
+        attempt(0)
+        return "Дзвоню в Instagram…"
+    }
+
     fun callInInstagram(contactName: String): String {
         if (!AppAutomationService.isEnabled()) return "Сервіс доступності вимкнено."
         

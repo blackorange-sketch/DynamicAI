@@ -3,7 +3,7 @@ package com.dynamicai.launcher.suggestion
 import com.dynamicai.launcher.command.Command
 import com.dynamicai.launcher.model.AppInfo
 
-enum class ContactAction { CALL, SMS, TELEGRAM, WHATSAPP, VIBER, INSTAGRAM, SIGNAL, EMAIL }
+enum class ContactAction { CALL, SMS, TELEGRAM, WHATSAPP, VIBER, INSTAGRAM, SIGNAL, EMAIL, APP_DATA, INSTAGRAM_CALL }
 
 sealed class Suggestion {
     abstract val label: String

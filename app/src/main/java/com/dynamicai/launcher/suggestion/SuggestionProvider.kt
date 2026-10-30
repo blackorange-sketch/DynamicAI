@@ -91,60 +91,57 @@ class SuggestionProvider(private val context: Context) {
                 )
             }
 
-        // === 2. Контакти з номерами (скоринг за якістю збігу) ===
+        // === 2. Контакти: ім'я (з нікнеймами), номер; дії месенджерів беруться з даних контакту ===
         val matchedContacts = contacts
-            .map { it to contactScore(it.name, q) }
+            .map { it to contactScore(it, q) }
             .filter { it.second > 0 }
             .sortedByDescending { it.second }
-            .map { it.first }
             .take(2)
 
         var contactRows = 0
-        for (contact in matchedContacts) {
-            val baseScore = contactScore(contact.name, q)
+        for ((contact, baseScore) in matchedContacts) {
             val phones = contact.phones.take(3)
             if (phones.isEmpty()) continue
 
-            // Дзвінок — для кожного номера
-            for ((idx, phone) in phones.withIndex()) {
-                if (contactRows >= 8) break
-                result.add(
-                    Suggestion.Contact(
-                        name = contact.name,
-                        actionLabel = "Подзвонити",
-                        actionType = ContactAction.CALL,
-                        target = phone,
-                        phoneDisplay = formatPhone(phone),
-                        score = baseScore - idx
-                    )
-                )
+            fun add(label: String, type: ContactAction, target: String, display: String?, delta: Int) {
+                if (contactRows >= 12) return
+                result.add(Suggestion.Contact(contact.name, label, type, target, display, baseScore - delta))
                 contactRows++
             }
 
-            // Інші дії — тільки для першого номера
+            // Телефонний дзвінок — для кожного номера
+            for ((idx, phone) in phones.withIndex()) add("Подзвонити", ContactAction.CALL, phone, formatPhone(phone), idx)
+
             val primary = phones.first()
             val primaryDisplay = formatPhone(primary)
-            val others = listOf(
-                "Telegram" to ContactAction.TELEGRAM,
-                "WhatsApp" to ContactAction.WHATSAPP,
-                "SMS" to ContactAction.SMS,
-                "Viber" to ContactAction.VIBER,
-                "Instagram" to ContactAction.INSTAGRAM
+            var d = 3
+            val messengers = listOf(
+                Triple("telegram", "Telegram", listOf("org.telegram.messenger", "org.telegram.messenger.web", "org.thunderdog.challegram")),
+                Triple("whatsapp", "WhatsApp", listOf("com.whatsapp", "com.whatsapp.w4b")),
+                Triple("viber", "Viber", listOf("com.viber.voip")),
+                Triple("signal", "Signal", listOf("org.thoughtcrime.securesms"))
             )
-            for ((i, entry) in others.withIndex()) {
-                if (contactRows >= 8) break
-                val (label, action) = entry
-                result.add(
-                    Suggestion.Contact(
-                        name = contact.name,
-                        actionLabel = label,
-                        actionType = action,
-                        target = primary,
-                        phoneDisplay = primaryDisplay,
-                        score = baseScore - 2 - i
-                    )
-                )
-                contactRows++
+            for ((kind, label, pkgs) in messengers) {
+                val rows = contact.apps.filter { it.kind == kind }
+                val call = rows.firstOrNull { it.action == "call" }
+                val video = rows.firstOrNull { it.action == "video" }
+                val chat = rows.firstOrNull { it.action == "chat" }
+                // Точні дії від самого месенджера — дзвінок іде саме тому, хто збережений у ньому
+                if (call != null) add("$label · дзвінок", ContactAction.APP_DATA, "${call.dataId}|${call.mime}", null, d++)
+                if (video != null) add("$label · відео", ContactAction.APP_DATA, "${video.dataId}|${video.mime}", null, d++)
+                if (chat != null) add("$label · чат", ContactAction.APP_DATA, "${chat.dataId}|${chat.mime}", null, d++)
+                else if (rows.isEmpty() && pkgs.any { installed(it) }) {
+                    // Немає синхронізованого запису — відкриваємо чат за номером
+                    val type = when (kind) { "telegram" -> ContactAction.TELEGRAM; "whatsapp" -> ContactAction.WHATSAPP
+                        "viber" -> ContactAction.VIBER; else -> ContactAction.SIGNAL }
+                    add("$label · чат за номером", type, primary, primaryDisplay, d++)
+                }
+            }
+            add("SMS", ContactAction.SMS, primary, primaryDisplay, d++)
+            if (installed("com.instagram.android")) {
+                val h = contact.instagram.orEmpty()
+                add(if (h.isNotBlank()) "Instagram · чат @$h" else "Instagram · чат", ContactAction.INSTAGRAM, h.ifBlank { contact.name }, null, d++)
+                add("Instagram · дзвінок", ContactAction.INSTAGRAM_CALL, h.ifBlank { contact.name }, null, d++)
             }
         }
 
@@ -264,6 +261,39 @@ class SuggestionProvider(private val context: Context) {
             } catch (_: Throwable) {}
         }
         return out
+    }
+
+    private val installedCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+    private fun installed(pkg: String): Boolean = installedCache.getOrPut(pkg) {
+        try { context.packageManager.getPackageInfo(pkg, 0); true } catch (_: Throwable) { false }
+    }
+
+    // Групи форм імені: пошук «Аня» знаходить і «Анна», «Саша» — «Олександр» тощо
+    private val nickGroups: List<Set<String>> = listOf(
+        "аня,анна,ганна,анюта", "саша,саня,олександр,олександра,сашко", "діма,дмитро,дімон", "женя,євген,євгеній,євгенія",
+        "таня,тетяна", "катя,катерина,катруся", "оля,ольга", "вова,володимир,вовка", "міша,михайло,миша", "коля,микола",
+        "андрій,андрюха,андрюша", "настя,анастасія", "наташа,наталія,наталя", "юля,юлія", "іра,ірина", "слава,славік,вячеслав",
+        "сергій,серж,серьога", "макс,максим", "бодя,богдан", "влад,владислав,владік", "ваня,іван", "петя,петро", "вася,василь",
+        "льоша,льоха,олексій", "паша,павло", "ліза,єлизавета", "маша,марія", "даша,дарія,дарина", "соня,софія", "віка,вікторія",
+        "вітя,віктор", "люда,людмила", "галя,галина", "леся,олеся", "лена,олена", "рома,роман", "стас,станіслав", "денис,деня"
+    ).map { it.split(',').toSet() }
+
+    private fun contactScore(contact: ContactInfo, q: String): Int {
+        val digits = q.filter { it.isDigit() }
+        // Пошук за номером: від 3 цифр, запит складається лише з цифр і символів номера
+        if (digits.length >= 3 && q.all { it.isDigit() || it in "+-() " }) {
+            return if (contact.phones.any { p -> p.filter { it.isDigit() }.contains(digits) }) 90 else 0
+        }
+        var best = contactScore(contact.name, q)
+        // Варіанти імені (слово запиту → форми з тієї ж групи), з невеликим штрафом
+        val words = q.split(' ').filter { it.isNotBlank() }
+        if (words.size == 1) {
+            val group = nickGroups.firstOrNull { words[0] in it }
+            if (group != null) {
+                for (alt in group) if (alt != words[0]) best = maxOf(best, contactScore(contact.name, alt) - 8)
+            }
+        }
+        return best
     }
 
     private fun contactScore(name: String, q: String): Int {

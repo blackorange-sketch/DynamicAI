@@ -120,6 +120,15 @@ private val STEP_CATALOG: List<Pair<String, List<StepSpec>>> = listOf(
         StepSpec("Вимкнути додаток", "disableApp(package=\"{0}\")", desc = "Ховає додаток із системи", pick = "app"),
         StepSpec("Увімкнути додаток", "enableApp(package=\"{0}\")", desc = "Повертає вимкнений додаток", pick = "app")
     ),
+    "🎯 Фокус і сповіщення" to listOf(
+        StepSpec("Прочитати сповіщення вголос", "notifDigest(speak=\"true\")", desc = "Потрібен доступ до сповіщень"),
+        StepSpec("Підсумок сповіщень (у {last})", "notifDigest(speak=\"false\")"),
+        StepSpec("Фокус: Робота", "focusMode(id=\"work\")"),
+        StepSpec("Фокус: Сон", "focusMode(id=\"sleep\")"),
+        StepSpec("Фокус: Авто", "focusMode(id=\"car\")"),
+        StepSpec("Фокус: Вільний час", "focusMode(id=\"free\")"),
+        StepSpec("Фокус: вимкнути", "focusMode(id=\"off\")")
+    ),
     "🏠 Дім" to listOf(
         StepSpec("🧹 Пилосос: почати прибирання", "vacuum(action=\"start\")", desc = "Потрібні IP і токен у Налаштування → Система"),
         StepSpec("🧹 Пилосос: пауза", "vacuum(action=\"pause\")"),

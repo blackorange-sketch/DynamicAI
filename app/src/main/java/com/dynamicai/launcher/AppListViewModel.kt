@@ -358,6 +358,8 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         _history.value = historyStorage.get()
         refresh()
         startLlmAutoUnload()
+        com.dynamicai.launcher.macro.FocusModes.init(app)
+        viewModelScope.launch { com.dynamicai.launcher.macro.FocusModes.active.collect { updateQuery("") } }
         // Фонове завантаження моделі: перший запит не чекатиме ~15 с на старт рушія
         if (settingsStorage.load().llmPreload) {
             viewModelScope.launch {
@@ -398,8 +400,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     fun updateQuery(query: String) {
         viewModelScope.launch {
             val foldersPkgs = _folders.value.flatMap { it.packageNames }.toSet()
+            val focusHidden = com.dynamicai.launcher.macro.FocusModes.hiddenFor(com.dynamicai.launcher.macro.FocusModes.active.value, _apps.value)
             val visibleApps = _apps.value.filter {
-                it.packageName !in _hidden.value && it.packageName !in foldersPkgs
+                it.packageName !in _hidden.value && it.packageName !in foldersPkgs && it.packageName !in focusHidden
             }
             _suggestions.value = suggestionProvider.build(
                 query, visibleApps, _contacts.value, executor.flashlightOn.value

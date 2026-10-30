@@ -6,6 +6,12 @@ import android.service.notification.StatusBarNotification
 
 /** Передає вхідні сповіщення інших додатків у тригери макросів («notification:пакет:текст»). */
 class MacroNotificationListener : NotificationListenerService() {
+    companion object {
+        @Volatile var instance: MacroNotificationListener? = null
+    }
+
+    override fun onListenerConnected() { instance = this }
+    override fun onListenerDisconnected() { if (instance === this) instance = null }
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         try {
             if (sbn.packageName == packageName) return

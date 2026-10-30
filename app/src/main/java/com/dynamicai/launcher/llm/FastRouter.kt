@@ -68,8 +68,9 @@ class FastRouter(private val runTool: suspend (String) -> String) {
         val sys = SYS_TOGGLES.any { it.first.containsMatchIn(t) } && (ON.containsMatchIn(t) || OFF.containsMatchIn(t)) ||
             SYS_PHRASES.any { it.first.containsMatchIn(t) }
         val vac = t.contains("пилосос") || Regex("^(почни|запусти)\\s+прибирання$|^прибери(\\s+вдома|\\s+в\\s+квартирі)?$").containsMatchIn(t)
+        val misc = Regex("сповіщен.*(прочитай|які|є|озвуч)|(прочитай|озвуч\\p{L}*|які)\\s+(мої\\s+)?сповіщ|що\\s+нового|^(режим|фокус)\\s+(сну|роботи|вільн|відпочин|авто)|фокус").containsMatchIn(t)
         val media = Regex("(наступн|попередн|минул)\\p{L}*\\s+(трек|пісн|композиц)|^\\s*(пауза|далі)\\s*$").containsMatchIn(t)
-        return toggle || media || sys || vac
+        return toggle || media || sys || vac || misc
     }
 
     suspend fun tryHandle(raw: String): String? {
@@ -105,6 +106,14 @@ class FastRouter(private val runTool: suspend (String) -> String) {
                 else -> """vacuum(action="start")"""
             }
             Regex("^(почни|запусти)\\s+прибирання$|^прибери(\\s+вдома|\\s+в\\s+квартирі)?$").containsMatchIn(t) -> """vacuum(action="start")"""
+
+            // Підсумок сповіщень
+            Regex("(прочитай|озвуч\\p{L}*|які|покажи|є)\\s+(мої\\s+|нові\\s+)?сповіщ|^що\\s+нового$|^сповіщення$").containsMatchIn(t) -> """notifDigest(speak="false")"""
+
+            // Режими фокусу
+            Regex("^(вимкни|скасуй|вийди з)\\s+(режим\\s+)?фокус\\p{L}*$|^звичайний\\s+фокус$").containsMatchIn(t) -> """focusMode(id="off")"""
+            Regex("^(увімкни\\s+|включи\\s+)?(режим|фокус)\\s+(фокусу\\s+)?(сну|роботи|вільний час|відпочинку|гри|авто)$").containsMatchIn(t) ->
+                com.dynamicai.launcher.macro.FocusModes.idFromPhrase(t)?.let { """focusMode(id="$it")""" }
 
             // Системні дії через Shizuku
             SYS_PHRASES.any { it.first.containsMatchIn(t) } -> SYS_PHRASES.first { it.first.containsMatchIn(t) }.second

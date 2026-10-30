@@ -51,6 +51,8 @@ data class LauncherSettings(
     val litertMtp: String = "default",         // "default" | "on" | "off"
     val litertSeparateCache: Boolean = false,
     val maxResponseTokens: Int = 256,          // ліміт довжини відповіді (MNN: токени; усі: обрізання за реченням)
+    val gestureDoubleTap: String = "none",      // "none" | "notifications" | "voice" | "lock" | "macro:<id>"
+    val gestureSwipeDown: String = "notifications",
     val vacuumIp: String = "",
     val vacuumToken: String = "",
     val vacuumProto: String = "auto",           // "auto" | "miot" | "roborock"
@@ -117,6 +119,8 @@ class SettingsStorage(context: Context) {
             litertSeparateCache = prefs.getBoolean("litertSeparateCache", false),
             maxResponseTokens = prefs.getInt("maxResponseTokens", 256),
             carBtName = prefs.getString("carBtName", "") ?: "",
+            gestureDoubleTap = prefs.getString("gestureDoubleTap", "none") ?: "none",
+            gestureSwipeDown = prefs.getString("gestureSwipeDown", "notifications") ?: "notifications",
             vacuumIp = prefs.getString("vacuumIp", "") ?: "",
             vacuumToken = prefs.getString("vacuumToken", "") ?: "",
             vacuumProto = prefs.getString("vacuumProto", "auto") ?: "auto",
@@ -179,6 +183,8 @@ class SettingsStorage(context: Context) {
             .putBoolean("litertSeparateCache", s.litertSeparateCache)
             .putInt("maxResponseTokens", s.maxResponseTokens)
             .putString("carBtName", s.carBtName)
+            .putString("gestureDoubleTap", s.gestureDoubleTap)
+            .putString("gestureSwipeDown", s.gestureSwipeDown)
             .putString("vacuumIp", s.vacuumIp)
             .putString("vacuumToken", s.vacuumToken)
             .putString("vacuumProto", s.vacuumProto)

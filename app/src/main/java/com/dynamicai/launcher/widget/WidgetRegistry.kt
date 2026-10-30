@@ -27,7 +27,9 @@ object WidgetRegistry {
         WidgetType("notes", "Нотатки", "📝"),
         WidgetType("music", "Музичний плеєр", "🎵"),
         WidgetType("macro_tiles", "Макроси (плитки)", "⚡"),
-        WidgetType("smart_actions", "Розумні пропозиції", "✨")
+        WidgetType("smart_actions", "Розумні пропозиції", "✨"),
+        WidgetType("focus", "Режими фокусу", "🎯"),
+        WidgetType("notif_digest", "Підсумок сповіщень", "🔔")
         // майбутні: "calendar", "battery", "quick_actions"
     )
 
@@ -89,5 +91,7 @@ fun RenderPlacedWidget(
         }
         "macro_tiles" -> MacroTilesWidget(widget.size, onWidgetLongPress, onOpenMacros, sizeModifier)
         "smart_actions" -> SmartActionsWidget(widget.size, onWidgetLongPress, onOpenVoice, sizeModifier)
+        "focus" -> FocusWidget(onWidgetLongPress, sizeModifier)
+        "notif_digest" -> NotificationDigestWidget(onWidgetLongPress, sizeModifier)
     }
 }

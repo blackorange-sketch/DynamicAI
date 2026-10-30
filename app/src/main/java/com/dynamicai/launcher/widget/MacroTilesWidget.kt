@@ -145,3 +145,71 @@ private fun ActionChip(a: SmartAction, onClick: () -> Unit) {
         Text(a.label, color = AppTheme.colors.textPrimary, fontSize = 13.sp, maxLines = 1)
     }
 }
+
+/** Віджет «Фокус»: чіпи режимів (Робота, Сон, Авто, Вільний час) і вимкнення; активний підсвічений. */
+@Composable
+fun FocusWidget(onLongPress: () -> Unit, modifier: Modifier = Modifier) {
+    val ctx = LocalContext.current
+    LaunchedEffect(Unit) { com.dynamicai.launcher.macro.FocusModes.init(ctx) }
+    val active by com.dynamicai.launcher.macro.FocusModes.active.collectAsState()
+    Column(modifier = modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { onLongPress() }) }) {
+        Text(
+            "🎯 Фокус" + (com.dynamicai.launcher.macro.FocusModes.find(active)?.let { " · ${it.name}" } ?: ""),
+            color = AppTheme.colors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+        )
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            com.dynamicai.launcher.macro.FocusModes.presets.forEach { m ->
+                val on = m.id == active
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (on) AppTheme.colors.accent.copy(alpha = 0.28f) else AppTheme.colors.textPrimary.copy(alpha = 0.08f))
+                        .border(1.dp, if (on) AppTheme.colors.accent else AppTheme.colors.glassBorder.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
+                        .pointerInput(m.id, on) {
+                            detectTapGestures(onTap = {
+                                if (on) com.dynamicai.launcher.macro.FocusModes.deactivate(ctx)
+                                else com.dynamicai.launcher.macro.FocusModes.activate(ctx, m.id)
+                            }, onLongPress = { onLongPress() })
+                        }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(m.icon, fontSize = 16.sp)
+                    Spacer(Modifier.width(6.dp))
+                    Text(m.name, color = AppTheme.colors.textPrimary, fontSize = 13.sp, maxLines = 1)
+                }
+            }
+        }
+    }
+}
+
+/** Віджет «Сповіщення»: підсумок за додатками, тап — прочитати вголос. */
+@Composable
+fun NotificationDigestWidget(onLongPress: () -> Unit, modifier: Modifier = Modifier) {
+    val ctx = LocalContext.current
+    var text by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) {
+        while (true) {
+            text = try { com.dynamicai.launcher.macro.NotificationDigest.build(ctx) } catch (_: Throwable) { "" }
+            delay(15_000)
+        }
+    }
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(AppTheme.colors.textPrimary.copy(alpha = 0.06f))
+            .border(1.dp, AppTheme.colors.glassBorder.copy(alpha = 0.7f), RoundedCornerShape(18.dp))
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { com.dynamicai.launcher.macro.MacroTools(ctx).speak(text) },
+                    onLongPress = { onLongPress() }
+                )
+            }
+            .padding(12.dp)
+    ) {
+        Text("🔔 Сповіщення · тап — прочитати", color = AppTheme.colors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(4.dp))
+        Text(text.ifBlank { "…" }, color = AppTheme.colors.textPrimary, fontSize = 13.sp, maxLines = 6, overflow = TextOverflow.Ellipsis)
+    }
+}

@@ -564,6 +564,14 @@ fun SettingsScreen(
         if (initialCategory == null || cat == "system") {
         GlassSectionHeader("Bluetooth")
         BluetoothTestRow()
+        GlassSectionHeader("👆 Жести")
+        GlassCard {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                GestureRow("Подвійний тап по порожньому місцю", settings.gestureDoubleTap) { onSettingsChange(settings.copy(gestureDoubleTap = it)) }
+                Spacer(Modifier.height(10.dp))
+                GestureRow("Свайп вниз по екрану", settings.gestureSwipeDown) { onSettingsChange(settings.copy(gestureSwipeDown = it)) }
+            }
+        }
         GlassSectionHeader("🧹 Робот-пилосос")
         GlassCard {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -1365,4 +1373,43 @@ private fun VacuumSettingsBlock(settings: LauncherSettings, onSettingsChange: (L
         }
     }, enabled = !testing) { Text("Перевірити зв'язок", color = AppTheme.colors.successLight) }
     if (testResult.isNotBlank()) Text(testResult, color = AppTheme.colors.textPrimary, fontSize = 12.sp)
+}
+
+
+/** Вибір дії для жесту: стандартні варіанти або будь-який макрос. */
+@Composable
+private fun GestureRow(title: String, value: String, onPick: (String) -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var showMacros by remember { mutableStateOf(false) }
+    val macroName = remember(value) {
+        if (value.startsWith("macro:")) com.dynamicai.launcher.macro.MacroStorage(ctx).get().firstOrNull { it.id == value.removePrefix("macro:") }?.name else null
+    }
+    Text(title, color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+    Spacer(Modifier.height(6.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        val current = if (value.startsWith("macro:")) "macro" else value
+        listOf("Нічого" to "none", "Шторка" to "notifications", "Голос" to "voice", "Блок." to "lock", "Макрос" to "macro").forEach { (label, id) ->
+            LlmBackendChip(label, id, current) { if (it == "macro") showMacros = true else onPick(it) }
+        }
+    }
+    if (macroName != null) Text("⚡ $macroName", color = AppTheme.colors.successLight, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+    if (showMacros) {
+        val macros = remember { com.dynamicai.launcher.macro.MacroStorage(ctx).get() }
+        AlertDialog(
+            onDismissRequest = { showMacros = false },
+            containerColor = AppTheme.colors.surface,
+            title = { Text("Який макрос запускати?", color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()).heightIn(max = 360.dp)) {
+                    if (macros.isEmpty()) Text("Макросів ще немає — створіть їх у «Керування макросами».", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
+                    macros.forEach { m ->
+                        Text("${m.icon}  ${m.name}", color = AppTheme.colors.textPrimary, fontSize = 15.sp,
+                            modifier = Modifier.fillMaxWidth().clickable { onPick("macro:" + m.id); showMacros = false }.padding(vertical = 10.dp))
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showMacros = false }) { Text("Закрити", color = AppTheme.colors.textSecondary) } }
+        )
+    }
 }

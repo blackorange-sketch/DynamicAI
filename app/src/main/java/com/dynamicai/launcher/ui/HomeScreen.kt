@@ -395,10 +395,28 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
     LaunchedEffect(query) { vm.updateQuery(query) }
 
+    // Режим фокусу ховає відволікаючі додатки (ігри, соцмережі) поверх ручного списку прихованих
+    LaunchedEffect(Unit) { com.dynamicai.launcher.macro.FocusModes.init(ctx) }
+    val activeFocus by com.dynamicai.launcher.macro.FocusModes.active.collectAsStateWithLifecycle()
+    val hiddenEff = remember(hidden, apps, activeFocus) { hidden + com.dynamicai.launcher.macro.FocusModes.hiddenFor(activeFocus, apps) }
+
+    val settingsNow by rememberUpdatedState(settings)
+    fun runGesture(spec: String) {
+        when {
+            spec.isBlank() || spec == "none" -> {}
+            spec == "notifications" -> statusBarCtrl.expandNotifications()
+            spec == "voice" -> ctx.startActivity(android.content.Intent(ctx, com.dynamicai.launcher.VoiceChatActivity::class.java))
+            spec == "lock" -> com.dynamicai.launcher.macro.MacroLauncher.runTool(ctx, "systemAction(action=\"lock\")")
+            spec.startsWith("macro:") -> com.dynamicai.launcher.macro.MacroStorage(ctx).get()
+                .firstOrNull { it.id == spec.removePrefix("macro:") }?.let { com.dynamicai.launcher.macro.MacroLauncher.run(ctx, it) }
+            spec.startsWith("tool:") -> com.dynamicai.launcher.macro.MacroLauncher.runTool(ctx, spec.removePrefix("tool:"))
+        }
+    }
+
     // Алфавітна стрічка: активний екран визначає джерело
-    val drawerAppsAll = remember(apps, hidden, folders) {
+    val drawerAppsAll = remember(apps, hiddenEff, folders) {
         val folderPkgs = folders.flatMap { it.packageNames }.toSet()
-        apps.filter { it.packageName !in hidden && it.packageName !in folderPkgs }
+        apps.filter { it.packageName !in hiddenEff && it.packageName !in folderPkgs }
     }
     val drawerFiltered = remember(drawerAppsAll, drawerCategory) {
         if (drawerCategory == "all") drawerAppsAll
@@ -417,8 +435,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
     val letters = if (drawerOpen) drawerLetters else homeLetters
 
-    val dockApps = remember(dockPkgs, apps, hidden) {
-        apps.filter { it.packageName in dockPkgs && it.packageName !in hidden }
+    val dockApps = remember(dockPkgs, apps, hiddenEff) {
+        apps.filter { it.packageName in dockPkgs && it.packageName !in hiddenEff }
     }
 
     LaunchedEffect(activeLetter) { if (activeLetter != null) showOverlay = true }
@@ -606,6 +624,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             .background(AppTheme.colors.background.copy(alpha = settings.backgroundAlphaPercent / 100f))
             .pointerInput(Unit) {
                 detectTapGestures(
+                    onDoubleTap = {
+                        if (!showSettings && !drawerOpen && !searchActive && openFolder == null && !showNotesScreen && !showMacroManager) {
+                            runGesture(settingsNow.gestureDoubleTap)
+                        }
+                    },
                     onLongPress = {
                         // Тільки якщо ми на головному екрані (не в drawer/search/settings)
                         if (!showSettings && !drawerOpen && !searchActive) {
@@ -616,12 +639,18 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 )
             }
             .pointerInput(Unit) {
-                detectVerticalDragGestures { _, dragAmount ->
-                    if (dragAmount > 10f
+                var swipeFired = false
+                detectVerticalDragGestures(
+                    onDragStart = { swipeFired = false },
+                    onDragEnd = { swipeFired = false },
+                    onDragCancel = { swipeFired = false }
+                ) { _, dragAmount ->
+                    if (dragAmount > 10f && !swipeFired
                         && !drawerOpen && !searchActive && !showSettings
                         && openFolder == null && !showNotesScreen && !showMacroManager
                     ) {
-                        statusBarCtrl.expandNotifications()
+                        swipeFired = true
+                        runGesture(settingsNow.gestureSwipeDown)
                     }
                 }
             }
@@ -1059,9 +1088,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
         
 
-        val drawerApps = remember(apps, hidden) {
+        val drawerApps = remember(apps, hiddenEff) {
             // Показуємо всі apps крім прихованих (ті що в папках теж видно)
-            apps.filter { it.packageName !in hidden }
+            apps.filter { it.packageName !in hiddenEff }
         }
         AppDrawer(
             apps = drawerApps,

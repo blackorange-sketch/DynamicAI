@@ -25,7 +25,9 @@ object WidgetRegistry {
     val available = listOf(
         WidgetType("weather_clock", "Погода та годинник", "🌤️"),
         WidgetType("notes", "Нотатки", "📝"),
-        WidgetType("music", "Музичний плеєр", "🎵")
+        WidgetType("music", "Музичний плеєр", "🎵"),
+        WidgetType("macro_tiles", "Макроси (плитки)", "⚡"),
+        WidgetType("smart_actions", "Розумні пропозиції", "✨")
         // майбутні: "calendar", "battery", "quick_actions"
     )
 
@@ -49,6 +51,9 @@ fun RenderPlacedWidget(
     onNotesDelete: (String) -> Unit,
     onNotesAdd: (String) -> Unit,
     onOpenAllNotes: () -> Unit,
+    onWidgetLongPress: () -> Unit = {},
+    onOpenMacros: () -> Unit = {},
+    onOpenVoice: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val sizeModifier = when (widget.size) {
@@ -82,5 +87,7 @@ fun RenderPlacedWidget(
         "music" -> {
             MusicWidget(size = widget.size, modifier = sizeModifier)
         }
+        "macro_tiles" -> MacroTilesWidget(widget.size, onWidgetLongPress, onOpenMacros, sizeModifier)
+        "smart_actions" -> SmartActionsWidget(widget.size, onWidgetLongPress, onOpenVoice, sizeModifier)
     }
 }

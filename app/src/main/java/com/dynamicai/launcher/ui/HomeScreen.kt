@@ -700,7 +700,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                             onNotesToggle = { id -> notesStorage.toggle(id); notesList = notesStorage.get() },
                                             onNotesDelete = { id -> notesStorage.remove(id); notesList = notesStorage.get() },
                                             onNotesAdd = { text -> notesStorage.add(text); notesList = notesStorage.get() },
-                                            onOpenAllNotes = { showNotesScreen = true }
+                                            onOpenAllNotes = { showNotesScreen = true },
+                                            onWidgetLongPress = { widgetSettingsFor = widget },
+                                            onOpenMacros = { showMacroManager = true },
+                                            onOpenVoice = {
+                                                ctx.startActivity(android.content.Intent(ctx, com.dynamicai.launcher.VoiceChatActivity::class.java))
+                                            }
                                         )
                                     }
                                     if (widgetSettingsFor?.id == widget.id) {

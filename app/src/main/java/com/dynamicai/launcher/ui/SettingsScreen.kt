@@ -481,6 +481,19 @@ fun SettingsScreen(
                 current = settings.overlayPosition,
                 onChange = { onSettingsChange(settings.copy(overlayPosition = it)) }
             )
+            Text("Ландшафт (якщо док не ховається)", color = AppTheme.colors.textSecondary, fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+            SizeSliderRow(
+                label = "По вертикалі (ландшафт)",
+                value = settings.overlayOffsetYPercentLandscape,
+                suffix = "%",
+                values = listOf(10, 25, 40, 50, 60, 75, 90),
+                onChange = { onSettingsChange(settings.copy(overlayOffsetYPercentLandscape = it)) }
+            )
+            PositionRow(
+                current = settings.overlayPositionLandscape,
+                onChange = { onSettingsChange(settings.copy(overlayPositionLandscape = it)) }
+            )
         }
         }
 
@@ -575,6 +588,12 @@ fun SettingsScreen(
             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 SwitchRow("Жива аврора на фоні (більше споживає батарею)", settings.liveAurora, Icons.Default.Star, AppTheme.colors.accent) {
                     onSettingsChange(settings.copy(liveAurora = it))
+                }
+                SwitchRow("Паралакс при гортанні сторінок", settings.pageParallax, Icons.Default.Star, AppTheme.colors.accent) {
+                    onSettingsChange(settings.copy(pageParallax = it))
+                }
+                SwitchRow("Вночі (00–06) лише годинник", settings.nightClockMode, Icons.Default.Settings, AppTheme.colors.purple) {
+                    onSettingsChange(settings.copy(nightClockMode = it))
                 }
                 SwitchRow("Режим однієї руки (вміст нижче)", settings.oneHandMode, Icons.Default.Settings, AppTheme.colors.success) {
                     onSettingsChange(settings.copy(oneHandMode = it))

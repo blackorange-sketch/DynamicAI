@@ -310,6 +310,19 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         if (apps.isNotEmpty()) vm.markDockAppeared()
     }
 
+    // Нічний режим «лише годинник» (00:00–06:00)
+    var isNightNow by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val h = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+            isNightNow = h in 0..5
+            kotlinx.coroutines.delay(60_000)
+        }
+    }
+
+    // Точка останнього дотику — звідси «розкривається» запуск додатка
+    var lastTouch by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Unspecified) }
+
     // Бейджі сповіщень на іконках дока (потрібен доступ до сповіщень)
     var dockBadges by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     LaunchedEffect(Unit) {
@@ -622,7 +635,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
     val launchFade by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (launchingApp != null) 0f else 1f,
-        animationSpec = androidx.compose.animation.core.tween(180),
+        animationSpec = androidx.compose.animation.core.tween(220),
         label = "launchFade"
     )
 
@@ -631,9 +644,23 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             .fillMaxSize()
             .graphicsLayer {
                 alpha = launchFade
-                val s = 0.94f + 0.06f * launchFade
+                // Зум від місця дотику: екран «розкривається» назовні
+                val s = 1f + 0.18f * (1f - launchFade)
                 scaleX = s
                 scaleY = s
+                if (lastTouch != androidx.compose.ui.geometry.Offset.Unspecified && size.width > 0f) {
+                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(
+                        (lastTouch.x / size.width).coerceIn(0f, 1f), (lastTouch.y / size.height).coerceIn(0f, 1f)
+                    )
+                }
+            }
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        ev.changes.firstOrNull { it.pressed }?.let { lastTouch = it.position }
+                    }
+                }
             }
             .background(AppTheme.colors.background.copy(alpha = settings.backgroundAlphaPercent / 100f))
             .pointerInput(Unit) {
@@ -717,15 +744,27 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         }
                         
                         Column(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    if (settings.pageParallax) {
+                                        val off = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
+                                        val a = kotlin.math.abs(off).coerceIn(0f, 1f)
+                                        translationX = off * size.width * 0.25f
+                                        alpha = 1f - 0.6f * a
+                                        val sc = 1f - 0.06f * a
+                                        scaleX = sc; scaleY = sc
+                                    }
+                                },
                             verticalArrangement = Arrangement.Top
                         ) {
                             val pageWidgets = placedWidgets.filter { it.page == page }
                             val hasFull = pageWidgets.any { it.size == "full" }
-                            val visibleWidgets = if (hasFull) pageWidgets.filter { it.size == "full" } else pageWidgets
+                            val baseWidgets = if (hasFull) pageWidgets.filter { it.size == "full" } else pageWidgets
+                            val clockOnly = if (isNightNow && settings.nightClockMode) baseWidgets.filter { it.type == "weather_clock" } else emptyList()
+                            val visibleWidgets = if (clockOnly.isNotEmpty()) clockOnly else baseWidgets
                             
-                            visibleWidgets
-                                .forEach { widget ->
+                            val renderOne: @Composable (com.dynamicai.launcher.widget.PlacedWidget) -> Unit = { widget ->
                                     androidx.compose.foundation.layout.Box(
                                         modifier = Modifier.pointerInput(widget.id) {
                                             detectTapGestures(
@@ -769,10 +808,30 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                             onMove = { newPage ->
                                                 placedWidgetsStorage.moveToPage(widget.id, newPage)
                                                 placedWidgets = placedWidgetsStorage.get()
+                                            },
+                                            onStackWithPrevious = {
+                                                placedWidgetsStorage.stackWithPrevious(widget.id)
+                                                placedWidgets = placedWidgetsStorage.get()
+                                                widgetSettingsFor = null
+                                            },
+                                            onUnstack = {
+                                                placedWidgetsStorage.unstack(widget.id)
+                                                placedWidgets = placedWidgetsStorage.get()
+                                                widgetSettingsFor = null
                                             }
                                         )
                                     }
-                                }
+                            }
+                            // Віджети з однаковим group малюємо як стек на місці першого
+                            val slots = mutableListOf<MutableList<com.dynamicai.launcher.widget.PlacedWidget>>()
+                            for (w in visibleWidgets) {
+                                val s = if (w.group.isNotBlank() && w.size != "full") slots.firstOrNull { it.first().group == w.group } else null
+                                if (s != null) s.add(w) else slots.add(mutableListOf(w))
+                            }
+                            slots.forEach { s ->
+                                if (s.size == 1) renderOne(s[0])
+                                else com.dynamicai.launcher.widget.WidgetStack(s) { renderOne(it) }
+                            }
                         }
                     }
                     

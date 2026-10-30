@@ -27,7 +27,9 @@ fun WidgetSettingsDialog(
     onDismiss: () -> Unit,
     onDelete: () -> Unit,
     onSizeChange: (String) -> Unit,
-    onMove: (Int) -> Unit
+    onMove: (Int) -> Unit,
+    onStackWithPrevious: () -> Unit = {},
+    onUnstack: () -> Unit = {}
 ) {
     var selectedPage by remember { mutableStateOf(widget.page) }
     var newPageCount by remember { mutableStateOf(pageCount.coerceAtLeast(1)) }
@@ -71,7 +73,15 @@ fun WidgetSettingsDialog(
                     }
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
+                TextButton(onClick = { if (widget.group.isBlank()) onStackWithPrevious() else onUnstack(); onDismiss() }) {
+                    Text(
+                        if (widget.group.isBlank()) "⧉ Об'єднати в стек із попереднім" else "⧉ Вийти зі стека",
+                        color = AppTheme.colors.accent
+                    )
+                }
+
+                Spacer(Modifier.height(8.dp))
 
                 // Сторінка
                 Text("Сторінка", color = AppTheme.colors.textSecondary, fontSize = 12.sp)

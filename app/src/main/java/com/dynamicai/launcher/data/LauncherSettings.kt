@@ -22,6 +22,10 @@ data class LauncherSettings(
     val overlayOffsetYPercent: Int = 50,     // 0..100, вертикальний центр дока
     val overlayHandleLengthDp: Int = 140,
     val overlayHandleAlphaPercent: Int = 55,
+    val overlayOffsetYPercentLandscape: Int = 50,
+    val overlayPositionLandscape: String = "right",
+    val pageParallax: Boolean = true,
+    val nightClockMode: Boolean = false,
     val overlayHideInLandscape: Boolean = true,  // ховати плаваючий док у ландшафті (відео, ігри)
     val overlayHideOnKeyboard: Boolean = true,   // ховати плаваючий док при відкритій клавіатурі
     val overlayAutoCollapseMs: Int = 0,      // 0 = вимкнено
@@ -97,6 +101,10 @@ class SettingsStorage(context: Context) {
         overlayHandleAlphaPercent = prefs.getInt("overlayHandleAlphaPercent", 55),
         overlayHideOnKeyboard = prefs.getBoolean("overlayHideOnKeyboard", true),
         overlayHideInLandscape = prefs.getBoolean("overlayHideInLandscape", true),
+        overlayOffsetYPercentLandscape = prefs.getInt("overlayOffsetYPercentLandscape", 50),
+        overlayPositionLandscape = prefs.getString("overlayPositionLandscape", "right") ?: "right",
+        pageParallax = prefs.getBoolean("pageParallax", true),
+        nightClockMode = prefs.getBoolean("nightClockMode", false),
         overlayAutoCollapseMs = prefs.getInt("overlayAutoCollapseMs", 0),
         overlayEdgePaddingDp = prefs.getInt("overlayEdgePaddingDp", 14),
         backgroundAlphaPercent = prefs.getInt("backgroundAlphaPercent", 100),
@@ -166,6 +174,10 @@ class SettingsStorage(context: Context) {
             .putInt("overlayHandleAlphaPercent", s.overlayHandleAlphaPercent)
             .putBoolean("overlayHideOnKeyboard", s.overlayHideOnKeyboard)
             .putBoolean("overlayHideInLandscape", s.overlayHideInLandscape)
+            .putInt("overlayOffsetYPercentLandscape", s.overlayOffsetYPercentLandscape)
+            .putString("overlayPositionLandscape", s.overlayPositionLandscape)
+            .putBoolean("pageParallax", s.pageParallax)
+            .putBoolean("nightClockMode", s.nightClockMode)
             .putInt("overlayAutoCollapseMs", s.overlayAutoCollapseMs)
             .putInt("overlayEdgePaddingDp", s.overlayEdgePaddingDp)
             .putInt("backgroundAlphaPercent", s.backgroundAlphaPercent)

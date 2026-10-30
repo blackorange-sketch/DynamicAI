@@ -117,6 +117,10 @@ class FloatingDockService : Service() {
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
+        try {
+            applyPosition()
+            if (::rootLayout.isInitialized) windowManager.updateViewLayout(rootLayout, params)
+        } catch (_: Throwable) {}
         updateDockVisibility()
     }
 
@@ -478,10 +482,12 @@ class FloatingDockService : Service() {
     }
 
     private fun applyPosition() {
-        val horizontal = if (settings.overlayPosition == "left") Gravity.START else Gravity.END
+        val land = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val side = if (land) settings.overlayPositionLandscape else settings.overlayPosition
+        val horizontal = if (side == "left") Gravity.START else Gravity.END
         params.gravity = Gravity.CENTER_VERTICAL or horizontal
         params.x = 0
-        val pct = settings.overlayOffsetYPercent.coerceIn(0, 100)
+        val pct = (if (land) settings.overlayOffsetYPercentLandscape else settings.overlayOffsetYPercent).coerceIn(0, 100)
         params.y = ((pct - 50) * 8).coerceIn(-400, 400)
     }
 

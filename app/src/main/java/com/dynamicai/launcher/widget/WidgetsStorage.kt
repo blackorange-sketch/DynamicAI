@@ -19,7 +19,8 @@ class WidgetsStorage(context: Context) {
                     id = o.getString("id"),
                     type = o.getString("type"),
                     page = o.optInt("page", 0),
-                    size = o.optString("size", "medium")
+                    size = o.optString("size", "medium"),
+                    group = o.optString("group", "")
                 )
             }
         } catch (_: Exception) { emptyList() }
@@ -50,7 +51,27 @@ class WidgetsStorage(context: Context) {
     }
 
     fun moveToPage(id: String, newPage: Int) {
-        save(get().map { if (it.id == id) it.copy(page = newPage) else it })
+        save(get().map { if (it.id == id) it.copy(page = newPage, group = "") else it })
+    }
+
+    /** Додає віджет у стек із попереднім віджетом тієї ж сторінки. */
+    fun stackWithPrevious(id: String) {
+        val list = get()
+        val idx = list.indexOfFirst { it.id == id }
+        if (idx < 0) return
+        val w = list[idx]
+        val prev = list.subList(0, idx).lastOrNull { it.page == w.page && it.size != "full" } ?: return
+        val g = prev.group.ifBlank { UUID.randomUUID().toString() }
+        save(list.map { if (it.id == id || it.id == prev.id) it.copy(group = g) else it })
+    }
+
+    fun unstack(id: String) {
+        val list = get()
+        val g = list.firstOrNull { it.id == id }?.group.orEmpty()
+        val left = list.map { if (it.id == id) it.copy(group = "") else it }
+        // якщо у стеку лишився один віджет — розформовуємо
+        val remaining = left.count { g.isNotBlank() && it.group == g }
+        save(if (remaining <= 1) left.map { if (g.isNotBlank() && it.group == g) it.copy(group = "") else it } else left)
     }
 
     /** При першому запуску — створюємо дефолтні віджети. */
@@ -77,6 +98,7 @@ class WidgetsStorage(context: Context) {
                 put("type", w.type)
                 put("page", w.page)
                 put("size", w.size)
+                put("group", w.group)
             })
         }
         prefs.edit().putString("items", arr.toString()).apply()

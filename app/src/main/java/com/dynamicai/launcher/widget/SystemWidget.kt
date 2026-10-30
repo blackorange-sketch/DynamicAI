@@ -88,7 +88,7 @@ fun SystemWidget(size: String, onLongPress: () -> Unit, modifier: Modifier = Mod
             val disk = StatBarData("Сховище", "%.0f / %.0f ГБ".format(snap.storageUsedGb, snap.storageTotalGb), stFrac)
             val bat = StatBarData(
                 if (snap.charging) "Батарея ⚡" else "Батарея",
-                "${snap.batteryPct}% · %.1f°C".format(snap.batteryTempC),
+                "${snap.batteryPct}% · ${"%.1f".format(snap.batteryTempC)}°C",
                 snap.batteryPct / 100f, invert = true
             )
             val bars = if (size == "small") listOf(ram, cpu) else listOf(ram, cpu, disk, bat)

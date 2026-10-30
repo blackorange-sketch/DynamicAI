@@ -6,7 +6,7 @@ import com.dynamicai.launcher.command.FuzzyMatcher
 import com.dynamicai.launcher.command.SettingsRoutes
 import com.dynamicai.launcher.model.AppInfo
 
-class SuggestionProvider(context: Context) {
+class SuggestionProvider(private val context: Context) {
 
     private val customStorage = CustomActionStorage(context)
 
@@ -146,8 +146,31 @@ class SuggestionProvider(context: Context) {
                 result.add(Suggestion.App(app, score))
             }
 
+        // === 5. Макроси, нотатки, збережені розмови, «спитати асистента» ===
+        try {
+            com.dynamicai.launcher.macro.MacroStorage(context).get().forEach { m ->
+                val phrases = m.trigger.split(',').map { it.trim() }.filter { it.isNotBlank() }
+                val best = (listOf(m.name) + phrases).maxOf { FuzzyMatcher.score(it, q) }
+                if (best >= 60) result.add(Suggestion.Extra("macro", m.icon, m.name, "Макрос · запустити", m.id, best))
+            }
+            com.dynamicai.launcher.note.NotesStorage(context).get()
+                .filter { it.text.contains(q, ignoreCase = true) }.take(2)
+                .forEach { result.add(Suggestion.Extra("note", "📝", it.text.replace("\n", " ").take(60), "Нотатка", it.id, 50)) }
+            com.dynamicai.launcher.overlay.ChatArchive.init(context)
+            val fmt = java.text.SimpleDateFormat("d MMM", java.util.Locale("uk", "UA"))
+            com.dynamicai.launcher.overlay.ChatArchive.sorted()
+                .filter { c -> c.title.contains(q, ignoreCase = true) || c.messages.any { it.content.contains(q, ignoreCase = true) } }
+                .take(2)
+                .forEach { result.add(Suggestion.Extra("chat", "💬", c(it.title), "Розмова · ${fmt.format(java.util.Date(it.ts))}", it.id, 45)) }
+        } catch (_: Throwable) {}
+        if (q.length >= 3) {
+            result.add(Suggestion.Extra("ask", "🤖", "Спитати асистента: «${query.trim().take(40)}»", "Відповідь текстом і голосом", query.trim(), 10))
+        }
+
         return result.sortedByDescending { it.score }
     }
+
+    private fun c(s: String) = s
 
     private fun contactScore(name: String, q: String): Int {
         val n = name.lowercase().trim()

@@ -84,17 +84,18 @@ class VoiceChatActivity : ComponentActivity() {
             am.mode = android.media.AudioManager.MODE_IN_COMMUNICATION
         } catch (_: Throwable) {}
 
+        val askText = intent?.getStringExtra("ask")
         setContent {
             val vm: AppListViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
             com.dynamicai.launcher.ui.theme.StoredAppTheme {
-                VoiceChatScreen(vm = vm, onClose = { finish() })
+                VoiceChatScreen(vm = vm, onClose = { finish() }, initialQuery = askText)
             }
         }
     }
 }
 
 @Composable
-fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
+fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: String? = null) {
     val ctx = LocalContext.current
     val messages = ChatHistoryManager.history
     var voiceState by remember { mutableStateOf(VoiceState.LISTENING) }
@@ -117,6 +118,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
 
     var activeJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
     var showClearDialog by remember { mutableStateOf(false) }
+    var showArchive by remember { mutableStateOf(false) }
 
     /** Відправляє запит моделі. addUserMessage=false — для повтору останнього запиту. */
     fun sendQuery(text: String, addUserMessage: Boolean = true) {
@@ -267,7 +269,9 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
     LaunchedEffect(Unit) { 
         ChatHistoryManager.init(ctx)  // історія переживає закриття екрана
         vm.tts // прогрів
-        if (messages.isEmpty()) {
+        if (!initialQuery.isNullOrBlank()) {
+            sendQuery(initialQuery)
+        } else if (messages.isEmpty()) {
             val greeting = when ((0..2).random()) {
                 0 -> "Системи онлайн. Чим можу допомогти?"
                 1 -> "Слухаю вас."
@@ -316,9 +320,12 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
             ) {
                 Text("Голосовий асистент", color = AppTheme.colors.textPrimary, fontSize = AppDims.textTitle, fontWeight = FontWeight.SemiBold)
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { showArchive = true }) {
+                        Text("🕘", fontSize = 20.sp)
+                    }
                     if (visible.isNotEmpty()) {
                         IconButton(onClick = { showClearDialog = true }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Очистити розмову", tint = AppTheme.colors.textSecondary)
+                            Text("＋", color = AppTheme.colors.textSecondary, fontSize = 26.sp)
                         }
                     }
                     GlassCloseButton(onClick = onClose)
@@ -333,11 +340,11 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 AlertDialog(
                     onDismissRequest = { showClearDialog = false },
                     containerColor = AppTheme.colors.surface,
-                    title = { Text("Очистити розмову?", color = AppTheme.colors.textPrimary) },
-                    text = { Text("Усі повідомлення буде видалено.", color = AppTheme.colors.textSecondary) },
+                    title = { Text("Нова розмова?", color = AppTheme.colors.textPrimary) },
+                    text = { Text("Поточну розмову буде збережено в історії (🕘).", color = AppTheme.colors.textSecondary) },
                     confirmButton = {
-                        TextButton(onClick = { ChatHistoryManager.clear(); showClearDialog = false }) {
-                            Text("Очистити", color = AppTheme.colors.danger)
+                        TextButton(onClick = { stopGeneration(); ChatHistoryManager.clear(); showClearDialog = false }) {
+                            Text("Почати нову", color = AppTheme.colors.accent)
                         }
                     },
                     dismissButton = {
@@ -450,6 +457,13 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit) {
                 LiquidChip("Wild Rift", AppTheme.colors.purple) { ctx.startActivity(Intent(ctx, WildRiftAdvisorActivity::class.java)) }
             }
             Spacer(modifier = Modifier.height(AppDims.spaceS))
+        }
+
+        if (showArchive) {
+            com.dynamicai.launcher.ui.ChatArchiveScreen(
+                onOpen = { chat -> stopGeneration(); ChatHistoryManager.restore(chat.id); showArchive = false },
+                onClose = { showArchive = false }
+            )
         }
     }
 }

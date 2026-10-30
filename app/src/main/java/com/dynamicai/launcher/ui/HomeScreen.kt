@@ -844,6 +844,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             vm.executeSuggestion(s); closeSearch()
                         }
+                        is Suggestion.Extra -> SuggestionExtraRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            vm.executeSuggestion(s); closeSearch()
+                        }
                         is Suggestion.Contact -> SuggestionContactRow(s) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             vm.executeSuggestion(s); closeSearch()
@@ -1614,6 +1618,37 @@ fun SuggestionActionRow(s: Suggestion.Action, onClick: () -> Unit) {
         Column {
             Text(s.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
             s.subtitle?.let { Text(it, color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 12.sp) }
+        }
+    }
+}
+
+@Composable
+fun SuggestionExtraRow(s: Suggestion.Extra, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                brush = Brush.verticalGradient(
+                    listOf(
+                        AppTheme.colors.textPrimary.copy(alpha = if (s.kind == "ask") 0.04f else 0.08f),
+                        AppTheme.colors.textPrimary.copy(alpha = 0.02f)
+                    )
+                )
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(20.dp)).background(AppTheme.colors.accent.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) { Text(s.icon, fontSize = 20.sp) }
+        Spacer(Modifier.width(14.dp))
+        Column {
+            Text(s.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp, maxLines = 1)
+            Text(s.subtitle, color = AppTheme.colors.textMuted, fontSize = 12.sp)
         }
     }
 }

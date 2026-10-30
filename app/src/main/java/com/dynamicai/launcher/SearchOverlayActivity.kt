@@ -192,6 +192,10 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
             is Suggestion.Contact -> {
                 // Контакти у overlay поки не підтримуються
             }
+            is Suggestion.Extra -> {
+                com.dynamicai.launcher.suggestion.SuggestionRunner.run(ctx, s)
+                onClose()
+            }
         }
     }
 
@@ -284,6 +288,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                                     onLongClick = { handleSuggestion(s) }
                                 )
                                 is Suggestion.Contact -> {}
+                                is Suggestion.Extra -> com.dynamicai.launcher.ui.SuggestionExtraRow(s) { handleSuggestion(s) }
                             }
                         }
                     }

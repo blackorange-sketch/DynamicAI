@@ -439,6 +439,11 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 handleResult(result, s.label)
             }
             is Suggestion.Contact -> executeContact(s)
+            is Suggestion.Extra -> {
+                if (!com.dynamicai.launcher.suggestion.SuggestionRunner.run(getApplication(), s) && s.kind == "note") {
+                    _openNotesRequest.value = true
+                }
+            }
         }
     }
 

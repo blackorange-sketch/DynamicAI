@@ -31,6 +31,16 @@ sealed class Suggestion {
         override val score: Int
     ) : Suggestion()
 
+    /** Універсальний результат пошуку: макрос, нотатка, збережена розмова або «спитати асистента». */
+    data class Extra(
+        val kind: String,          // "macro" | "note" | "chat" | "ask"
+        val icon: String,
+        override val label: String,
+        val subtitle: String,
+        val payload: String,       // id макроса/нотатки/розмови або текст запиту
+        override val score: Int
+    ) : Suggestion()
+
     data class Contact(
         val name: String,
         val actionLabel: String,
@@ -52,6 +62,7 @@ fun Suggestion.stableKey(): String = when (this) {
     is Suggestion.Action -> "action:$id"
     is Suggestion.Setting -> "setting:$route"
     is Suggestion.Contact -> "contact:$name:${actionType.name}:$target"
+    is Suggestion.Extra -> "extra:$kind:$payload"
 }
 
 fun formatPhone(raw: String): String {

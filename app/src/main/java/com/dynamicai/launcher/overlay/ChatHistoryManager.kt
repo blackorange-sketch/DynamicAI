@@ -19,6 +19,7 @@ object ChatHistoryManager {
     /** Підключає збереження історії (викликати один раз; повторні виклики ігноруються). */
     fun init(context: Context) {
         if (prefs != null) return
+        ChatArchive.init(context)
         val p = context.applicationContext.getSharedPreferences("chat_history", Context.MODE_PRIVATE)
         prefs = p
         if (history.isEmpty()) {
@@ -44,8 +45,20 @@ object ChatHistoryManager {
         history.removeAll { it.role == "status" }
     }
 
+    /** Нова розмова: поточна зберігається в архів. */
     fun clear() {
+        ChatArchive.archive(history.toList())
         history.clear()
+        persist()
+    }
+
+    /** Відкриває розмову з архіву; поточна спершу зберігається. */
+    fun restore(id: String) {
+        val chat = ChatArchive.get(id) ?: return
+        if (ChatArchive.currentId != id) ChatArchive.archive(history.toList())
+        history.clear()
+        history.addAll(chat.messages)
+        ChatArchive.currentId = id
         persist()
     }
 

@@ -16,6 +16,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
@@ -311,12 +312,15 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                 }
             }
 
-            LazyColumn(
+            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(4),
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
+                contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (rows.isEmpty() && query.isNotBlank()) {
-                    item {
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -327,19 +331,22 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                         }
                     }
                 }
-                items(rows, key = { it.stableKey() }) { s ->
+                items(
+                    rows,
+                    key = { it.stableKey() },
+                    span = { s ->
+                        androidx.compose.foundation.lazy.grid.GridItemSpan(if (s is Suggestion.App) 1 else maxLineSpan)
+                    }
+                ) { s ->
                     when (s) {
                         is Suggestion.Action -> SuggestionActionRow(s) { handleSuggestion(s) }
                         is Suggestion.Setting -> SuggestionSettingRow(s) { handleSuggestion(s) }
-                        is Suggestion.App -> AppRow(
+                        is Suggestion.App -> com.dynamicai.launcher.ui.AppGridItem(
                             app = s.app,
-                            inDock = false,
-                            iconSizeDp = iconSize,
+                            iconSizeDp = settings?.menuIconSizeDp ?: 52,
                             fontSizeSp = fontSize,
-                            showLabel = showLabels,
-                            onClick = { handleSuggestion(s) },
                             onLongClick = { handleSuggestion(s) },
-                            highlight = query
+                            onTap = { handleSuggestion(s) }
                         )
                         is Suggestion.Contact -> com.dynamicai.launcher.ui.SuggestionContactRow(s) { handleSuggestion(s) }
                         is Suggestion.Extra -> com.dynamicai.launcher.ui.SuggestionExtraRow(s) { handleSuggestion(s) }

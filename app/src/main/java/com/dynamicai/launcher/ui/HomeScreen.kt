@@ -38,6 +38,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -171,7 +172,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
     val focusRequester = remember { FocusRequester() }
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
-    val listState = rememberLazyListState()
+    val listState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val drawerGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val scope = rememberCoroutineScope()
     var scrollJob by remember { mutableStateOf<Job?>(null) }
@@ -996,16 +997,17 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     exit = fadeOut(androidx.compose.animation.core.tween(90)),
                     modifier = Modifier.fillMaxSize()
                 ) {
-            LazyColumn(
+            // Результати пошуку: додатки — квадратні плитки (як у шторці), решта — рядки на всю ширину
+            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
                 state = listState,
+                columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(4),
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = 8.dp,
-                    bottom = 8.dp
-                )
+                contentPadding = PaddingValues(top = 8.dp, bottom = 170.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 if (suggestions.isEmpty() && query.isNotBlank()) {
-                    item {
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -1019,9 +1021,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         }
                     }
                 }
-                items(suggestions, key = { it.stableKey() }) { s ->
-                  // Без animateItem: при швидкому наборі рядки мають змінюватись різко, а не «пливти»
-                  androidx.compose.foundation.layout.Box {
+                items(
+                    suggestions,
+                    key = { it.stableKey() },
+                    span = { s ->
+                        androidx.compose.foundation.lazy.grid.GridItemSpan(if (s is Suggestion.App) 1 else maxLineSpan)
+                    }
+                ) { s ->
                     when (s) {
                         is Suggestion.Action -> SuggestionActionRow(s) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -1039,18 +1045,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             vm.executeSuggestion(s); closeSearch()
                         }
-                        is Suggestion.App -> AppRow(
+                        is Suggestion.App -> AppGridItem(
                             app = s.app,
-                            inDock = s.app.packageName in dockPkgs,
-                            iconSizeDp = settings.iconSizeDp,
+                            iconSizeDp = settings.menuIconSizeDp,
                             fontSizeSp = settings.fontSizeSp,
-                            showLabel = settings.showLabels,
-                            onClick = { launchAppWithAnimation(s.app) },
                             onLongClick = { menuApp = s.app },
-                            highlight = query
+                            onTap = { launchAppWithAnimation(s.app) }
                         )
                     }
-                  }
                 }
             }
                 }

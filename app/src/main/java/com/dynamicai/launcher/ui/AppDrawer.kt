@@ -244,7 +244,7 @@ private fun CategoryChip(
 }
 
 @Composable
-private fun AppGridItem(
+internal fun AppGridItem(
     app: AppInfo,
     iconSizeDp: Int,
     fontSizeSp: Int,

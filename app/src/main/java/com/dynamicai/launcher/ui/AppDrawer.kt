@@ -48,8 +48,6 @@ private data class Category(val id: String, val label: String)
 fun AppDrawer(
     apps: List<AppInfo>,
     backgroundAlphaPercent: Int,
-    iconSizeDp: Int,
-    fontSizeSp: Int,
     onLaunch: (AppInfo) -> Unit,
     onLongClick: (AppInfo) -> Unit = {},
     onDismiss: () -> Unit,
@@ -99,7 +97,7 @@ fun AppDrawer(
         }
     }
 
-    val columns = gridCellsForIcons(iconSizeDp)
+    val columns = gridCells()
 
     // Категорії — тільки ті, де є ≥ 3 застосунки
     val categories: List<Category> = remember(apps) {
@@ -161,10 +159,10 @@ fun AppDrawer(
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
                     horizontalArrangement = gridGapH(),
-                    verticalArrangement = Arrangement.spacedBy(LocalGridGapV.current.dp)
+                    verticalArrangement = gridGapV()
                 ) {
                     items(filtered, key = { it.packageName }) { app ->
-                        AppGridItem(app, iconSizeDp, fontSizeSp, onLongClick = { onLongClick(app) }) {
+                        AppGridItem(app, onLongClick = { onLongClick(app) }) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onLaunch(app)
                             onDismiss()
@@ -244,11 +242,12 @@ private fun CategoryChip(
 @Composable
 internal fun AppGridItem(
     app: AppInfo,
-    iconSizeDp: Int,
-    fontSizeSp: Int,
     onLongClick: () -> Unit = {},
     onTap: () -> Unit
 ) {
+    val style = LocalGridStyle.current
+    val iconSizeDp = style.gridIconDp
+    val fontSizeSp = style.fontSp
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier

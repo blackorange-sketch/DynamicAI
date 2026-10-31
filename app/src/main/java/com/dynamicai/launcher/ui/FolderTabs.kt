@@ -37,8 +37,6 @@ fun FolderTabs(
     folders: List<Folder>,
     apps: List<AppInfo>,
     selectedFolderId: String?,
-    iconSizeDp: Int,
-    fontSizeSp: Int,
     onSelectFolder: (Folder) -> Unit,
     onLongPressFolder: (Folder) -> Unit,
     onLaunchApp: (AppInfo) -> Unit,
@@ -64,7 +62,7 @@ fun FolderTabs(
                 shrinkTowards = Alignment.Bottom
             )
         ) {
-            val cols = gridCellsForIcons(iconSizeDp)
+            val cols = gridCells()
             LazyVerticalGrid(
                 columns = cols,
                 modifier = Modifier
@@ -80,11 +78,11 @@ fun FolderTabs(
                     .padding(vertical = 6.dp),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = gridGapH(),
-                verticalArrangement = Arrangement.spacedBy(LocalGridGapV.current.dp)
+                verticalArrangement = gridGapV()
             ) {
                 gridItems(folderApps, key = { it.packageName }) { app ->
                     // Та сама плитка, що у шторці: однакові підкладка, шрифт і відступи
-                    AppGridItem(app, iconSizeDp, fontSizeSp, onTap = { onLaunchApp(app) })
+                    AppGridItem(app, onTap = { onLaunchApp(app) })
                 }
             }
         }

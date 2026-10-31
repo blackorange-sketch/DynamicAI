@@ -194,8 +194,6 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
     }
 
     val settings = remember { runCatching { com.dynamicai.launcher.data.SettingsStorage(ctx).load() }.getOrNull() }
-    val iconSize = settings?.iconSizeDp ?: 44
-    val fontSize = settings?.fontSizeSp ?: 16
     val showLabels = settings?.showLabels ?: true
     val hiddenNow = remember { try { com.dynamicai.launcher.data.HiddenAppsStorage(ctx).get() } catch (_: Throwable) { emptySet() } }
     // Порожній запит — той самий алфавітний список усіх додатків, що й у пошуку на головному екрані
@@ -312,11 +310,11 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
 
             if (query.isNotBlank()) {
             androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                columns = com.dynamicai.launcher.ui.gridCellsForIcons(settings?.menuIconSizeDp ?: 56),
+                columns = com.dynamicai.launcher.ui.gridCells(),
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
                 horizontalArrangement = com.dynamicai.launcher.ui.gridGapH(),
-                verticalArrangement = Arrangement.spacedBy(com.dynamicai.launcher.ui.LocalGridGapV.current.dp)
+                verticalArrangement = com.dynamicai.launcher.ui.gridGapV()
             ) {
                 if (rows.isEmpty()) {
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
@@ -342,8 +340,6 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                         is Suggestion.Setting -> SuggestionSettingRow(s) { handleSuggestion(s) }
                         is Suggestion.App -> com.dynamicai.launcher.ui.AppGridItem(
                             app = s.app,
-                            iconSizeDp = settings?.menuIconSizeDp ?: 56,
-                            fontSizeSp = fontSize,
                             onLongClick = { handleSuggestion(s) },
                             onTap = { handleSuggestion(s) }
                         )
@@ -376,8 +372,6 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                         is Suggestion.App -> AppRow(
                             app = s.app,
                             inDock = false,
-                            iconSizeDp = iconSize,
-                            fontSizeSp = fontSize,
                             showLabel = showLabels,
                             onClick = { handleSuggestion(s) },
                             onLongClick = { handleSuggestion(s) },

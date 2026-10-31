@@ -1002,11 +1002,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             // Набраний запит: додатки — квадратні плитки, решта результатів — рядки на всю ширину
             androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
                 state = searchGridState,
-                columns = gridCellsForIcons(settings.menuIconSizeDp),
+                columns = gridCells(),
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 8.dp, bottom = if (dockPkgs.isNotEmpty()) 110.dp else 8.dp),
                 horizontalArrangement = gridGapH(),
-                verticalArrangement = Arrangement.spacedBy(LocalGridGapV.current.dp)
+                verticalArrangement = gridGapV()
             ) {
                 if (suggestions.isEmpty()) {
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
@@ -1049,8 +1049,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         }
                         is Suggestion.App -> AppGridItem(
                             app = s.app,
-                            iconSizeDp = settings.menuIconSizeDp,
-                            fontSizeSp = settings.fontSizeSp,
                             onLongClick = { menuApp = s.app },
                             onTap = { launchAppWithAnimation(s.app) }
                         )
@@ -1104,8 +1102,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         is Suggestion.App -> AppRow(
                             app = s.app,
                             inDock = s.app.packageName in dockPkgs,
-                            iconSizeDp = settings.iconSizeDp,
-                            fontSizeSp = settings.fontSizeSp,
                             showLabel = settings.showLabels,
                             onClick = { launchAppWithAnimation(s.app) },
                             onLongClick = { menuApp = s.app },
@@ -1210,8 +1206,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     folders = folders,
                     apps = apps,
                     selectedFolderId = selectedTabFolderId,
-                    iconSizeDp = settings.menuIconSizeDp,
-                    fontSizeSp = settings.fontSizeSp,
                     onSelectFolder = { folder ->
                         selectedTabFolderId =
                             if (selectedTabFolderId == folder.id) null
@@ -1265,7 +1259,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             }
             Dock(
                 items = dockItems,
-                iconSizeDp = settings.dockIconSizeDp,
+                iconSizeDp = LocalGridStyle.current.dockIconDp,
                 onLongClick = { item ->
                     if (!item.isFolder) {
                         val app = apps.firstOrNull { it.packageName == item.id }
@@ -1326,8 +1320,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 }
             },
             backgroundAlphaPercent = settings.backgroundAlphaPercent,
-            iconSizeDp = settings.menuIconSizeDp,
-            fontSizeSp = settings.fontSizeSp,
             onLaunch = { app -> launchAppWithAnimation(app) },
             onLongClick = { app -> menuApp = app },
             onDismiss = { drawerOpen = false },
@@ -1939,17 +1931,18 @@ fun SuggestionContactRow(s: Suggestion.Contact, onClick: () -> Unit) {
 fun AppRow(
     app: AppInfo,
     inDock: Boolean,
-    iconSizeDp: Int,
-    fontSizeSp: Int,
     showLabel: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     highlight: String = ""
 ) {
+    val style = LocalGridStyle.current
+    val iconSizeDp = style.listIconDp
+    val fontSizeSp = style.fontSp
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = (LocalListGap.current / 2).dp)
+            .padding(horizontal = 8.dp, vertical = (style.listGapDp / 2).dp)
             .clip(RoundedCornerShape(18.dp))
             .background(
                 brush = Brush.verticalGradient(

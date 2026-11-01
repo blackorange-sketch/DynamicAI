@@ -54,11 +54,11 @@ fun FolderTabs(
         AnimatedVisibility(
             visible = selectedFolder != null,
             enter = expandVertically(
-                animationSpec = tween(200),
+                animationSpec = tween(animMs(200)),
                 expandFrom = Alignment.Bottom
             ),
             exit = shrinkVertically(
-                animationSpec = tween(180),
+                animationSpec = tween(animMs(180)),
                 shrinkTowards = Alignment.Bottom
             )
         ) {

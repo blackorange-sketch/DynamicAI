@@ -48,3 +48,13 @@ fun gridGapH(): Arrangement.Horizontal =
 
 @Composable
 fun gridGapV(): Arrangement.Vertical = Arrangement.spacedBy(LocalGridStyle.current.gapVDp.dp)
+
+/** Швидкість анімацій у відсотках (0 = без анімацій). */
+val LocalAnimSpeed = compositionLocalOf { 100 }
+
+/** Тривалість базової анімації з урахуванням налаштування швидкості. */
+@Composable
+fun animMs(baseMs: Int): Int {
+    val speed = LocalAnimSpeed.current
+    return if (speed <= 0) 0 else (baseMs * 100f / speed).toInt()
+}

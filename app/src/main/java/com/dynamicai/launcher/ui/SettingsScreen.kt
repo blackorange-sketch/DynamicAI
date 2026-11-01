@@ -330,6 +330,17 @@ fun SettingsScreen(
             }
         }
         
+        GlassSectionHeader("Анімації")
+        GlassCard {
+            SizeSliderRow(
+                label = "Швидкість анімацій (шторка, папки, головний екран; 0 = вимкнено)",
+                value = settings.animSpeedPercent,
+                suffix = "%",
+                values = listOf(0, 50, 75, 100, 150, 200),
+                onChange = { onSettingsChange(settings.copy(animSpeedPercent = it)) }
+            )
+        }
+
         GlassSectionHeader("Фон лаунчера")
         GlassCard {
             SizeSliderRow(

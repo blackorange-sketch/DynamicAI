@@ -125,12 +125,12 @@ fun AppDrawer(
         visible = visible,
         enter = slideInVertically(
             initialOffsetY = { it / 2 },
-            animationSpec = tween(280, easing = FastOutSlowInEasing)
-        ) + fadeIn(tween(220)),
+            animationSpec = tween(animMs(280), easing = FastOutSlowInEasing)
+        ) + fadeIn(tween(animMs(220))),
         exit = slideOutVertically(
             targetOffsetY = { it / 2 },
-            animationSpec = tween(220, easing = FastOutSlowInEasing)
-        ) + fadeOut(tween(180))
+            animationSpec = tween(animMs(220), easing = FastOutSlowInEasing)
+        ) + fadeOut(tween(animMs(180)))
     ) {
         val bgAlpha = kotlin.math.max(0.65f, backgroundAlphaPercent / 100f)
         Box(

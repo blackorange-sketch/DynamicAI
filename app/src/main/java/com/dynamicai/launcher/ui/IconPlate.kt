@@ -22,6 +22,7 @@ fun IconLayoutProvider(settings: LauncherSettings, content: @Composable () -> Un
     CompositionLocalProvider(
         LocalIconShape provides settings.iconShape,
         LocalGridStyle provides settings.toGridStyle(),
+        LocalAnimSpeed provides settings.animSpeedPercent,
         content = content
     )
 }

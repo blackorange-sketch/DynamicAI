@@ -63,6 +63,7 @@ data class LauncherSettings(
     val gridGapHDp: Int = 4,                  // горизонтальний відступ між іконками в сітці
     val gridGapVDp: Int = 12,                 // вертикальний відступ між іконками в сітці
     val listGapDp: Int = 6,                   // відступ між рядками списку
+    val animSpeedPercent: Int = 100,          // швидкість анімацій: 0 = вимкнено, 100 = звичайна
     val accentColor: Int = 0,                 // свій акцентний колір (ARGB), 0 = колір теми
     val uniformIcons: Boolean = false,         // один розмір іконок у списку, доку та сітці
     val liveAurora: Boolean = false,           // жива аврора на фоні головного екрана
@@ -148,6 +149,7 @@ class SettingsStorage(context: Context) {
             gridGapHDp = prefs.getInt("gridGapHDp", 4),
             gridGapVDp = prefs.getInt("gridGapVDp", 12),
             listGapDp = prefs.getInt("listGapDp", 6),
+            animSpeedPercent = prefs.getInt("animSpeedPercent", 100),
             accentColor = prefs.getInt("accentColor", 0),
             uniformIcons = prefs.getBoolean("uniformIcons", false),
             liveAurora = prefs.getBoolean("liveAurora", false),
@@ -229,6 +231,7 @@ class SettingsStorage(context: Context) {
             .putInt("gridGapHDp", s.gridGapHDp)
             .putInt("gridGapVDp", s.gridGapVDp)
             .putInt("listGapDp", s.listGapDp)
+            .putInt("animSpeedPercent", s.animSpeedPercent)
             .putInt("accentColor", s.accentColor)
             .putBoolean("uniformIcons", s.uniformIcons)
             .putBoolean("liveAurora", s.liveAurora)

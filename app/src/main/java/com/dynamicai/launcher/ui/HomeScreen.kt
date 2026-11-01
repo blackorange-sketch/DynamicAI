@@ -157,12 +157,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     // Анімація зникнення HomeScreen при відкритті drawer
     val homeAlpha by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (drawerOpen) 0f else 1f,
-        animationSpec = androidx.compose.animation.core.tween(if (drawerOpen) 200 else 260),
+        animationSpec = androidx.compose.animation.core.tween(animMs(if (drawerOpen) 200 else 260)),
         label = "homeAlpha"
     )
     val homeScale by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (drawerOpen) 0.90f else 1f,
-        animationSpec = androidx.compose.animation.core.tween(if (drawerOpen) 240 else 280),
+        animationSpec = androidx.compose.animation.core.tween(animMs(if (drawerOpen) 240 else 280)),
         label = "homeScale"
     )
     var launchingApp by remember { mutableStateOf<AppInfo?>(null) }

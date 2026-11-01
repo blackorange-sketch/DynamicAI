@@ -1025,8 +1025,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         }
                     }
                 }
+                // Додатки — плитками зверху, решта результатів (дії, налаштування, контакти) — рядками знизу
+                val orderedSuggestions = suggestions.filterIsInstance<Suggestion.App>() +
+                    suggestions.filter { it !is Suggestion.App }
                 items(
-                    suggestions,
+                    orderedSuggestions,
                     key = { it.stableKey() },
                     span = { s ->
                         androidx.compose.foundation.lazy.grid.GridItemSpan(if (s is Suggestion.App) 1 else maxLineSpan)
@@ -1216,7 +1219,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     onLongPressFolder = { folder ->
                         folderHeaderMenu = folder
                     },
-                    onLaunchApp = { app -> launchAppWithAnimation(app) }
+                    onLaunchApp = { app -> launchAppWithAnimation(app) },
+                    onLongPressApp = { app ->
+                        folderMenuApp = app
+                        folderMenuFolder = folders.firstOrNull { it.id == selectedTabFolderId }
+                    }
                 )
             }
         }
@@ -1445,6 +1452,21 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                 .pointerInput(app.packageName) {
                                     detectTapGestures {
                                         launchAppWithAnimation(app)
+                                        folderMenuApp = null
+                                        folderMenuFolder = null
+                                    }
+                                }
+                                .padding(vertical = 12.dp)
+                        )
+                        Text(
+                            "Більше дій…",
+                            color = AppTheme.colors.textSecondary,
+                            fontSize = 15.sp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .pointerInput(app.packageName) {
+                                    detectTapGestures {
+                                        menuApp = app
                                         folderMenuApp = null
                                         folderMenuFolder = null
                                     }

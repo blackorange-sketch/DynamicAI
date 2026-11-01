@@ -40,6 +40,7 @@ fun FolderTabs(
     onSelectFolder: (Folder) -> Unit,
     onLongPressFolder: (Folder) -> Unit,
     onLaunchApp: (AppInfo) -> Unit,
+    onLongPressApp: (AppInfo) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (folders.isEmpty()) return
@@ -82,7 +83,7 @@ fun FolderTabs(
             ) {
                 gridItems(folderApps, key = { it.packageName }) { app ->
                     // Та сама плитка, що у шторці: однакові підкладка, шрифт і відступи
-                    AppGridItem(app, onTap = { onLaunchApp(app) })
+                    AppGridItem(app, onLongClick = { onLongPressApp(app) }, onTap = { onLaunchApp(app) })
                 }
             }
         }

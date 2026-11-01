@@ -226,6 +226,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
     val overlayScope = rememberCoroutineScope()
     val rows: List<Suggestion> = if (query.isBlank()) allApps.map { Suggestion.App(it, 0) }
         else (suggestions + webSugg).distinctBy { it.stableKey() }.sortedByDescending { it.score }
+            .let { l -> l.filterIsInstance<Suggestion.App>() + l.filter { it !is Suggestion.App } }
 
     com.dynamicai.launcher.ui.IconLayoutProvider(settings ?: com.dynamicai.launcher.data.LauncherSettings()) {
     Box(

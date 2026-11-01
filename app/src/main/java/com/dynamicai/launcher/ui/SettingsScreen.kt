@@ -635,44 +635,10 @@ fun SettingsScreen(
         }
         }
 
-        // ==== Енергозбереження ====
+        // ==== Система ====
         if (initialCategory == null || cat == "system") {
-        GlassSectionHeader("Енергозбереження")
-        GlassCard {
-            SwitchRow("Пауза при вимкненому екрані", settings.wpPauseOnScreenOff, Icons.Default.Star, AppTheme.colors.textMuted) {
-                onSettingsChange(settings.copy(wpPauseOnScreenOff = it))
-            }
-            SwitchRow("Пауза при низькому заряді", settings.wpPauseOnLowBattery, Icons.Default.Star, AppTheme.colors.warning) {
-                onSettingsChange(settings.copy(wpPauseOnLowBattery = it))
-            }
-            FpsRow(
-                current = settings.wpFps,
-                onChange = { onSettingsChange(settings.copy(wpFps = it)) }
-            )
-        }
-        }
-
-        // ==== Дії ====
-        if (initialCategory == null || cat == "system") {
-        GlassSectionHeader("⚙️ Система")
-        if (initialCategory == null || cat == "system") {
-        GlassSectionHeader("Shizuku")
+        GlassSectionHeader("Доступ і дозволи")
         ShizukuTestRow()
-
-        if (initialCategory == null || cat == "system") {
-        GlassSectionHeader("Дії")
-        GlassCard {
-            ActionRow("Оновити контакти", Icons.Default.Person, AppTheme.colors.success, onRefreshContacts)
-            ActionRow("Очистити історію команд", Icons.Default.Delete, AppTheme.colors.danger, onClearHistory)
-            ActionRow("Показати всі приховані ($hiddenCount)", Icons.Default.Info, AppTheme.colors.textMuted, onClearHidden)
-        }
-        }
-        }
-        }
-
-        // ==== LLM ====
-        if (initialCategory == null || cat == "system") {
-        GlassSectionHeader("Дозволи")
         GlassCard {
             val ctx = LocalContext.current
                 var hasWriteSettings by remember {
@@ -716,35 +682,53 @@ fun SettingsScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
         }
+        BluetoothTestRow()
+
+        GlassSectionHeader("Живлення")
+        GlassCard {
+            SwitchRow("Пауза при вимкненому екрані", settings.wpPauseOnScreenOff, Icons.Default.Star, AppTheme.colors.textMuted) {
+                onSettingsChange(settings.copy(wpPauseOnScreenOff = it))
+            }
+            SwitchRow("Пауза при низькому заряді", settings.wpPauseOnLowBattery, Icons.Default.Star, AppTheme.colors.warning) {
+                onSettingsChange(settings.copy(wpPauseOnLowBattery = it))
+            }
+            FpsRow(
+                current = settings.wpFps,
+                onChange = { onSettingsChange(settings.copy(wpFps = it)) }
+            )
         }
 
-        if (initialCategory == null || cat == "system") {
-        GlassSectionHeader("Bluetooth")
-        BluetoothTestRow()
-        GlassSectionHeader("💾 Резервна копія")
+        GlassSectionHeader("Дані та дії")
+        GlassCard {
+            ActionRow("Оновити контакти", Icons.Default.Person, AppTheme.colors.success, onRefreshContacts)
+            ActionRow("Очистити історію команд", Icons.Default.Delete, AppTheme.colors.danger, onClearHistory)
+            ActionRow("Показати всі приховані ($hiddenCount)", Icons.Default.Info, AppTheme.colors.textMuted, onClearHidden)
+        }
+        GlassSectionHeader("Резервна копія")
         GlassCard {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 BackupSettingsBlock()
             }
         }
-        GlassSectionHeader("🧹 Робот-пилосос")
+
+        GlassSectionHeader("Робот-пилосос")
         GlassCard {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 VacuumSettingsBlock(settings, onSettingsChange)
             }
         }
-        GlassSectionHeader("🚗 Авто")
+        GlassSectionHeader("Авто")
         GlassCard {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 CarModeSettingsBlock(settings, onSettingsChange)
             }
         }
+        }
 
-
+        // ==== ШІ: асистент ====
         if (showAssistant) {
         GlassSectionHeader("🤖 ШІ та Асистент")
-                if (showAssistant) {
-                GlassSectionHeader("🫧 Плаваючий асистент")
+        GlassSectionHeader("🫧 Плаваючий асистент")
         GlassCard {
             val prefs = remember { ctx.getSharedPreferences("floating_orb", android.content.Context.MODE_PRIVATE) }
             var orbEnabled by remember { mutableStateOf(prefs.getBoolean("enabled", false)) }
@@ -789,8 +773,6 @@ fun SettingsScreen(
                     )
                 )
             }
-        }
-                }
         }
         }
 

@@ -234,11 +234,31 @@ private fun SystemDetailsDialog(snap: SystemStats.Snapshot?, onDismiss: () -> Un
     }
 }
 
+private object ProcIconCache {
+    private val map = java.util.concurrent.ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
+    private val failed = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    fun get(pkg: String): androidx.compose.ui.graphics.ImageBitmap? = map[pkg]
+
+    suspend fun load(ctx: android.content.Context, pkg: String): androidx.compose.ui.graphics.ImageBitmap? {
+        map[pkg]?.let { return it }
+        if (pkg in failed) return null
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                ctx.packageManager.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap().also { map[pkg] = it }
+            } catch (_: Throwable) { failed.add(pkg); null }
+        }
+    }
+}
+
 @Composable
 private fun ProcRowView(r: ProcRow, canStop: Boolean, onStop: () -> Unit) {
     val ctx = LocalContext.current
-    val icon = remember(r.pkg) {
-        try { ctx.packageManager.getApplicationIcon(r.pkg).toBitmap(72, 72).asImageBitmap() } catch (_: Throwable) { null }
+    // Іконки кешуються на рівні процесу й вантажаться поза головним потоком
+    // (раніше читались знову при кожному відкритті віджета, що засмічувало лог помилками ROM-кешу іконок)
+    var icon by remember(r.pkg) { mutableStateOf(ProcIconCache.get(r.pkg)) }
+    LaunchedEffect(r.pkg) {
+        if (icon == null) icon = ProcIconCache.load(ctx, r.pkg)
     }
     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
         if (icon != null) Image(icon, null, Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)))

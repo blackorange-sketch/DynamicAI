@@ -48,7 +48,7 @@ class AppRepository(private val context: Context) {
             list.map { cached ->
                 async(ioLimited) {
                     val icon = loadIconOnly(cached.packageName)
-                    val bmp = try { icon.toBitmap(72, 72) } catch (_: Throwable) { null }
+                    val bmp = try { icon.toBitmap(128, 128) } catch (_: Throwable) { null }
                     val cat = try {
                         pm.getApplicationInfo(cached.packageName, 0).category
                     } catch (_: Throwable) { ApplicationInfo.CATEGORY_UNDEFINED }
@@ -94,7 +94,7 @@ class AppRepository(private val context: Context) {
             unique.map { r ->
                 async(ioLimited) {
                     val icon = try { pm.getApplicationIcon(r.pkg) } catch (_: Throwable) { pm.defaultActivityIcon }
-                    val bmp = try { icon.toBitmap(72, 72) } catch (_: Throwable) { null }
+                    val bmp = try { icon.toBitmap(128, 128) } catch (_: Throwable) { null }
                     AppInfo(r.label, r.pkg, placeholderIcon, r.isSystem, bmp, r.category)
                 }
             }.awaitAll()

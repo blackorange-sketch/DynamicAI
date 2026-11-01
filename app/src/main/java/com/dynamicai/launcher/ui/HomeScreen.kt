@@ -644,7 +644,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         val app = launchingApp ?: return@LaunchedEffect
         kotlinx.coroutines.delay(160)
         vm.launch(app.packageName)
-        kotlinx.coroutines.delay(200)
+        kotlinx.coroutines.delay(420)
         launchingApp = null
     }
 
@@ -1802,6 +1802,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             }
         }
     }
+
+    // Анімація запуску поверх усього (поза зумом/затемненням основного екрана)
+    LaunchOverlay(launchingApp, lastTouch)
 
     }
 }

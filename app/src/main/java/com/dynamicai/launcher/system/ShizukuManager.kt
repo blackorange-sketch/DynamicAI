@@ -16,6 +16,24 @@ class ShizukuManager(private val context: Context) {
         const val PERMISSION_REQUEST_CODE = 1001
     }
 
+    /**
+     * Іконки недавніх кешуються на рівні процесу: раніше getApplicationIcon викликався для кожного завдання
+     * при кожному оновленні списку, і ROM щоразу сипав помилками про відсутні файли теми іконок.
+     * Для кожного споживача створюється власна копія Drawable.
+     */
+    private val iconStates = java.util.concurrent.ConcurrentHashMap<String, android.graphics.drawable.Drawable.ConstantState>()
+
+    private fun cachedIcon(
+        pm: android.content.pm.PackageManager,
+        pkg: String,
+        appInfo: android.content.pm.ApplicationInfo
+    ): android.graphics.drawable.Drawable {
+        iconStates[pkg]?.let { return it.newDrawable().mutate() }
+        val d = pm.getApplicationIcon(appInfo)
+        d.constantState?.let { iconStates[pkg] = it; return it.newDrawable().mutate() }
+        return d
+    }
+
     data class RecentTask(
         val id: Int,
         val packageName: String,
@@ -206,7 +224,7 @@ class ShizukuManager(private val context: Context) {
                         pm.getApplicationInfo(pkg, 0)
                     } catch (_: Exception) { continue }
                     val label = pm.getApplicationLabel(appInfo).toString()
-                    val icon = pm.getApplicationIcon(appInfo)
+                    val icon = cachedIcon(pm, pkg, appInfo)
 
                     // Спробувати отримати snapshot
                     val snapshot = try { getTaskSnapshot(taskId) } catch (_: Throwable) { null }

@@ -439,6 +439,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         when {
             spec.isBlank() || spec == "none" -> {}
             spec == "notifications" -> statusBarCtrl.expandNotifications()
+            spec == "drawer" -> drawerOpen = true
+            spec == "search" -> searchMode = true
             spec == "voice" -> ctx.startActivity(android.content.Intent(ctx, com.dynamicai.launcher.VoiceChatActivity::class.java))
             spec == "lock" -> com.dynamicai.launcher.macro.MacroLauncher.runTool(ctx, "systemAction(action=\"lock\")")
             spec.startsWith("macro:") -> com.dynamicai.launcher.macro.MacroStorage(ctx).get()
@@ -697,12 +699,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     onDragEnd = { swipeFired = false },
                     onDragCancel = { swipeFired = false }
                 ) { _, dragAmount ->
-                    if (dragAmount > 10f && !swipeFired
+                    if (Math.abs(dragAmount) > 10f && !swipeFired
                         && !drawerOpen && !searchActive && !showSettings
                         && openFolder == null && !showNotesScreen && !showMacroManager
                     ) {
                         swipeFired = true
-                        runGesture(settingsNow.gestureSwipeDown)
+                        runGesture(if (dragAmount > 0f) settingsNow.gestureSwipeDown else settingsNow.gestureSwipeUp)
                     }
                 }
             }

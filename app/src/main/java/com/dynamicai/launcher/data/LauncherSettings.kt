@@ -71,6 +71,7 @@ data class LauncherSettings(
     val iconShape: String = "original",        // "original" | "circle" | "squircle" | "square"
     val gestureDoubleTap: String = "none",      // "none" | "notifications" | "voice" | "lock" | "macro:<id>"
     val gestureSwipeDown: String = "notifications",
+    val gestureSwipeUp: String = "none",
     val vacuumIp: String = "",
     val vacuumToken: String = "",
     val vacuumProto: String = "auto",           // "auto" | "miot" | "roborock"
@@ -157,6 +158,7 @@ class SettingsStorage(context: Context) {
             iconShape = prefs.getString("iconShape", "original") ?: "original",
             gestureDoubleTap = prefs.getString("gestureDoubleTap", "none") ?: "none",
             gestureSwipeDown = prefs.getString("gestureSwipeDown", "notifications") ?: "notifications",
+            gestureSwipeUp = prefs.getString("gestureSwipeUp", "none") ?: "none",
             vacuumIp = prefs.getString("vacuumIp", "") ?: "",
             vacuumToken = prefs.getString("vacuumToken", "") ?: "",
             vacuumProto = prefs.getString("vacuumProto", "auto") ?: "auto",
@@ -239,6 +241,7 @@ class SettingsStorage(context: Context) {
             .putString("iconShape", s.iconShape)
             .putString("gestureDoubleTap", s.gestureDoubleTap)
             .putString("gestureSwipeDown", s.gestureSwipeDown)
+            .putString("gestureSwipeUp", s.gestureSwipeUp)
             .putString("vacuumIp", s.vacuumIp)
             .putString("vacuumToken", s.vacuumToken)
             .putString("vacuumProto", s.vacuumProto)

@@ -699,6 +699,8 @@ fun SettingsScreen(
                 GestureRow("Подвійний тап по порожньому місцю", settings.gestureDoubleTap) { onSettingsChange(settings.copy(gestureDoubleTap = it)) }
                 Spacer(Modifier.height(10.dp))
                 GestureRow("Свайп вниз по екрану", settings.gestureSwipeDown) { onSettingsChange(settings.copy(gestureSwipeDown = it)) }
+                Spacer(Modifier.height(10.dp))
+                GestureRow("Свайп вгору по екрану", settings.gestureSwipeUp) { onSettingsChange(settings.copy(gestureSwipeUp = it)) }
             }
         }
         GlassSectionHeader("🧹 Робот-пилосос")
@@ -1506,6 +1508,7 @@ private fun VacuumSettingsBlock(settings: LauncherSettings, onSettingsChange: (L
 
 
 /** Вибір дії для жесту: стандартні варіанти або будь-який макрос. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun GestureRow(title: String, value: String, onPick: (String) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -1515,9 +1518,9 @@ private fun GestureRow(title: String, value: String, onPick: (String) -> Unit) {
     }
     Text(title, color = AppTheme.colors.textPrimary, fontSize = 14.sp)
     Spacer(Modifier.height(6.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         val current = if (value.startsWith("macro:")) "macro" else value
-        listOf("Нічого" to "none", "Шторка" to "notifications", "Голос" to "voice", "Блок." to "lock", "Макрос" to "macro").forEach { (label, id) ->
+        listOf("Нічого" to "none", "Шторка" to "notifications", "Шухляда" to "drawer", "Пошук" to "search", "Голос" to "voice", "Блок." to "lock", "Макрос" to "macro").forEach { (label, id) ->
             LlmBackendChip(label, id, current) { if (it == "macro") showMacros = true else onPick(it) }
         }
     }

@@ -125,7 +125,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|density|fontScale|layoutDirection"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|density|fontScale|layoutDirection|uiMode|locale|navigation|colorMode|mcc|mnc|touchscreen"
             android:stateNotNeeded="true"
             android:excludeFromRecents="true"
             android:theme="@style/Theme.DynamicAI">

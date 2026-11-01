@@ -124,10 +124,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     var showMacroManager by remember { mutableStateOf(false) }
     var showNotesScreen by remember { mutableStateOf(false) }
     val placedWidgetsStorage = remember { com.dynamicai.launcher.widget.WidgetsStorage(ctx) }
-    var placedWidgets by remember { mutableStateOf<List<com.dynamicai.launcher.widget.PlacedWidget>>(emptyList()) }
+    var placedWidgets by remember { mutableStateOf<List<com.dynamicai.launcher.widget.PlacedWidget>>(placedWidgetsStorage.get()) }
     var showAddWidgetDialog by remember { mutableStateOf(false) }
     var currentSettingsCategory by remember { mutableStateOf<String?>(null) }
-    var currentPage by remember { mutableStateOf(0) }
+    var currentPage by remember { mutableStateOf(if (placedWidgetsStorage.hasDashboard()) 1 else 0) }
     val pageCount = remember(placedWidgets) {
         (placedWidgets.maxOfOrNull { it.page } ?: 0) + 1
     }
@@ -866,6 +866,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     LaunchedEffect(pagerState.currentPage) {
                         currentPage = pagerState.currentPage
                     }
+                    LaunchedEffect(currentPage, pageCount) {
+                        val target = currentPage.coerceIn(0, pageCount - 1)
+                        if (pagerState.currentPage != target) pagerState.animateScrollToPage(target)
+                    }
 
                     // Dots під віджетами (перед search bar)
                     if (pageCount > 1) {
@@ -1540,6 +1544,18 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         showNewFolderDialog = true
                     })
                     add(MenuItemSpec("Автопапки за категоріями") { vm.createAutoFolders() })
+                    if (placedWidgetsStorage.hasDashboard())
+                        add(MenuItemSpec("Прибрати дошку зліва") {
+                            placedWidgetsStorage.removeDashboard()
+                            placedWidgets = placedWidgetsStorage.get()
+                            currentPage = 0
+                        })
+                    else
+                        add(MenuItemSpec("Створити дошку зліва") {
+                            placedWidgetsStorage.createDashboard()
+                            placedWidgets = placedWidgetsStorage.get()
+                            currentPage = 1
+                        })
                     add(MenuItemSpec("Керування папками") { showFolderManager = true })
                     if (pageCount > 1) add(MenuItemSpec("Наступна сторінка (${currentPage + 1}/$pageCount)") {
                         currentPage = (currentPage + 1) % pageCount

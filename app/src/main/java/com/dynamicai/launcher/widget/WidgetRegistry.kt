@@ -30,7 +30,9 @@ object WidgetRegistry {
         WidgetType("smart_actions", "Розумні пропозиції", "✨"),
         WidgetType("focus", "Режими фокусу", "🎯"),
         WidgetType("notif_digest", "Підсумок сповіщень", "🔔"),
-        WidgetType("system", "Ресурси системи", "📊")
+        WidgetType("system", "Ресурси системи", "📊"),
+        WidgetType("tgchats", "Чати Telegram", "✈️"),
+        WidgetType("quick_actions", "Швидкі дії", "🔧")
         // майбутні: "calendar", "battery", "quick_actions"
     )
 
@@ -95,5 +97,7 @@ fun RenderPlacedWidget(
         "focus" -> FocusWidget(onWidgetLongPress, sizeModifier)
         "notif_digest" -> NotificationDigestWidget(onWidgetLongPress, sizeModifier)
         "system" -> SystemWidget(widget.size, onWidgetLongPress, sizeModifier)
+        "tgchats" -> TgChatsWidget(widget.size, onWidgetLongPress, sizeModifier)
+        "quick_actions" -> QuickActionsWidget(widget.size, onWidgetLongPress, sizeModifier)
     }
 }

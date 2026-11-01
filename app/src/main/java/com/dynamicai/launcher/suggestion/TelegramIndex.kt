@@ -94,6 +94,12 @@ object TelegramIndex {
         } catch (_: Throwable) {}
     }
 
+    /** Останні чати (з відомим часом активності), новіші першими. */
+    fun recent(ctx: Context, n: Int): List<Chat> {
+        refreshShortcuts(ctx)
+        return read(ctx).filter { it.ts > 0 }.sortedByDescending { it.ts }.take(n)
+    }
+
     fun search(ctx: Context, query: String): List<Pair<Chat, Int>> {
         refreshShortcuts(ctx)
         return read(ctx).mapNotNull { c ->

@@ -87,6 +87,28 @@ class WidgetsStorage(context: Context) {
         return defaults
     }
 
+    /** Чи є дошка зліва від головного екрана (тоді головний — сторінка 1). */
+    fun hasDashboard(): Boolean = prefs.getBoolean("dashboard", false)
+
+    /** Зсуває всі сторінки на +1 і створює дошку на сторінці 0. */
+    fun createDashboard() {
+        if (hasDashboard()) return
+        val shifted = get().map { it.copy(page = it.page + 1) }.toMutableList()
+        listOf("system", "quick_actions", "tgchats", "notes").forEach {
+            shifted.add(PlacedWidget(UUID.randomUUID().toString(), it, 0,
+                if (it == "quick_actions") "small" else "medium"))
+        }
+        save(shifted)
+        prefs.edit().putBoolean("dashboard", true).apply()
+    }
+
+    /** Прибирає дошку: віджети дошки видаляються, решта зсувається назад. */
+    fun removeDashboard() {
+        if (!hasDashboard()) return
+        save(get().filter { it.page != 0 }.map { it.copy(page = it.page - 1) })
+        prefs.edit().putBoolean("dashboard", false).apply()
+    }
+
     /** Скільки сторінок потрібно (максимальний page + 1). */
     fun pageCount(): Int = (get().maxOfOrNull { it.page } ?: 0) + 1
 

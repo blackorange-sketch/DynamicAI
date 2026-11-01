@@ -261,7 +261,8 @@ private fun ProcRowView(r: ProcRow, canStop: Boolean, onStop: () -> Unit) {
         if (icon == null) icon = ProcIconCache.load(ctx, r.pkg)
     }
     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (icon != null) Image(icon, null, Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)))
+        val shown = icon
+        if (shown != null) Image(shown, null, Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)))
         else Box(Modifier.size(34.dp).clip(RoundedCornerShape(10.dp)).background(AppTheme.colors.textPrimary.copy(alpha = 0.1f)))
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {

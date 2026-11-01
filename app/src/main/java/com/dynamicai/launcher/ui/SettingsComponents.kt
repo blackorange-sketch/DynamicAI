@@ -62,15 +62,16 @@ internal fun SizeSliderRow(
     values: List<Int>,
     onChange: (Int) -> Unit
 ) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(label, color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            Text("$value$suffix", color = AppTheme.colors.accent, fontSize = 13.sp)
+            Text(label, color = AppTheme.colors.textPrimary, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Text("$value$suffix", color = AppTheme.colors.accent, fontSize = 12.sp)
         }
         Slider(
+            modifier = Modifier.height(26.dp),
             value = values.indexOf(value).coerceAtLeast(0).toFloat(),
             onValueChange = { v ->
                 val idx = v.roundToInt().coerceIn(0, values.size - 1)

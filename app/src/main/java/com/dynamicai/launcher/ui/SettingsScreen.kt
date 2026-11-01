@@ -330,17 +330,6 @@ fun SettingsScreen(
             }
         }
         
-        GlassSectionHeader("Анімації")
-        GlassCard {
-            SizeSliderRow(
-                label = "Швидкість анімацій (шторка, папки, головний екран; 0 = вимкнено)",
-                value = settings.animSpeedPercent,
-                suffix = "%",
-                values = listOf(0, 50, 75, 100, 150, 200),
-                onChange = { onSettingsChange(settings.copy(animSpeedPercent = it)) }
-            )
-        }
-
         GlassSectionHeader("Фон лаунчера")
         GlassCard {
             SizeSliderRow(
@@ -403,7 +392,7 @@ fun SettingsScreen(
 
         // ==== Розміри ====
         if (initialCategory == null || cat == "appearance") {
-        GlassSectionHeader("Розміри")
+        GlassSectionHeader("Іконки та сітка")
         GlassCard {
             GridStylePreview()
             SwitchRow("Однаковий розмір іконок скрізь", settings.uniformIcons, Icons.Default.Settings, AppTheme.colors.accent) {
@@ -505,7 +494,7 @@ fun SettingsScreen(
 
         // ==== Вигляд ====
         if (initialCategory == null || cat == "appearance") {
-        GlassSectionHeader("Вигляд")
+        GlassSectionHeader("Елементи екрана")
         GlassCard {
             SwitchRow("Показувати кнопку Recent", settings.showRecentButton, Icons.Default.Menu, AppTheme.colors.purple) {
                 onSettingsChange(settings.copy(showRecentButton = it))
@@ -520,6 +509,55 @@ fun SettingsScreen(
             ActionRow("Застосунки у дока", Icons.Default.Home, AppTheme.colors.purple, onOpenDockEditor)
             ActionRow("Керування папками", Icons.Default.Add, AppTheme.colors.accent, onOpenFolderManager)
         }
+        }
+
+        if (initialCategory == null || cat == "appearance") {
+        GlassSectionHeader("Ефекти та форма іконок")
+        GlassCard {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                SwitchRow("Жива аврора на фоні (більше споживає батарею)", settings.liveAurora, Icons.Default.Star, AppTheme.colors.accent) {
+                    onSettingsChange(settings.copy(liveAurora = it))
+                }
+                SwitchRow("Паралакс при гортанні сторінок", settings.pageParallax, Icons.Default.Star, AppTheme.colors.accent) {
+                    onSettingsChange(settings.copy(pageParallax = it))
+                }
+                SwitchRow("Вночі (00–06) лише годинник", settings.nightClockMode, Icons.Default.Settings, AppTheme.colors.purple) {
+                    onSettingsChange(settings.copy(nightClockMode = it))
+                }
+                SwitchRow("Режим однієї руки (вміст нижче)", settings.oneHandMode, Icons.Default.Settings, AppTheme.colors.success) {
+                    onSettingsChange(settings.copy(oneHandMode = it))
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("Форма іконок додатків", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("Оригінал" to "original", "Коло" to "circle", "Сквірк" to "squircle", "Квадрат" to "square").forEach { (label, id) ->
+                        LlmBackendChip(label, id, settings.iconShape) { onSettingsChange(settings.copy(iconShape = it)) }
+                    }
+                }
+            }
+        }
+        GlassSectionHeader("Жести")
+        GlassCard {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                GestureRow("Подвійний тап по порожньому місцю", settings.gestureDoubleTap) { onSettingsChange(settings.copy(gestureDoubleTap = it)) }
+                Spacer(Modifier.height(10.dp))
+                GestureRow("Свайп вниз по екрану", settings.gestureSwipeDown) { onSettingsChange(settings.copy(gestureSwipeDown = it)) }
+                Spacer(Modifier.height(10.dp))
+                GestureRow("Свайп вгору по екрану", settings.gestureSwipeUp) { onSettingsChange(settings.copy(gestureSwipeUp = it)) }
+            }
+        }
+        GlassSectionHeader("Анімації")
+        GlassCard {
+            SizeSliderRow(
+                label = "Швидкість анімацій (шторка, папки, головний екран; 0 = вимкнено)",
+                value = settings.animSpeedPercent,
+                suffix = "%",
+                values = listOf(0, 50, 75, 100, 150, 200),
+                onChange = { onSettingsChange(settings.copy(animSpeedPercent = it)) }
+            )
+        }
+
         }
 
         // ==== Плаваючий док ====
@@ -683,45 +721,10 @@ fun SettingsScreen(
         if (initialCategory == null || cat == "system") {
         GlassSectionHeader("Bluetooth")
         BluetoothTestRow()
-        GlassSectionHeader("🎨 Вигляд лаунчера")
-        GlassCard {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                SwitchRow("Жива аврора на фоні (більше споживає батарею)", settings.liveAurora, Icons.Default.Star, AppTheme.colors.accent) {
-                    onSettingsChange(settings.copy(liveAurora = it))
-                }
-                SwitchRow("Паралакс при гортанні сторінок", settings.pageParallax, Icons.Default.Star, AppTheme.colors.accent) {
-                    onSettingsChange(settings.copy(pageParallax = it))
-                }
-                SwitchRow("Вночі (00–06) лише годинник", settings.nightClockMode, Icons.Default.Settings, AppTheme.colors.purple) {
-                    onSettingsChange(settings.copy(nightClockMode = it))
-                }
-                SwitchRow("Режим однієї руки (вміст нижче)", settings.oneHandMode, Icons.Default.Settings, AppTheme.colors.success) {
-                    onSettingsChange(settings.copy(oneHandMode = it))
-                }
-                Spacer(Modifier.height(8.dp))
-                Text("Форма іконок додатків", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
-                Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("Оригінал" to "original", "Коло" to "circle", "Сквірк" to "squircle", "Квадрат" to "square").forEach { (label, id) ->
-                        LlmBackendChip(label, id, settings.iconShape) { onSettingsChange(settings.copy(iconShape = it)) }
-                    }
-                }
-            }
-        }
         GlassSectionHeader("💾 Резервна копія")
         GlassCard {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 BackupSettingsBlock()
-            }
-        }
-        GlassSectionHeader("👆 Жести")
-        GlassCard {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                GestureRow("Подвійний тап по порожньому місцю", settings.gestureDoubleTap) { onSettingsChange(settings.copy(gestureDoubleTap = it)) }
-                Spacer(Modifier.height(10.dp))
-                GestureRow("Свайп вниз по екрану", settings.gestureSwipeDown) { onSettingsChange(settings.copy(gestureSwipeDown = it)) }
-                Spacer(Modifier.height(10.dp))
-                GestureRow("Свайп вгору по екрану", settings.gestureSwipeUp) { onSettingsChange(settings.copy(gestureSwipeUp = it)) }
             }
         }
         GlassSectionHeader("🧹 Робот-пилосос")
@@ -919,68 +922,10 @@ fun SettingsScreen(
         LaunchedEffect(Unit) {
             while (true) { vm.checkLlmReady(); kotlinx.coroutines.delay(3000) }
         }
+        // --- Відповіді ---
+        GlassSectionHeader("Відповіді")
         GlassCard {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("LiteRT GPU (експериментально)", color = AppTheme.colors.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    "Якщо Gemma на GPU видає нісенітниці, спробуйте FLOAT32 і вимкнений MTP. Після змін перезапустіть рушій.",
-                    color = AppTheme.colors.textMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp)
-                )
-                Spacer(Modifier.height(10.dp))
-                Text("Точність активацій", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
-                Spacer(Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    LlmBackendChip("За замовч.", "default", settings.litertActivation) { onSettingsChange(settings.copy(litertActivation = it)) }
-                    LlmBackendChip("FLOAT32", "float32", settings.litertActivation) { onSettingsChange(settings.copy(litertActivation = it)) }
-                    LlmBackendChip("FLOAT16", "float16", settings.litertActivation) { onSettingsChange(settings.copy(litertActivation = it)) }
-                }
-                Spacer(Modifier.height(10.dp))
-                Text("Speculative decoding (MTP)", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
-                Spacer(Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    LlmBackendChip("За замовч.", "default", settings.litertMtp) { onSettingsChange(settings.copy(litertMtp = it)) }
-                    LlmBackendChip("Увімк.", "on", settings.litertMtp) { onSettingsChange(settings.copy(litertMtp = it)) }
-                    LlmBackendChip("Вимк.", "off", settings.litertMtp) { onSettingsChange(settings.copy(litertMtp = it)) }
-                }
-                SwitchRow(
-                    label = "Режим агента в голосовому чаті (довгий промпт)",
-                    checked = settings.useAgent,
-                    icon = Icons.Default.Settings,
-                    tint = AppTheme.colors.purple
-                ) { onSettingsChange(settings.copy(useAgent = it)) }
-                SwitchRow(
-                    label = "Окремий кеш для кожної комбінації",
-                    checked = settings.litertSeparateCache,
-                    icon = Icons.Default.Settings,
-                    tint = AppTheme.colors.accent
-                ) { onSettingsChange(settings.copy(litertSeparateCache = it)) }
-
-                Spacer(Modifier.height(8.dp))
-                HorizontalDivider(color = AppTheme.colors.glassBorder)
-                Spacer(Modifier.height(8.dp))
-
-                Text("Вивантажувати модель з пам'яті після простою", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
-                Spacer(Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("3 хв" to 3, "15 хв" to 15, "60 хв" to 60, "Ніколи" to 0).forEach { (label, min) ->
-                        LlmBackendChip(label, min.toString(), settings.llmUnloadMinutes.toString()) {
-                            onSettingsChange(settings.copy(llmUnloadMinutes = it.toInt()))
-                        }
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-                Text("Макс. довжина відповіді (токени, застосується після перезапуску рушія)", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
-                Spacer(Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf(128, 256, 512, 1024).forEach { n ->
-                        LlmBackendChip(n.toString(), n.toString(), settings.maxResponseTokens.toString()) {
-                            onSettingsChange(settings.copy(maxResponseTokens = it.toInt()))
-                        }
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-                VoskSettingsBlock(settings, onSettingsChange)
-                Spacer(Modifier.height(10.dp))
                 Text("Мова відповіді", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -995,6 +940,15 @@ fun SettingsScreen(
                     LlmBackendChip("Коротко (1–3 речення)", "short", settings.answerStyle) { onSettingsChange(settings.copy(answerStyle = it)) }
                     LlmBackendChip("Звичайно", "normal", settings.answerStyle) { onSettingsChange(settings.copy(answerStyle = it)) }
                 }
+                Text("Макс. довжина відповіді (токени, застосується після перезапуску рушія)", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(128, 256, 512, 1024).forEach { n ->
+                        LlmBackendChip(n.toString(), n.toString(), settings.maxResponseTokens.toString()) {
+                            onSettingsChange(settings.copy(maxResponseTokens = it.toInt()))
+                        }
+                    }
+                }
                 SwitchRow(
                     label = "Автопошук в інтернеті (Вікіпедія + веб) для питань про світ",
                     checked = settings.autoSearch,
@@ -1007,6 +961,28 @@ fun SettingsScreen(
                     icon = Icons.Default.Settings,
                     tint = AppTheme.colors.success
                 ) { onSettingsChange(settings.copy(fastCommands = it)) }
+                SwitchRow(
+                    label = "Режим агента в голосовому чаті (довгий промпт)",
+                    checked = settings.useAgent,
+                    icon = Icons.Default.Settings,
+                    tint = AppTheme.colors.purple
+                ) { onSettingsChange(settings.copy(useAgent = it)) }
+            }
+        }
+
+        // --- Пам'ять і рушій ---
+        GlassSectionHeader("Пам'ять і рушій")
+        GlassCard {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Вивантажувати модель з пам'яті після простою", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("3 хв" to 3, "15 хв" to 15, "60 хв" to 60, "Ніколи" to 0).forEach { (label, min) ->
+                        LlmBackendChip(label, min.toString(), settings.llmUnloadMinutes.toString()) {
+                            onSettingsChange(settings.copy(llmUnloadMinutes = it.toInt()))
+                        }
+                    }
+                }
                 SwitchRow(
                     label = "Завантажувати модель у фоні при старті",
                     checked = settings.llmPreload,
@@ -1036,6 +1012,50 @@ fun SettingsScreen(
                     TextButton(enabled = !llmRestarting, onClick = { vm.restartLlmEngine(clearGpuCache = true) }) {
                         Text("+ очистити кеш GPU", color = AppTheme.colors.danger, fontSize = 12.sp)
                     }
+                }
+            }
+        }
+
+        // --- LiteRT (експериментально), згорнуто за замовчуванням ---
+        var litertOpen by remember { mutableStateOf(false) }
+        GlassCard {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable { litertOpen = !litertOpen },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("LiteRT GPU (експериментально)", color = AppTheme.colors.textPrimary, fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                    Text(if (litertOpen) "▲" else "▼", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                }
+                if (litertOpen) {
+                    Text(
+                        "Якщо Gemma на GPU видає нісенітниці, спробуйте FLOAT32 і вимкнений MTP. Після змін перезапустіть рушій.",
+                        color = AppTheme.colors.textMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp)
+                    )
+                    Spacer(Modifier.height(10.dp))
+                Text("Точність активацій", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LlmBackendChip("За замовч.", "default", settings.litertActivation) { onSettingsChange(settings.copy(litertActivation = it)) }
+                    LlmBackendChip("FLOAT32", "float32", settings.litertActivation) { onSettingsChange(settings.copy(litertActivation = it)) }
+                    LlmBackendChip("FLOAT16", "float16", settings.litertActivation) { onSettingsChange(settings.copy(litertActivation = it)) }
+                }
+                Spacer(Modifier.height(10.dp))
+                Text("Speculative decoding (MTP)", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LlmBackendChip("За замовч.", "default", settings.litertMtp) { onSettingsChange(settings.copy(litertMtp = it)) }
+                    LlmBackendChip("Увімк.", "on", settings.litertMtp) { onSettingsChange(settings.copy(litertMtp = it)) }
+                    LlmBackendChip("Вимк.", "off", settings.litertMtp) { onSettingsChange(settings.copy(litertMtp = it)) }
+                }
+                SwitchRow(
+                    label = "Окремий кеш для кожної комбінації",
+                    checked = settings.litertSeparateCache,
+                    icon = Icons.Default.Settings,
+                    tint = AppTheme.colors.accent
+                ) { onSettingsChange(settings.copy(litertSeparateCache = it)) }
+
                 }
             }
         }
@@ -1201,6 +1221,11 @@ fun SettingsScreen(
 }  // LiteRT GlassCard
             }  // if (showModels)
             if (showVoice) {
+            GlassCard {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                    VoskSettingsBlock(settings, onSettingsChange)
+                }
+            }
             GlassCard {
             // Toggle завжди видно
             SwitchRow(

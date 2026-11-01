@@ -94,7 +94,7 @@ class WidgetsStorage(context: Context) {
     fun createDashboard() {
         if (hasDashboard()) return
         val shifted = get().map { it.copy(page = it.page + 1) }.toMutableList()
-        listOf("system", "quick_actions", "tgchats", "notes").forEach {
+        listOf("system", "quick_actions", "news", "tgchats", "notes").forEach {
             shifted.add(PlacedWidget(UUID.randomUUID().toString(), it, 0,
                 if (it == "quick_actions") "small" else "medium"))
         }

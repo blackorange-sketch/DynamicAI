@@ -32,7 +32,8 @@ object WidgetRegistry {
         WidgetType("notif_digest", "Підсумок сповіщень", "🔔"),
         WidgetType("system", "Ресурси системи", "📊"),
         WidgetType("tgchats", "Чати Telegram", "✈️"),
-        WidgetType("quick_actions", "Швидкі дії", "🔧")
+        WidgetType("quick_actions", "Швидкі дії", "🔧"),
+        WidgetType("news", "Новини (Google News)", "📰")
         // майбутні: "calendar", "battery", "quick_actions"
     )
 
@@ -99,5 +100,6 @@ fun RenderPlacedWidget(
         "system" -> SystemWidget(widget.size, onWidgetLongPress, sizeModifier)
         "tgchats" -> TgChatsWidget(widget.size, onWidgetLongPress, sizeModifier)
         "quick_actions" -> QuickActionsWidget(widget.size, onWidgetLongPress, sizeModifier)
+        "news" -> NewsWidget(widget.size, onWidgetLongPress, sizeModifier)
     }
 }

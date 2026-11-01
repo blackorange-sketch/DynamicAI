@@ -1231,7 +1231,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             )
         }
 
-        if (dockPkgs.isNotEmpty()) {
+        // Під час пошуку док ховаємо — не заважає результатам
+        if (dockPkgs.isNotEmpty() && !searchMode) {
             val dockItems = remember(dockPkgs, apps, folders) {
                 dockPkgs.mapNotNull { id ->
                     if (id.startsWith("folder:")) {

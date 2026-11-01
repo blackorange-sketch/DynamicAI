@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import com.dynamicai.launcher.suggestion.Suggestion
 import com.dynamicai.launcher.suggestion.stableKey
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class SearchOverlayActivity : ComponentActivity() {
 
@@ -216,6 +217,13 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                 com.dynamicai.launcher.suggestion.BrowserBridge.searchUrl(it), 11)
         }
     }
+    var menuApp by remember { mutableStateOf<AppInfo?>(null) }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val letters = remember(allApps) {
+        allApps.map { it.label.firstOrNull()?.uppercaseChar()?.takeIf { c -> c.isLetter() } ?: '#' }.distinct()
+    }
+    var activeLetter by remember { mutableStateOf<Char?>(null) }
+    val overlayScope = rememberCoroutineScope()
     val rows: List<Suggestion> = if (query.isBlank()) allApps.map { Suggestion.App(it, 0) }
         else (suggestions + webSugg).distinctBy { it.stableKey() }.sortedByDescending { it.score }
 
@@ -248,6 +256,58 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                 focusRequester = focusRequester,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
             )
+
+            menuApp?.let { app ->
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { menuApp = null },
+                    title = { Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
+                    text = {
+                        Column {
+                            listOf("Запустити", "Про додаток", "Видалити").forEach { action ->
+                                Text(
+                                    action,
+                                    color = if (action == "Видалити") AppTheme.colors.danger else AppTheme.colors.textPrimary,
+                                    fontSize = 15.sp,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .pointerInput(action) {
+                                            detectTapGestures {
+                                                val pkg = app.packageName
+                                                menuApp = null
+                                                try {
+                                                    when (action) {
+                                                        "Запустити" -> {
+                                                            try { com.dynamicai.launcher.suggestion.AppUsage.bump(ctx, pkg) } catch (_: Throwable) {}
+                                                            executor.launchApp(app); onClose()
+                                                        }
+                                                        "Про додаток" -> {
+                                                            ctx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                                                .apply { data = android.net.Uri.parse("package:$pkg"); addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                                                            onClose()
+                                                        }
+                                                        else -> {
+                                                            ctx.startActivity(Intent(Intent.ACTION_DELETE)
+                                                                .apply { data = android.net.Uri.parse("package:$pkg"); addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                                                            onClose()
+                                                        }
+                                                    }
+                                                } catch (_: Throwable) {}
+                                            }
+                                        }
+                                        .padding(vertical = 12.dp)
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(onClick = { menuApp = null }) {
+                            Text("Скасувати", color = AppTheme.colors.textPrimary)
+                        }
+                    },
+                    containerColor = AppTheme.colors.surface
+                )
+            }
 
             LaunchedEffect(response) {
                 response?.let {
@@ -340,7 +400,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                         is Suggestion.Setting -> SuggestionSettingRow(s) { handleSuggestion(s) }
                         is Suggestion.App -> com.dynamicai.launcher.ui.AppGridItem(
                             app = s.app,
-                            onLongClick = { handleSuggestion(s) },
+                            onLongClick = { menuApp = s.app },
                             onTap = { handleSuggestion(s) }
                         )
                         is Suggestion.Contact -> com.dynamicai.launcher.ui.SuggestionContactRow(s) { handleSuggestion(s) }
@@ -349,8 +409,10 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                 }
             }
             } else {
+            Box(Modifier.weight(1f).fillMaxWidth()) {
             LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
             ) {
                 if (rows.isEmpty() && query.isNotBlank()) {
@@ -374,13 +436,30 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                             inDock = false,
                             showLabel = showLabels,
                             onClick = { handleSuggestion(s) },
-                            onLongClick = { handleSuggestion(s) },
+                            onLongClick = { menuApp = s.app },
                             highlight = query
                         )
                         is Suggestion.Contact -> com.dynamicai.launcher.ui.SuggestionContactRow(s) { handleSuggestion(s) }
                         is Suggestion.Extra -> com.dynamicai.launcher.ui.SuggestionExtraRow(s) { handleSuggestion(s) }
                     }
                 }
+            }
+            if (query.isBlank() && letters.isNotEmpty()) {
+                com.dynamicai.launcher.ui.AlphabetSidebar(
+                    letters = letters,
+                    activeLetter = activeLetter,
+                    onLetterSelected = { letter ->
+                        activeLetter = letter
+                        val idx = rows.indexOfFirst {
+                            it is Suggestion.App &&
+                                (it.app.label.firstOrNull()?.uppercaseChar()?.takeIf { c -> c.isLetter() } ?: '#') == letter
+                        }
+                        if (idx >= 0) overlayScope.launch { try { listState.scrollToItem(idx) } catch (_: Throwable) {} }
+                    },
+                    onLetterReleased = { activeLetter = null },
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                )
+            }
             }
             }
         }

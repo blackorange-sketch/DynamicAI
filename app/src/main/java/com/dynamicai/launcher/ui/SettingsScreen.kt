@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -223,59 +224,20 @@ fun SettingsScreen(
         }
 
         if (initialCategory == null || cat == "tools") {
-        GlassSectionHeader("Нотатки")
+        HiddenAppsSection(vm)
+
+        GlassSectionHeader("Нотатки та макроси")
         GlassCard {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .pointerInput("notes") { detectTapGestures { onOpenNotes() } }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.Edit, null, tint = AppTheme.colors.accent, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(12.dp))
-                Text("Керування нотатками", color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                Icon(Icons.Default.KeyboardArrowRight, null, tint = AppTheme.colors.glassBorder, modifier = Modifier.size(18.dp))
-            }
-        }
+            ActionRow("Керування нотатками", Icons.Default.Edit, AppTheme.colors.accent, onOpenNotes)
+            ActionRow("Керування макросами", Icons.Default.PlayArrow, AppTheme.colors.warning, onOpenMacroManager)
         }
 
-        if (initialCategory == null || cat == "tools") {
-        GlassSectionHeader("Макроси")
+        GlassSectionHeader("Віджети і модулі")
         GlassCard {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .pointerInput("macros") { detectTapGestures { onOpenMacroManager() } }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.PlayArrow, null, tint = AppTheme.colors.warning, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(12.dp))
-                Text("Керування макросами", color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                Icon(Icons.Default.KeyboardArrowRight, null, tint = AppTheme.colors.glassBorder, modifier = Modifier.size(18.dp))
-            }
-        }
-        }
-
-        // ==== Погода ====
-        if (initialCategory == null || cat == "tools") {
-        GlassSectionHeader("🧩 Віджети та Інструменти")
-        if (initialCategory == null || cat == "tools") {
-        GlassCard {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { val intent = Intent(ctx, ModuleManagerActivity::class.java)
+            ActionRow("Менеджер модулів", Icons.Default.Build, AppTheme.colors.accent) {
+                val intent = Intent(ctx, ModuleManagerActivity::class.java)
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                ctx.startActivity(intent) }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.Build, null, tint = AppTheme.colors.accent, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(12.dp))
-                Text("Менеджер модулів", color = AppTheme.colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                Icon(Icons.Default.KeyboardArrowRight, null, tint = AppTheme.colors.glassBorder, modifier = Modifier.size(18.dp))
+                ctx.startActivity(intent)
             }
         }
 
@@ -295,7 +257,6 @@ fun SettingsScreen(
                 current = settings.weatherUnit,
                 onChange = { onSettingsChange(settings.copy(weatherUnit = it)) }
             )
-        }
         }
         }
 
@@ -702,7 +663,6 @@ fun SettingsScreen(
         GlassCard {
             ActionRow("Оновити контакти", Icons.Default.Person, AppTheme.colors.success, onRefreshContacts)
             ActionRow("Очистити історію команд", Icons.Default.Delete, AppTheme.colors.danger, onClearHistory)
-            ActionRow("Показати всі приховані ($hiddenCount)", Icons.Default.Info, AppTheme.colors.textMuted, onClearHidden)
         }
         GlassSectionHeader("Резервна копія")
         GlassCard {
@@ -1536,6 +1496,56 @@ private fun VacuumSettingsBlock(settings: LauncherSettings, onSettingsChange: (L
 
 
 /** Вибір дії для жесту: стандартні варіанти або будь-який макрос. */
+@Composable
+private fun HiddenAppsSection(vm: AppListViewModel) {
+    val hidden by vm.hidden.collectAsStateWithLifecycle()
+    val apps by vm.apps.collectAsStateWithLifecycle()
+    var open by remember { mutableStateOf(false) }
+    val list = remember(hidden, apps) { apps.filter { it.packageName in hidden }.sortedBy { it.label.lowercase() } }
+    GlassSectionHeader("Приховані застосунки")
+    GlassCard {
+        ActionRow("Керувати прихованими (${hidden.size})", Icons.Default.Info, AppTheme.colors.textMuted) { open = true }
+    }
+    if (open) {
+        AlertDialog(
+            onDismissRequest = { open = false },
+            containerColor = AppTheme.colors.surface,
+            title = { Text("Приховані застосунки", color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()).heightIn(max = 400.dp)) {
+                    if (list.isEmpty()) {
+                        Text("Прихованих застосунків немає. Сховати застосунок можна довгим натисканням на ньому.",
+                            color = AppTheme.colors.textSecondary, fontSize = 13.sp)
+                    }
+                    list.forEach { app ->
+                        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            app.bitmap?.let {
+                                androidx.compose.foundation.Image(
+                                    bitmap = it.asImageBitmap(), contentDescription = null,
+                                    modifier = Modifier.size(34.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 14.sp,
+                                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f))
+                            TextButton(onClick = { vm.unhideApp(app.packageName) }) {
+                                Text("Показати", color = AppTheme.colors.accent, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                if (list.isNotEmpty()) TextButton(onClick = { vm.clearHidden() }) {
+                    Text("Показати всі", color = AppTheme.colors.accent)
+                }
+            },
+            dismissButton = { TextButton(onClick = { open = false }) { Text("Закрити", color = AppTheme.colors.textSecondary) } }
+        )
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun GestureRow(title: String, value: String, onPick: (String) -> Unit) {

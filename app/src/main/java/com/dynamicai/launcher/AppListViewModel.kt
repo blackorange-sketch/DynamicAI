@@ -530,6 +530,12 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         updateQuery("")
     }
 
+    fun unhideApp(pkg: String) {
+        hiddenStorage.show(pkg)
+        _hidden.value = hiddenStorage.get()
+        updateQuery("")
+    }
+
     fun clearHidden() {
         hiddenStorage.clear()
         _hidden.value = emptySet()

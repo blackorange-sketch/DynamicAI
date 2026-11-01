@@ -41,6 +41,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -481,6 +482,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     val searchActive = searchMode || query.isNotBlank()
     // Поле пошуку видно (постійно або при активації)
     val showSearchField = settings.showSearchBar || searchActive
+    // Ландшафт: ліворуч віджети/дошка, праворуч постійна панель додатків
+    val isLandscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
+        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val landscapePane = isLandscape && !searchActive && !listVisible
 
     if (showWeatherDetail) {
         ScreenEnter {
@@ -727,7 +732,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxHeight()
+                .fillMaxWidth(if (landscapePane) 0.46f else 1f)
                 // Поки відкрита шторка — головний екран не реагує на дотики (раніше свайпи/тапи проходили крізь неї)
                 .pointerInput(drawerOpen) {
                     if (drawerOpen) awaitPointerEventScope {
@@ -769,9 +775,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             if (!showNotesScreen) notesList = notesStorage.get()
                         }
                         
+                        val pageScrollable = landscapePane && placedWidgets.none { it.page == page && it.size == "full" }
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
+                                .then(if (pageScrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier)
                                 .graphicsLayer {
                                     if (settings.pageParallax) {
                                         val off = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
@@ -1127,7 +1135,17 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             }
         }
 
-        if (letters.isNotEmpty() && (drawerOpen || (query.isBlank() && !searchMode))) {
+        if (landscapePane) {
+            val paneApps = remember(apps, hiddenEff) { apps.filter { it.packageName !in hiddenEff } }
+            LandscapeAppPane(
+                apps = paneApps,
+                onLaunch = { app -> launchAppWithAnimation(app) },
+                onLongClick = { app -> menuApp = app },
+                modifier = Modifier.align(Alignment.CenterEnd).fillMaxWidth(0.54f).fillMaxHeight()
+            )
+        }
+
+        if (letters.isNotEmpty() && (drawerOpen || (query.isBlank() && !searchMode && !landscapePane))) {
             AlphabetSidebar(
                 letters = letters,
                 activeLetter = activeLetter,
@@ -1204,7 +1222,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         if (folders.isNotEmpty() && !listVisible && query.isBlank() && !searchMode && !drawerOpen) {
             Column(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
+                    .align(if (landscapePane) Alignment.BottomStart else Alignment.BottomCenter)
+                    .then(if (landscapePane) Modifier.fillMaxWidth(0.46f) else Modifier)
                     .graphicsLayer {
                         alpha = homeAlpha
                         scaleX = homeScale
@@ -1310,7 +1329,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     }
                 },
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
+                    .align(if (landscapePane) Alignment.BottomStart else Alignment.BottomCenter)
+                    .then(if (landscapePane) Modifier.fillMaxWidth(0.46f) else Modifier)
                     .alpha(contentAlpha)
                     .graphicsLayer {
                         alpha = homeAlpha

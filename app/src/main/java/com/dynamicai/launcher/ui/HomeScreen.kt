@@ -1515,6 +1515,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         newFolderSelection = emptySet()
                         showNewFolderDialog = true
                     })
+                    add(MenuItemSpec("Автопапки за категоріями") { vm.createAutoFolders() })
                     add(MenuItemSpec("Керування папками") { showFolderManager = true })
                     if (pageCount > 1) add(MenuItemSpec("Наступна сторінка (${currentPage + 1}/$pageCount)") {
                         currentPage = (currentPage + 1) % pageCount

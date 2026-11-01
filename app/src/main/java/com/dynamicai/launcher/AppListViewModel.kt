@@ -566,6 +566,40 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         updateQuery("")
     }
 
+    /**
+     * Автопапки за категоріями (Ігри, Соц. мережі, Медіа, Інструменти, Навігація): беруться лише
+     * застосунки, які ще не лежать у папках і не приховані; категорії з менш ніж 3 застосунками пропускаються.
+     * Якщо папка з такою назвою вже є — до неї дописуються нові застосунки.
+     */
+    fun createAutoFolders() {
+        val labels = linkedMapOf(
+            "games" to "Ігри", "social" to "Соц. мережі", "media" to "Медіа",
+            "tools" to "Інструменти", "maps" to "Навігація"
+        )
+        val inFolders = _folders.value.flatMap { it.packageNames }.toSet()
+        val free = _apps.value.filter { it.packageName !in _hidden.value && it.packageName !in inFolders }
+        var created = 0
+        var filled = 0
+        try {
+            for ((cat, name) in labels) {
+                val pkgs = free.filter { it.category == cat }.map { it.packageName }
+                val existing = _folders.value.firstOrNull { it.name == name }
+                if (existing != null) {
+                    pkgs.forEach { folderStorage.addApp(existing.id, it) }
+                    filled += pkgs.size
+                } else if (pkgs.size >= 3) {
+                    folderStorage.create(name, pkgs); created++
+                }
+            }
+            _folders.value = folderStorage.get()
+            updateQuery("")
+            _response.value = if (created + filled == 0) "Немає категорій з 3+ вільними застосунками"
+                else "Створено папок: $created, додано застосунків: $filled"
+        } catch (t: Throwable) {
+            _response.value = "Помилка автопапок: ${t.message}"
+        }
+    }
+
     fun folderOf(pkg: String): Folder? = folderStorage.folderOf(pkg)
 
     private var weatherJob: kotlinx.coroutines.Job? = null

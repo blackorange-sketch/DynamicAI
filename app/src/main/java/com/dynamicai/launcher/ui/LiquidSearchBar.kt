@@ -55,7 +55,7 @@ fun LiquidSearchBar(
                 textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
                 cursorBrush = SolidColor(AppTheme.colors.textPrimary),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search, platformImeOptions = androidx.compose.ui.text.input.PlatformImeOptions("flagNoExtractUi")),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() }),
                 modifier = Modifier
                     .fillMaxWidth()

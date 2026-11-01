@@ -730,10 +730,247 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             )
         }
 
+        var paneReady by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) { paneReady = true }
+        val leftFraction by androidx.compose.animation.core.animateFloatAsState(
+            targetValue = if (isLandscape) 0.46f else 1f,
+            animationSpec = androidx.compose.animation.core.tween(animMs(420), easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            label = "leftFraction"
+        )
+        val resultsBlock: @Composable (Modifier) -> Unit = { mod ->
+            Box(modifier = mod) {
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = listVisible || searchMode || query.isNotBlank(),
+                    enter = fadeIn(androidx.compose.animation.core.tween(110)),
+                    exit = fadeOut(androidx.compose.animation.core.tween(90)),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+            if (query.isNotBlank()) {
+            // Набраний запит: додатки — квадратні плитки, решта результатів — рядки на всю ширину
+            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                state = searchGridState,
+                columns = gridCells(),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 8.dp, bottom = if (dockPkgs.isNotEmpty()) 110.dp else 8.dp),
+                horizontalArrangement = gridGapH(),
+                verticalArrangement = gridGapV()
+            ) {
+                if (suggestions.isEmpty()) {
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Нічого не знайдено за \"$query\"", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 16.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Спробуй: ліхтарик · wifi · Аня",
+                                color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted.copy(alpha = 0.7f), fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+                // Додатки — плитками зверху, решта результатів (дії, налаштування, контакти) — рядками знизу
+                val orderedSuggestions = suggestions.filterIsInstance<Suggestion.App>() +
+                    suggestions.filter { it !is Suggestion.App }
+                items(
+                    orderedSuggestions,
+                    key = { it.stableKey() },
+                    span = { s ->
+                        androidx.compose.foundation.lazy.grid.GridItemSpan(if (s is Suggestion.App) 1 else maxLineSpan)
+                    }
+                ) { s ->
+                    when (s) {
+                        is Suggestion.Action -> SuggestionActionRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            vm.executeSuggestion(s); closeSearch()
+                        }
+                        is Suggestion.Setting -> SuggestionSettingRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            vm.executeSuggestion(s); closeSearch()
+                        }
+                        is Suggestion.Extra -> SuggestionExtraRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            vm.executeSuggestion(s); closeSearch()
+                        }
+                        is Suggestion.Contact -> SuggestionContactRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            vm.executeSuggestion(s); closeSearch()
+                        }
+                        is Suggestion.App -> AppGridItem(
+                            app = s.app,
+                            onLongClick = { menuApp = s.app },
+                            onTap = { launchAppWithAnimation(s.app) }
+                        )
+                    }
+                }
+            }
+            } else {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    top = 8.dp,
+                    bottom = if (dockPkgs.isNotEmpty()) 110.dp else 8.dp
+                )
+            ) {
+                if (suggestions.isEmpty() && query.isNotBlank()) {
+                    item {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Нічого не знайдено за \"$query\"", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 16.sp)
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                "Спробуй: ліхтарик · wifi · Аня",
+                                color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted.copy(alpha = 0.7f), fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+                items(suggestions, key = { it.stableKey() }) { s ->
+                  // Без animateItem: при швидкому наборі рядки мають змінюватись різко, а не «пливти»
+                  androidx.compose.foundation.layout.Box {
+                    when (s) {
+                        is Suggestion.Action -> SuggestionActionRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            vm.executeSuggestion(s); closeSearch()
+                        }
+                        is Suggestion.Setting -> SuggestionSettingRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            vm.executeSuggestion(s); closeSearch()
+                        }
+                        is Suggestion.Extra -> SuggestionExtraRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            vm.executeSuggestion(s); closeSearch()
+                        }
+                        is Suggestion.Contact -> SuggestionContactRow(s) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            vm.executeSuggestion(s); closeSearch()
+                        }
+                        is Suggestion.App -> AppRow(
+                            app = s.app,
+                            inDock = s.app.packageName in dockPkgs,
+                            showLabel = settings.showLabels,
+                            onClick = { launchAppWithAnimation(s.app) },
+                            onLongClick = { menuApp = s.app },
+                            highlight = query
+                        )
+                    }
+                  }
+                }
+            }
+            }
+                }
+            }
+        }
+        val folderBlock: @Composable (Modifier, androidx.compose.ui.unit.Dp) -> Unit = { mod, bottomPad ->
+            Column(
+                modifier = mod
+                    .graphicsLayer {
+                        alpha = homeAlpha
+                        scaleX = homeScale
+                        scaleY = homeScale
+                    }
+                    .padding(bottom = bottomPad)
+                    .padding(horizontal = 16.dp)
+            ) {
+                FolderTabs(
+                    folders = folders,
+                    apps = apps,
+                    selectedFolderId = selectedTabFolderId,
+                    onSelectFolder = { folder ->
+                        selectedTabFolderId =
+                            if (selectedTabFolderId == folder.id) null
+                            else folder.id
+                    },
+                    onLongPressFolder = { folder ->
+                        folderHeaderMenu = folder
+                    },
+                    onLaunchApp = { app -> launchAppWithAnimation(app) },
+                    onLongPressApp = { app ->
+                        folderMenuApp = app
+                        folderMenuFolder = folders.firstOrNull { it.id == selectedTabFolderId }
+                    }
+                )
+            }
+        }
+        val dockBlock: @Composable (Modifier) -> Unit = { mod ->
+            val dockItems = remember(dockPkgs, apps, folders) {
+                dockPkgs.mapNotNull { id ->
+                    if (id.startsWith("folder:")) {
+                        val fid = id.removePrefix("folder:")
+                        val f = folders.firstOrNull { it.id == fid } ?: return@mapNotNull null
+                        val firstApp = apps.firstOrNull { it.packageName in f.packageNames }
+                        DockItem(
+                            id = id,
+                            label = f.name,
+                            icon = firstApp?.icon,
+                            isFolder = true,
+                            bitmap = firstApp?.bitmap
+                        )
+                    } else {
+                        val a = apps.firstOrNull { it.packageName == id } ?: return@mapNotNull null
+                        DockItem(
+                            id = id,
+                            label = a.label,
+                            icon = a.icon,
+                            isFolder = false,
+                            bitmap = a.bitmap
+                        )
+                    }
+                }
+            }
+            Dock(
+                items = dockItems,
+                iconSizeDp = LocalGridStyle.current.dockIconDp,
+                onLongClick = { item ->
+                    if (!item.isFolder) {
+                        val app = apps.firstOrNull { it.packageName == item.id }
+                        if (app != null) menuApp = app
+                    }
+                },
+                onLaunch = { item ->
+                    if (item.isFolder) {
+                        val fid = item.id.removePrefix("folder:")
+                        openFolder = folders.firstOrNull { it.id == fid }
+                    } else {
+                        val app = apps.firstOrNull { it.packageName == item.id }
+                        if (app != null) launchAppWithAnimation(app)
+                    }
+                },
+                onSearch = { searchMode = true },
+                onRecent = {
+                    showRecent = true
+                    vm.loadRecentTasks()
+                },
+                showRecentButton = settings.showRecentButton,
+                appeared = dockAppeared,
+                badges = dockBadges,
+                onSwipeUp = {
+                    if (settings.showRecentButton) {
+                        // Recent увімкнено — показуємо його
+                        showRecent = true
+                        vm.loadRecentTasks()
+                    } else {
+                        // Recent вимкнено — показуємо AppDrawer (всі застосунки)
+                        drawerOpen = true
+                    }
+                },
+                modifier = mod
+                    .alpha(contentAlpha)
+                    .graphicsLayer {
+                        alpha = homeAlpha
+                        scaleX = homeScale
+                        scaleY = homeScale
+                    }
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxHeight()
-                .fillMaxWidth(if (landscapePane) 0.46f else 1f)
+                .fillMaxWidth(leftFraction)
                 // Поки відкрита шторка — головний екран не реагує на дотики (раніше свайпи/тапи проходили крізь неї)
                 .pointerInput(drawerOpen) {
                     if (drawerOpen) awaitPointerEventScope {
@@ -767,7 +1004,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         userScrollEnabled = !drawerOpen && openFolder == null && !searchMode,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(3f)
+                            .weight(if (isLandscape) 1f else 3f)
                     ) { page ->
                         val notesStorage = remember { com.dynamicai.launcher.note.NotesStorage(ctx) }
                         var notesList by remember { mutableStateOf<List<com.dynamicai.launcher.note.Note>>(emptyList()) }
@@ -1007,142 +1244,54 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 }
             }
 
-            Box(modifier = Modifier.weight(1f)) {
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = listVisible || searchMode || query.isNotBlank(),
-                    enter = fadeIn(androidx.compose.animation.core.tween(110)),
-                    exit = fadeOut(androidx.compose.animation.core.tween(90)),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-            if (query.isNotBlank()) {
-            // Набраний запит: додатки — квадратні плитки, решта результатів — рядки на всю ширину
-            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                state = searchGridState,
-                columns = gridCells(),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 8.dp, bottom = if (dockPkgs.isNotEmpty()) 110.dp else 8.dp),
-                horizontalArrangement = gridGapH(),
-                verticalArrangement = gridGapV()
-            ) {
-                if (suggestions.isEmpty()) {
-                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text("Нічого не знайдено за \"$query\"", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 16.sp)
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                "Спробуй: ліхтарик · wifi · Аня",
-                                color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted.copy(alpha = 0.7f), fontSize = 13.sp
-                            )
-                        }
-                    }
+            if (!isLandscape) resultsBlock(Modifier.weight(1f))
+
+            // Ландшафт: папки та док стоять у лівій панелі одне під одним (без накладання)
+            if (isLandscape) {
+                if (folders.isNotEmpty() && !listVisible && query.isBlank() && !searchMode && !drawerOpen) {
+                    folderBlock(Modifier.padding(top = 4.dp), 4.dp)
                 }
-                // Додатки — плитками зверху, решта результатів (дії, налаштування, контакти) — рядками знизу
-                val orderedSuggestions = suggestions.filterIsInstance<Suggestion.App>() +
-                    suggestions.filter { it !is Suggestion.App }
-                items(
-                    orderedSuggestions,
-                    key = { it.stableKey() },
-                    span = { s ->
-                        androidx.compose.foundation.lazy.grid.GridItemSpan(if (s is Suggestion.App) 1 else maxLineSpan)
-                    }
-                ) { s ->
-                    when (s) {
-                        is Suggestion.Action -> SuggestionActionRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.Setting -> SuggestionSettingRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.Extra -> SuggestionExtraRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.Contact -> SuggestionContactRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.App -> AppGridItem(
-                            app = s.app,
-                            onLongClick = { menuApp = s.app },
-                            onTap = { launchAppWithAnimation(s.app) }
-                        )
-                    }
-                }
-            }
-            } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = 8.dp,
-                    bottom = if (dockPkgs.isNotEmpty()) 110.dp else 8.dp
-                )
-            ) {
-                if (suggestions.isEmpty() && query.isNotBlank()) {
-                    item {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text("Нічого не знайдено за \"$query\"", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 16.sp)
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                "Спробуй: ліхтарик · wifi · Аня",
-                                color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted.copy(alpha = 0.7f), fontSize = 13.sp
-                            )
-                        }
-                    }
-                }
-                items(suggestions, key = { it.stableKey() }) { s ->
-                  // Без animateItem: при швидкому наборі рядки мають змінюватись різко, а не «пливти»
-                  androidx.compose.foundation.layout.Box {
-                    when (s) {
-                        is Suggestion.Action -> SuggestionActionRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.Setting -> SuggestionSettingRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.Extra -> SuggestionExtraRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.Contact -> SuggestionContactRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.App -> AppRow(
-                            app = s.app,
-                            inDock = s.app.packageName in dockPkgs,
-                            showLabel = settings.showLabels,
-                            onClick = { launchAppWithAnimation(s.app) },
-                            onLongClick = { menuApp = s.app },
-                            highlight = query
-                        )
-                    }
-                  }
-                }
-            }
-            }
+                if (dockPkgs.isNotEmpty() && !searchMode) {
+                    dockBlock(Modifier.padding(bottom = 6.dp).navigationBarsPadding())
                 }
             }
         }
 
-        if (landscapePane) {
+        // Права панель ландшафту: або постійна сітка додатків, або результати пошуку/списку
+        val paneFrame = Modifier.align(Alignment.CenterEnd).fillMaxWidth(0.54f).fillMaxHeight()
+        if (isLandscape) {
             val paneApps = remember(apps, hiddenEff) { apps.filter { it.packageName !in hiddenEff } }
-            LandscapeAppPane(
-                apps = paneApps,
-                onLaunch = { app -> launchAppWithAnimation(app) },
-                onLongClick = { app -> menuApp = app },
-                modifier = Modifier.align(Alignment.CenterEnd).fillMaxWidth(0.54f).fillMaxHeight()
-            )
+            androidx.compose.animation.AnimatedVisibility(
+                visible = paneReady && landscapePane,
+                enter = fadeIn(androidx.compose.animation.core.tween(animMs(360), delayMillis = animMs(120))) +
+                    androidx.compose.animation.slideInHorizontally(
+                        androidx.compose.animation.core.tween(animMs(420), easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                    ) { it / 3 } +
+                    androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(animMs(420)), initialScale = 0.94f),
+                exit = fadeOut(androidx.compose.animation.core.tween(animMs(140))) +
+                    androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(animMs(200))) { it / 6 },
+                modifier = paneFrame
+            ) {
+                LandscapeAppPane(
+                    apps = paneApps,
+                    onLaunch = { app -> launchAppWithAnimation(app) },
+                    onLongClick = { app -> menuApp = app },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            androidx.compose.animation.AnimatedVisibility(
+                visible = !landscapePane,
+                enter = fadeIn(androidx.compose.animation.core.tween(animMs(240))) +
+                    androidx.compose.animation.slideInHorizontally(
+                        androidx.compose.animation.core.tween(animMs(320), easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                    ) { it / 4 },
+                exit = fadeOut(androidx.compose.animation.core.tween(animMs(120))),
+                modifier = paneFrame
+            ) {
+                resultsBlock(
+                    Modifier.fillMaxSize().statusBarsPadding().padding(top = 8.dp, end = 12.dp, bottom = 8.dp)
+                )
+            }
         }
 
         if (letters.isNotEmpty() && (drawerOpen || (query.isBlank() && !searchMode && !landscapePane))) {
@@ -1218,39 +1367,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             }
         }
 
-        // Папки над доком
-        if (folders.isNotEmpty() && !listVisible && query.isBlank() && !searchMode && !drawerOpen) {
-            Column(
-                modifier = Modifier
-                    .align(if (landscapePane) Alignment.BottomStart else Alignment.BottomCenter)
-                    .then(if (landscapePane) Modifier.fillMaxWidth(0.46f) else Modifier)
-                    .graphicsLayer {
-                        alpha = homeAlpha
-                        scaleX = homeScale
-                        scaleY = homeScale
-                    }
-                    .padding(bottom = if (dockPkgs.isNotEmpty()) 100.dp else 20.dp)
-                    .padding(horizontal = 16.dp)
-            ) {
-                FolderTabs(
-                    folders = folders,
-                    apps = apps,
-                    selectedFolderId = selectedTabFolderId,
-                    onSelectFolder = { folder ->
-                        selectedTabFolderId =
-                            if (selectedTabFolderId == folder.id) null
-                            else folder.id
-                    },
-                    onLongPressFolder = { folder ->
-                        folderHeaderMenu = folder
-                    },
-                    onLaunchApp = { app -> launchAppWithAnimation(app) },
-                    onLongPressApp = { app ->
-                        folderMenuApp = app
-                        folderMenuFolder = folders.firstOrNull { it.id == selectedTabFolderId }
-                    }
-                )
-            }
+        // Папки над доком (у ландшафті вони вбудовані в ліву панель)
+        if (folders.isNotEmpty() && !listVisible && query.isBlank() && !searchMode && !drawerOpen && !isLandscape) {
+            folderBlock(
+                Modifier.align(Alignment.BottomCenter),
+                if (dockPkgs.isNotEmpty()) 100.dp else 20.dp
+            )
         }
 
         // Оверлей з відповіддю
@@ -1266,78 +1388,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         }
 
         // Під час пошуку док ховаємо — не заважає результатам
-        if (dockPkgs.isNotEmpty() && !searchMode) {
-            val dockItems = remember(dockPkgs, apps, folders) {
-                dockPkgs.mapNotNull { id ->
-                    if (id.startsWith("folder:")) {
-                        val fid = id.removePrefix("folder:")
-                        val f = folders.firstOrNull { it.id == fid } ?: return@mapNotNull null
-                        val firstApp = apps.firstOrNull { it.packageName in f.packageNames }
-                        DockItem(
-                            id = id,
-                            label = f.name,
-                            icon = firstApp?.icon,
-                            isFolder = true,
-                            bitmap = firstApp?.bitmap
-                        )
-                    } else {
-                        val a = apps.firstOrNull { it.packageName == id } ?: return@mapNotNull null
-                        DockItem(
-                            id = id,
-                            label = a.label,
-                            icon = a.icon,
-                            isFolder = false,
-                            bitmap = a.bitmap
-                        )
-                    }
-                }
-            }
-            Dock(
-                items = dockItems,
-                iconSizeDp = LocalGridStyle.current.dockIconDp,
-                onLongClick = { item ->
-                    if (!item.isFolder) {
-                        val app = apps.firstOrNull { it.packageName == item.id }
-                        if (app != null) menuApp = app
-                    }
-                },
-                onLaunch = { item ->
-                    if (item.isFolder) {
-                        val fid = item.id.removePrefix("folder:")
-                        openFolder = folders.firstOrNull { it.id == fid }
-                    } else {
-                        val app = apps.firstOrNull { it.packageName == item.id }
-                        if (app != null) launchAppWithAnimation(app)
-                    }
-                },
-                onSearch = { searchMode = true },
-                onRecent = {
-                    showRecent = true
-                    vm.loadRecentTasks()
-                },
-                showRecentButton = settings.showRecentButton,
-                appeared = dockAppeared,
-                badges = dockBadges,
-                onSwipeUp = {
-                    if (settings.showRecentButton) {
-                        // Recent увімкнено — показуємо його
-                        showRecent = true
-                        vm.loadRecentTasks()
-                    } else {
-                        // Recent вимкнено — показуємо AppDrawer (всі застосунки)
-                        drawerOpen = true
-                    }
-                },
-                modifier = Modifier
-                    .align(if (landscapePane) Alignment.BottomStart else Alignment.BottomCenter)
-                    .then(if (landscapePane) Modifier.fillMaxWidth(0.46f) else Modifier)
-                    .alpha(contentAlpha)
-                    .graphicsLayer {
-                        alpha = homeAlpha
-                        scaleX = homeScale
-                        scaleY = homeScale
-                    }
-            )
+        if (dockPkgs.isNotEmpty() && !searchMode && !isLandscape) {
+            dockBlock(Modifier.align(Alignment.BottomCenter))
         }
 
         

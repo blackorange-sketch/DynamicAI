@@ -471,6 +471,11 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         refreshWeather()
     }
 
+    fun moveDock(id: String, delta: Int) {
+        dockStorage.move(id, delta)
+        _dockPkgs.value = dockStorage.getDockApps()
+    }
+
     fun executeSuggestion(s: Suggestion) {
         if (lastQueryText.isNotBlank()) {
             com.dynamicai.launcher.suggestion.SearchHistory.add(getApplication(), lastQueryText)

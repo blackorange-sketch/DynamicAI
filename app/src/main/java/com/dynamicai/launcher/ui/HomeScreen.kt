@@ -561,6 +561,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             dockPkgs = dockPkgs,
             hidden = hidden,
             onToggle = { vm.toggleDock(it) },
+            onMove = { id, delta -> vm.moveDock(id, delta) },
+            folderNames = folders.associate { "folder:" + it.id to it.name },
             onClose = { showDockEditor = false }
         )
         return@DynamicAITheme

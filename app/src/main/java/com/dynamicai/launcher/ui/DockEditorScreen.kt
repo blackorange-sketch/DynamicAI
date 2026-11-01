@@ -27,7 +27,9 @@ fun DockEditorScreen(
     dockPkgs: List<String>,
     hidden: Set<String>,
     onToggle: (String) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onMove: (String, Int) -> Unit = { _, _ -> },
+    folderNames: Map<String, String> = emptyMap()
 ) {
     var query by remember { mutableStateOf("") }
 
@@ -80,6 +82,43 @@ fun DockEditorScreen(
         )
 
         HorizontalDivider(color = com.dynamicai.launcher.ui.theme.AppTheme.colors.glassBorder)
+
+        // Порядок у доку: стрілки зсувають елемент ліворуч/праворуч
+        if (dockPkgs.isNotEmpty() && query.isBlank()) {
+            Text(
+                "Порядок у доку (зліва направо)",
+                color = AppTheme.colors.textSecondary, fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 6.dp)
+            )
+            Column(Modifier.padding(horizontal = 16.dp)) {
+                dockPkgs.forEachIndexed { index, id ->
+                    val app = apps.firstOrNull { it.packageName == id }
+                    val name = app?.label ?: folderNames[id] ?: id
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("${index + 1}", color = AppTheme.colors.textMuted, fontSize = 13.sp, modifier = Modifier.width(24.dp))
+                        if (app?.bitmap != null) {
+                            Icon(bitmap = app.bitmap.asImageBitmap(), contentDescription = null,
+                                modifier = Modifier.size(28.dp), tint = Color.Unspecified)
+                        } else {
+                            Text("📁", fontSize = 20.sp, modifier = Modifier.width(28.dp))
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Text(name, color = AppTheme.colors.textPrimary, fontSize = 15.sp,
+                            maxLines = 1, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { onMove(id, -1) }, enabled = index > 0, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.KeyboardArrowUp, "Вгору / ліворуч", tint = AppTheme.colors.textPrimary)
+                        }
+                        IconButton(onClick = { onMove(id, 1) }, enabled = index < dockPkgs.size - 1, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.KeyboardArrowDown, "Вниз / праворуч", tint = AppTheme.colors.textPrimary)
+                        }
+                    }
+                }
+            }
+            HorizontalDivider(color = AppTheme.colors.glassBorder, modifier = Modifier.padding(top = 6.dp))
+        }
 
         // Список
         LazyColumn(

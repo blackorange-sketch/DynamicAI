@@ -1497,7 +1497,7 @@ private fun VacuumSettingsBlock(settings: LauncherSettings, onSettingsChange: (L
 
 /** Вибір дії для жесту: стандартні варіанти або будь-який макрос. */
 @Composable
-private fun HiddenAppsSection(vm: AppListViewModel) {
+private fun HiddenAppsSection(vm: com.dynamicai.launcher.AppListViewModel) {
     val hidden by vm.hidden.collectAsStateWithLifecycle()
     val apps by vm.apps.collectAsStateWithLifecycle()
     var open by remember { mutableStateOf(false) }

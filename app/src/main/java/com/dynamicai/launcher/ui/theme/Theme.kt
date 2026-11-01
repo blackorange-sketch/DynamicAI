@@ -262,9 +262,18 @@ private fun resolveAppColors(themeId: String): AppColors {
 fun DynamicAITheme(
     themeId: String = "glass_dark",
     backgroundOverride: Color? = null,
+    accentOverride: Int = 0,
     content: @Composable () -> Unit
 ) {
-    val colors = resolveAppColors(themeId)
+    val base = resolveAppColors(themeId)
+    val colors = if (accentOverride == 0) base else {
+        val a = Color(accentOverride)
+        base.copy(
+            accent = a,
+            accentLight = androidx.compose.ui.graphics.lerp(a, Color.White, 0.4f),
+            accentDark = androidx.compose.ui.graphics.lerp(a, Color.Black, 0.3f)
+        )
+    }
     val scheme = remember(colors, backgroundOverride) { colors.toMaterialScheme(backgroundOverride) }
     CompositionLocalProvider(
         LocalAppColors provides colors,
@@ -287,17 +296,19 @@ fun DynamicAITheme(
 fun StoredAppTheme(content: @Composable () -> Unit) {
     val ctx = LocalContext.current
     var themeId by remember { mutableStateOf(runCatching { SettingsStorage(ctx).load().appTheme }.getOrDefault("glass_dark")) }
+    var accent by remember { mutableStateOf(runCatching { SettingsStorage(ctx).load().accentColor }.getOrDefault(0)) }
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 themeId = runCatching { SettingsStorage(ctx).load().appTheme }.getOrDefault(themeId)
+                accent = runCatching { SettingsStorage(ctx).load().accentColor }.getOrDefault(accent)
             }
         }
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
-    DynamicAITheme(themeId = themeId, content = content)
+    DynamicAITheme(themeId = themeId, accentOverride = accent, content = content)
 }
 
 object AppTheme {

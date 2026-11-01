@@ -63,6 +63,7 @@ data class LauncherSettings(
     val gridGapHDp: Int = 4,                  // горизонтальний відступ між іконками в сітці
     val gridGapVDp: Int = 12,                 // вертикальний відступ між іконками в сітці
     val listGapDp: Int = 6,                   // відступ між рядками списку
+    val accentColor: Int = 0,                 // свій акцентний колір (ARGB), 0 = колір теми
     val uniformIcons: Boolean = false,         // один розмір іконок у списку, доку та сітці
     val liveAurora: Boolean = false,           // жива аврора на фоні головного екрана
     val oneHandMode: Boolean = false,          // вміст головного екрана зсунуто вниз
@@ -147,6 +148,7 @@ class SettingsStorage(context: Context) {
             gridGapHDp = prefs.getInt("gridGapHDp", 4),
             gridGapVDp = prefs.getInt("gridGapVDp", 12),
             listGapDp = prefs.getInt("listGapDp", 6),
+            accentColor = prefs.getInt("accentColor", 0),
             uniformIcons = prefs.getBoolean("uniformIcons", false),
             liveAurora = prefs.getBoolean("liveAurora", false),
             oneHandMode = prefs.getBoolean("oneHandMode", false),
@@ -227,6 +229,7 @@ class SettingsStorage(context: Context) {
             .putInt("gridGapHDp", s.gridGapHDp)
             .putInt("gridGapVDp", s.gridGapVDp)
             .putInt("listGapDp", s.listGapDp)
+            .putInt("accentColor", s.accentColor)
             .putBoolean("uniformIcons", s.uniformIcons)
             .putBoolean("liveAurora", s.liveAurora)
             .putBoolean("oneHandMode", s.oneHandMode)

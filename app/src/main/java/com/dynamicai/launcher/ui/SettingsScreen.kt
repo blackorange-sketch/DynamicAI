@@ -323,6 +323,10 @@ fun SettingsScreen(
                         ThemeChip("Material You (з шпалер)", "glass_dynamic", settings.appTheme) { onSettingsChange(settings.copy(appTheme = it)) }
                     }
                 }
+                Spacer(Modifier.height(14.dp))
+                Text("Акцентний колір (A = колір теми)", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(8.dp))
+                AccentPicker(settings.accentColor) { onSettingsChange(settings.copy(accentColor = it)) }
             }
         }
         
@@ -390,6 +394,7 @@ fun SettingsScreen(
         if (initialCategory == null || cat == "appearance") {
         GlassSectionHeader("Розміри")
         GlassCard {
+            GridStylePreview()
             SwitchRow("Однаковий розмір іконок скрізь", settings.uniformIcons, Icons.Default.Settings, AppTheme.colors.accent) {
                 // При вмиканні всі розміри вирівнюються за розміром у сітці
                 onSettingsChange(

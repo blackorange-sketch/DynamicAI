@@ -95,7 +95,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     val suggestions by vm.suggestions.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     // background береться з зовнішньої теми (MainActivity): прозорий або чорний залежно від кастомного фону
-    DynamicAITheme(themeId = settings.appTheme, backgroundOverride = androidx.compose.material3.MaterialTheme.colorScheme.background) {
+    DynamicAITheme(themeId = settings.appTheme, accentOverride = settings.accentColor, backgroundOverride = androidx.compose.material3.MaterialTheme.colorScheme.background) {
     val hidden by vm.hidden.collectAsStateWithLifecycle()
     val folders by vm.folders.collectAsStateWithLifecycle()
     val weather by vm.weather.collectAsStateWithLifecycle()

@@ -145,7 +145,7 @@ class MainActivity : ComponentActivity() {
             val hasCustomBg = settings.backgroundImageUri.isNotBlank()
             val dynamicBg = if (hasCustomBg) androidx.compose.ui.graphics.Color(0xFF000000) else androidx.compose.ui.graphics.Color.Transparent
             // Єдина тема: наші кольори + Material-схема, побудована з них
-            DynamicAITheme(themeId = settings.appTheme, backgroundOverride = dynamicBg) {
+            DynamicAITheme(themeId = settings.appTheme, backgroundOverride = dynamicBg, accentOverride = settings.accentColor) {
                 androidx.compose.material3.Surface(color = dynamicBg, modifier = Modifier.fillMaxSize()) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         MainBackground(settings)

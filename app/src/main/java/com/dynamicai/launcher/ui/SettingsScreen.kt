@@ -473,6 +473,27 @@ fun SettingsScreen(
                 onChange = { onSettingsChange(settings.copy(listGapDp = it)) }
             )
             SizeSliderRow(
+                label = "Док: відступ між іконками",
+                value = settings.dockGapDp,
+                suffix = "dp",
+                values = listOf(0, 2, 4, 6, 10, 16, 24),
+                onChange = { onSettingsChange(settings.copy(dockGapDp = it)) }
+            )
+            SizeSliderRow(
+                label = "Док: заокруглення панелі",
+                value = settings.dockCornerDp,
+                suffix = "dp",
+                values = listOf(0, 8, 16, 26, 34, 40),
+                onChange = { onSettingsChange(settings.copy(dockCornerDp = it)) }
+            )
+            SizeSliderRow(
+                label = "Док: прозорість панелі",
+                value = settings.dockOpacityPercent,
+                suffix = "%",
+                values = listOf(0, 25, 50, 75, 100),
+                onChange = { onSettingsChange(settings.copy(dockOpacityPercent = it)) }
+            )
+            SizeSliderRow(
                 label = "Розмір шрифту",
                 value = settings.fontSizeSp,
                 suffix = "sp",

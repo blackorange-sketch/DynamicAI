@@ -54,6 +54,8 @@ fun Dock(
     badges: Map<String, Int> = emptyMap(),
     modifier: Modifier = Modifier
 ) {
+    val style = LocalGridStyle.current
+    val dockShape = RoundedCornerShape(style.dockCornerDp.dp)
 
     Row(
         modifier = modifier
@@ -64,12 +66,12 @@ fun Dock(
                 }
             }
             .padding(horizontal = 8.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(26.dp))
+            .clip(dockShape)
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        AppTheme.colors.glassBackground,
-                        AppTheme.colors.glassBackgroundAlt
+                        AppTheme.colors.glassBackground.copy(alpha = AppTheme.colors.glassBackground.alpha * style.dockOpacity),
+                        AppTheme.colors.glassBackgroundAlt.copy(alpha = AppTheme.colors.glassBackgroundAlt.alpha * style.dockOpacity)
                     )
                 )
             )
@@ -81,10 +83,10 @@ fun Dock(
                         AppTheme.colors.glassBorder.copy(alpha = 0.5f)
                     )
                 ),
-                shape = RoundedCornerShape(26.dp)
+                shape = dockShape
             )
             .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(style.dockGapDp.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Кнопка пошуку — акцентна

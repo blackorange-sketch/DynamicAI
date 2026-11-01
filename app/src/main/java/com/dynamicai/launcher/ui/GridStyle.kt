@@ -22,7 +22,10 @@ data class GridStyle(
     val platePadDp: Int = 6,
     val gapHDp: Int = 4,
     val gapVDp: Int = 12,
-    val listGapDp: Int = 6
+    val listGapDp: Int = 6,
+    val dockGapDp: Int = 6,
+    val dockCornerDp: Int = 26,
+    val dockOpacity: Float = 1f
 ) {
     /** Ширина клітинки = підкладка + місце під підпис; відступ між клітинками = gapHDp точно. */
     val cellWidthDp: Int get() = gridIconDp + platePadDp + 14
@@ -33,10 +36,12 @@ val LocalGridStyle = compositionLocalOf { GridStyle() }
 fun LauncherSettings.toGridStyle(): GridStyle =
     if (uniformIcons) GridStyle(
         listIconDp = menuIconSizeDp, dockIconDp = menuIconSizeDp, gridIconDp = menuIconSizeDp,
-        fontSp = fontSizeSp, platePadDp = iconPlatePadDp, gapHDp = gridGapHDp, gapVDp = gridGapVDp, listGapDp = listGapDp
+        fontSp = fontSizeSp, platePadDp = iconPlatePadDp, gapHDp = gridGapHDp, gapVDp = gridGapVDp, listGapDp = listGapDp,
+        dockGapDp = dockGapDp, dockCornerDp = dockCornerDp, dockOpacity = dockOpacityPercent / 100f
     ) else GridStyle(
         listIconDp = iconSizeDp, dockIconDp = dockIconSizeDp, gridIconDp = menuIconSizeDp,
-        fontSp = fontSizeSp, platePadDp = iconPlatePadDp, gapHDp = gridGapHDp, gapVDp = gridGapVDp, listGapDp = listGapDp
+        fontSp = fontSizeSp, platePadDp = iconPlatePadDp, gapHDp = gridGapHDp, gapVDp = gridGapVDp, listGapDp = listGapDp,
+        dockGapDp = dockGapDp, dockCornerDp = dockCornerDp, dockOpacity = dockOpacityPercent / 100f
     )
 
 @Composable

@@ -31,12 +31,13 @@ private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
 @Composable
 fun LaunchOverlay(app: AppInfo?, origin: Offset) {
     if (LocalAnimSpeed.current <= 0) return
-    val progress by animateFloatAsState(
+    val progressState = animateFloatAsState(
         targetValue = if (app != null) 1f else 0f,
         animationSpec = if (app != null) tween(animMs(320), easing = CubicBezierEasing(0.2f, 0f, 0f, 1f)) else snap(),
         label = "launchProgress"
     )
-    if (progress <= 0f) return
+    val visible by remember { androidx.compose.runtime.derivedStateOf { progressState.value > 0f } }
+    if (!visible) return
     val last = remember { mutableStateOf<AppInfo?>(null) }
     if (app != null) last.value = app
     val shown = app ?: last.value
@@ -46,7 +47,7 @@ fun LaunchOverlay(app: AppInfo?, origin: Offset) {
         val h = size.height
         val from = if (origin == Offset.Unspecified) Offset(w / 2f, h / 2f) else origin
         val start = 56.dp.toPx()
-        val p = progress
+        val p = progressState.value
         // Прямокутник «вікна»: від квадрата навколо іконки до всього екрана
         val left = lerp(from.x - start / 2f, 0f, p)
         val top = lerp(from.y - start / 2f, 0f, p)
@@ -55,6 +56,16 @@ fun LaunchOverlay(app: AppInfo?, origin: Offset) {
         val radius = lerp(14.dp.toPx(), 0f, p)
         // Заливка з'являється швидко, щоб іконка спочатку лишалась «на місці»
         val fill = (p * 3.5f).coerceIn(0f, 1f)
+        // М'яка тінь навколо вікна: кілька напівпрозорих шарів, що розходяться й гаснуть
+        for (i in 1..4) {
+            val grow = i * 5.dp.toPx() * (1f - p * 0.7f)
+            drawRoundRect(
+                color = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.11f * (1f - p) * fill.coerceAtLeast(0.4f)),
+                topLeft = Offset(left - grow, top - grow + 3.dp.toPx()),
+                size = Size(right - left + grow * 2, bottom - top + grow * 2),
+                cornerRadius = CornerRadius(radius + grow, radius + grow)
+            )
+        }
         drawRoundRect(
             color = bg.copy(alpha = fill),
             topLeft = Offset(left, top),

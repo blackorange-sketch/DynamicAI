@@ -122,7 +122,7 @@ class AppRepository(private val context: Context) {
         return try {
             // smooth: власна анімація лаунчера вже грає, тож системну замінюємо м'яким перетином
             val opts = if (smooth) android.app.ActivityOptions
-                .makeCustomAnimation(context, android.R.anim.fade_in, android.R.anim.fade_out).toBundle() else null
+                .makeCustomAnimation(context, com.dynamicai.launcher.R.anim.launch_fade_in, 0).toBundle() else null
             context.startActivity(intent, opts)
             true
         } catch (_: Exception) {

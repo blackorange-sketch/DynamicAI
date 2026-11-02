@@ -658,17 +658,17 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
             vm.launch(app.packageName, smooth = smoothLaunch)
         }
-        // Тримаємо оверлей, доки лаунчер не піде у фон (додаток на екрані), але не довше 1,5 с
-        kotlinx.coroutines.withTimeoutOrNull(1500) {
-            lifecycleOwner.lifecycle.currentStateFlow.first { !it.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) }
+        // Тримаємо оверлей, доки лаунчер не стане повністю невидимим (додаток уже намальований), максимум 1,3 с.
+        // PAUSED настає ще до появи вікна додатка, тому чекаємо саме STOPPED — інакше головний екран блимає.
+        kotlinx.coroutines.withTimeoutOrNull(1300) {
+            lifecycleOwner.lifecycle.currentStateFlow.first { !it.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED) }
         }
-        kotlinx.coroutines.delay(120)
         launchingApp = null
     }
 
     val launchFade by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (launchingApp != null) 0f else 1f,
-        animationSpec = androidx.compose.animation.core.tween(220),
+        animationSpec = androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing),
         label = "launchFade"
     )
 
@@ -676,11 +676,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         modifier = Modifier
             .fillMaxSize()
             .graphicsLayer {
-                alpha = launchFade
-                // Зум від місця дотику: екран «розкривається» назовні
-                val s = 1f + 0.18f * (1f - launchFade)
+                // Як в iOS: головний екран трохи зменшується, тьмяніє й розмивається, поки відкривається додаток
+                val t = 1f - launchFade
+                alpha = 1f - 0.5f * t
+                val s = 1f - 0.07f * t
                 scaleX = s
                 scaleY = s
+                if (t > 0.02f && android.os.Build.VERSION.SDK_INT >= 31) {
+                    val r = 18.dp.toPx() * t
+                    renderEffect = androidx.compose.ui.graphics.BlurEffect(r, r, androidx.compose.ui.graphics.TileMode.Decal)
+                } else renderEffect = null
                 if (lastTouch != androidx.compose.ui.geometry.Offset.Unspecified && size.width > 0f) {
                     transformOrigin = androidx.compose.ui.graphics.TransformOrigin(
                         (lastTouch.x / size.width).coerceIn(0f, 1f), (lastTouch.y / size.height).coerceIn(0f, 1f)

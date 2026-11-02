@@ -24,6 +24,39 @@ class ChatEngine(
 
     companion object {
         private const val TAG = "ChatEngine"
+        /** simpleAnswer повертає це, коли хмара недоступна: викликач має завантажити локальну модель і повторити. */
+        const val CLOUD_FAILED = "\u0000cloud_failed"
+        /** Маркер у тексті відповіді: після нього йдуть рядки «назва<TAB>url» — джерела. */
+        const val SOURCES_TAG = "\u27e6\u0434\u0436\u0435\u0440\u0435\u043b\u0430\u27e7"
+    }
+
+    @Volatile private var lastSources: List<WebSearchRepository.WebHit> = emptyList()
+    @Volatile private var cloudCooldownUntil = 0L
+
+    /** Блок джерел для останньої відповіді (і очищує його). Порожній рядок, якщо джерел нема. */
+    fun takeSources(): String {
+        val src = lastSources
+        lastSources = emptyList()
+        if (src.isEmpty()) return ""
+        return "\n\n" + SOURCES_TAG + "\n" + src.joinToString("\n") {
+            it.title.replace(Regex("[\\t\\n\\r]+"), " ").take(90) + "\t" + it.url
+        }
+    }
+
+    private val SCREEN_ASK = Regex("(що|про що)\\s+(там\\s+)?(на|в|у)\\s+(цьому\\s+)?(екрані|вікні)|прочитай\\s+(екран|це)|підсумуй\\s+(екран|це|сторінку)|переказуй\\s+екран")
+
+    /** Чи відповідатиме на це питання хмарна модель (тоді локальну завантажувати не потрібно). */
+    fun cloudPreferred(question: String): Boolean {
+        val s = com.dynamicai.launcher.data.SettingsStorage(context).load()
+        if (!s.cloudEnabled || !CloudLlm.hasKey(s)) return false
+        if (System.currentTimeMillis() < cloudCooldownUntil) return false
+        val t = question.lowercase()
+        if (SCREEN_ASK.containsMatchIn(t)) return false           // текст екрана не залишає пристрій
+        if (MacroBuilder.looksLikeRequest(question)) return false  // макроси збирає локальна модель
+        return when (s.cloudMode) {
+            "always" -> true
+            else -> looksFactual(t.removePrefix("а ").removePrefix("і ").removePrefix("ну ")) || t.length > 70
+        }
     }
 
     /**
@@ -503,7 +536,16 @@ class ChatEngine(
         return out
     }
 
-    suspend fun simpleAnswer(question: String, onToken: ((String) -> Unit)? = null, history: String = ""): String {
+    suspend fun simpleAnswer(
+        question: String,
+        onToken: ((String) -> Unit)? = null,
+        history: String = "",
+        onStatus: ((String) -> Unit)? = null,
+        allowCloud: Boolean = true
+    ): String {
+        if (allowCloud && cloudPreferred(question)) {
+            return cloudAnswer(question, onToken, history, onStatus) ?: CLOUD_FAILED
+        }
         if (!llm.isReady) return "LLM не активна"
         macroFlow(question)?.let { return it }
         return try {
@@ -574,6 +616,100 @@ class ChatEngine(
             if (t is kotlinx.coroutines.CancellationException) throw t
             Log.e(TAG, "simpleAnswer failed", t)
             "Помилка: ${t.message}"
+        }
+    }
+
+    /**
+     * Відповідь хмарної моделі з «розумним пошуком»: для фактичних питань шукаємо в мережі, читаємо кращі сторінки
+     * й даємо моделі пронумеровані джерела. null — хмара не відповіла (потрібен запасний локальний шлях).
+     */
+    private suspend fun cloudAnswer(
+        question: String, onToken: ((String) -> Unit)?, history: String, onStatus: ((String) -> Unit)?
+    ): String? {
+        val s = com.dynamicai.launcher.data.SettingsStorage(context).load()
+        lastSources = emptyList()
+        val followUp = history.isNotBlank() && isFollowUp(question)
+        val prevUser = history.lines().lastOrNull { it.startsWith("Користувач:") }?.removePrefix("Користувач:")?.trim().orEmpty()
+        val searchText = if (followUp && prevUser.isNotBlank()) "$prevUser. $question" else question
+        val bare = question.removePrefix("а ").removePrefix("і ").removePrefix("ну ")
+        val wantSearch = s.autoSearch && (looksFactual(bare) || EXPLICIT_SEARCH.containsMatchIn(question.lowercase()) ||
+            (followUp && looksFactual(prevUser)))
+
+        var sourcesText = ""
+        if (wantSearch) {
+            try {
+                onStatus?.invoke("Шукаю в інтернеті…")
+                val query = searchQueryFrom(searchText)
+                val hits = webSearch.searchHits(query, 6)
+                val wiki = try { webSearch.toContext(webSearch.search(query)) } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e; ""
+                }
+                val top = hits.take(3)
+                val pages = if (top.isNotEmpty()) {
+                    onStatus?.invoke("Читаю сторінки (${top.size})…")
+                    webSearch.readPages(top.map { it.url }, query)
+                } else emptyMap()
+                val used = ArrayList<WebSearchRepository.WebHit>()
+                val sb = StringBuilder()
+                hits.forEachIndexed { i, h ->
+                    val body = pages[h.url] ?: h.snippet
+                    if (body.isBlank()) return@forEachIndexed
+                    if (used.size >= 5) return@forEachIndexed
+                    used.add(h)
+                    sb.append("[").append(used.size).append("] ").append(h.title).append(" (").append(h.domain).append(")\n")
+                        .append(body.take(1500)).append("\n\n")
+                }
+                if (wiki.isNotBlank()) sb.append("Вікіпедія:\n").append(wiki.take(900)).append("\n")
+                sourcesText = sb.toString().trim()
+                lastSources = used.take(4)
+                Log.e(TAG, "☁️ smart search '$query': ${used.size} sources, ${sourcesText.length} chars")
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e(TAG, "smart search failed: ${e.message}")
+            }
+        }
+
+        val now = java.time.LocalDateTime.now()
+        val date = now.format(java.time.format.DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy, HH:mm", java.util.Locale("uk", "UA")))
+        val lang = when (s.answerLanguage) {
+            "en" -> "Відповідай англійською."
+            "auto" -> "Відповідай мовою питання."
+            else -> "Відповідай українською."
+        }
+        val style = if (s.answerStyle == "short")
+            "Відповідай стисло: 1–3 речення."
+        else
+            "Довжину добирай за питанням: просте — 1–2 речення; складне — короткі абзаци або список з рядків, що починаються з «•». " +
+                "Спершу пряма відповідь, потім деталі."
+        val system = buildString {
+            append("Ти — голосовий асистент у мобільному лаунчері Android. Зараз: ").append(date).append(". ")
+            append(lang).append(' ').append(style).append('\n')
+            append("Не використовуй markdown-розмітку (зірочки, решітки, блоки коду) і не став посилань чи номерів джерел у тексті: ")
+            append("відповідь озвучується, а джерела показуються окремо. ")
+            append("Якщо передано джерела — спирайся лише на них і на загальновідомі факти, нічого не вигадуй. ")
+            append("Якщо в джерелах немає відповіді, чесно скажи про це. Для свіжих даних (ціни, новини, результати) називай, звідки вони, і коли це актуально.")
+        }
+        val user = buildString {
+            if (history.isNotBlank() && followUp) append("Попередня розмова:\n").append(compactHistory(history)).append("\n\n")
+            if (sourcesText.isNotBlank()) append("Джерела з інтернету:\n").append(sourcesText).append("\n\n")
+            append("Питання: ").append(question)
+        }
+
+        onStatus?.invoke("Пишу відповідь…")
+        val acc = StringBuilder()
+        return try {
+            val r = CloudLlm.generate(s, system, user) { tok -> acc.append(tok); onToken?.invoke(tok) }
+            Log.e(TAG, "☁️ cloud answer via ${CloudLlm.lastProvider}: ${r.length} chars")
+            r.trim()
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Log.e(TAG, "cloud failed: ${e.message}")
+            lastSources = if (acc.length > 40) lastSources else emptyList()
+            if (acc.length > 40) acc.toString().trim()      // частину вже озвучено: лишаємо її
+            else {
+                cloudCooldownUntil = System.currentTimeMillis() + 90_000   // кілька хвилин не мучимо недоступну хмару
+                null
+            }
         }
     }
 

@@ -912,6 +912,50 @@ fun SettingsScreen(
             }
         }
 
+        // --- Хмарна модель ---
+        GlassSectionHeader("Хмарна модель (Gemini / Groq)")
+        GlassCard {
+            Column(modifier = Modifier.padding(16.dp)) {
+                SwitchRow(
+                    label = "Складні питання й пошук — через хмарну модель",
+                    checked = settings.cloudEnabled,
+                    icon = Icons.Default.Settings,
+                    tint = AppTheme.colors.accent
+                ) { onSettingsChange(settings.copy(cloudEnabled = it)) }
+                Text(
+                    "Лаунчер сам шукає в інтернеті, читає кращі сторінки й дає моделі джерела. Прості команди (ліхтарик, додатки…) " +
+                        "і балачки лишаються локальними. Без мережі чи ключа працює локальна модель.",
+                    color = AppTheme.colors.textSecondary, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("Коли використовувати", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LlmBackendChip("Авто (факти й складні)", "auto", settings.cloudMode) { onSettingsChange(settings.copy(cloudMode = it)) }
+                    LlmBackendChip("Усі питання", "always", settings.cloudMode) { onSettingsChange(settings.copy(cloudMode = it)) }
+                }
+                TextFieldRow("Gemini API-ключ (aistudio.google.com/apikey)", settings.geminiKey, "AIza…", secret = true) {
+                    onSettingsChange(settings.copy(geminiKey = it))
+                }
+                TextFieldRow("Модель Gemini", settings.geminiModel, "gemini-flash-latest") {
+                    onSettingsChange(settings.copy(geminiModel = it))
+                }
+                TextFieldRow("Groq API-ключ — запасний (console.groq.com/keys)", settings.groqKey, "gsk_…", secret = true) {
+                    onSettingsChange(settings.copy(groqKey = it))
+                }
+                TextFieldRow("Модель Groq", settings.groqModel, "llama-3.3-70b-versatile") {
+                    onSettingsChange(settings.copy(groqModel = it))
+                }
+                CloudTestRow(settings)
+                Text(
+                    "Приватність: назовні йде лише питання, кілька останніх реплік і публічні уривки знайдених сторінок. " +
+                        "Контакти, нотатки, повідомлення й текст екрана не надсилаються. На безкоштовному рівні Google може " +
+                        "використовувати запити для покращення продуктів — не питайте там особистого.",
+                    color = AppTheme.colors.textSecondary, fontSize = 11.sp, modifier = Modifier.padding(top = 10.dp)
+                )
+            }
+        }
+
         // --- Пам'ять і рушій ---
         GlassSectionHeader("Пам'ять і рушій")
         GlassCard {

@@ -2,6 +2,8 @@ package com.dynamicai.launcher.llm
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -114,6 +116,124 @@ class WebSearchRepository {
         Log.e(TAG, "Web search failed: $errors")
         ""
     }
+
+    data class WebHit(val title: String, val snippet: String, val url: String) {
+        val domain: String get() = try { java.net.URI(url).host.orEmpty().removePrefix("www.") } catch (_: Exception) { url }
+    }
+
+    private fun unescapeAmp(s: String) = s.replace("&amp;", "&").replace("&quot;", "\"").replace("&#x27;", "'")
+
+    private fun ddgHits(q: String, limit: Int): List<WebHit> {
+        val html = fetch("https://html.duckduckgo.com/html/?q=$q&kl=ua-uk")
+        val anchors = Regex("<a[^>]*class=\"result__a\"[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL).findAll(html).toList()
+        val snippets = Regex("class=\"result__snippet\"[^>]*>(.*?)</a>", RegexOption.DOT_MATCHES_ALL).findAll(html).map { cleanHtml(it.groupValues[1]) }.toList()
+        val out = ArrayList<WebHit>()
+        for ((i, m) in anchors.withIndex()) {
+            if (out.size >= limit) break
+            val href = Regex("href=\"([^\"]+)\"").find(m.value)?.groupValues?.get(1)?.let { unescapeAmp(it) } ?: continue
+            var url = href
+            if (url.contains("uddg=")) {
+                url = java.net.URLDecoder.decode(url.substringAfter("uddg=").substringBefore("&"), "UTF-8")
+            } else if (url.startsWith("//")) url = "https:$url"
+            if (!url.startsWith("http")) continue
+            if (url.contains("duckduckgo.com")) continue   // реклама й службові посилання
+            out.add(WebHit(cleanHtml(m.groupValues[1]), snippets.getOrNull(i).orEmpty(), url))
+        }
+        return out
+    }
+
+    private fun bingHits(q: String, limit: Int): List<WebHit> {
+        val xml = fetch("https://www.bing.com/search?q=$q&format=rss&setlang=uk&mkt=uk-UA")
+        val items = Regex("<item>(.*?)</item>", RegexOption.DOT_MATCHES_ALL).findAll(xml).map { it.groupValues[1] }.toList()
+        return items.mapNotNull { it0 ->
+            val title = cleanHtml(Regex("<title>(.*?)</title>", RegexOption.DOT_MATCHES_ALL).find(it0)?.groupValues?.get(1) ?: "")
+            val link = Regex("<link>(.*?)</link>", RegexOption.DOT_MATCHES_ALL).find(it0)?.groupValues?.get(1)?.trim() ?: return@mapNotNull null
+            val desc = cleanHtml(Regex("<description>(.*?)</description>", RegexOption.DOT_MATCHES_ALL).find(it0)?.groupValues?.get(1) ?: "")
+            if (!link.startsWith("http")) null else WebHit(title, desc, link)
+        }.take(limit)
+    }
+
+    /** Результати вебпошуку з посиланнями (DuckDuckGo → Bing). */
+    suspend fun searchHits(query: String, limit: Int = 6): List<WebHit> = withContext(Dispatchers.IO) {
+        val q = URLEncoder.encode(query, "UTF-8")
+        for ((name, fn) in listOf<Pair<String, (String, Int) -> List<WebHit>>>("ddg" to ::ddgHits, "bing" to ::bingHits)) {
+            try {
+                val r = fn(q, limit)
+                if (r.isNotEmpty()) { lastError = "Hits[$name] OK: ${r.size}"; return@withContext r }
+            } catch (t: Throwable) {
+                if (t is kotlinx.coroutines.CancellationException) throw t
+                lastError = "Hits[$name] failed: ${t.message}"
+            }
+        }
+        emptyList()
+    }
+
+    private val BLOCK_TAGS = Regex("<(script|style|nav|header|footer|aside|noscript|form|svg)[^>]*>.*?</\\1>", setOf(RegexOption.DOT_MATCHES_ALL, RegexOption.IGNORE_CASE))
+
+    private fun fetchHtmlLimited(url: String, maxChars: Int = 400_000): String {
+        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 5_000
+            readTimeout = 6_000
+            instanceFollowRedirects = true
+            setRequestProperty("User-Agent", MOBILE_UA)
+            setRequestProperty("Accept-Language", "uk,en;q=0.8")
+        }
+        try {
+            if (conn.responseCode !in 200..299) throw java.io.IOException("HTTP ${conn.responseCode}")
+            val type = conn.contentType.orEmpty().lowercase()
+            if (type.isNotEmpty() && !type.contains("html") && !type.contains("text")) throw java.io.IOException("not html: $type")
+            val sb = StringBuilder()
+            conn.inputStream.bufferedReader().use { r ->
+                val buf = CharArray(8192)
+                while (sb.length < maxChars) {
+                    val n = r.read(buf)
+                    if (n < 0) break
+                    sb.append(buf, 0, n)
+                }
+            }
+            return sb.toString()
+        } finally { conn.disconnect() }
+    }
+
+    /** Основний текст сторінки: найрелевантніші до запиту абзаци (до maxChars). */
+    private fun extractRelevant(html: String, query: String, maxChars: Int): String {
+        var t = BLOCK_TAGS.replace(html, " ")
+        t = t.replace(Regex("<!--.*?-->", RegexOption.DOT_MATCHES_ALL), " ")
+        t = t.replace(Regex("</(p|div|li|h[1-6]|tr|section|article)>|<br\\s*/?>", RegexOption.IGNORE_CASE), "\n")
+        t = t.replace(Regex("<[^>]+>"), " ")
+        val words = query.lowercase().split(Regex("[^\\p{L}\\d]+")).filter { it.length >= 4 }.map { it.take(5) }.toSet()
+        val paras = t.split('\n').map { cleanHtml(it) }.filter { it.length >= 70 }
+        if (paras.isEmpty()) return ""
+        val scored = paras.mapIndexed { i, p ->
+            val low = p.lowercase()
+            val hit = words.count { low.contains(it) }
+            Triple(i, p, hit * 10 + (if (i < 4) 3 else 0) + minOf(p.length, 400) / 100)
+        }
+        val chosen = scored.sortedByDescending { it.third }.take(8).sortedBy { it.first }
+        val out = StringBuilder()
+        for ((_, p, _) in chosen) {
+            if (out.length + p.length > maxChars) { if (out.isEmpty()) out.append(p.take(maxChars)); break }
+            out.append(p).append('\n')
+        }
+        return out.toString().trim()
+    }
+
+    /** Паралельно читає сторінки (кожна не довше ~7 с); повертає url → релевантний текст. */
+    suspend fun readPages(urls: List<String>, query: String, maxCharsEach: Int = 1500): Map<String, String> =
+        withContext(Dispatchers.IO) {
+            kotlinx.coroutines.coroutineScope {
+                urls.map { u ->
+                    async {
+                        u to (kotlinx.coroutines.withTimeoutOrNull(7_000) {
+                            try { extractRelevant(fetchHtmlLimited(u), query, maxCharsEach) } catch (t: Throwable) {
+                                if (t is kotlinx.coroutines.CancellationException) throw t
+                                ""
+                            }
+                        } ?: "")
+                    }
+                }.awaitAll().filter { it.second.isNotBlank() }.toMap()
+            }
+        }
 
     private suspend fun searchJoke(): SearchResult = withContext(Dispatchers.IO) {
         val jokes = listOf(

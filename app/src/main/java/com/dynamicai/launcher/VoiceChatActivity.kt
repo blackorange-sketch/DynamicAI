@@ -132,7 +132,8 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
             .filter { it.role == "user" || it.role == "assistant" }
             .dropLast(1).takeLast(10)
             .joinToString("\n") { msg ->
-                if (msg.role == "user") "Користувач: ${msg.content}" else "Асистент: ${msg.content}"
+                val body = msg.content.substringBefore(com.dynamicai.launcher.llm.ChatEngine.SOURCES_TAG).trim()
+                if (msg.role == "user") "Користувач: $body" else "Асистент: $body"
             }
         activeJob = processQuery(
             text, historyStr, vm, scope,
@@ -550,6 +551,15 @@ private fun MessageBubble(msg: ChatMessage, maxWidth: androidx.compose.ui.unit.D
     val c = AppTheme.colors
     val isUser = msg.role == "user"
     val isError = msg.role == "error"
+    val tag = com.dynamicai.launcher.llm.ChatEngine.SOURCES_TAG
+    val bodyText = msg.content.substringBefore(tag).trim()
+    val sources = remember(msg.content) {
+        if (!msg.content.contains(tag)) emptyList()
+        else msg.content.substringAfter(tag).trim().lines().mapNotNull { l ->
+            val parts = l.split('\t')
+            if (parts.size >= 2 && parts[1].startsWith("http")) parts[0].trim() to parts[1].trim() else null
+        }
+    }
     val shape = if (isUser) RoundedCornerShape(20.dp, 20.dp, 4.dp, 20.dp) else RoundedCornerShape(20.dp, 20.dp, 20.dp, 4.dp)
     val bg = when { isError -> c.danger.copy(alpha = 0.12f); isUser -> c.accent.copy(alpha = 0.20f); else -> c.glassBackground }
     val border = when { isError -> c.danger.copy(alpha = 0.5f); isUser -> c.accent.copy(alpha = 0.4f); else -> c.glassBorder }
@@ -569,12 +579,31 @@ private fun MessageBubble(msg: ChatMessage, maxWidth: androidx.compose.ui.unit.D
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 Text(
-                    msg.content,
+                    bodyText,
                     color = if (isError) c.danger else c.textPrimary,
                     fontSize = 15.sp,
                     lineHeight = 22.sp,
                     fontWeight = if (isUser) FontWeight.Medium else FontWeight.Normal
                 )
+                if (sources.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text("Джерела", color = c.textSecondary, fontSize = 11.sp)
+                    sources.forEachIndexed { i, (title, url) ->
+                        val host = try { java.net.URI(url).host.orEmpty().removePrefix("www.") } catch (_: Exception) { url }
+                        Text(
+                            "${i + 1}. $host" + if (title.isNotBlank() && !title.equals(host, true)) " — $title" else "",
+                            color = c.accent, fontSize = 12.sp, maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .clickable {
+                                    try {
+                                        ctx.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                    } catch (_: Throwable) {}
+                                }
+                                .padding(vertical = 3.dp)
+                        )
+                    }
+                }
                 if (isError && msg.action != null) {
                     TextButton(onClick = { onAction(msg.action) }) {
                         Text(
@@ -589,7 +618,7 @@ private fun MessageBubble(msg: ChatMessage, maxWidth: androidx.compose.ui.unit.D
                     menu = false
                     try {
                         val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        cm.setPrimaryClip(android.content.ClipData.newPlainText("message", msg.content))
+                        cm.setPrimaryClip(android.content.ClipData.newPlainText("message", bodyText))
                         android.widget.Toast.makeText(ctx, "Скопійовано", android.widget.Toast.LENGTH_SHORT).show()
                     } catch (_: Throwable) {}
                 })
@@ -598,7 +627,7 @@ private fun MessageBubble(msg: ChatMessage, maxWidth: androidx.compose.ui.unit.D
                     try {
                         val send = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
-                            putExtra(Intent.EXTRA_TEXT, msg.content)
+                            putExtra(Intent.EXTRA_TEXT, bodyText)
                         }
                         ctx.startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     } catch (_: Throwable) {}
@@ -843,18 +872,22 @@ fun processQuery(
                     return@launch
                 }
             }
-            if (!vm.ensureLlmLoaded()) {
+            // Хмарна модель (Gemini/Groq) відповідає без локальної — тоді вона не займає пам'ять
+            val cloudFirst = vm.chatEngine.cloudPreferred(text)
+            suspend fun localOrFail(): Boolean {
+                if (vm.ensureLlmLoaded()) return true
                 onMessage(ChatMessage("error", "Модель не завантажилась. Перезапустіть рушій або оберіть іншу модель зверху.", "restart"))
                 onStateChange(VoiceState.SPEAKING)
                 vm.tts.speakWithCallback("Модель не завантажилась.") { onStateChange(VoiceState.LISTENING) }
-                return@launch
+                return false
             }
+            if (!cloudFirst && !localOrFail()) return@launch
             // Для MNN-моделей використовуємо простий чат (без агента)
             // для LiteRT (Gemma) — з агентними інструментами
             // Налаштування «Режим агента» вимкнено — теж простий чат (короткий промпт, зручно для діагностики GPU)
             val useAgent = vm.settings.value.useAgent
             val maxTokens = vm.settings.value.maxResponseTokens
-            val simple = vm.currentModelId.startsWith("mnn-") || !useAgent
+            val simple = cloudFirst || vm.currentModelId.startsWith("mnn-") || !useAgent
             val job = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
 
             // Потокове озвучення: перше речення звучить, поки модель дописує решту
@@ -875,13 +908,23 @@ fun processQuery(
                 vm.tts.speakChunk(sentence)
             }
 
-            val rawAnswer = if (simple) {
-                vm.chatEngine.simpleAnswer(text, { token -> splitter.feed(token) }, history)
+            val onStatus: (String) -> Unit = { st -> onMessage(ChatMessage("status", st)) }
+            var rawAnswer = if (simple) {
+                vm.chatEngine.simpleAnswer(text, { token -> splitter.feed(token) }, history, onStatus)
             } else {
                 vm.chatEngine.answerWithAgent(text, history)
             }
+            var usedCloud = cloudFirst
+            if (rawAnswer == com.dynamicai.launcher.llm.ChatEngine.CLOUD_FAILED) {
+                // Хмара недоступна (нема мережі/ліміт) — тихо переходимо на локальну модель
+                usedCloud = false
+                if (!localOrFail()) return@launch
+                onStatus("Хмара недоступна, відповідає локальна модель…")
+                rawAnswer = vm.chatEngine.simpleAnswer(text, { token -> splitter.feed(token) }, history, onStatus, allowCloud = false)
+            }
+            val sourcesBlock = if (usedCloud) vm.chatEngine.takeSources() else ""
             // Довга відповідь не влазить у повідомлення і довго озвучується — обрізаємо за реченням
-            val answer = limitAnswer(rawAnswer, maxTokens)
+            val answer = limitAnswer(rawAnswer, if (usedCloud) maxOf(maxTokens, 700) else maxTokens)
             stopListening() // Примусово вимикаємо мікрофон, щоб не зчитав TTS
 
             // Службові відповіді рушія — показуємо як помилку з кнопкою, а не озвучуємо
@@ -892,7 +935,7 @@ fun processQuery(
                 return@launch
             }
 
-            onMessage(ChatMessage("assistant", answer))
+            onMessage(ChatMessage("assistant", answer + sourcesBlock))
             if (simple && splitter.fedAny) {
                 // Дозвучуємо залишок і чекаємо кінця черги озвучення
                 splitter.flush()

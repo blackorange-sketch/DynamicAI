@@ -83,6 +83,12 @@ data class LauncherSettings(
     val answerLanguage: String = "uk",         // "uk" | "auto" (мова питання) | "en"
     val answerStyle: String = "short",         // "short" | "normal": чи просити модель відповідати коротко
     val autoSearch: Boolean = true,            // для фактичних питань спершу шукати у Вікіпедії
+    val cloudEnabled: Boolean = false,         // хмарна модель (Gemini/Groq) для складних питань і пошуку
+    val cloudMode: String = "auto",            // "auto" — фактичні й складні питання; "always" — усі питання до моделі
+    val geminiKey: String = "",
+    val geminiModel: String = "gemini-flash-latest",
+    val groqKey: String = "",
+    val groqModel: String = "llama-3.3-70b-versatile",
     val fastCommands: Boolean = true,          // прості команди телефону виконуються без моделі
     val llmPreload: Boolean = false,           // завантажувати модель у фоні при старті лаунчера
     val llmUnloadMinutes: Int = 3,             // 0 = ніколи не вивантажувати
@@ -172,6 +178,12 @@ class SettingsStorage(context: Context) {
             answerLanguage = prefs.getString("answerLanguage", "uk") ?: "uk",
             answerStyle = prefs.getString("answerStyle", "short") ?: "short",
             autoSearch = prefs.getBoolean("autoSearch", true),
+            cloudEnabled = prefs.getBoolean("cloudEnabled", false),
+            cloudMode = prefs.getString("cloudMode", "auto") ?: "auto",
+            geminiKey = prefs.getString("geminiKey", "") ?: "",
+            geminiModel = prefs.getString("geminiModel", "gemini-flash-latest") ?: "gemini-flash-latest",
+            groqKey = prefs.getString("groqKey", "") ?: "",
+            groqModel = prefs.getString("groqModel", "llama-3.3-70b-versatile") ?: "llama-3.3-70b-versatile",
             fastCommands = prefs.getBoolean("fastCommands", true),
             llmPreload = prefs.getBoolean("llmPreload", false),
             llmUnloadMinutes = prefs.getInt("llmUnloadMinutes", 3),
@@ -258,6 +270,12 @@ class SettingsStorage(context: Context) {
             .putString("answerLanguage", s.answerLanguage)
             .putString("answerStyle", s.answerStyle)
             .putBoolean("autoSearch", s.autoSearch)
+            .putBoolean("cloudEnabled", s.cloudEnabled)
+            .putString("cloudMode", s.cloudMode)
+            .putString("geminiKey", s.geminiKey)
+            .putString("geminiModel", s.geminiModel)
+            .putString("groqKey", s.groqKey)
+            .putString("groqModel", s.groqModel)
             .putBoolean("fastCommands", s.fastCommands)
             .putBoolean("llmPreload", s.llmPreload)
             .putInt("llmUnloadMinutes", s.llmUnloadMinutes)

@@ -664,3 +664,62 @@ internal fun AppPickerRow(
         )
     }
 }
+
+/** Рядок із підписом і текстовим полем; secret = приховує введене (ключі API). */
+@Composable
+internal fun TextFieldRow(label: String, value: String, placeholder: String, secret: Boolean = false, onChange: (String) -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+        Text(label, color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+        Spacer(Modifier.height(4.dp))
+        BasicTextField(
+            value = value,
+            onValueChange = { onChange(it.trim()) },
+            textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 13.sp),
+            cursorBrush = SolidColor(AppTheme.colors.accent),
+            singleLine = true,
+            visualTransformation = if (secret) androidx.compose.ui.text.input.PasswordVisualTransformation()
+                else androidx.compose.ui.text.input.VisualTransformation.None,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(AppTheme.colors.glassBorder.copy(alpha = 0.5f))
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            decorationBox = { inner ->
+                if (value.isEmpty()) Text(placeholder, color = AppTheme.colors.textSecondary, fontSize = 13.sp)
+                inner()
+            }
+        )
+    }
+}
+
+/** Кнопка перевірки хмарної моделі: надсилає крихітний запит і показує, хто відповів. */
+@Composable
+internal fun CloudTestRow(settings: LauncherSettings) {
+    val scope = rememberCoroutineScope()
+    var status by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
+        Text(
+            if (busy) "Перевіряю…" else "Перевірити з'єднання",
+            color = AppTheme.colors.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .clickable(enabled = !busy) {
+                    busy = true; status = ""
+                    scope.launch {
+                        status = try {
+                            val r = com.dynamicai.launcher.llm.CloudLlm.generate(
+                                settings, "Відповідай одним словом.", "Скажи слово: готово", { }
+                            )
+                            "✅ Працює (${com.dynamicai.launcher.llm.CloudLlm.lastProvider}): ${r.trim().take(40)}"
+                        } catch (e: Exception) {
+                            "❌ ${e.message ?: "помилка"}".take(200)
+                        }
+                        busy = false
+                    }
+                }
+                .padding(vertical = 6.dp)
+        )
+        if (status.isNotEmpty()) Text(status, color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+    }
+}

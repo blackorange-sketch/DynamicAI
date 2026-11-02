@@ -116,11 +116,14 @@ class AppRepository(private val context: Context) {
 
     fun clearIconCache() = iconCache.evictAll()
 
-    fun launchApp(packageName: String): Boolean {
+    fun launchApp(packageName: String, smooth: Boolean = false): Boolean {
         val intent = pm.getLaunchIntentForPackage(packageName) ?: return false
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return try {
-            context.startActivity(intent)
+            // smooth: власна анімація лаунчера вже грає, тож системну замінюємо м'яким перетином
+            val opts = if (smooth) android.app.ActivityOptions
+                .makeCustomAnimation(context, android.R.anim.fade_in, android.R.anim.fade_out).toBundle() else null
+            context.startActivity(intent, opts)
             true
         } catch (_: Exception) {
             false

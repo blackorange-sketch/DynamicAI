@@ -85,6 +85,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.first
 
 @Composable
 fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launcher.HubEvent? = null) {
@@ -645,11 +646,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         }
     }
 
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     LaunchedEffect(launchingApp) {
         val app = launchingApp ?: return@LaunchedEffect
-        kotlinx.coroutines.delay(160)
-        vm.launch(app.packageName)
-        kotlinx.coroutines.delay(420)
+        // Запускаємо одразу: поки грає анімація, додаток уже стартує і до її кінця готовий
+        vm.launch(app.packageName, smooth = settings.animSpeedPercent > 0)
+        // Тримаємо оверлей, доки лаунчер не піде у фон (додаток на екрані), але не довше 1,5 с
+        kotlinx.coroutines.withTimeoutOrNull(1500) {
+            lifecycleOwner.lifecycle.currentStateFlow.first { !it.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) }
+        }
+        kotlinx.coroutines.delay(120)
         launchingApp = null
     }
 

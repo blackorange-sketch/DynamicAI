@@ -460,9 +460,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun launch(pkg: String) {
+    fun launch(pkg: String, smooth: Boolean = false) {
         try { com.dynamicai.launcher.suggestion.AppUsage.bump(getApplication(), pkg) } catch (_: Throwable) {}
-        repo.launchApp(pkg)
+        repo.launchApp(pkg, smooth)
     }
 
     fun toggleDock(pkg: String) {

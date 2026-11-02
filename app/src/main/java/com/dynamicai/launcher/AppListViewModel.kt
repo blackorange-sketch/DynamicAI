@@ -423,10 +423,10 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         queryJob = viewModelScope.launch {
             // Затримка 70 мс при наборі + обчислення поза головним потоком (раніше — на кожен символ у Main)
             if (query.isNotBlank()) kotlinx.coroutines.delay(35)
-            val foldersPkgs = _folders.value.flatMap { it.packageNames }.toSet()
             val focusHidden = com.dynamicai.launcher.macro.FocusModes.hiddenFor(com.dynamicai.launcher.macro.FocusModes.active.value, _apps.value)
             val visibleApps = _apps.value.filter {
-                it.packageName !in _hidden.value && it.packageName !in foldersPkgs && it.packageName !in focusHidden
+                // Додатки з папок теж шукаються й показуються у списку — приховані лише ті, що в «Прихованих»/режимі фокусу
+                it.packageName !in _hidden.value && it.packageName !in focusHidden
             }
             val contactsNow = _contacts.value
             val flash = executor.flashlightOn.value

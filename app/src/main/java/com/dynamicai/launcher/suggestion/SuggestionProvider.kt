@@ -167,7 +167,7 @@ class SuggestionProvider(private val context: Context) {
             .filter { it.second >= 35 }
             .map { (app, score) -> app to (score + AppUsage.boost(context, app.packageName)) }
             .sortedByDescending { it.second }
-            .take(8)
+            .take(40)
         appHits.forEach { (app, score) -> result.add(Suggestion.App(app, score)) }
 
         // Пошук за категорією: «ігри», «музика», «карти»…

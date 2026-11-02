@@ -453,8 +453,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
     // Алфавітна стрічка: активний екран визначає джерело
     val drawerAppsAll = remember(apps, hiddenEff, folders) {
-        val folderPkgs = folders.flatMap { it.packageNames }.toSet()
-        apps.filter { it.packageName !in hiddenEff && it.packageName !in folderPkgs }
+        apps.filter { it.packageName !in hiddenEff }
     }
     val drawerFiltered = remember(drawerAppsAll, drawerCategory) {
         if (drawerCategory == "all") drawerAppsAll

@@ -650,7 +650,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     LaunchedEffect(launchingApp) {
         val app = launchingApp ?: return@LaunchedEffect
         // Запускаємо одразу: поки грає анімація, додаток уже стартує і до її кінця готовий
-        vm.launch(app.packageName, smooth = settings.animSpeedPercent > 0)
+        // Спершу даємо намалювати перші кадри анімації, а важкий виклик запуску робимо поза головним потоком —
+        // інакше binder-виклик startActivity на мить заморожує UI («ривок»)
+        androidx.compose.runtime.withFrameNanos { }
+        androidx.compose.runtime.withFrameNanos { }
+        val smoothLaunch = settings.animSpeedPercent > 0
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            vm.launch(app.packageName, smooth = smoothLaunch)
+        }
         // Тримаємо оверлей, доки лаунчер не піде у фон (додаток на екрані), але не довше 1,5 с
         kotlinx.coroutines.withTimeoutOrNull(1500) {
             lifecycleOwner.lifecycle.currentStateFlow.first { !it.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) }

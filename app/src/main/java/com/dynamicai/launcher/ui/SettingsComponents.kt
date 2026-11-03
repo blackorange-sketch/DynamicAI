@@ -709,8 +709,8 @@ internal fun CloudTestRow(settings: LauncherSettings) {
                     scope.launch {
                         status = try {
                             val r = com.dynamicai.launcher.llm.CloudLlm.generate(
-                                settings, "Відповідай одним словом.", "Скажи слово: готово", { }
-                            )
+                                settings, "Відповідай одним словом.", "Скажи слово: готово"
+                            ) { }
                             "✅ Працює (${com.dynamicai.launcher.llm.CloudLlm.lastProvider}): ${r.trim().take(40)}"
                         } catch (e: Exception) {
                             "❌ ${e.message ?: "помилка"}".take(200)

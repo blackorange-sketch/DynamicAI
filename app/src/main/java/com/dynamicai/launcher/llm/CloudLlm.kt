@@ -27,13 +27,32 @@ object CloudLlm {
      * Генерує відповідь, віддаючи токени по мірі надходження. Спершу Gemini, при помилці до першого токена — Groq.
      * Повертає повний текст або кидає CloudException.
      */
-    suspend fun generate(s: LauncherSettings, system: String, user: String, onToken: (String) -> Unit): String {
+    /** Приводить історію до чергування user/assistant (Gemini цього вимагає): зливає сусідні однакові ролі, відкидає зайве. */
+    private fun normalize(history: List<Pair<String, String>>): List<Pair<String, String>> {
+        val out = ArrayList<Pair<String, String>>()
+        for ((role, text) in history) {
+            if (text.isBlank()) continue
+            val r = if (role == "user") "user" else "assistant"
+            if (out.isNotEmpty() && out.last().first == r) out[out.size - 1] = r to (out.last().second + "\n" + text)
+            else out.add(r to text)
+        }
+        while (out.isNotEmpty() && out.first().first != "user") out.removeAt(0)
+        while (out.isNotEmpty() && out.last().first != "assistant") out.removeAt(out.size - 1)
+        return out
+    }
+
+    suspend fun generate(
+        s: LauncherSettings, system: String, user: String,
+        history: List<Pair<String, String>> = emptyList(),
+        onToken: (String) -> Unit
+    ): String {
+        val hist = normalize(history)
         val errors = ArrayList<String>()
         var emitted = false
         val track: (String) -> Unit = { emitted = true; onToken(it) }
         if (s.geminiKey.isNotBlank()) {
             try {
-                val r = gemini(s.geminiKey.trim(), s.geminiModel.ifBlank { "gemini-flash-latest" }, system, user, track)
+                val r = gemini(s.geminiKey.trim(), s.geminiModel.ifBlank { "gemini-flash-latest" }, system, user, hist, track)
                 lastProvider = "Gemini"
                 return r
             } catch (e: Exception) {
@@ -45,7 +64,7 @@ object CloudLlm {
         }
         if (s.groqKey.isNotBlank()) {
             try {
-                val r = groq(s.groqKey.trim(), s.groqModel.ifBlank { "openai/gpt-oss-120b" }, system, user, track)
+                val r = groq(s.groqKey.trim(), s.groqModel.ifBlank { "openai/gpt-oss-120b" }, system, user, hist, track)
                 lastProvider = "Groq"
                 return r
             } catch (e: Exception) {
@@ -97,11 +116,20 @@ object CloudLlm {
         return conn
     }
 
-    private suspend fun gemini(key: String, model: String, system: String, user: String, onToken: (String) -> Unit): String =
+    private suspend fun gemini(
+        key: String, model: String, system: String, user: String,
+        hist: List<Pair<String, String>>, onToken: (String) -> Unit
+    ): String =
         withContext(Dispatchers.IO) {
+            val contents = JSONArray()
+            hist.forEach { (role, text) ->
+                contents.put(JSONObject().put("role", if (role == "user") "user" else "model")
+                    .put("parts", JSONArray().put(JSONObject().put("text", text))))
+            }
+            contents.put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", user))))
             val body = JSONObject()
                 .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", system))))
-                .put("contents", JSONArray().put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", user)))))
+                .put("contents", contents)
                 .put("generationConfig", JSONObject().put("temperature", 0.6).put("maxOutputTokens", 1400))
                 .toString()
             val conn = open(
@@ -127,17 +155,21 @@ object CloudLlm {
             acc.toString()
         }
 
-    private suspend fun groq(key: String, model: String, system: String, user: String, onToken: (String) -> Unit): String =
+    private suspend fun groq(
+        key: String, model: String, system: String, user: String,
+        hist: List<Pair<String, String>>, onToken: (String) -> Unit
+    ): String =
         withContext(Dispatchers.IO) {
+            val messages = JSONArray().put(JSONObject().put("role", "system").put("content", system))
+            hist.forEach { (role, text) -> messages.put(JSONObject().put("role", role).put("content", text)) }
+            messages.put(JSONObject().put("role", "user").put("content", user))
             val body = JSONObject()
                 .put("model", model)
                 .put("stream", true)
                 .put("temperature", 0.6)
                 .put("max_tokens", 1400)
                 .also { if (model.contains("gpt-oss")) it.put("reasoning_effort", "low") }   // швидше: мінімум «роздумів»
-                .put("messages", JSONArray()
-                    .put(JSONObject().put("role", "system").put("content", system))
-                    .put(JSONObject().put("role", "user").put("content", user)))
+                .put("messages", messages)
                 .toString()
             val conn = open("https://api.groq.com/openai/v1/chat/completions", mapOf("Authorization" to "Bearer $key"), body)
             val acc = StringBuilder()

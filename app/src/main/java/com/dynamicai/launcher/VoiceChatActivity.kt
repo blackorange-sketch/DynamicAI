@@ -130,7 +130,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
         if (addUserMessage) ChatHistoryManager.addMessage("user", text)
         val historyStr = messages
             .filter { it.role == "user" || it.role == "assistant" }
-            .dropLast(1).takeLast(10)
+            .dropLast(1).takeLast(16)
             .joinToString("\n") { msg ->
                 val body = msg.content.substringBefore(com.dynamicai.launcher.llm.ChatEngine.SOURCES_TAG).trim()
                 if (msg.role == "user") "Користувач: $body" else "Асистент: $body"

@@ -623,6 +623,46 @@ class ChatEngine(
      * Відповідь хмарної моделі з «розумним пошуком»: для фактичних питань шукаємо в мережі, читаємо кращі сторінки
      * й даємо моделі пронумеровані джерела. null — хмара не відповіла (потрібен запасний локальний шлях).
      */
+    /** «Користувач: …/Асистент: …» → список реплік (багаторядкові відповіді склеюються), найновіші в межах ~7000 символів. */
+    private fun parseHistory(history: String): List<Pair<String, String>> {
+        val msgs = ArrayList<Pair<String, String>>()
+        for (line in history.lines()) {
+            when {
+                line.startsWith("Користувач: ") -> msgs.add("user" to line.removePrefix("Користувач: "))
+                line.startsWith("Асистент: ") -> msgs.add("assistant" to line.removePrefix("Асистент: "))
+                msgs.isNotEmpty() -> msgs[msgs.size - 1] = msgs.last().first to (msgs.last().second + "\n" + line)
+            }
+        }
+        val kept = ArrayList<Pair<String, String>>()
+        var budget = 7000
+        for ((role, text) in msgs.asReversed()) {
+            val t = text.trim().take(1200)
+            if (t.isBlank()) continue
+            if (budget - t.length < 0) break
+            budget -= t.length
+            kept.add(role to t)
+        }
+        return kept.asReversed()
+    }
+
+    /** Робить із уточнення («а в Кракові?») самостійний пошуковий запит за допомогою моделі; null — не вдалося. */
+    private suspend fun rewriteQuery(s: com.dynamicai.launcher.data.LauncherSettings, hist: List<Pair<String, String>>, question: String): String? {
+        if (hist.isEmpty()) return null
+        return try {
+            kotlinx.coroutines.withTimeoutOrNull(6_000) {
+                CloudLlm.generate(
+                    s,
+                    "Перепиши останнє повідомлення користувача як самостійний пошуковий запит (до 12 слів), враховуючи попередню розмову. " +
+                        "Лише текст запиту, без пояснень і лапок.",
+                    question, hist.takeLast(6)
+                ) { }.trim().trim('"', '«', '»').takeIf { it.length in 3..120 }
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            null
+        }
+    }
+
     private suspend fun cloudAnswer(
         question: String, onToken: ((String) -> Unit)?, history: String, onStatus: ((String) -> Unit)?
     ): String? {
@@ -631,6 +671,7 @@ class ChatEngine(
         val followUp = history.isNotBlank() && isFollowUp(question)
         val prevUser = history.lines().lastOrNull { it.startsWith("Користувач:") }?.removePrefix("Користувач:")?.trim().orEmpty()
         val searchText = if (followUp && prevUser.isNotBlank()) "$prevUser. $question" else question
+        val histMsgs = parseHistory(history)
         val bare = question.removePrefix("а ").removePrefix("і ").removePrefix("ну ")
         val wantSearch = s.autoSearch && (looksFactual(bare) || EXPLICIT_SEARCH.containsMatchIn(question.lowercase()) ||
             (followUp && looksFactual(prevUser)))
@@ -639,7 +680,9 @@ class ChatEngine(
         if (wantSearch) {
             try {
                 onStatus?.invoke("Шукаю в інтернеті…")
-                val query = searchQueryFrom(searchText)
+                // Уточнення («а в Кракові?») → самостійний запит; якщо хмара не впоралась — простий склейка з попереднім питанням
+                val query = (if (followUp) rewriteQuery(s, histMsgs, question) else null) ?: searchQueryFrom(searchText)
+                Log.e(TAG, "☁️ search query: $query")
                 val hits = webSearch.searchHits(query, 6)
                 val wiki = try { webSearch.toContext(webSearch.search(query)) } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e; ""
@@ -686,11 +729,11 @@ class ChatEngine(
             append(lang).append(' ').append(style).append('\n')
             append("Не використовуй markdown-розмітку (зірочки, решітки, блоки коду) і не став посилань чи номерів джерел у тексті: ")
             append("відповідь озвучується, а джерела показуються окремо. ")
+            append("Враховуй попередню розмову: короткі уточнення («а в Кракові?», «чому?») стосуються її теми. ")
             append("Якщо передано джерела — спирайся лише на них і на загальновідомі факти, нічого не вигадуй. ")
             append("Якщо в джерелах немає відповіді, чесно скажи про це. Для свіжих даних (ціни, новини, результати) називай, звідки вони, і коли це актуально.")
         }
         val user = buildString {
-            if (history.isNotBlank() && followUp) append("Попередня розмова:\n").append(compactHistory(history)).append("\n\n")
             if (sourcesText.isNotBlank()) append("Джерела з інтернету:\n").append(sourcesText).append("\n\n")
             append("Питання: ").append(question)
         }
@@ -698,7 +741,7 @@ class ChatEngine(
         onStatus?.invoke("Пишу відповідь…")
         val acc = StringBuilder()
         return try {
-            val r = CloudLlm.generate(s, system, user) { tok -> acc.append(tok); onToken?.invoke(tok) }
+            val r = CloudLlm.generate(s, system, user, histMsgs) { tok -> acc.append(tok); onToken?.invoke(tok) }
             Log.e(TAG, "☁️ cloud answer via ${CloudLlm.lastProvider}: ${r.length} chars")
             r.trim()
         } catch (e: Exception) {

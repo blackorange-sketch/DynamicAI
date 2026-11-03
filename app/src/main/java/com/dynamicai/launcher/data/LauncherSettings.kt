@@ -88,7 +88,7 @@ data class LauncherSettings(
     val geminiKey: String = "",
     val geminiModel: String = "gemini-flash-latest",
     val groqKey: String = "",
-    val groqModel: String = "llama-3.3-70b-versatile",
+    val groqModel: String = "openai/gpt-oss-120b",
     val fastCommands: Boolean = true,          // прості команди телефону виконуються без моделі
     val llmPreload: Boolean = false,           // завантажувати модель у фоні при старті лаунчера
     val llmUnloadMinutes: Int = 3,             // 0 = ніколи не вивантажувати
@@ -183,7 +183,9 @@ class SettingsStorage(context: Context) {
             geminiKey = prefs.getString("geminiKey", "") ?: "",
             geminiModel = prefs.getString("geminiModel", "gemini-flash-latest") ?: "gemini-flash-latest",
             groqKey = prefs.getString("groqKey", "") ?: "",
-            groqModel = prefs.getString("groqModel", "llama-3.3-70b-versatile") ?: "llama-3.3-70b-versatile",
+            // Llama 3.3 70B Groq прибрав з безкоштовного рівня — старе збережене значення замінюємо на актуальне
+            groqModel = (prefs.getString("groqModel", "openai/gpt-oss-120b") ?: "openai/gpt-oss-120b")
+                .takeIf { it != "llama-3.3-70b-versatile" && it != "llama-3.1-8b-instant" } ?: "openai/gpt-oss-120b",
             fastCommands = prefs.getBoolean("fastCommands", true),
             llmPreload = prefs.getBoolean("llmPreload", false),
             llmUnloadMinutes = prefs.getInt("llmUnloadMinutes", 3),

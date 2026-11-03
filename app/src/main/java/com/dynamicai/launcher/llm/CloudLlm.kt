@@ -28,7 +28,7 @@ object CloudLlm {
      * Повертає повний текст або кидає CloudException.
      */
     suspend fun generate(s: LauncherSettings, system: String, user: String, onToken: (String) -> Unit): String {
-        var lastError: Exception? = null
+        val errors = ArrayList<String>()
         var emitted = false
         val track: (String) -> Unit = { emitted = true; onToken(it) }
         if (s.geminiKey.isNotBlank()) {
@@ -38,22 +38,22 @@ object CloudLlm {
                 return r
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                lastError = e
+                errors.add("Gemini: ${e.message}")
                 // Якщо частину відповіді вже озвучено — не перемикаємось, щоб не дублювати
                 if (emitted) throw e
             }
         }
         if (s.groqKey.isNotBlank()) {
             try {
-                val r = groq(s.groqKey.trim(), s.groqModel.ifBlank { "llama-3.3-70b-versatile" }, system, user, track)
+                val r = groq(s.groqKey.trim(), s.groqModel.ifBlank { "openai/gpt-oss-120b" }, system, user, track)
                 lastProvider = "Groq"
                 return r
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                lastError = e
+                errors.add("Groq: ${e.message}")
             }
         }
-        throw lastError as? CloudException ?: CloudException(lastError?.message ?: "Ключ API не задано")
+        throw CloudException(if (errors.isEmpty()) "Ключ API не задано" else errors.joinToString("  |  "))
     }
 
     private fun errorText(conn: HttpURLConnection, code: Int): String {
@@ -134,6 +134,7 @@ object CloudLlm {
                 .put("stream", true)
                 .put("temperature", 0.6)
                 .put("max_tokens", 1400)
+                .also { if (model.contains("gpt-oss")) it.put("reasoning_effort", "low") }   // швидше: мінімум «роздумів»
                 .put("messages", JSONArray()
                     .put(JSONObject().put("role", "system").put("content", system))
                     .put(JSONObject().put("role", "user").put("content", user)))

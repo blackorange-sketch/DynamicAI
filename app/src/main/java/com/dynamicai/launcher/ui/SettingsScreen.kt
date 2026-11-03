@@ -943,7 +943,7 @@ fun SettingsScreen(
                 TextFieldRow("Groq API-ключ — запасний (console.groq.com/keys)", settings.groqKey, "gsk_…", secret = true) {
                     onSettingsChange(settings.copy(groqKey = it))
                 }
-                TextFieldRow("Модель Groq", settings.groqModel, "llama-3.3-70b-versatile") {
+                TextFieldRow("Модель Groq", settings.groqModel, "openai/gpt-oss-120b") {
                     onSettingsChange(settings.copy(groqModel = it))
                 }
                 CloudTestRow(settings)

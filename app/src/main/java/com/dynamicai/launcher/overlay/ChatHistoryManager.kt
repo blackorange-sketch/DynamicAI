@@ -40,6 +40,17 @@ object ChatHistoryManager {
         persist()
     }
 
+    /** «Нова тема»: розмова лишається на екрані, але модель далі бачить лише репліки після цього маркера. */
+    fun markTopic() {
+        if (history.isEmpty() || history.last().role == "topic") return
+        history.add(ChatMessage("topic", "Нова тема"))
+        persist()
+    }
+
+    /** Репліки поточної теми (після останнього маркера «Нова тема») без службових. */
+    fun currentTopic(): List<ChatMessage> =
+        history.toList().takeLastWhile { it.role != "topic" }.filter { it.role == "user" || it.role == "assistant" }
+
     /** Прибирає тимчасові «Думаю…». */
     fun removeStatus() {
         history.removeAll { it.role == "status" }
@@ -66,7 +77,7 @@ object ChatHistoryManager {
         val p = prefs ?: return
         try {
             val arr = JSONArray()
-            history.filter { it.role == "user" || it.role == "assistant" }.forEach {
+            history.filter { it.role == "user" || it.role == "assistant" || it.role == "topic" }.forEach {
                 arr.put(JSONObject().put("r", it.role).put("c", it.content))
             }
             p.edit().putString("items", arr.toString()).apply()

@@ -86,7 +86,7 @@ data class LauncherSettings(
     val cloudEnabled: Boolean = false,         // хмарна модель (Gemini/Groq) для складних питань і пошуку
     val cloudMode: String = "auto",            // "auto" — фактичні й складні питання; "always" — усі питання до моделі
     val geminiKey: String = "",
-    val geminiModel: String = "gemini-flash-latest",
+    val geminiModel: String = "gemini-3.5-flash-lite",
     val groqKey: String = "",
     val groqModel: String = "openai/gpt-oss-120b",
     val fastCommands: Boolean = true,          // прості команди телефону виконуються без моделі
@@ -181,7 +181,9 @@ class SettingsStorage(context: Context) {
             cloudEnabled = prefs.getBoolean("cloudEnabled", false),
             cloudMode = prefs.getString("cloudMode", "auto") ?: "auto",
             geminiKey = prefs.getString("geminiKey", "") ?: "",
-            geminiModel = prefs.getString("geminiModel", "gemini-flash-latest") ?: "gemini-flash-latest",
+            // Старе типове значення gemini-flash-latest недоступне на безкоштовному рівні — замінюємо на актуальну Flash-Lite
+            geminiModel = (prefs.getString("geminiModel", "gemini-3.5-flash-lite") ?: "gemini-3.5-flash-lite")
+                .takeIf { it != "gemini-flash-latest" } ?: "gemini-3.5-flash-lite",
             groqKey = prefs.getString("groqKey", "") ?: "",
             // Llama 3.3 70B Groq прибрав з безкоштовного рівня — старе збережене значення замінюємо на актуальне
             groqModel = (prefs.getString("groqModel", "openai/gpt-oss-120b") ?: "openai/gpt-oss-120b")

@@ -45,6 +45,59 @@ class ChatEngine(
 
     private val SCREEN_ASK = Regex("(що|про що)\\s+(там\\s+)?(на|в|у)\\s+(цьому\\s+)?(екрані|вікні)|прочитай\\s+(екран|це)|підсумуй\\s+(екран|це|сторінку)|переказуй\\s+екран")
 
+    /** Усі питання (крім екрана й макросів) йдуть у хмару — локальну модель не потрібно завантажувати наперед. */
+    fun cloudOnly(): Boolean {
+        val s = com.dynamicai.launcher.data.SettingsStorage(context).load()
+        return s.cloudEnabled && CloudLlm.hasKey(s) && s.cloudMode == "always"
+    }
+
+    // ===== Підсумок старої частини розмови (для хмари) =====
+    private var summaryText = ""
+    private var summaryCount = 0
+    private var summaryFp = 0
+    private var summaryRetryAt = 0L
+
+    /**
+     * Репліки, що вийшли за вікно останніх 16, стискаються моделлю в короткий підсумок. Оновлюється пачками по 4 репліки,
+     * щоб не робити зайвих запитів; при зміні розмови скидається.
+     */
+    private suspend fun olderSummary(s: com.dynamicai.launcher.data.LauncherSettings, older: List<com.dynamicai.launcher.overlay.ChatMessage>): String {
+        if (older.isEmpty()) return ""
+        val fp = older.first().content.hashCode()
+        if (fp != summaryFp || older.size < summaryCount) { summaryText = ""; summaryCount = 0; summaryFp = fp }
+        val fresh = older.drop(summaryCount)
+        val due = fresh.size >= 4 || summaryText.isBlank()
+        if (!due || System.currentTimeMillis() < summaryRetryAt) return summaryText
+        val input = buildString {
+            if (summaryText.isNotBlank()) append("Попередній підсумок:\n").append(summaryText).append("\n\n")
+            append("Нові репліки:\n")
+            fresh.forEach {
+                val who = if (it.role == "user") "Користувач" else "Асистент"
+                append(who).append(": ").append(it.content.substringBefore(SOURCES_TAG).trim().take(500)).append('\n')
+            }
+        }.takeLast(5000)
+        val r = try {
+            kotlinx.coroutines.withTimeoutOrNull(9_000) {
+                CloudLlm.generate(
+                    s,
+                    "Ти стискаєш розмову. Зроби стислий підсумок (до 8 коротких пунктів, до 900 символів): теми, " +
+                        "названі користувачем факти про нього й домовленості, що можуть знадобитися далі. " +
+                        "Якщо є попередній підсумок — онови його новими репліками. Без вступів.",
+                    input
+                ) { }.trim()
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            null
+        }
+        if (r.isNullOrBlank()) {
+            summaryRetryAt = System.currentTimeMillis() + 120_000
+        } else {
+            summaryText = r.take(1200); summaryCount = older.size
+        }
+        return summaryText
+    }
+
     /** Чи відповідатиме на це питання хмарна модель (тоді локальну завантажувати не потрібно). */
     fun cloudPreferred(question: String): Boolean {
         val s = com.dynamicai.launcher.data.SettingsStorage(context).load()
@@ -672,6 +725,10 @@ class ChatEngine(
         val prevUser = history.lines().lastOrNull { it.startsWith("Користувач:") }?.removePrefix("Користувач:")?.trim().orEmpty()
         val searchText = if (followUp && prevUser.isNotBlank()) "$prevUser. $question" else question
         val histMsgs = parseHistory(history)
+        // Репліки поточної теми, що не влізли у вікно останніх 16 → підсумок
+        val conv = com.dynamicai.launcher.overlay.ChatHistoryManager.currentTopic().dropLast(1)
+        val older = conv.dropLast(minOf(16, conv.size))
+        val summary = olderSummary(s, older)
         val bare = question.removePrefix("а ").removePrefix("і ").removePrefix("ну ")
         val wantSearch = s.autoSearch && (looksFactual(bare) || EXPLICIT_SEARCH.containsMatchIn(question.lowercase()) ||
             (followUp && looksFactual(prevUser)))
@@ -729,6 +786,7 @@ class ChatEngine(
             append(lang).append(' ').append(style).append('\n')
             append("Не використовуй markdown-розмітку (зірочки, решітки, блоки коду) і не став посилань чи номерів джерел у тексті: ")
             append("відповідь озвучується, а джерела показуються окремо. ")
+            if (summary.isNotBlank()) append("Підсумок попередньої частини розмови: ").append(summary).append(' ')
             append("Враховуй попередню розмову: короткі уточнення («а в Кракові?», «чому?») стосуються її теми. ")
             append("Якщо передано джерела — спирайся лише на них і на загальновідомі факти, нічого не вигадуй. ")
             append("Якщо в джерелах немає відповіді, чесно скажи про це. Для свіжих даних (ціни, новини, результати) називай, звідки вони, і коли це актуально.")

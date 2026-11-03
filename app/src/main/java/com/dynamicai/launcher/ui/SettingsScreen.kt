@@ -937,7 +937,7 @@ fun SettingsScreen(
                 TextFieldRow("Gemini API-ключ (aistudio.google.com/apikey)", settings.geminiKey, "AIza…", secret = true) {
                     onSettingsChange(settings.copy(geminiKey = it))
                 }
-                TextFieldRow("Модель Gemini", settings.geminiModel, "gemini-flash-latest") {
+                TextFieldRow("Модель Gemini", settings.geminiModel, "gemini-3.5-flash-lite") {
                     onSettingsChange(settings.copy(geminiModel = it))
                 }
                 TextFieldRow("Groq API-ключ — запасний (console.groq.com/keys)", settings.groqKey, "gsk_…", secret = true) {

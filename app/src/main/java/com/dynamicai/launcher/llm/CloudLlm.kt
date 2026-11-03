@@ -52,7 +52,7 @@ object CloudLlm {
         val track: (String) -> Unit = { emitted = true; onToken(it) }
         if (s.geminiKey.isNotBlank()) {
             try {
-                val r = gemini(s.geminiKey.trim(), s.geminiModel.ifBlank { "gemini-flash-latest" }, system, user, hist, track)
+                val r = gemini(s.geminiKey.trim(), s.geminiModel.ifBlank { "gemini-3.5-flash-lite" }, system, user, hist, track)
                 lastProvider = "Gemini"
                 return r
             } catch (e: Exception) {

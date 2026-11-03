@@ -367,7 +367,8 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         com.dynamicai.launcher.macro.FocusModes.init(app)
         viewModelScope.launch { com.dynamicai.launcher.macro.FocusModes.active.collect { updateQuery("") } }
         // Фонове завантаження моделі: перший запит не чекатиме ~15 с на старт рушія
-        if (settingsStorage.load().llmPreload) {
+        // Усі питання йдуть у хмару — локальну модель наперед не вантажимо
+        if (settingsStorage.load().llmPreload && !chatEngine.cloudOnly()) {
             viewModelScope.launch {
                 kotlinx.coroutines.delay(4000)
                 try { ensureLlmLoaded() } catch (t: Throwable) { android.util.Log.e("LLM_DEBUG", "preload failed: ${t.message}") }
@@ -680,10 +681,21 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         // Питання → ChatEngine (LLM + Web Search)
         if (cmd is com.dynamicai.launcher.command.Command.AskQuestion) {
             viewModelScope.launch {
-                _response.value = "🧠 Завантажую LLM…"
-                ensureLlmLoaded()
-                _response.value = "🔍 Шукаю…"
-                val answer = chatEngine.answer(cmd.query)
+                val answer = if (chatEngine.cloudPreferred(cmd.query)) {
+                    _response.value = "🔍 Шукаю…"
+                    val r = chatEngine.simpleAnswer(cmd.query, onStatus = { st -> _response.value = "🔍 $st" })
+                    chatEngine.takeSources()   // у цьому вікні джерела не показуємо — скидаємо
+                    if (r == ChatEngine.CLOUD_FAILED) {
+                        _response.value = "🧠 Завантажую LLM…"
+                        ensureLlmLoaded()
+                        chatEngine.answer(cmd.query)
+                    } else r
+                } else {
+                    _response.value = "🧠 Завантажую LLM…"
+                    ensureLlmLoaded()
+                    _response.value = "🔍 Шукаю…"
+                    chatEngine.answer(cmd.query)
+                }
                 _response.value = answer
                 val settings = settingsStorage.load()
                 if (settings.useTts) {
@@ -701,7 +713,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             }
             // Перевіряємо toggle + готовність LLM (через файл, БЕЗ engine)
             val settings = settingsStorage.load()
-            if (!settings.useLlm || !downloader.isDownloaded) {
+            if (!settings.useLlm || !downloader.isDownloaded || chatEngine.cloudOnly()) {
                 _response.value = "Не розумію команду: \"$text\""
                 return
             }

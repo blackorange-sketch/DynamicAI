@@ -128,8 +128,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
         if (addUserMessage && text == lastSentText && now - lastSentAt < 2000) return
         if (addUserMessage) { lastSentText = text; lastSentAt = now }
         if (addUserMessage) ChatHistoryManager.addMessage("user", text)
-        val historyStr = messages
-            .filter { it.role == "user" || it.role == "assistant" }
+        val historyStr = ChatHistoryManager.currentTopic()
             .dropLast(1).takeLast(16)
             .joinToString("\n") { msg ->
                 val body = msg.content.substringBefore(com.dynamicai.launcher.llm.ChatEngine.SOURCES_TAG).trim()
@@ -342,10 +341,21 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
                     onDismissRequest = { showClearDialog = false },
                     containerColor = AppTheme.colors.surface,
                     title = { Text("Нова розмова?", color = AppTheme.colors.textPrimary) },
-                    text = { Text("Поточну розмову буде збережено в історії (🕘).", color = AppTheme.colors.textSecondary) },
+                    text = {
+                        Text(
+                            "«Нова тема» лишає розмову на екрані, але асистент забуває попередній контекст. " +
+                                "«Нова розмова» зберігає поточну в історії (🕘) й очищує екран.",
+                            color = AppTheme.colors.textSecondary
+                        )
+                    },
                     confirmButton = {
-                        TextButton(onClick = { stopGeneration(); ChatHistoryManager.clear(); showClearDialog = false }) {
-                            Text("Почати нову", color = AppTheme.colors.accent)
+                        Row {
+                            TextButton(onClick = { stopGeneration(); ChatHistoryManager.markTopic(); showClearDialog = false }) {
+                                Text("Нова тема", color = AppTheme.colors.accent)
+                            }
+                            TextButton(onClick = { stopGeneration(); ChatHistoryManager.clear(); showClearDialog = false }) {
+                                Text("Нова розмова", color = AppTheme.colors.accent)
+                            }
                         }
                     },
                     dismissButton = {
@@ -385,6 +395,14 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
                 verticalArrangement = Arrangement.spacedBy(AppDims.spaceS)
             ) {
                 items(visible) { msg ->
+                    if (msg.role == "topic") {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.weight(1f).height(1.dp).background(AppTheme.colors.glassBorder))
+                            Text("  нова тема  ", color = AppTheme.colors.textSecondary, fontSize = 11.sp)
+                            Box(Modifier.weight(1f).height(1.dp).background(AppTheme.colors.glassBorder))
+                        }
+                        return@items
+                    }
                     MessageBubble(msg, maxBubble) { action ->
                         when (action) {
                             "restart" -> vm.restartLlmEngine()

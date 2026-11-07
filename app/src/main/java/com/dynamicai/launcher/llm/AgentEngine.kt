@@ -190,8 +190,38 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         27. getDeviceInfo() -> Загальна інформація про пристрій (мережа, заряд, час).
     """.trimIndent()
 
-    suspend fun processWithTools(question: String, history: String = ""): String = withContext(Dispatchers.IO) {
-        if (llm == null) return@withContext "Помилка: LLM не ініціалізована"
+    /** Інструменти, чиї результати містять особисті дані з екрана/сповіщень/нотаток — у хмару не віддаємо. */
+    private val cloudHiddenTools = setOf("readScreen", "notifDigest", "readNotes")
+
+    /** Чи схоже прохання на дію з телефоном (а не на питання) — тоді його варто віддати агентові. */
+    fun looksActionable(question: String): Boolean {
+        val q = question.lowercase()
+        val skip = setOf("searchWeb", "searchGoogle", "getTime", "getNews") + cloudHiddenTools
+        return toolKeywords.any { (name, keys) -> name !in skip && keys.any { q.contains(it) } }
+    }
+
+    private fun cloudToolsBlock(): String =
+        "Доступні інструменти:\n" + allToolLines.filter { it.first !in cloudHiddenTools }.joinToString("\n") { "- ${it.second}" }
+
+    /** Один крок хмарного агента; відповідь приводимо до формату «TOOL_CALL: інструмент(...)» без зайвого тексту. */
+    private suspend fun cloudComplete(s: com.dynamicai.launcher.data.LauncherSettings, prompt: String): String {
+        val raw = CloudLlm.generate(
+            s,
+            "Ти — агент керування телефоном Android. Суворо дотримуйся формату з інструкції. Без markdown і без пояснень перед командою.",
+            prompt
+        ) { }.trim()
+        val i = raw.indexOf("TOOL_CALL:")
+        if (i < 0) return raw
+        var call = raw.substring(i + "TOOL_CALL:".length).lineSequence().firstOrNull { it.isNotBlank() }.orEmpty().trim().trim('`')
+        if (call.contains(')')) call = call.substringBeforeLast(')') + ")"
+        return "TOOL_CALL: $call"
+    }
+
+    suspend fun processWithTools(
+        question: String, history: String = "",
+        cloud: com.dynamicai.launcher.data.LauncherSettings? = null
+    ): String = withContext(Dispatchers.IO) {
+        if (llm == null && cloud == null) return@withContext "Помилка: LLM не ініціалізована"
         var currentContext = "Запит користувача: $question"
         var iteration = 0
         val maxIterations = 4 // Максимум 4 кроки для складних задач
@@ -216,7 +246,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 [ПОТОЧНИЙ ЗАПИТ]
                 $question
                 
-                ${selectTools(question)}
+                ${if (cloud != null) cloudToolsBlock() else selectTools(question)}
                 
                 [ПОТОЧНИЙ КОНТЕКСТ ВИКОНАННЯ]
                 $currentContext
@@ -227,7 +257,18 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 Якщо ти вже маєш всю інформацію для відповіді, напиши фінальну відповідь користувачу.
             """.trimIndent()
 
-            val response = llm?.complete(prompt)?.trim() ?: return@withContext "Помилка агента"
+            val response = if (cloud != null) {
+                try {
+                    cloudComplete(cloud, prompt)
+                } catch (e: CloudLlm.CloudException) {
+                    // Після першої виконаної дії не перекидаємо на локальну модель — інакше дія повторилась би
+                    if (iteration > 0) return@withContext currentContext.lines()
+                        .lastOrNull { it.startsWith("[Результат дії]:") }?.removePrefix("[Результат дії]:")?.trim() ?: "Дію виконано"
+                    throw e
+                }
+            } else {
+                llm?.complete(prompt)?.trim() ?: return@withContext "Помилка агента"
+            }
 
             // Працюємо ТІЛЬКИ з чітким префіксом TOOL_CALL:
             if (response.contains("TOOL_CALL:")) {

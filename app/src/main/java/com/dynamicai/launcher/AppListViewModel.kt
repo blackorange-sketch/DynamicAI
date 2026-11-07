@@ -713,12 +713,27 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             }
             // Перевіряємо toggle + готовність LLM (через файл, БЕЗ engine)
             val settings = settingsStorage.load()
-            if (!settings.useLlm || !downloader.isDownloaded || chatEngine.cloudOnly()) {
+            val cloudAgent = chatEngine.cloudAgentEligible(text)
+            val localOk = settings.useLlm && downloader.isDownloaded && !chatEngine.cloudOnly()
+            if (!cloudAgent && !localOk) {
                 _response.value = "Не розумію команду: \"$text\""
                 return
             }
 
             viewModelScope.launch {
+                if (cloudAgent) {
+                    _response.value = "☁️ Виконую…"
+                    val r = chatEngine.cloudAgent(text, "")
+                    if (r != ChatEngine.CLOUD_FAILED) {
+                        _response.value = r
+                        if (settings.useTts) tts.speak(r)
+                        return@launch
+                    }
+                    if (!localOk) {
+                        _response.value = "Хмара недоступна. Не розумію команду: \"$text\""
+                        return@launch
+                    }
+                }
                 _response.value = "🧠 Думаю… (5-15 сек)"
                 try {
                     ensureLlmLoaded()

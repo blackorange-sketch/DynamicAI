@@ -890,6 +890,23 @@ fun processQuery(
                     return@launch
                 }
             }
+            // Керування телефоном через хмарного агента (Gemini/Groq) — локальна модель не потрібна
+            if (vm.chatEngine.cloudAgentEligible(text)) {
+                onMessage(ChatMessage("status", "Виконую…"))
+                val r = vm.chatEngine.cloudAgent(text, history)
+                if (r != com.dynamicai.launcher.llm.ChatEngine.CLOUD_FAILED) {
+                    val reply = limitAnswer(r, 700)
+                    onMessage(ChatMessage("assistant", reply))
+                    onStateChange(VoiceState.SPEAKING)
+                    vm.tts.speakWithCallback(reply) {
+                        kotlinx.coroutines.MainScope().launch {
+                            kotlinx.coroutines.delay(400)
+                            onStateChange(VoiceState.LISTENING)
+                        }
+                    }
+                    return@launch
+                }
+            }
             // Хмарна модель (Gemini/Groq) відповідає без локальної — тоді вона не займає пам'ять
             val cloudFirst = vm.chatEngine.cloudPreferred(text)
             suspend fun localOrFail(): Boolean {

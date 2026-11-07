@@ -814,6 +814,31 @@ class ChatEngine(
         }
     }
 
+    /** Чи варто віддати це прохання хмарному агентові (керування телефоном без локальної моделі). */
+    fun cloudAgentEligible(question: String): Boolean {
+        val s = com.dynamicai.launcher.data.SettingsStorage(context).load()
+        if (!s.cloudEnabled || !CloudLlm.hasKey(s)) return false
+        if (System.currentTimeMillis() < cloudCooldownUntil) return false
+        if (SCREEN_ASK.containsMatchIn(question.lowercase())) return false
+        if (MacroBuilder.looksLikeRequest(question)) return false
+        return agentEngine.looksActionable(question)
+    }
+
+    /** Керування телефоном через Gemini/Groq: хмара обирає інструмент, виконуємо його на пристрої. CLOUD_FAILED — хмара недоступна. */
+    suspend fun cloudAgent(question: String, history: String = ""): String {
+        val s = com.dynamicai.launcher.data.SettingsStorage(context).load()
+        return try {
+            val r = agentEngine.processWithTools(question, compactHistory(history), cloud = s)
+            Log.e(TAG, "☁️ cloud agent via ${CloudLlm.lastProvider}: ${r.take(80)}")
+            r
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Log.e(TAG, "cloud agent failed: ${e.message}")
+            cloudCooldownUntil = System.currentTimeMillis() + 90_000
+            CLOUD_FAILED
+        }
+    }
+
     suspend fun answerWithAgent(question: String, history: String = ""): String {
         if (!llm.isReady) return "LLM не активна"
         macroFlow(question)?.let { return it }

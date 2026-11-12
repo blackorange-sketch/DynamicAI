@@ -28,6 +28,14 @@ object CloudLlm {
      * Генерує відповідь, віддаючи токени по мірі надходження. Спершу Gemini, при помилці до першого токена — Groq.
      * Повертає повний текст або кидає CloudException.
      */
+    /** Питання про зображення. Лише Gemini: типова модель Groq зображень не приймає. */
+    suspend fun vision(s: LauncherSettings, system: String, user: String, jpeg: ByteArray, onToken: (String) -> Unit): String {
+        if (s.geminiKey.isBlank()) throw CloudException("Для зображень потрібен ключ Gemini")
+        val r = gemini(s.geminiKey.trim(), s.geminiModel.ifBlank { "gemini-3.5-flash-lite" }, system, user, emptyList(), onToken, jpeg)
+        lastProvider = "Gemini"
+        return r
+    }
+
     /** Приводить історію до чергування user/assistant (Gemini цього вимагає): зливає сусідні однакові ролі, відкидає зайве. */
     private fun normalize(history: List<Pair<String, String>>): List<Pair<String, String>> {
         val out = ArrayList<Pair<String, String>>()
@@ -119,7 +127,8 @@ object CloudLlm {
 
     private suspend fun gemini(
         key: String, model: String, system: String, user: String,
-        hist: List<Pair<String, String>>, onToken: (String) -> Unit
+        hist: List<Pair<String, String>>, onToken: (String) -> Unit,
+        image: ByteArray? = null
     ): String =
         withContext(Dispatchers.IO) {
             val contents = JSONArray()
@@ -127,7 +136,14 @@ object CloudLlm {
                 contents.put(JSONObject().put("role", if (role == "user") "user" else "model")
                     .put("parts", JSONArray().put(JSONObject().put("text", text))))
             }
-            contents.put(JSONObject().put("role", "user").put("parts", JSONArray().put(JSONObject().put("text", user))))
+            val userParts = JSONArray()
+            if (image != null) {
+                userParts.put(JSONObject().put("inlineData", JSONObject()
+                    .put("mimeType", "image/jpeg")
+                    .put("data", android.util.Base64.encodeToString(image, android.util.Base64.NO_WRAP))))
+            }
+            userParts.put(JSONObject().put("text", user))
+            contents.put(JSONObject().put("role", "user").put("parts", userParts))
             val body = JSONObject()
                 .put("systemInstruction", JSONObject().put("parts", JSONArray().put(JSONObject().put("text", system))))
                 .put("contents", contents)

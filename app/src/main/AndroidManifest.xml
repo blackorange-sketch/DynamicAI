@@ -238,6 +238,20 @@
             android:exported="false"
             android:theme="@style/Theme.DynamicAI" />
 
+        <!-- «Поділитися» зображенням з інших програм → питання асистентові про це зображення -->
+        <activity
+            android:name=".ShareImageActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:label="Запитати DynamicAI"
+            android:theme="@style/Theme.DynamicAI.Overlay">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+
     
         <service
             android:name=".accessibility.AppAutomationService"

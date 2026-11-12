@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dynamicai.launcher.ui.GlassCloseButton
 import com.dynamicai.launcher.ui.theme.AppDims
 import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.asImageBitmap
 import com.dynamicai.launcher.overlay.ChatMessage
 import com.dynamicai.launcher.overlay.ChatHistoryManager
 import androidx.compose.ui.Alignment
@@ -119,17 +120,18 @@ class VoiceChatActivity : ComponentActivity() {
         } catch (_: Throwable) {}
 
         val askText = intent?.getStringExtra("ask")
+        val imagePath = intent?.getStringExtra("image_path")
         setContent {
             val vm: AppListViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
             StoredAppTheme {
-                VoiceChatScreen(vm = vm, onClose = { finish() }, initialQuery = askText)
+                VoiceChatScreen(vm = vm, onClose = { finish() }, initialQuery = askText, initialImagePath = imagePath)
             }
         }
     }
 }
 
 @Composable
-fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: String? = null) {
+fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: String? = null, initialImagePath: String? = null) {
     val ctx = LocalContext.current
     val messages = ChatHistoryManager.history
     var voiceState by remember { mutableStateOf(VoiceState.LISTENING) }
@@ -151,11 +153,55 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
     }
 
     var activeJob by remember { mutableStateOf<Job?>(null) }
+    // Зображення, додане до наступного питання (з галереї або через «Поділитися»)
+    var pendingImage by remember { mutableStateOf<ByteArray?>(null) }
+    LaunchedEffect(initialImagePath) {
+        if (!initialImagePath.isNullOrBlank()) {
+            pendingImage = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try { java.io.File(initialImagePath).readBytes() } catch (_: Throwable) { null }
+            }
+        }
+    }
+    val imagePicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) scope.launch {
+            pendingImage = com.dynamicai.launcher.llm.ImageInput.loadJpeg(ctx, uri)
+            if (pendingImage == null) Toast.makeText(ctx, "Не вдалося прочитати зображення", Toast.LENGTH_SHORT).show()
+        }
+    }
     var showClearDialog by remember { mutableStateOf(false) }
     var showArchive by remember { mutableStateOf(false) }
 
     /** Відправляє запит моделі. addUserMessage=false — для повтору останнього запиту. */
     fun sendQuery(text: String, addUserMessage: Boolean = true) {
+        // Є додане зображення — питання йде до хмарної моделі із зором
+        val image = pendingImage
+        if (image != null) {
+            pendingImage = null
+            val question = text.ifBlank { "Що на цьому зображенні?" }
+            ChatHistoryManager.addMessage("user", "🖼 $question")
+            activeJob = scope.launch {
+                voiceState = VoiceState.THINKING
+                stopListening()
+                ChatHistoryManager.addMessage("status", "Дивлюся на зображення…")
+                val r = vm.chatEngine.visionAnswer(question, image)
+                ChatHistoryManager.removeStatus()
+                val failed = r.startsWith("Помилка") || r.startsWith("Щоб аналізувати")
+                if (failed) {
+                    ChatHistoryManager.addMessage("error", r)
+                    voiceState = VoiceState.LISTENING
+                } else {
+                    val reply = limitAnswer(r, 700)
+                    ChatHistoryManager.addMessage("assistant", reply)
+                    voiceState = VoiceState.SPEAKING
+                    vm.tts.speakWithCallback(reply) {
+                        MainScope().launch { delay(400); voiceState = VoiceState.LISTENING }
+                    }
+                }
+            }
+            return
+        }
         if (text.isBlank()) return
         // Подвійний виклик (напр. розпізнавач віддав результат двічі) — ігноруємо
         val now = System.currentTimeMillis()
@@ -354,6 +400,15 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
             ) {
                 Text("Голосовий асистент", color = AppTheme.colors.textPrimary, fontSize = AppDims.textTitle, fontWeight = FontWeight.SemiBold)
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = {
+                        imagePicker.launch(
+                            androidx.activity.result.PickVisualMediaRequest(
+                                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
+                            )
+                        )
+                    }) {
+                        Text("🖼", fontSize = 20.sp)
+                    }
                     IconButton(onClick = { showArchive = true }) {
                         Text("🕘", fontSize = 20.sp)
                     }
@@ -460,6 +515,43 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
 
             Spacer(modifier = Modifier.height(AppDims.spaceL))
 
+            // Додане зображення: наступне питання (текстом або голосом) буде про нього
+            pendingImage?.let { img ->
+                val thumb = remember(img) {
+                    try { android.graphics.BitmapFactory.decodeByteArray(img, 0, img.size)?.asImageBitmap() } catch (_: Throwable) { null }
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = AppDims.spaceS)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(AppTheme.colors.glassBackground)
+                        .border(1.dp, AppTheme.colors.glassBorder, RoundedCornerShape(16.dp))
+                        .padding(AppDims.spaceS),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (thumb != null) {
+                        androidx.compose.foundation.Image(
+                            bitmap = thumb,
+                            contentDescription = "Додане зображення",
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp))
+                        )
+                    }
+                    Text(
+                        "Зображення додано — поставте питання",
+                        color = AppTheme.colors.textSecondary,
+                        fontSize = 13.sp,
+                        modifier = Modifier.weight(1f).padding(horizontal = AppDims.spaceM)
+                    )
+                    Text(
+                        "✕",
+                        color = AppTheme.colors.textMuted,
+                        fontSize = 16.sp,
+                        modifier = Modifier.clip(CircleShape).clickable { pendingImage = null }.padding(8.dp)
+                    )
+                }
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -491,7 +583,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
                 } else {
                     Box(
                         modifier = Modifier.size(44.dp).clip(CircleShape).background(AppTheme.colors.accent.copy(alpha = 0.18f)).clickable {
-                            if (query.isNotBlank()) {
+                            if (query.isNotBlank() || pendingImage != null) {
                                 sendQuery(query)
                                 query = ""
                             }

@@ -838,6 +838,24 @@ class ChatEngine(
         }
     }
 
+    /** Питання про зображення (фото з галереї або те, чим поділилися з іншої програми) — відповідає Gemini. */
+    suspend fun visionAnswer(question: String, jpeg: ByteArray, onToken: ((String) -> Unit)? = null): String {
+        val s = SettingsStorage(context).load()
+        if (s.geminiKey.isBlank()) {
+            return "Щоб аналізувати зображення, додайте ключ Gemini: Налаштування → ШІ → Моделі → Хмарна модель."
+        }
+        val system = "Ти — асистент у мобільному лаунчері Android. Відповідай мовою питання (типово українською), " +
+            "стисло й по суті, без markdown-розмітки. Спирайся лише на те, що справді видно на зображенні; " +
+            "текст із зображення передавай точно. Якщо чогось не видно або не розібрати — так і скажи."
+        return try {
+            CloudLlm.vision(s, system, question.ifBlank { "Що на цьому зображенні?" }, jpeg) { onToken?.invoke(it) }.trim()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.e(TAG, "vision failed: ${e.message}")
+            "Помилка: ${e.message}"
+        }
+    }
+
     /** Чи варто віддати це прохання хмарному агентові (керування телефоном без локальної моделі). */
     fun cloudAgentEligible(question: String): Boolean {
         val s = SettingsStorage(context).load()

@@ -148,10 +148,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     var selectedTabFolderId by remember { mutableStateOf<String?>(null) }
     var showMainMenu by remember { mutableStateOf(false) }
     var showNewFolderDialog by remember { mutableStateOf(false) }
-    var newFolderName by remember { mutableStateOf("") }
-    var newFolderSelection by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showCreateFolder by remember { mutableStateOf<AppInfo?>(null) }
-    var createFolderName by remember { mutableStateOf("") }
     var addToFolderPicker by remember { mutableStateOf<AppInfo?>(null) }
     var overlayActive by remember { mutableStateOf(false) }
     var drawerOpen by remember { mutableStateOf(false) }
@@ -1461,188 +1458,40 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             gridState = drawerGridState
         )
 
-        // Діалог створення папки
+        // Діалоги й меню винесено в HomeDialogs.kt
         showCreateFolder?.let { app ->
-            AlertDialog(
-                modifier = Modifier.popIn(),
-                onDismissRequest = { showCreateFolder = null; createFolderName = "" },
-                title = { Text("Нова папка", color = AppTheme.colors.textPrimary) },
-                text = {
-                    Column {
-                        Text("Застосунок: ${app.label}", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 13.sp)
-                        Spacer(Modifier.height(12.dp))
-                        androidx.compose.foundation.text.BasicTextField(
-                            value = createFolderName,
-                            onValueChange = { createFolderName = it },
-                            textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
-                            cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.textPrimary),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                            decorationBox = { inner ->
-                                if (createFolderName.isEmpty()) {
-                                    Text("Назва папки", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 16.sp)
-                                }
-                                inner()
-                            }
-                        )
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        if (createFolderName.isNotBlank()) {
-                            vm.createFolder(createFolderName, listOf(app.packageName))
-                        }
-                        showCreateFolder = null
-                        createFolderName = ""
-                    }) { Text("Створити", color = AppTheme.colors.accent) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showCreateFolder = null; createFolderName = "" }) {
-                        Text("Скасувати", color = AppTheme.colors.textPrimary)
-                    }
-                },
-                containerColor = AppTheme.colors.surface
+            CreateFolderDialog(
+                app = app,
+                onCreate = { name -> vm.createFolder(name, listOf(app.packageName)) },
+                onDismiss = { showCreateFolder = null }
             )
         }
 
-        // Діалог вибору папки (додати застосунок до існуючої)
         addToFolderPicker?.let { app ->
-            AlertDialog(
-                modifier = Modifier.popIn(),
-                onDismissRequest = { addToFolderPicker = null },
-                title = { Text("Додати ${app.label} до…", color = AppTheme.colors.textPrimary) },
-                text = {
-                    Column {
-                        if (folders.isEmpty()) {
-                            Text("Немає папок", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 14.sp)
-                        } else {
-                            folders.forEach { f ->
-                                Text(
-                                    f.name,
-                                    color = AppTheme.colors.textPrimary,
-                                    fontSize = 16.sp,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .pointerInput(f.id) {
-                                            detectTapGestures {
-                                                vm.addToFolder(f.id, app.packageName)
-                                                addToFolderPicker = null
-                                            }
-                                        }
-                                        .padding(vertical = 12.dp)
-                                )
-                            }
-                        }
-                    }
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { addToFolderPicker = null }) {
-                        Text("Скасувати", color = AppTheme.colors.textPrimary)
-                    }
-                },
-                containerColor = AppTheme.colors.surface
+            AddToFolderDialog(
+                app = app,
+                folders = folders,
+                onPick = { f -> vm.addToFolder(f.id, app.packageName); addToFolderPicker = null },
+                onDismiss = { addToFolderPicker = null }
             )
         }
 
-        // Діалог long-press на застосунок у папці
         folderMenuApp?.let { app ->
-            AlertDialog(
-                modifier = Modifier.popIn(),
-                onDismissRequest = { folderMenuApp = null; folderMenuFolder = null },
-                title = { Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
-                text = {
-                    Column {
-                        Text(
-                            "Прибрати з папки",
-                            color = AppTheme.colors.textPrimary,
-                            fontSize = 15.sp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .pointerInput(app.packageName) {
-                                    detectTapGestures {
-                                        folderMenuFolder?.let { f ->
-                                            vm.removeFromFolder(f.id, app.packageName)
-                                        }
-                                        folderMenuApp = null
-                                        folderMenuFolder = null
-                                    }
-                                }
-                                .padding(vertical = 12.dp)
-                        )
-                        Text(
-                            "Запустити",
-                            color = AppTheme.colors.textPrimary,
-                            fontSize = 15.sp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .pointerInput(app.packageName) {
-                                    detectTapGestures {
-                                        launchAppWithAnimation(app)
-                                        folderMenuApp = null
-                                        folderMenuFolder = null
-                                    }
-                                }
-                                .padding(vertical = 12.dp)
-                        )
-                        Text(
-                            "Більше дій…",
-                            color = AppTheme.colors.textSecondary,
-                            fontSize = 15.sp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .pointerInput(app.packageName) {
-                                    detectTapGestures {
-                                        menuApp = app
-                                        folderMenuApp = null
-                                        folderMenuFolder = null
-                                    }
-                                }
-                                .padding(vertical = 12.dp)
-                        )
-                    }
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { folderMenuApp = null; folderMenuFolder = null }) {
-                        Text("Скасувати", color = AppTheme.colors.textPrimary)
-                    }
-                },
-                containerColor = AppTheme.colors.surface
+            val closeFolderMenu = { folderMenuApp = null; folderMenuFolder = null }
+            FolderAppMenuDialog(
+                app = app,
+                onRemove = { folderMenuFolder?.let { f -> vm.removeFromFolder(f.id, app.packageName) }; closeFolderMenu() },
+                onLaunch = { launchAppWithAnimation(app); closeFolderMenu() },
+                onMore = { menuApp = app; closeFolderMenu() },
+                onDismiss = closeFolderMenu
             )
         }
 
-        // Діалог long-press на заголовок папки
         folderHeaderMenu?.let { folder ->
-            AlertDialog(
-                modifier = Modifier.popIn(),
-                onDismissRequest = { folderHeaderMenu = null },
-                title = { Text(folder.name, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
-                text = {
-                    Column {
-                        Text(
-                            "Видалити папку (застосунки залишаться)",
-                            color = AppTheme.colors.danger,
-                            fontSize = 15.sp,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .pointerInput(folder.id) {
-                                    detectTapGestures {
-                                        vm.deleteFolder(folder.id)
-                                        folderHeaderMenu = null
-                                    }
-                                }
-                                .padding(vertical = 12.dp)
-                        )
-                    }
-                },
-                confirmButton = {},
-                dismissButton = {
-                    TextButton(onClick = { folderHeaderMenu = null }) {
-                        Text("Скасувати", color = AppTheme.colors.textPrimary)
-                    }
-                },
-                containerColor = AppTheme.colors.surface
+            FolderHeaderDialog(
+                folder = folder,
+                onDelete = { vm.deleteFolder(folder.id); folderHeaderMenu = null },
+                onDismiss = { folderHeaderMenu = null }
             )
         }
 
@@ -1660,11 +1509,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     MenuTile("⚙", "Налаштування") { showSettings = true }
                 ),
                 items = buildList {
-                    add(MenuItemSpec("Створити папку") {
-                        newFolderName = ""
-                        newFolderSelection = emptySet()
-                        showNewFolderDialog = true
-                    })
+                    add(MenuItemSpec("Створити папку") { showNewFolderDialog = true })
                     add(MenuItemSpec("Автопапки за категоріями") { vm.createAutoFolders() })
                     if (placedWidgetsStorage.hasDashboard())
                         add(MenuItemSpec("Прибрати дошку зліва") {
@@ -1688,257 +1533,59 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             )
         }
 
-        // ==== Діалог нової папки ====
         if (showNewFolderDialog) {
-            AlertDialog(
-                modifier = Modifier.popIn(),
-                onDismissRequest = { showNewFolderDialog = false },
-                title = { Text("Нова папка", color = AppTheme.colors.textPrimary) },
-                text = {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        androidx.compose.foundation.text.BasicTextField(
-                            value = newFolderName,
-                            onValueChange = { newFolderName = it },
-                            textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
-                            cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.textPrimary),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                            decorationBox = { inner ->
-                                if (newFolderName.isEmpty()) {
-                                    Text("Назва папки", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 16.sp)
-                                }
-                                inner()
-                            }
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Text("Обери застосунки:", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 13.sp)
-                        Spacer(Modifier.height(6.dp))
-                        androidx.compose.foundation.lazy.LazyColumn(
-                            modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)
-                        ) {
-                            items(apps) { app ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .pointerInput(app.packageName) {
-                                            detectTapGestures {
-                                                newFolderSelection = if (app.packageName in newFolderSelection)
-                                                    newFolderSelection - app.packageName
-                                                else
-                                                    newFolderSelection + app.packageName
-                                            }
-                                        }
-                                        .padding(vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    androidx.compose.material3.Checkbox(
-                                        checked = app.packageName in newFolderSelection,
-                                        onCheckedChange = { checked ->
-                                            newFolderSelection = if (checked)
-                                                newFolderSelection + app.packageName
-                                            else
-                                                newFolderSelection - app.packageName
-                                        }
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Icon(
-                                        bitmap = (app.bitmap ?: app.icon.toBitmap(72, 72)).asImageBitmap(),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(32.dp),
-                                        tint = Color.Unspecified
-                                    )
-                                    Spacer(Modifier.width(12.dp))
-                                    Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 15.sp)
-                                }
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            if (newFolderName.isNotBlank() && newFolderSelection.isNotEmpty()) {
-                                vm.createFolder(newFolderName, newFolderSelection.toList())
-                            }
-                            showNewFolderDialog = false
-                        },
-                        enabled = newFolderName.isNotBlank() && newFolderSelection.isNotEmpty()
-                    ) { Text("Створити", color = AppTheme.colors.accent) }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showNewFolderDialog = false }) {
-                        Text("Скасувати", color = AppTheme.colors.textPrimary)
-                    }
-                },
-                containerColor = AppTheme.colors.surface
+            NewFolderDialog(
+                apps = apps,
+                onCreate = { name, pkgs -> vm.createFolder(name, pkgs) },
+                onDismiss = { showNewFolderDialog = false }
             )
         }
 
-        // ==== Діалог відкритої папки ====
         openFolder?.let { folder ->
-            val folderApps = apps.filter { it.packageName in folder.packageNames }
-            AlertDialog(
-                modifier = Modifier.popIn(),
-                onDismissRequest = { openFolder = null },
-                title = { Text(folder.name, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
-                text = {
-                    androidx.compose.foundation.lazy.LazyColumn(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)
-                    ) {
-                        items(folderApps, key = { it.packageName }) { app ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .pointerInput(app.packageName) {
-                                        detectTapGestures {
-                                            launchAppWithAnimation(app)
-                                            openFolder = null
-                                        }
-                                    }
-                                    .padding(vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    bitmap = (app.bitmap ?: app.icon.toBitmap(96, 96)).asImageBitmap(),
-                                    contentDescription = app.label,
-                                    modifier = Modifier.size(40.dp),
-                                    tint = Color.Unspecified
-                                )
-                                Spacer(Modifier.width(16.dp))
-                                Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        // Додати папку в док
-                        if (folder.id !in dockPkgs) {
-                            vm.toggleDock("folder:${folder.id}")
-                        } else {
-                            vm.toggleDock("folder:${folder.id}")
-                        }
-                        openFolder = null
-                    }) {
-                        Text(
-                            if ("folder:${folder.id}" in dockPkgs) "Прибрати з дока"
-                            else "Додати в док",
-                            color = AppTheme.colors.accent
-                        )
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { openFolder = null }) {
-                        Text("Закрити", color = AppTheme.colors.textPrimary)
-                    }
-                },
-                containerColor = AppTheme.colors.surface
+            OpenFolderDialog(
+                folder = folder,
+                apps = apps,
+                inDock = "folder:${folder.id}" in dockPkgs,
+                onLaunch = { app -> launchAppWithAnimation(app); openFolder = null },
+                onToggleDock = { vm.toggleDock("folder:${folder.id}"); openFolder = null },
+                onDismiss = { openFolder = null }
             )
         }
 
         pendingChoice?.let { candidates ->
-            AlertDialog(
-                modifier = Modifier.popIn(),
-                onDismissRequest = { vm.dismissChoice() },
-                title = { Text("Обери застосунок", color = AppTheme.colors.textPrimary) },
-                text = {
-                    Column {
-                        candidates.forEach { app ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { vm.onAppChosen(app) }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    bitmap = (app.bitmap ?: app.icon.toBitmap(96, 96)).asImageBitmap(),
-                                    contentDescription = app.label,
-                                    modifier = Modifier.size(36.dp),
-                                    tint = Color.Unspecified
-                                )
-                                Spacer(Modifier.width(12.dp))
-                                Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
-                            }
-                        }
-                    }
-                },
-                confirmButton = {},
-                dismissButton = { TextButton(onClick = { vm.dismissChoice() }) { Text("Скасувати", color = AppTheme.colors.textPrimary) } },
-                containerColor = AppTheme.colors.surface
-            )
+            AppChoiceDialog(candidates, onChosen = { vm.onAppChosen(it) }, onDismiss = { vm.dismissChoice() })
         }
 
         menuApp?.let { app ->
             val inFolder = vm.folderOf(app.packageName)
             AppMenuPopup(app = app, anchor = lastTouch, onDismiss = { menuApp = null }) {
-                    Column {
-                        if (inFolder == null) {
-                            MenuItem(if (app.packageName in dockPkgs) "Прибрати з дока" else "Додати в док") {
-                                vm.toggleDock(app.packageName); menuApp = null
-                            }
-                            MenuItem("Створити папку з цим застосунком") {
-                                showCreateFolder = app; menuApp = null
-                            }
-                            MenuItem("Додати до існуючої папки") {
-                                addToFolderPicker = app; menuApp = null
-                            }
-                        } else {
-                            MenuItem("Прибрати з папки «${inFolder.name}»") {
-                                vm.removeFromFolder(inFolder.id, app.packageName)
-                                menuApp = null
-                            }
+                Column {
+                    if (inFolder == null) {
+                        MenuItem(if (app.packageName in dockPkgs) "Прибрати з дока" else "Додати в док") {
+                            vm.toggleDock(app.packageName); menuApp = null
                         }
-                        MenuItem("Приховати зі списку") {
-                            vm.hideApp(app.packageName); menuApp = null
+                        MenuItem("Створити папку з цим застосунком") {
+                            showCreateFolder = app; menuApp = null
                         }
-                        MenuItem("Інформація про застосунок") {
-                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                data = Uri.parse("package:${app.packageName}")
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            try { ctx.startActivity(intent) } catch (_: Exception) {}
-                            menuApp = null
+                        MenuItem("Додати до існуючої папки") {
+                            addToFolderPicker = app; menuApp = null
                         }
-                        MenuItem("Видалити з телефону") {
-                            try {
-                                // Спроба 1: ACTION_UNINSTALL_PACKAGE (як у Lawnchair)
-                                val uninstallIntent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
-                                    data = Uri.fromParts("package", app.packageName, null)
-                                    putExtra(Intent.EXTRA_RETURN_RESULT, true)
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                try {
-                                    val activity = ctx as? android.app.Activity ?: ctx
-                                    activity.startActivity(uninstallIntent)
-                                    android.util.Log.e("Uninstall", "ACTION_UNINSTALL_PACKAGE OK")
-                                } catch (e1: Exception) {
-                                    android.util.Log.e("Uninstall", "UNINSTALL failed: ${e1.message}", e1)
-                                    val deleteIntent = Intent(Intent.ACTION_DELETE).apply {
-                                        data = Uri.parse("package:${app.packageName}")
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    try {
-                                        ctx.startActivity(deleteIntent)
-                                        android.util.Log.e("Uninstall", "ACTION_DELETE OK")
-                                    } catch (e2: Exception) {
-                                        android.util.Log.e("Uninstall", "DELETE failed: ${e2.message}", e2)
-                                        throw e2
-                                    }
-                                }
-                            } catch (t: Throwable) {
-                                // Спроба 3: Налаштування застосунку з кнопкою видалення
-                                try {
-                                    val settingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                        data = Uri.parse("package:${app.packageName}")
-                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                    }
-                                    ctx.startActivity(settingsIntent)
-                                } catch (_: Exception) {}
-                            }
+                    } else {
+                        MenuItem("Прибрати з папки «${inFolder.name}»") {
+                            vm.removeFromFolder(inFolder.id, app.packageName)
                             menuApp = null
                         }
                     }
+                    MenuItem("Приховати зі списку") {
+                        vm.hideApp(app.packageName); menuApp = null
+                    }
+                    MenuItem("Інформація про застосунок") {
+                        openAppInfo(ctx, app.packageName); menuApp = null
+                    }
+                    MenuItem("Видалити з телефону") {
+                        uninstallApp(ctx, app.packageName); menuApp = null
+                    }
+                }
             }
         }
     }
@@ -1947,258 +1594,4 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     LaunchOverlay(launchingApp, lastTouch)
 
     }
-}
-@Composable
-fun AppContextMenu(
-    app: AppInfo,
-    inDock: Boolean,
-    onDismiss: () -> Unit,
-    onToggleDock: () -> Unit,
-    onHide: () -> Unit,
-    onInfo: () -> Unit
-) {
-    AlertDialog(
-        modifier = Modifier.popIn(),
-        onDismissRequest = onDismiss,
-        title = { Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
-        text = {
-            Column {
-                MenuItem(if (inDock) "Прибрати з дока" else "Додати в док", onToggleDock)
-                MenuItem("Приховати зі списку", onHide)
-                MenuItem("Інформація про застосунок", onInfo)
-            }
-        },
-        confirmButton = {},
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Скасувати", color = AppTheme.colors.textPrimary) } },
-        containerColor = AppTheme.colors.surface
-    )
-}
-
-@Composable
-private fun MenuItem(label: String, onClick: () -> Unit) {
-    Text(
-        label,
-        color = AppTheme.colors.textPrimary,
-        fontSize = 15.sp,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp)
-    )
-}
-
-@Composable
-fun SuggestionActionRow(s: Suggestion.Action, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 3.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                brush = Brush.verticalGradient(
-                    listOf(
-                        AppTheme.colors.textPrimary.copy(alpha = 0.08f),
-                        AppTheme.colors.textPrimary.copy(alpha = 0.02f)
-                    )
-                )
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        GlassCircleIcon(Icons.Default.Star, AppTheme.colors.accent)
-        Spacer(Modifier.width(14.dp))
-        Column {
-            Text(s.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
-            s.subtitle?.let { Text(it, color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 12.sp) }
-        }
-    }
-}
-
-@Composable
-fun SuggestionExtraRow(s: Suggestion.Extra, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 3.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                brush = Brush.verticalGradient(
-                    listOf(
-                        AppTheme.colors.textPrimary.copy(alpha = if (s.kind == "ask") 0.04f else 0.08f),
-                        AppTheme.colors.textPrimary.copy(alpha = 0.02f)
-                    )
-                )
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(20.dp)).background(AppTheme.colors.accent.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center
-        ) { Text(s.icon, fontSize = 20.sp) }
-        Spacer(Modifier.width(14.dp))
-        Column {
-            Text(s.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp, maxLines = 1)
-            Text(s.subtitle, color = AppTheme.colors.textMuted, fontSize = 12.sp)
-        }
-    }
-}
-
-@Composable
-fun SuggestionSettingRow(s: Suggestion.Setting, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 3.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                brush = Brush.verticalGradient(
-                    listOf(
-                        AppTheme.colors.textPrimary.copy(alpha = 0.08f),
-                        AppTheme.colors.textPrimary.copy(alpha = 0.02f)
-                    )
-                )
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        GlassCircleIcon(Icons.Default.Settings, AppTheme.colors.textMuted)
-        Spacer(Modifier.width(14.dp))
-        Text(s.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
-    }
-}
-
-@Composable
-fun SuggestionContactRow(s: Suggestion.Contact, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 3.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                brush = Brush.verticalGradient(
-                    listOf(
-                        AppTheme.colors.textPrimary.copy(alpha = 0.08f),
-                        AppTheme.colors.textPrimary.copy(alpha = 0.02f)
-                    )
-                )
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        GlassCircleIcon(Icons.Default.Person, AppTheme.colors.successLight)
-        Spacer(Modifier.width(14.dp))
-        Column {
-            Text(s.name, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
-            Text(s.subtitle, color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 12.sp)
-        }
-    }
-}
-
-@Composable
-fun AppRow(
-    app: AppInfo,
-    inDock: Boolean,
-    showLabel: Boolean,
-    onClick: () -> Unit,
-    onLongClick: () -> Unit,
-    highlight: String = ""
-) {
-    val style = LocalGridStyle.current
-    val iconSizeDp = style.listIconDp
-    val fontSizeSp = style.fontSp
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = (style.listGapDp / 2).dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                brush = Brush.verticalGradient(
-                    listOf(
-                        AppTheme.colors.textPrimary.copy(alpha = 0.06f),
-                        AppTheme.colors.textPrimary.copy(alpha = 0.015f)
-                    )
-                )
-            )
-            .pressable(scaleDown = 0.97f, haptic = false, onLongPress = onLongClick) { onClick() }
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Єдина підкладка під іконку
-        IconPlate(iconSizeDp) {
-            Icon(
-                bitmap = (app.bitmap ?: app.icon.toBitmap(96, 96)).asImageBitmap(),
-                contentDescription = app.label,
-                modifier = Modifier.size(iconSizeDp.dp).iconShape(),
-                tint = Color.Unspecified
-            )
-        }
-        if (showLabel) {
-            Spacer(Modifier.width(14.dp))
-            val baseColor = if (inDock) AppTheme.colors.accent else AppTheme.colors.textPrimary
-            val hl = AppTheme.colors.accent
-            val labelText = remember(app.label, highlight, baseColor, hl) {
-                val i = if (highlight.isBlank()) -1 else app.label.indexOf(highlight.trim(), ignoreCase = true)
-                androidx.compose.ui.text.buildAnnotatedString {
-                    if (i < 0) append(app.label)
-                    else {
-                        append(app.label.substring(0, i))
-                        withStyle(androidx.compose.ui.text.SpanStyle(color = hl, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)) {
-                            append(app.label.substring(i, i + highlight.trim().length))
-                        }
-                        append(app.label.substring(i + highlight.trim().length))
-                    }
-                }
-            }
-            Text(labelText, color = baseColor, fontSize = fontSizeSp.sp)
-        }
-    }
-}
-
-
-private fun openGoogleSearch(ctx: android.content.Context, query: String) {
-    val url = "https://www.google.com/search?q=" + android.net.Uri.encode(query)
-    if (com.dynamicai.launcher.suggestion.BrowserBridge.open(ctx, url)) return
-    val viewIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).apply {
-        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
-    
-    try {
-        val st = com.dynamicai.launcher.data.SettingsStorage(ctx).load()
-        if (st.defaultBrowser.isNotBlank()) {
-            val i = android.content.Intent(viewIntent).setPackage(st.defaultBrowser)
-            ctx.startActivity(i)
-            return
-        }
-    } catch (_: Throwable) {}
-    
-    try {
-        val i = android.content.Intent(viewIntent).setPackage("com.google.android.googlequicksearchbox")
-        ctx.startActivity(i)
-        return
-    } catch (_: Throwable) {}
-    
-    try {
-        val i = android.content.Intent(viewIntent).setPackage("com.android.chrome")
-        ctx.startActivity(i)
-        return
-    } catch (_: Throwable) {}
-    
-    try {
-        ctx.startActivity(viewIntent)
-    } catch (_: Throwable) {}
-}
-
-private fun isScreenOn(ctx: android.content.Context): Boolean {
-    return try {
-        val pm = ctx.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
-        pm.isInteractive
-    } catch (_: Throwable) { true }
-
-
-
 }

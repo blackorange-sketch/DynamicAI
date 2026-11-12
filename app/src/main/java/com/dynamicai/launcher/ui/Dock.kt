@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -142,11 +143,16 @@ fun Dock(
         items.forEachIndexed { index, item ->
             val itemAlpha by animateFloatAsState(
                 targetValue = if (appeared) 1f else 0f,
-                animationSpec = tween(durationMillis = 280, delayMillis = 40 + index * 55),
+                animationSpec = tween(durationMillis = 340, delayMillis = 40 + index * 45, easing = Motion.Decel),
                 label = "dockItem$index"
             )
             if (item.isFolder) {
-                IconPlate(iconSizeDp, Modifier.alpha(itemAlpha), Modifier.pressable { onLaunch(item) }) {
+                IconPlate(iconSizeDp, Modifier.graphicsLayer {
+                            alpha = itemAlpha
+                            val sc = 0.7f + 0.3f * itemAlpha
+                            scaleX = sc; scaleY = sc
+                            translationY = (1f - itemAlpha) * 14.dp.toPx()
+                        }, Modifier.pressable { onLaunch(item) }) {
                     item.bitmap?.let {
                         Icon(
                             bitmap = it.asImageBitmap(),
@@ -160,7 +166,12 @@ fun Dock(
                 item.bitmap?.let {
                     IconPlate(
                         iconSizeDp,
-                        Modifier.alpha(itemAlpha),
+                        Modifier.graphicsLayer {
+                            alpha = itemAlpha
+                            val sc = 0.7f + 0.3f * itemAlpha
+                            scaleX = sc; scaleY = sc
+                            translationY = (1f - itemAlpha) * 14.dp.toPx()
+                        },
                         Modifier.pressable(
                             onTap = { onLaunch(item) },
                             onLongPress = { onLongClick(item) }

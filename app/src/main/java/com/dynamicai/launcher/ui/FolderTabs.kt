@@ -55,13 +55,13 @@ fun FolderTabs(
         AnimatedVisibility(
             visible = selectedFolder != null,
             enter = expandVertically(
-                animationSpec = tween(animMs(200)),
+                animationSpec = tween(animMs(300), easing = Motion.Decel),
                 expandFrom = Alignment.Bottom
-            ),
+            ) + androidx.compose.animation.fadeIn(tween(animMs(220), delayMillis = animMs(40))),
             exit = shrinkVertically(
-                animationSpec = tween(animMs(180)),
+                animationSpec = tween(animMs(200), easing = Motion.Accel),
                 shrinkTowards = Alignment.Bottom
-            )
+            ) + androidx.compose.animation.fadeOut(tween(animMs(120)))
         ) {
             val cols = gridCells()
             LazyVerticalGrid(

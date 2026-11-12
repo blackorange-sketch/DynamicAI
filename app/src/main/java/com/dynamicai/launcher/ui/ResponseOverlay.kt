@@ -51,8 +51,8 @@ fun ResponseOverlay(
     var copied by remember(text) { mutableStateOf(false) }
     AnimatedVisibility(
         visible = visible && text.isNotBlank(),
-        enter = slideInVertically { it } + fadeIn(),
-        exit = slideOutVertically { it } + fadeOut(),
+        enter = slideInVertically(androidx.compose.animation.core.tween(animMs(340), easing = Motion.Decel)) { it / 2 } + fadeIn(androidx.compose.animation.core.tween(animMs(200))),
+        exit = slideOutVertically(androidx.compose.animation.core.tween(animMs(200), easing = Motion.Accel)) { it / 2 } + fadeOut(androidx.compose.animation.core.tween(animMs(160))),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp)

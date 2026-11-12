@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -52,8 +53,8 @@ fun Modifier.pressableWithBounds(
         .onGloballyPositioned { coords ->
             bounds = coords.boundsInRoot()
         }
-        .scale(scale)
-        .alpha(dim)
+        // Читаємо значення в graphicsLayer: іконка не перекомпоновується на кожен кадр натискання
+        .graphicsLayer { scaleX = scale; scaleY = scale; alpha = dim }
         .pointerInput(Unit) {
             detectTapGestures(
                 onPress = {

@@ -44,8 +44,8 @@ fun RecentScreen(
 ) {
     AnimatedVisibility(
         visible = visible,
-        enter = slideInVertically { it } + fadeIn(),
-        exit = slideOutVertically { it } + fadeOut()
+        enter = slideInVertically(androidx.compose.animation.core.tween(animMs(360), easing = Motion.Decel)) { it / 4 } + fadeIn(androidx.compose.animation.core.tween(animMs(220))),
+        exit = slideOutVertically(androidx.compose.animation.core.tween(animMs(220), easing = Motion.Accel)) { it / 5 } + fadeOut(androidx.compose.animation.core.tween(animMs(180)))
     ) {
         Box(
             modifier = Modifier

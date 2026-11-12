@@ -159,12 +159,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     // Анімація зникнення HomeScreen при відкритті drawer
     val homeAlpha by androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (drawerOpen) 0f else 1f,
-        animationSpec = androidx.compose.animation.core.tween(animMs(if (drawerOpen) 200 else 260)),
+        animationSpec = androidx.compose.animation.core.tween(animMs(if (drawerOpen) 180 else 300), easing = Motion.Standard),
         label = "homeAlpha"
     )
     val homeScale by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (drawerOpen) 0.90f else 1f,
-        animationSpec = androidx.compose.animation.core.tween(animMs(if (drawerOpen) 240 else 280)),
+        targetValue = if (drawerOpen) 0.93f else 1f,
+        animationSpec = androidx.compose.animation.core.tween(animMs(if (drawerOpen) 260 else 340), easing = Motion.Decel),
         label = "homeScale"
     )
     var launchingApp by remember { mutableStateOf<AppInfo?>(null) }
@@ -583,7 +583,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
 
     if (showSettings) {
-        androidx.compose.animation.Crossfade(targetState = currentSettingsCategory, label = "settingsNav") { category ->
+        androidx.compose.animation.Crossfade(targetState = currentSettingsCategory, animationSpec = androidx.compose.animation.core.tween(220, easing = Motion.Standard), label = "settingsNav") { category ->
         if (category == null) {
             SettingsMenuScreen(
                 onCategorySelected = { currentSettingsCategory = it },
@@ -737,8 +737,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         // Затемнення фону коли список/пошук/drawer активний
         androidx.compose.animation.AnimatedVisibility(
             visible = listVisible || searchMode || query.isNotBlank(),
-            enter = androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.fadeOut()
+            enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(animMs(240), easing = Motion.Standard)),
+            exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(animMs(200), easing = Motion.Standard))
         ) {
             Box(
                 modifier = Modifier
@@ -1383,7 +1383,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
         AnimatedVisibility(
             visible = showOverlay && activeLetter != null,
-            enter = fadeIn(), exit = fadeOut(),
+            enter = fadeIn(androidx.compose.animation.core.tween(120)) +
+                androidx.compose.animation.scaleIn(androidx.compose.animation.core.spring(dampingRatio = 0.7f, stiffness = 500f), initialScale = 0.8f),
+            exit = fadeOut(androidx.compose.animation.core.tween(180)) +
+                androidx.compose.animation.scaleOut(androidx.compose.animation.core.tween(180), targetScale = 0.9f),
             modifier = Modifier.align(Alignment.Center).zIndex(20f)
         ) {
             Box(
@@ -1445,6 +1448,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         // Діалог створення папки
         showCreateFolder?.let { app ->
             AlertDialog(
+                modifier = Modifier.popIn(),
                 onDismissRequest = { showCreateFolder = null; createFolderName = "" },
                 title = { Text("Нова папка", color = AppTheme.colors.textPrimary) },
                 text = {
@@ -1488,6 +1492,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         // Діалог вибору папки (додати застосунок до існуючої)
         addToFolderPicker?.let { app ->
             AlertDialog(
+                modifier = Modifier.popIn(),
                 onDismissRequest = { addToFolderPicker = null },
                 title = { Text("Додати ${app.label} до…", color = AppTheme.colors.textPrimary) },
                 text = {
@@ -1527,6 +1532,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         // Діалог long-press на застосунок у папці
         folderMenuApp?.let { app ->
             AlertDialog(
+                modifier = Modifier.popIn(),
                 onDismissRequest = { folderMenuApp = null; folderMenuFolder = null },
                 title = { Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
                 text = {
@@ -1593,6 +1599,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         // Діалог long-press на заголовок папки
         folderHeaderMenu?.let { folder ->
             AlertDialog(
+                modifier = Modifier.popIn(),
                 onDismissRequest = { folderHeaderMenu = null },
                 title = { Text(folder.name, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
                 text = {
@@ -1668,6 +1675,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         // ==== Діалог нової папки ====
         if (showNewFolderDialog) {
             AlertDialog(
+                modifier = Modifier.popIn(),
                 onDismissRequest = { showNewFolderDialog = false },
                 title = { Text("Нова папка", color = AppTheme.colors.textPrimary) },
                 text = {
@@ -1814,6 +1822,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
         pendingChoice?.let { candidates ->
             AlertDialog(
+                modifier = Modifier.popIn(),
                 onDismissRequest = { vm.dismissChoice() },
                 title = { Text("Обери застосунок", color = AppTheme.colors.textPrimary) },
                 text = {
@@ -1933,6 +1942,7 @@ fun AppContextMenu(
     onInfo: () -> Unit
 ) {
     AlertDialog(
+        modifier = Modifier.popIn(),
         onDismissRequest = onDismiss,
         title = { Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
         text = {

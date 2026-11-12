@@ -102,6 +102,7 @@ fun AppMenuPopup(
     ) {
         Column(
             Modifier
+                .popIn()
                 .width(264.dp)
                 .shadow(16.dp, RoundedCornerShape(22.dp))
                 .clip(RoundedCornerShape(22.dp))

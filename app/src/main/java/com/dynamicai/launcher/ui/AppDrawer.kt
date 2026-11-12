@@ -123,14 +123,16 @@ fun AppDrawer(
 
     AnimatedVisibility(
         visible = visible,
+        // Шторка «виростає» знизу: короткий шлях + легке збільшення — рух читається, але не тягнеться
         enter = slideInVertically(
-            initialOffsetY = { it / 2 },
-            animationSpec = tween(animMs(280), easing = FastOutSlowInEasing)
-        ) + fadeIn(tween(animMs(220))),
+            initialOffsetY = { it / 6 },
+            animationSpec = tween(animMs(360), easing = Motion.Decel)
+        ) + fadeIn(tween(animMs(200))) +
+            androidx.compose.animation.scaleIn(tween(animMs(360), easing = Motion.Decel), initialScale = 0.96f),
         exit = slideOutVertically(
-            targetOffsetY = { it / 2 },
-            animationSpec = tween(animMs(220), easing = FastOutSlowInEasing)
-        ) + fadeOut(tween(animMs(180)))
+            targetOffsetY = { it / 8 },
+            animationSpec = tween(animMs(200), easing = Motion.Accel)
+        ) + fadeOut(tween(animMs(160)))
     ) {
         val bgAlpha = kotlin.math.max(0.65f, backgroundAlphaPercent / 100f)
         Box(

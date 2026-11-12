@@ -14,12 +14,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 fun ScreenEnter(content: @Composable () -> Unit) {
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
-    val a by animateFloatAsState(if (shown) 1f else 0f, spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow), label = "screenEnter")
+    val a by animateFloatAsState(if (shown) 1f else 0f, spring(dampingRatio = 0.86f, stiffness = 380f), label = "screenEnter")
     Box(
         Modifier.fillMaxSize().graphicsLayer {
             alpha = a.coerceIn(0f, 1f)
-            val s = 0.94f + 0.06f * a
+            val s = 0.95f + 0.05f * a
             scaleX = s; scaleY = s
+            translationY = (1f - a) * 28f * density
         }
     ) { content() }
 }

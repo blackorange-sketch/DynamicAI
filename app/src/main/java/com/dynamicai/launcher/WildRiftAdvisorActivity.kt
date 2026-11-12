@@ -44,8 +44,17 @@ import kotlinx.coroutines.launch
 
 class WildRiftAdvisorActivity : ComponentActivity() {
     private val vm: AppListViewModel by viewModels()
+    override fun finish() {
+        super.finish()
+        @Suppress("DEPRECATION")
+        overridePendingTransition(0, R.anim.screen_out)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Плавна поява екрана: проявлення з легким збільшенням
+        @Suppress("DEPRECATION")
+        overridePendingTransition(R.anim.screen_in, R.anim.screen_hold)
         
         // Перевіряємо та завантажуємо ресурси Wild Rift
         lifecycleScope.launch {

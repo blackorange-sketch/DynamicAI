@@ -75,8 +75,17 @@ import kotlin.math.sqrt
 import kotlin.math.sin
 
 class VoiceChatActivity : ComponentActivity() {
+    override fun finish() {
+        super.finish()
+        @Suppress("DEPRECATION")
+        overridePendingTransition(0, R.anim.screen_out)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Плавна поява екрана: проявлення з легким збільшенням
+        @Suppress("DEPRECATION")
+        overridePendingTransition(R.anim.screen_in, R.anim.screen_hold)
         enableEdgeToEdge()
         // Вмикаємо апаратне придушення відлуння (AEC)
         try {
@@ -403,12 +412,21 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
                         }
                         return@items
                     }
-                    MessageBubble(msg, maxBubble) { action ->
-                        when (action) {
-                            "restart" -> vm.restartLlmEngine()
-                            "retry" -> messages.lastOrNull { it.role == "user" }?.let { last ->
-                                ChatHistoryManager.history.removeAll { it.role == "error" }
-                                sendQuery(last.content, addUserMessage = false)
+                    // Нове повідомлення проявляється, а сусідні плавно зсуваються
+                    Box(
+                        Modifier.fillMaxWidth().animateItem(
+                            fadeInSpec = androidx.compose.animation.core.tween(260),
+                            placementSpec = androidx.compose.animation.core.spring(dampingRatio = 0.85f, stiffness = 380f),
+                            fadeOutSpec = androidx.compose.animation.core.tween(120)
+                        )
+                    ) {
+                        MessageBubble(msg, maxBubble) { action ->
+                            when (action) {
+                                "restart" -> vm.restartLlmEngine()
+                                "retry" -> messages.lastOrNull { it.role == "user" }?.let { last ->
+                                    ChatHistoryManager.history.removeAll { it.role == "error" }
+                                    sendQuery(last.content, addUserMessage = false)
+                                }
                             }
                         }
                     }

@@ -340,7 +340,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     var dockBadges by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     LaunchedWhileStarted {
         while (true) {
-            val m = try { com.dynamicai.launcher.macro.NotificationDigest.counts(ctx) } catch (_: Throwable) { emptyMap() }
+            // Запит до системи сповіщень — поза головним потоком, щоб не збивати кадри під час жестів
+            val m = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                try { com.dynamicai.launcher.macro.NotificationDigest.counts(ctx) } catch (_: Throwable) { emptyMap() }
+            }
             if (m != dockBadges) dockBadges = m
             kotlinx.coroutines.delay(4000)
         }

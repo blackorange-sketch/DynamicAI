@@ -40,7 +40,10 @@ fun MacroTilesWidget(
     var macros by remember { mutableStateOf(MacroStorage(ctx).get().filter { it.enabled }) }
     val running by MacroLauncher.running.collectAsState()
     com.dynamicai.launcher.ui.LaunchedWhileStarted {
-        while (true) { macros = MacroStorage(ctx).get().filter { it.enabled }; delay(5000) }
+        while (true) {
+            macros = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { MacroStorage(ctx).get().filter { it.enabled } }
+            delay(5000)
+        }
     }
     val cols = 3
     val rows = when (size) { "small" -> 1; "large" -> 3; "full" -> 5; else -> 2 }
@@ -100,7 +103,7 @@ fun SmartActionsWidget(
     var actions by remember { mutableStateOf<List<SmartAction>>(emptyList()) }
     com.dynamicai.launcher.ui.LaunchedWhileStarted {
         while (true) {
-            actions = try { ContextActions.build(ctx) } catch (_: Throwable) { emptyList() }
+            actions = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { try { ContextActions.build(ctx) } catch (_: Throwable) { emptyList() } }
             delay(30_000)
         }
     }
@@ -191,7 +194,7 @@ fun NotificationDigestWidget(onLongPress: () -> Unit, modifier: Modifier = Modif
     var text by remember { mutableStateOf("") }
     com.dynamicai.launcher.ui.LaunchedWhileStarted {
         while (true) {
-            text = try { com.dynamicai.launcher.macro.NotificationDigest.build(ctx) } catch (_: Throwable) { "" }
+            text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { try { com.dynamicai.launcher.macro.NotificationDigest.build(ctx) } catch (_: Throwable) { "" } }
             delay(15_000)
         }
     }

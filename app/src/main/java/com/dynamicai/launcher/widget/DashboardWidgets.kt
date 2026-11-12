@@ -46,8 +46,12 @@ fun TgChatsWidget(size: String, onLongPress: () -> Unit, modifier: Modifier = Mo
     val ctx = LocalContext.current
     val rows = when (size) { "small" -> 3; "large" -> 8; "full" -> 12; else -> 5 }
     var chats by remember { mutableStateOf(TelegramIndex.recent(ctx, rows)) }
-    LaunchedEffect(rows) {
-        while (true) { chats = TelegramIndex.recent(ctx, rows); delay(5000) }
+    // Оновлюємо лише поки лаунчер на екрані, і читаємо індекс поза головним потоком
+    com.dynamicai.launcher.ui.LaunchedWhileStarted(rows) {
+        while (true) {
+            chats = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { TelegramIndex.recent(ctx, rows) }
+            delay(5000)
+        }
     }
     Column(
         modifier = modifier.widgetCard()

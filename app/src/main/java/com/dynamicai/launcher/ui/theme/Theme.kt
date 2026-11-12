@@ -295,14 +295,14 @@ fun DynamicAITheme(
 @Composable
 fun StoredAppTheme(content: @Composable () -> Unit) {
     val ctx = LocalContext.current
-    var themeId by remember { mutableStateOf(runCatching { SettingsStorage(ctx).load().appTheme }.getOrDefault("glass_dark")) }
-    var accent by remember { mutableStateOf(runCatching { SettingsStorage(ctx).load().accentColor }.getOrDefault(0)) }
+    val initial = remember { runCatching { SettingsStorage(ctx).load() }.getOrNull() }
+    var themeId by remember { mutableStateOf(initial?.appTheme ?: "glass_dark") }
+    var accent by remember { mutableStateOf(initial?.accentColor ?: 0) }
     val owner = LocalLifecycleOwner.current
     DisposableEffect(owner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                themeId = runCatching { SettingsStorage(ctx).load().appTheme }.getOrDefault(themeId)
-                accent = runCatching { SettingsStorage(ctx).load().accentColor }.getOrDefault(accent)
+                runCatching { SettingsStorage(ctx).load() }.getOrNull()?.let { themeId = it.appTheme; accent = it.accentColor }
             }
         }
         owner.lifecycle.addObserver(observer)

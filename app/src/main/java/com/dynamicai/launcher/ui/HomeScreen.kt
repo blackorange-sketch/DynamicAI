@@ -139,7 +139,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     var showRecent by remember { mutableStateOf(false) }
     var showWeatherDetail by remember { mutableStateOf(false) }
     var searchMode by remember { mutableStateOf(false) }
-    var widgetSettingsFor by remember { mutableStateOf<com.dynamicai.launcher.widget.PlacedWidget?>(null) }
     var menuApp by remember { mutableStateOf<AppInfo?>(null) }
     var folderMenuApp by remember { mutableStateOf<AppInfo?>(null) }
     var folderMenuFolder by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
@@ -1025,17 +1024,22 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             .fillMaxWidth()
                             .weight(if (isLandscape) 1f else 3f)
                     ) { page ->
-                        val notesStorage = remember { com.dynamicai.launcher.note.NotesStorage(ctx) }
-                        var notesList by remember { mutableStateOf<List<com.dynamicai.launcher.note.Note>>(emptyList()) }
-                        LaunchedEffect(showNotesScreen, page) {
-                            if (!showNotesScreen) notesList = notesStorage.get()
-                        }
-                        
-                        val pageScrollable = landscapePane && placedWidgets.none { it.page == page && it.size == "full" }
-                        Column(
+                        HomeWidgetPage(
+                            page = page,
+                            pageCount = pageCount,
+                            placedWidgets = placedWidgets,
+                            storage = placedWidgetsStorage,
+                            weather = weather,
+                            showWeather = settings.showWeather,
+                            clockOnlyMode = isNightNow && settings.nightClockMode,
+                            scrollable = landscapePane,
+                            notesScreenOpen = showNotesScreen,
+                            onWidgetsChanged = { placedWidgets = placedWidgetsStorage.get() },
+                            onWeatherTap = { showWeatherDetail = true },
+                            onOpenSettings = { showSettings = true },
+                            onOpenNotes = { showNotesScreen = true },
+                            onOpenMacros = { showMacroManager = true },
                             modifier = Modifier
-                                .fillMaxSize()
-                                .then(if (pageScrollable) Modifier.verticalScroll(rememberScrollState()) else Modifier)
                                 .graphicsLayer {
                                     if (settings.pageParallax) {
                                         val off = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
@@ -1047,86 +1051,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                         val sc = 1f - 0.08f * a
                                         scaleX = sc; scaleY = sc
                                     }
-                                },
-                            verticalArrangement = Arrangement.Top
-                        ) {
-                            val pageWidgets = placedWidgets.filter { it.page == page }
-                            val hasFull = pageWidgets.any { it.size == "full" }
-                            val baseWidgets = if (hasFull) pageWidgets.filter { it.size == "full" } else pageWidgets
-                            val clockOnly = if (isNightNow && settings.nightClockMode) baseWidgets.filter { it.type == "weather_clock" } else emptyList()
-                            val visibleWidgets = if (clockOnly.isNotEmpty()) clockOnly else baseWidgets
-                            
-                            val renderOne: @Composable (com.dynamicai.launcher.widget.PlacedWidget) -> Unit = { widget ->
-                                    androidx.compose.foundation.layout.Box(
-                                        modifier = Modifier.pointerInput(widget.id) {
-                                            detectTapGestures(
-                                                onLongPress = { widgetSettingsFor = widget }
-                                            )
-                                        }
-                                    ) {
-                                        com.dynamicai.launcher.widget.RenderPlacedWidget(
-                                            widget = widget,
-                                            weather = weather,
-                                            showWeather = settings.showWeather,
-                                            notes = notesList,
-                                            notesStorage = notesStorage,
-                                            onWeatherTap = { showWeatherDetail = true },
-                                            onSettingsLongPress = { showSettings = true },
-                                            onNotesToggle = { id -> notesStorage.toggle(id); notesList = notesStorage.get() },
-                                            onNotesDelete = { id -> notesStorage.remove(id); notesList = notesStorage.get() },
-                                            onNotesAdd = { text -> notesStorage.add(text); notesList = notesStorage.get() },
-                                            onOpenAllNotes = { showNotesScreen = true },
-                                            onWidgetLongPress = { widgetSettingsFor = widget },
-                                            onOpenMacros = { showMacroManager = true },
-                                            onOpenVoice = {
-                                                ctx.startActivity(android.content.Intent(ctx, com.dynamicai.launcher.VoiceChatActivity::class.java))
-                                            }
-                                        )
-                                    }
-                                    if (widgetSettingsFor?.id == widget.id) {
-                                        com.dynamicai.launcher.widget.WidgetSettingsDialog(
-                                            widget = widget,
-                                            pageCount = pageCount,
-                                            onDismiss = { widgetSettingsFor = null },
-                                            onDelete = {
-                                                placedWidgetsStorage.remove(widget.id)
-                                                placedWidgets = placedWidgetsStorage.get()
-                                                widgetSettingsFor = null
-                                            },
-                                            onSizeChange = { newSize ->
-                                                placedWidgetsStorage.updateSize(widget.id, newSize)
-                                                placedWidgets = placedWidgetsStorage.get()
-                                            },
-                                            onMove = { newPage ->
-                                                placedWidgetsStorage.moveToPage(widget.id, newPage)
-                                                placedWidgets = placedWidgetsStorage.get()
-                                            },
-                                            onStackWithPrevious = {
-                                                placedWidgetsStorage.stackWithPrevious(widget.id)
-                                                placedWidgets = placedWidgetsStorage.get()
-                                                widgetSettingsFor = null
-                                            },
-                                            onUnstack = {
-                                                placedWidgetsStorage.unstack(widget.id)
-                                                placedWidgets = placedWidgetsStorage.get()
-                                                widgetSettingsFor = null
-                                            }
-                                        )
-                                    }
-                            }
-                            // Віджети з однаковим group малюємо як стек на місці першого
-                            val slots = mutableListOf<MutableList<com.dynamicai.launcher.widget.PlacedWidget>>()
-                            for (w in visibleWidgets) {
-                                val s = if (w.group.isNotBlank() && w.size != "full") slots.firstOrNull { it.first().group == w.group } else null
-                                if (s != null) s.add(w) else slots.add(mutableListOf(w))
-                            }
-                            slots.forEachIndexed { i, s ->
-                                androidx.compose.foundation.layout.Box(Modifier.appearStagger(i)) {
-                                    if (s.size == 1) renderOne(s[0])
-                                    else com.dynamicai.launcher.widget.WidgetStack(s) { renderOne(it) }
                                 }
-                            }
-                        }
+                        )
                     }
                     
                     // settledPage, а не currentPage: інакше весь екран перекомпоновується посеред свайпу (ривок)

@@ -1019,6 +1019,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         state = pagerState,
                         // Перемикання сторінок лише на головному екрані: не у шторці, папці чи пошуку
                         userScrollEnabled = !drawerOpen && openFolder == null && !searchMode,
+                        // Сусідні сторінки зібрані наперед — початок свайпу без ривка
+                        beyondViewportPageCount = 1,
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(if (isLandscape) 1f else 3f)
@@ -1039,8 +1041,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                         val off = (pagerState.currentPage - page) + pagerState.currentPageOffsetFraction
                                         val a = kotlin.math.abs(off).coerceIn(0f, 1f)
                                         translationX = off * size.width * 0.25f
-                                        alpha = 1f - 0.6f * a
-                                        val sc = 1f - 0.06f * a
+                                        // Сусідня сторінка зсунута паралаксом у бік поточної, тому гасимо її повністю:
+                                        // інакше її віджети видно з краю екрана, коли сторінка вже стоїть на місці
+                                        alpha = (1f - a * 1.3f).coerceIn(0f, 1f)
+                                        val sc = 1f - 0.08f * a
                                         scaleX = sc; scaleY = sc
                                     }
                                 },
@@ -1125,8 +1129,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         }
                     }
                     
-                    LaunchedEffect(pagerState.currentPage) {
-                        currentPage = pagerState.currentPage
+                    // settledPage, а не currentPage: інакше весь екран перекомпоновується посеред свайпу (ривок)
+                    LaunchedEffect(pagerState.settledPage) {
+                        currentPage = pagerState.settledPage
                     }
                     LaunchedEffect(currentPage, pageCount) {
                         val target = currentPage.coerceIn(0, pageCount - 1)
@@ -1144,12 +1149,17 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                 Box(
                                     modifier = Modifier
                                         .padding(horizontal = 3.dp)
-                                        .size(if (p == currentPage) 8.dp else 6.dp)
+                                        .size(8.dp)
+                                        // Крапка плавно «перетікає» слідом за пальцем; читання в graphicsLayer — без перекомпонування
+                                        .graphicsLayer {
+                                            val pos = pagerState.currentPage + pagerState.currentPageOffsetFraction
+                                            val sel = (1f - kotlin.math.abs(pos - p)).coerceIn(0f, 1f)
+                                            val sc = 0.75f + 0.25f * sel
+                                            scaleX = sc; scaleY = sc
+                                            alpha = 0.35f + 0.65f * sel
+                                        }
                                         .clip(androidx.compose.foundation.shape.CircleShape)
-                                        .background(
-                                            if (p == currentPage) AppTheme.colors.textPrimary
-                                            else AppTheme.colors.textPrimary.copy(alpha = 0.35f)
-                                        )
+                                        .background(AppTheme.colors.textPrimary)
                                 )
                             }
                         }

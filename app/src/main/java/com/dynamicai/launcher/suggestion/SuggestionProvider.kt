@@ -212,6 +212,16 @@ class SuggestionProvider(private val context: Context) {
             }
         } catch (_: Throwable) {}
 
+        // Миттєві відповіді: валюти, час у місті, дні до дати, сайт, номер телефону
+        try {
+            val QA = com.dynamicai.launcher.util.QuickAnswers
+            QA.currency(context, q)?.let { result.add(Suggestion.Extra("calc", "💱", it, "Курс валют · скопіювати", it.substringAfter("= "), 99)) }
+            QA.worldTime(q)?.let { result.add(Suggestion.Extra("calc", "🕒", it, "Час у місті · скопіювати", it, 99)) }
+            QA.daysUntil(q)?.let { result.add(Suggestion.Extra("calc", "📅", it, "Календар · скопіювати", it, 99)) }
+            QA.asUrl(q)?.let { result.add(Suggestion.Extra("web", "🌐", "Відкрити $q", "Сайт", it, 98)) }
+            QA.asPhone(query)?.let { result.add(Suggestion.Extra("dial", "📞", "Подзвонити $it", "Набрати номер", it, 98)) }
+        } catch (_: Throwable) {}
+
         // Фото й відео за назвою файлу (потрібен дозвіл на медіа)
         if (q.length >= 3) {
             try {

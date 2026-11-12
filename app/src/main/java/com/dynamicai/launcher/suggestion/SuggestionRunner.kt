@@ -49,6 +49,9 @@ object SuggestionRunner {
                 val parts = s.payload.split('|', limit = 2)
                 TelegramIndex.open(app, parts[0], parts.getOrElse(1) { "" })
             }
+            "dial" -> try {
+                app.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(s.payload))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (_: Throwable) {}
             "note" -> return false
         }
         return true

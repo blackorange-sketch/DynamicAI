@@ -29,13 +29,14 @@ import androidx.compose.ui.unit.sp
 import com.dynamicai.launcher.data.AppModule
 import com.dynamicai.launcher.data.ModuleManager
 import kotlinx.coroutines.launch
+import com.dynamicai.launcher.ui.theme.StoredAppTheme
 
 class ModuleManagerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            com.dynamicai.launcher.ui.theme.StoredAppTheme {
+            StoredAppTheme {
                 ModuleManagerScreen(onClose = { finish() })
             }
         }

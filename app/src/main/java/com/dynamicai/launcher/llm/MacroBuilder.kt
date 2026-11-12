@@ -5,6 +5,9 @@ import com.dynamicai.launcher.macro.Macro
 import com.dynamicai.launcher.macro.MacroStorage
 import com.dynamicai.launcher.macro.MacroTriggerService
 import org.json.JSONObject
+import com.dynamicai.launcher.data.SettingsStorage
+import com.dynamicai.launcher.macro.AppUtils
+import java.util.UUID
 
 /**
  * Створення макросів з природної мови: «коли підключаюсь до авто, вмикай музику» → JSON → перевірка → підтвердження → збереження.
@@ -72,7 +75,7 @@ toggleWifi(state='on'), toggleBluetooth(state='off'), connectBluetooth(name='...
         val a = raw.indexOf('{'); val b = raw.lastIndexOf('}')
         if (a < 0 || b <= a) return null
         val o = try { JSONObject(raw.substring(a, b + 1)) } catch (_: Throwable) { return null }
-        val carBt = com.dynamicai.launcher.data.SettingsStorage(context).load().carBtName
+        val carBt = SettingsStorage(context).load().carBtName
 
         val triggers = mutableListOf<String>()
         o.optJSONArray("triggers")?.let { arr ->
@@ -84,7 +87,7 @@ toggleWifi(state='on'), toggleBluetooth(state='off'), connectBluetooth(name='...
                 if (kind == "app_opened" || kind == "app_closed" || kind == "notification") {
                     val arg = t.substringAfter(':', "")
                     val name = arg.substringBefore(':')
-                    val pkg = if (name.contains('.')) name else com.dynamicai.launcher.macro.AppUtils.packageFor(context, name) ?: continue
+                    val pkg = if (name.contains('.')) name else AppUtils.packageFor(context, name) ?: continue
                     t = "$kind:$pkg" + (if (arg.contains(':')) ":" + arg.substringAfter(':') else "")
                 }
                 if (kind == "bt_connected" || kind == "bt_disconnected") {
@@ -108,7 +111,7 @@ toggleWifi(state='on'), toggleBluetooth(state='off'), connectBluetooth(name='...
         val name = o.optString("name", "").trim().take(40).ifBlank { "Макрос" }
         val constraints = o.optString("constraints", "").trim()
         val macro = Macro(
-            id = java.util.UUID.randomUUID().toString(),
+            id = UUID.randomUUID().toString(),
             name = name,
             trigger = if (triggers.isEmpty()) name.lowercase() else "",
             steps = steps,

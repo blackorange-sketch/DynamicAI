@@ -53,6 +53,39 @@ import com.dynamicai.launcher.suggestion.Suggestion
 import com.dynamicai.launcher.suggestion.stableKey
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.core.content.ContextCompat
+import com.dynamicai.launcher.command.CommandExecutorProvider
+import com.dynamicai.launcher.data.HiddenAppsStorage
+import com.dynamicai.launcher.data.LauncherSettings
+import com.dynamicai.launcher.data.SettingsStorage
+import com.dynamicai.launcher.macro.FocusModes
+import com.dynamicai.launcher.suggestion.AppUsage
+import com.dynamicai.launcher.suggestion.BrowserBridge
+import com.dynamicai.launcher.suggestion.ContactInfo
+import com.dynamicai.launcher.suggestion.ContactLauncher
+import com.dynamicai.launcher.suggestion.ContactRepository
+import com.dynamicai.launcher.suggestion.SearchHistory
+import com.dynamicai.launcher.suggestion.SuggestionProvider
+import com.dynamicai.launcher.suggestion.SuggestionRunner
+import com.dynamicai.launcher.ui.AlphabetSidebar
+import com.dynamicai.launcher.ui.AppGridItem
+import com.dynamicai.launcher.ui.IconLayoutProvider
+import com.dynamicai.launcher.ui.SuggestionContactRow
+import com.dynamicai.launcher.ui.SuggestionExtraRow
+import com.dynamicai.launcher.ui.theme.StoredAppTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class SearchOverlayActivity : ComponentActivity() {
 
@@ -74,7 +107,7 @@ class SearchOverlayActivity : ComponentActivity() {
         setTurnScreenOn(true)
 
         setContent {
-            com.dynamicai.launcher.ui.theme.StoredAppTheme {
+            StoredAppTheme {
                 OverlaySearchScreen(onClose = { finish() })
             }
         }
@@ -90,7 +123,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
     val keyboard = LocalSoftwareKeyboardController.current
 
     val parser = remember { CommandParser() }
-    val executor = remember { com.dynamicai.launcher.command.CommandExecutorProvider.get(ctx) }
+    val executor = remember { CommandExecutorProvider.get(ctx) }
     val repo = remember { AppRepository(ctx) }
 
     var query by remember { mutableStateOf("") }
@@ -99,29 +132,29 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
     val focusRequester = remember { FocusRequester() }
 
     // Підказки — той самий SuggestionProvider, що й на головному екрані (контакти, калькулятор, файли, макроси…)
-    val provider = remember { com.dynamicai.launcher.suggestion.SuggestionProvider(ctx) }
-    var contacts by remember { mutableStateOf<List<com.dynamicai.launcher.suggestion.ContactInfo>>(emptyList()) }
+    val provider = remember { SuggestionProvider(ctx) }
+    var contacts by remember { mutableStateOf<List<ContactInfo>>(emptyList()) }
     var suggestions by remember { mutableStateOf<List<Suggestion>>(emptyList()) }
 
     LaunchedEffect(query, apps, contacts) {
         if (query.isBlank() || apps.isEmpty()) { suggestions = emptyList(); return@LaunchedEffect }
         delay(35)
-        val hidden = try { com.dynamicai.launcher.data.HiddenAppsStorage(ctx).get() } catch (_: Throwable) { emptySet() }
+        val hidden = try { HiddenAppsStorage(ctx).get() } catch (_: Throwable) { emptySet() }
         val focusHidden = try {
-            com.dynamicai.launcher.macro.FocusModes.hiddenFor(com.dynamicai.launcher.macro.FocusModes.active.value, apps)
+            FocusModes.hiddenFor(FocusModes.active.value, apps)
         } catch (_: Throwable) { emptySet<String>() }
         val visible = apps.filter { it.packageName !in hidden && it.packageName !in focusHidden }
-        suggestions = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        suggestions = withContext(Dispatchers.Default) {
             try { provider.build(query, visible, contacts, executor.flashlightOn.value) } catch (_: Throwable) { emptyList() }
         }
     }
 
     LaunchedEffect(Unit) {
         apps = try { repo.loadInstalledApps() } catch (_: Throwable) { emptyList() }
-        if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_CONTACTS) ==
-            android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_CONTACTS) ==
+            PackageManager.PERMISSION_GRANTED
         ) {
-            contacts = try { com.dynamicai.launcher.suggestion.ContactRepository(ctx).loadAll() } catch (_: Throwable) { emptyList() }
+            contacts = try { ContactRepository(ctx).loadAll() } catch (_: Throwable) { emptyList() }
         }
         delay(120)
         focusRequester.requestFocus()
@@ -146,10 +179,10 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
     }
 
     fun handleSuggestion(s: Suggestion) {
-        if (query.isNotBlank()) com.dynamicai.launcher.suggestion.SearchHistory.add(ctx, query)
+        if (query.isNotBlank()) SearchHistory.add(ctx, query)
         when (s) {
             is Suggestion.App -> {
-                try { com.dynamicai.launcher.suggestion.AppUsage.bump(ctx, s.app.packageName) } catch (_: Throwable) {}
+                try { AppUsage.bump(ctx, s.app.packageName) } catch (_: Throwable) {}
                 executor.launchApp(s.app)
                 onClose()
             }
@@ -164,11 +197,11 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                 else if (result is CommandResult.Error) response = result.message
             }
             is Suggestion.Contact -> {
-                val r = com.dynamicai.launcher.suggestion.ContactLauncher.run(ctx, s, contacts, apps, executor)
+                val r = ContactLauncher.run(ctx, s, contacts, apps, executor)
                 if (r is CommandResult.Error) response = r.message else onClose()
             }
             is Suggestion.Extra -> {
-                com.dynamicai.launcher.suggestion.SuggestionRunner.run(ctx, s)
+                SuggestionRunner.run(ctx, s)
                 onClose()
             }
         }
@@ -194,9 +227,9 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
         try { voiceLauncher.launch(intent) } catch (_: Exception) {}
     }
 
-    val settings = remember { runCatching { com.dynamicai.launcher.data.SettingsStorage(ctx).load() }.getOrNull() }
+    val settings = remember { runCatching { SettingsStorage(ctx).load() }.getOrNull() }
     val showLabels = settings?.showLabels ?: true
-    val hiddenNow = remember { try { com.dynamicai.launcher.data.HiddenAppsStorage(ctx).get() } catch (_: Throwable) { emptySet() } }
+    val hiddenNow = remember { try { HiddenAppsStorage(ctx).get() } catch (_: Throwable) { emptySet() } }
     // Порожній запит — той самий алфавітний список усіх додатків, що й у пошуку на головному екрані
     val allApps = remember(apps) {
         apps.filter { it.packageName !in hiddenNow }.sortedBy { it.label.lowercase() }
@@ -206,19 +239,19 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
     LaunchedEffect(query) {
         webSugg = emptyList()
         val q = query.trim()
-        val on = try { com.dynamicai.launcher.data.SettingsStorage(ctx).load().webSuggest } catch (_: Throwable) { false }
+        val on = try { SettingsStorage(ctx).load().webSuggest } catch (_: Throwable) { false }
         if (!on || q.length < 3) return@LaunchedEffect
         delay(250)
-        val web = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            com.dynamicai.launcher.suggestion.BrowserBridge.webSuggestions(q)
+        val web = withContext(Dispatchers.IO) {
+            BrowserBridge.webSuggestions(q)
         }
         webSugg = web.map {
             Suggestion.Extra("web", "🔎", it, "Підказка пошуку",
-                com.dynamicai.launcher.suggestion.BrowserBridge.searchUrl(it), 11)
+                BrowserBridge.searchUrl(it), 11)
         }
     }
     var menuApp by remember { mutableStateOf<AppInfo?>(null) }
-    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val listState = rememberLazyListState()
     val letters = remember(allApps) {
         allApps.map { it.label.firstOrNull()?.uppercaseChar()?.takeIf { c -> c.isLetter() } ?: '#' }.distinct()
     }
@@ -228,7 +261,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
         else (suggestions + webSugg).distinctBy { it.stableKey() }.sortedByDescending { it.score }
             .let { l -> l.filterIsInstance<Suggestion.App>() + l.filter { it !is Suggestion.App } }
 
-    com.dynamicai.launcher.ui.IconLayoutProvider(settings ?: com.dynamicai.launcher.data.LauncherSettings()) {
+    IconLayoutProvider(settings ?: LauncherSettings()) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -259,7 +292,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
             )
 
             menuApp?.let { app ->
-                androidx.compose.material3.AlertDialog(
+                AlertDialog(
                     onDismissRequest = { menuApp = null },
                     title = { Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
                     text = {
@@ -278,17 +311,17 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                                                 try {
                                                     when (action) {
                                                         "Запустити" -> {
-                                                            try { com.dynamicai.launcher.suggestion.AppUsage.bump(ctx, pkg) } catch (_: Throwable) {}
+                                                            try { AppUsage.bump(ctx, pkg) } catch (_: Throwable) {}
                                                             executor.launchApp(app); onClose()
                                                         }
                                                         "Про додаток" -> {
-                                                            ctx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                                                                .apply { data = android.net.Uri.parse("package:$pkg"); addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                                                            ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                                                .apply { data = Uri.parse("package:$pkg"); addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                                                             onClose()
                                                         }
                                                         else -> {
                                                             ctx.startActivity(Intent(Intent.ACTION_DELETE)
-                                                                .apply { data = android.net.Uri.parse("package:$pkg"); addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+                                                                .apply { data = Uri.parse("package:$pkg"); addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
                                                             onClose()
                                                         }
                                                     }
@@ -302,7 +335,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                     },
                     confirmButton = {},
                     dismissButton = {
-                        androidx.compose.material3.TextButton(onClick = { menuApp = null }) {
+                        TextButton(onClick = { menuApp = null }) {
                             Text("Скасувати", color = AppTheme.colors.textPrimary)
                         }
                     },
@@ -312,7 +345,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
 
             LaunchedEffect(response) {
                 response?.let {
-                    android.widget.Toast.makeText(ctx, it, android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, it, Toast.LENGTH_SHORT).show()
                     response = null
                 }
             }
@@ -320,16 +353,16 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
             // Часті додатки та історія — як на головному екрані
             if (query.isBlank()) {
                 var historyTick by remember { mutableStateOf(0) }
-                val history = remember(historyTick) { com.dynamicai.launcher.suggestion.SearchHistory.get(ctx) }
+                val history = remember(historyTick) { SearchHistory.get(ctx) }
                 val frequent = remember(apps) {
-                    com.dynamicai.launcher.suggestion.AppUsage.top(ctx, 6).mapNotNull { pkg -> apps.firstOrNull { it.packageName == pkg } }
+                    AppUsage.top(ctx, 6).mapNotNull { pkg -> apps.firstOrNull { it.packageName == pkg } }
                 }
                 if (frequent.isNotEmpty()) {
                     Text("Часті", color = AppTheme.colors.textSecondary, fontSize = 11.sp,
                         modifier = Modifier.padding(start = 10.dp, top = 6.dp, bottom = 4.dp))
                     Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         frequent.forEach { a ->
-                            androidx.compose.foundation.Image(
+                            Image(
                                 bitmap = (a.bitmap ?: a.icon.toBitmap(96, 96)).asImageBitmap(),
                                 contentDescription = a.label,
                                 modifier = Modifier
@@ -351,7 +384,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                             Text(
                                 "🕘 $h", color = AppTheme.colors.textPrimary, fontSize = 13.sp, maxLines = 1,
                                 modifier = Modifier
-                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                                    .clip(RoundedCornerShape(16.dp))
                                     .background(AppTheme.colors.textPrimary.copy(alpha = 0.08f))
                                     .pointerInput(h) { detectTapGestures { query = h } }
                                     .padding(horizontal = 12.dp, vertical = 7.dp)
@@ -361,7 +394,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                             "✕", color = AppTheme.colors.textSecondary, fontSize = 13.sp,
                             modifier = Modifier
                                 .pointerInput(Unit) {
-                                    detectTapGestures { com.dynamicai.launcher.suggestion.SearchHistory.clear(ctx); historyTick++ }
+                                    detectTapGestures { SearchHistory.clear(ctx); historyTick++ }
                                 }
                                 .padding(horizontal = 10.dp, vertical = 7.dp)
                         )
@@ -370,7 +403,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
             }
 
             if (query.isNotBlank()) {
-            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+            LazyVerticalGrid(
                 columns = com.dynamicai.launcher.ui.gridCells(),
                 modifier = Modifier.weight(1f).fillMaxWidth(),
                 contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp),
@@ -378,7 +411,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                 verticalArrangement = com.dynamicai.launcher.ui.gridGapV()
             ) {
                 if (rows.isEmpty()) {
-                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
@@ -393,19 +426,19 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                     rows,
                     key = { it.stableKey() },
                     span = { s ->
-                        androidx.compose.foundation.lazy.grid.GridItemSpan(if (s is Suggestion.App) 1 else maxLineSpan)
+                        GridItemSpan(if (s is Suggestion.App) 1 else maxLineSpan)
                     }
                 ) { s ->
                     when (s) {
                         is Suggestion.Action -> SuggestionActionRow(s) { handleSuggestion(s) }
                         is Suggestion.Setting -> SuggestionSettingRow(s) { handleSuggestion(s) }
-                        is Suggestion.App -> com.dynamicai.launcher.ui.AppGridItem(
+                        is Suggestion.App -> AppGridItem(
                             app = s.app,
                             onLongClick = { menuApp = s.app },
                             onTap = { handleSuggestion(s) }
                         )
-                        is Suggestion.Contact -> com.dynamicai.launcher.ui.SuggestionContactRow(s) { handleSuggestion(s) }
-                        is Suggestion.Extra -> com.dynamicai.launcher.ui.SuggestionExtraRow(s) { handleSuggestion(s) }
+                        is Suggestion.Contact -> SuggestionContactRow(s) { handleSuggestion(s) }
+                        is Suggestion.Extra -> SuggestionExtraRow(s) { handleSuggestion(s) }
                     }
                 }
             }
@@ -440,13 +473,13 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
                             onLongClick = { menuApp = s.app },
                             highlight = query
                         )
-                        is Suggestion.Contact -> com.dynamicai.launcher.ui.SuggestionContactRow(s) { handleSuggestion(s) }
-                        is Suggestion.Extra -> com.dynamicai.launcher.ui.SuggestionExtraRow(s) { handleSuggestion(s) }
+                        is Suggestion.Contact -> SuggestionContactRow(s) { handleSuggestion(s) }
+                        is Suggestion.Extra -> SuggestionExtraRow(s) { handleSuggestion(s) }
                     }
                 }
             }
             if (query.isBlank() && letters.isNotEmpty()) {
-                com.dynamicai.launcher.ui.AlphabetSidebar(
+                AlphabetSidebar(
                     letters = letters,
                     activeLetter = activeLetter,
                     onLetterSelected = { letter ->

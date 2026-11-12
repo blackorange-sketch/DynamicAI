@@ -7,6 +7,10 @@ import android.provider.Settings
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import android.app.NotificationManager
+import android.bluetooth.BluetoothAdapter
+import android.net.wifi.WifiManager
+import android.telephony.TelephonyManager
 
 /**
  * Керування системними налаштуваннями.
@@ -37,7 +41,7 @@ class QuickSettingsManager(private val context: Context) {
         // 2. Публічний API
         try {
             val wm = context.applicationContext.getSystemService(Context.WIFI_SERVICE)
-                    as android.net.wifi.WifiManager
+                    as WifiManager
             @Suppress("DEPRECATION")
             val ok2 = wm.setWifiEnabled(enabled)
             if (ok2) return@withContext Result.success("OK (fallback)")
@@ -50,7 +54,7 @@ class QuickSettingsManager(private val context: Context) {
 
     fun isWifiOn(): Boolean = try {
         val wm = context.applicationContext.getSystemService(Context.WIFI_SERVICE)
-                as android.net.wifi.WifiManager
+                as WifiManager
         wm.isWifiEnabled
     } catch (_: Throwable) { false }
 
@@ -65,7 +69,7 @@ class QuickSettingsManager(private val context: Context) {
 
         // 2. Публічний API
         try {
-            val adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter()
+            val adapter = BluetoothAdapter.getDefaultAdapter()
             if (adapter != null) {
                 @Suppress("MissingPermission")
                 val ok2 = if (enabled) adapter.enable() else adapter.disable()
@@ -78,14 +82,14 @@ class QuickSettingsManager(private val context: Context) {
     }
 
     fun isBluetoothOn(): Boolean = try {
-        android.bluetooth.BluetoothAdapter.getDefaultAdapter()?.isEnabled ?: false
+        BluetoothAdapter.getDefaultAdapter()?.isEnabled ?: false
     } catch (_: Throwable) { false }
 
     // ===== Mobile Data =====
     suspend fun setMobileData(enabled: Boolean): Result = withContext(Dispatchers.IO) {
         try {
             val tm = context.getSystemService(Context.TELEPHONY_SERVICE)
-                    as android.telephony.TelephonyManager
+                    as TelephonyManager
             val method = tm.javaClass.getMethod("setDataEnabled", Boolean::class.javaPrimitiveType)
             method.invoke(tm, enabled)
             Result.success("OK")
@@ -129,15 +133,15 @@ class QuickSettingsManager(private val context: Context) {
     suspend fun setDnd(enabled: Boolean): Result = withContext(Dispatchers.IO) {
         try {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE)
-                    as android.app.NotificationManager
+                    as NotificationManager
             if (Build.VERSION.SDK_INT >= 23) {
                 if (!nm.isNotificationPolicyAccessGranted) {
                     openSettings(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
                     return@withContext Result.failure("Дай дозвіл і повтори")
                 }
                 nm.setInterruptionFilter(
-                    if (enabled) android.app.NotificationManager.INTERRUPTION_FILTER_NONE
-                    else android.app.NotificationManager.INTERRUPTION_FILTER_ALL
+                    if (enabled) NotificationManager.INTERRUPTION_FILTER_NONE
+                    else NotificationManager.INTERRUPTION_FILTER_ALL
                 )
                 Result.success("OK")
             } else Result.failure("Не підтримується")

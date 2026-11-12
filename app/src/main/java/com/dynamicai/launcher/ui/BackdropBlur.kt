@@ -7,6 +7,8 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import android.os.Build
+import android.util.Log
 
 object BackdropBlur {
 
@@ -17,7 +19,7 @@ object BackdropBlur {
         if (cached != null && cachedWidth >= targetWidth) return cached
 
         val bitmap = loadBitmap(ctx) ?: run {
-            android.util.Log.w("BackdropBlur", "ALL METHODS FAILED — wallpaper is null")
+            Log.w("BackdropBlur", "ALL METHODS FAILED — wallpaper is null")
             return null
         }
 
@@ -41,15 +43,15 @@ object BackdropBlur {
 
         // Спосіб 0: getBitmap() через рефлексію — API 24+, обходить проблеми компіляції
         try {
-            if (android.os.Build.VERSION.SDK_INT >= 24) {
+            if (Build.VERSION.SDK_INT >= 24) {
                 val method = wm.javaClass.getMethod("getBitmap")
-                val b = method.invoke(wm) as? android.graphics.Bitmap
+                val b = method.invoke(wm) as? Bitmap
                 val desc = if (b != null) "${b.width}x${b.height}" else "NULL"
-                android.util.Log.d("BackdropBlur", "getBitmap() via reflection -> $desc")
+                Log.d("BackdropBlur", "getBitmap() via reflection -> $desc")
                 if (b != null) return b
             }
         } catch (e: Throwable) {
-            android.util.Log.w("BackdropBlur", "getBitmap() failed: ${e.message}")
+            Log.w("BackdropBlur", "getBitmap() failed: ${e.message}")
         }
 
         // Спосіб 1: getWallpaperFile(FLAG_SYSTEM) — найнадійніший, API 5+
@@ -58,13 +60,13 @@ object BackdropBlur {
             if (file != null) {
                 val b = BitmapFactory.decodeFileDescriptor(file.fileDescriptor)
                 val desc = if (b != null) "${b.width}x${b.height}" else "NULL"
-                android.util.Log.d("BackdropBlur", "getWallpaperFile(SYSTEM) -> $desc")
+                Log.d("BackdropBlur", "getWallpaperFile(SYSTEM) -> $desc")
                 if (b != null) return b
             } else {
-                android.util.Log.d("BackdropBlur", "getWallpaperFile(SYSTEM) -> null file")
+                Log.d("BackdropBlur", "getWallpaperFile(SYSTEM) -> null file")
             }
         } catch (e: Throwable) {
-            android.util.Log.w("BackdropBlur", "getWallpaperFile(SYSTEM) failed: ${e.message}")
+            Log.w("BackdropBlur", "getWallpaperFile(SYSTEM) failed: ${e.message}")
         }
 
         // Спосіб 2: getWallpaperFile(FLAG_LOCK)
@@ -73,13 +75,13 @@ object BackdropBlur {
             if (file != null) {
                 val b = BitmapFactory.decodeFileDescriptor(file.fileDescriptor)
                 val desc = if (b != null) "${b.width}x${b.height}" else "NULL"
-                android.util.Log.d("BackdropBlur", "getWallpaperFile(LOCK) -> $desc")
+                Log.d("BackdropBlur", "getWallpaperFile(LOCK) -> $desc")
                 if (b != null) return b
             } else {
-                android.util.Log.d("BackdropBlur", "getWallpaperFile(LOCK) -> null file")
+                Log.d("BackdropBlur", "getWallpaperFile(LOCK) -> null file")
             }
         } catch (e: Throwable) {
-            android.util.Log.w("BackdropBlur", "getWallpaperFile(LOCK) failed: ${e.message}")
+            Log.w("BackdropBlur", "getWallpaperFile(LOCK) failed: ${e.message}")
         }
 
         // Спосіб 3: getDrawable() — старий API 5+
@@ -92,13 +94,13 @@ object BackdropBlur {
                 val c = Canvas(bmp)
                 drawable.setBounds(0, 0, w, h)
                 drawable.draw(c)
-                android.util.Log.d("BackdropBlur", "getDrawable() -> ${w}x$h")
+                Log.d("BackdropBlur", "getDrawable() -> ${w}x$h")
                 return bmp
             } else {
-                android.util.Log.d("BackdropBlur", "getDrawable() -> null or 0x0")
+                Log.d("BackdropBlur", "getDrawable() -> null or 0x0")
             }
         } catch (e: Throwable) {
-            android.util.Log.w("BackdropBlur", "getDrawable() failed: ${e.message}")
+            Log.w("BackdropBlur", "getDrawable() failed: ${e.message}")
         }
 
         return null

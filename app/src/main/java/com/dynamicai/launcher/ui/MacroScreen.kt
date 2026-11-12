@@ -26,6 +26,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dynamicai.launcher.macro.Macro
+import java.util.UUID
 
 @Composable
 fun MacroScreen(
@@ -142,7 +143,7 @@ fun MacroScreen(
                 TextButton(onClick = {
                     val steps = editSteps.split("\n").map { it.trim() }.filter { it.isNotBlank() }
                     if (editName.isNotBlank() && steps.isNotEmpty()) {
-                        val id = editId ?: java.util.UUID.randomUUID().toString()
+                        val id = editId ?: UUID.randomUUID().toString()
                         onSave(Macro(id = id, name = editName.trim(), steps = steps))
                     }
                     showEditor = false

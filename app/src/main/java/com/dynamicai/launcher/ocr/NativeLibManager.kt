@@ -84,7 +84,7 @@ object NativeLibManager {
                 if (!response.isSuccessful) return@withContext false
 
                 response.body?.byteStream()?.let { input ->
-                    java.util.zip.ZipInputStream(input).use { zis ->
+                    ZipInputStream(input).use { zis ->
                         var entry = zis.nextEntry
                         while (entry != null) {
                             val file = File(libDir, entry.name)

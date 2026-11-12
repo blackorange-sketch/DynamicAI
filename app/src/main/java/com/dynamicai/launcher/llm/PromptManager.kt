@@ -2,6 +2,7 @@ package com.dynamicai.launcher.llm
 
 import android.content.Context
 import java.io.File
+import android.util.Log
 
 object PromptManager {
     private const val TAG = "PromptManager"
@@ -32,20 +33,20 @@ object PromptManager {
             if (!file.exists()) {
                 file.parentFile?.mkdirs()
                 file.writeText(default)
-                android.util.Log.e(TAG, "Created default: ${file.absolutePath}")
+                Log.e(TAG, "Created default: ${file.absolutePath}")
                 default
             } else {
                 var content = file.readText()
                 if (content.trim() in OLD_DEFAULTS) {
                     file.writeText(default)
                     content = default
-                    android.util.Log.e(TAG, "Migrated old default prompt: ${file.absolutePath}")
+                    Log.e(TAG, "Migrated old default prompt: ${file.absolutePath}")
                 }
-                android.util.Log.e(TAG, "Loaded ${file.absolutePath} (${content.length} chars): ${content.take(80)}")
+                Log.e(TAG, "Loaded ${file.absolutePath} (${content.length} chars): ${content.take(80)}")
                 content
             }
         } catch (t: Throwable) {
-            android.util.Log.e(TAG, "Failed to read ${file.absolutePath}: ${t.message}")
+            Log.e(TAG, "Failed to read ${file.absolutePath}: ${t.message}")
             default
         }
     }
@@ -56,9 +57,9 @@ object PromptManager {
             file.writeText(text)
             // Перечитуємо для перевірки
             val verify = file.readText()
-            android.util.Log.e(TAG, "Saved ${file.absolutePath}: written=${text.length}, readback=${verify.length}, match=${verify == text}")
+            Log.e(TAG, "Saved ${file.absolutePath}: written=${text.length}, readback=${verify.length}, match=${verify == text}")
         } catch (t: Throwable) {
-            android.util.Log.e(TAG, "Failed to write ${file.absolutePath}: ${t.message}")
+            Log.e(TAG, "Failed to write ${file.absolutePath}: ${t.message}")
         }
     }
 }

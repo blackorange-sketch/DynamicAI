@@ -33,6 +33,15 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.widget.Toast
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
+import com.dynamicai.launcher.ui.theme.StoredAppTheme
 
 object ScreenTranslateOverlay {
 
@@ -57,7 +66,7 @@ object ScreenTranslateOverlay {
                 setViewTreeLifecycleOwner(owner)
                 setViewTreeSavedStateRegistryOwner(owner)
                 setContent {
-                    com.dynamicai.launcher.ui.theme.StoredAppTheme {
+                    StoredAppTheme {
                         TranslateContent(blocks, targetLang, onCopy = onCopy, onClose = { hide() })
                     }
                 }
@@ -117,9 +126,9 @@ object ScreenTranslateOverlay {
 
 private fun copyText(ctx: Context, text: String) {
     try {
-        val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-        cm.setPrimaryClip(android.content.ClipData.newPlainText("translation", text))
-        android.widget.Toast.makeText(ctx, "Скопійовано", android.widget.Toast.LENGTH_SHORT).show()
+        val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cm.setPrimaryClip(ClipData.newPlainText("translation", text))
+        Toast.makeText(ctx, "Скопійовано", Toast.LENGTH_SHORT).show()
     } catch (_: Throwable) {}
 }
 
@@ -130,7 +139,7 @@ private fun TranslateContent(
     onCopy: (String) -> Unit,
     onClose: () -> Unit
 ) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val ctx = LocalContext.current
     var inline by remember { mutableStateOf(true) }
     val copy: (String) -> Unit = { copyText(ctx, it); onCopy(it) }
 
@@ -139,12 +148,12 @@ private fun TranslateContent(
             .fillMaxSize()
             .background(Color.Black.copy(alpha = if (inline) 0.18f else 0.45f))
             .clickable(
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { if (inline) onClose() }
     ) {
         if (inline) {
-            val density = androidx.compose.ui.platform.LocalDensity.current
+            val density = LocalDensity.current
             blocks.forEach { b ->
                 InlineBlock(b, density, copy)
             }
@@ -200,7 +209,7 @@ private fun ToolPill(label: String, onClick: () -> Unit) {
 
 /** Переклад поверх оригіналу: рамка за координатами OCR, розмір шрифту підбирається під площу блока. */
 @Composable
-private fun InlineBlock(b: TranslatedBlock, density: androidx.compose.ui.unit.Density, onCopy: (String) -> Unit) {
+private fun InlineBlock(b: TranslatedBlock, density: Density, onCopy: (String) -> Unit) {
     val r = b.bounds
     val wDp = with(density) { r.width().toDp() }
     val hDp = with(density) { r.height().toDp() }
@@ -210,7 +219,7 @@ private fun InlineBlock(b: TranslatedBlock, density: androidx.compose.ui.unit.De
     val fontSp = with(density) { fontPx.toSp() }.value.coerceIn(10f, 22f)
     Box(
         modifier = Modifier
-            .offset { androidx.compose.ui.unit.IntOffset(r.left, r.top) }
+            .offset { IntOffset(r.left, r.top) }
             .width(wDp)
             .heightIn(min = hDp)
             .clip(RoundedCornerShape(6.dp))

@@ -60,10 +60,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.LinearProgressIndicator
 import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.model.AppInfo
+import android.os.Build
+import androidx.compose.foundation.layout.ColumnScope
+import kotlinx.coroutines.delay
 
 /** Налаштування → Система: дозволи, живлення, дані, резервна копія, пилосос, авто. */
 @Composable
-internal fun androidx.compose.foundation.layout.ColumnScope.SettingsSystemSection(
+internal fun ColumnScope.SettingsSystemSection(
     settings: LauncherSettings,
     onSettingsChange: (LauncherSettings) -> Unit,
     onClearHistory: () -> Unit,
@@ -76,17 +79,17 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsSystemSectio
             val ctx = LocalContext.current
                 var hasWriteSettings by remember {
                 mutableStateOf(
-                    if (android.os.Build.VERSION.SDK_INT >= 23)
-                        android.provider.Settings.System.canWrite(ctx)
+                    if (Build.VERSION.SDK_INT >= 23)
+                        Settings.System.canWrite(ctx)
                     else true
                 )
             }
             LaunchedEffect(Unit) {
                 while (true) {
-                    if (android.os.Build.VERSION.SDK_INT >= 23) {
-                        hasWriteSettings = android.provider.Settings.System.canWrite(ctx)
+                    if (Build.VERSION.SDK_INT >= 23) {
+                        hasWriteSettings = Settings.System.canWrite(ctx)
                     }
-                    kotlinx.coroutines.delay(1000)
+                    delay(1000)
                 }
             }
             SwitchRow(
@@ -98,11 +101,11 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsSystemSectio
                     if (!hasWriteSettings) {
                         try {
                             ctx.startActivity(
-                                android.content.Intent(
-                                    android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS,
-                                    android.net.Uri.parse("package:${ctx.packageName}")
+                                Intent(
+                                    Settings.ACTION_MANAGE_WRITE_SETTINGS,
+                                    Uri.parse("package:${ctx.packageName}")
                                 ).apply {
-                                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 }
                             )
                         } catch (_: Throwable) {}

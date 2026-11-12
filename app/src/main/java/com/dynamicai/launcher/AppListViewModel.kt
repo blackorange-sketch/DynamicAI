@@ -41,6 +41,31 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.SharedPreferences
+import android.os.Build
+import android.util.Log
+import androidx.compose.runtime.mutableStateOf
+import com.dynamicai.launcher.command.Command
+import com.dynamicai.launcher.data.AppsCache
+import com.dynamicai.launcher.llm.LiteRtLlmEngine
+import com.dynamicai.launcher.llm.LlmModel
+import com.dynamicai.launcher.llm.ModelRepository
+import com.dynamicai.launcher.macro.FocusModes
+import com.dynamicai.launcher.ocr.NativeLibManager
+import com.dynamicai.launcher.ocr.ScreenTranslateOverlay
+import com.dynamicai.launcher.ocr.ScreenTranslator
+import com.dynamicai.launcher.suggestion.AppUsage
+import com.dynamicai.launcher.suggestion.BrowserBridge
+import com.dynamicai.launcher.suggestion.ContactLauncher
+import com.dynamicai.launcher.suggestion.SearchHistory
+import com.dynamicai.launcher.suggestion.SuggestionRunner
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
 
 class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -50,14 +75,14 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         @Volatile private var sharedChatEngine: ChatEngine? = null
         @Volatile private var sharedDownloader: ModelDownloader? = null
         /** Усі операції load/close/switch моделі йдуть по черзі — паралельний load MNN валить процес нативно. */
-        private val modelOpMutex = kotlinx.coroutines.sync.Mutex()
+        private val modelOpMutex = Mutex()
 
-        fun getSharedLlm(context: android.content.Context): HybridLlmEngine =
+        fun getSharedLlm(context: Context): HybridLlmEngine =
             sharedLlm ?: synchronized(this) {
                 sharedLlm ?: HybridLlmEngine(context.applicationContext).also { sharedLlm = it }
             }
 
-        fun getSharedChatEngine(context: android.content.Context): ChatEngine =
+        fun getSharedChatEngine(context: Context): ChatEngine =
             sharedChatEngine ?: synchronized(this) {
                 sharedChatEngine ?: ChatEngine(
                     context.applicationContext,
@@ -66,7 +91,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 ).also { sharedChatEngine = it }
             }
 
-        fun getSharedDownloader(context: android.content.Context): ModelDownloader =
+        fun getSharedDownloader(context: Context): ModelDownloader =
             sharedDownloader ?: synchronized(this) {
                 sharedDownloader ?: ModelDownloader(context.applicationContext).also { sharedDownloader = it }
             }
@@ -83,16 +108,16 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     private val settingsStorage = SettingsStorage(app)
     private val hiddenStorage = HiddenAppsStorage(app)
     private val folderStorage = FolderStorage(app)
-    private val appsCache = com.dynamicai.launcher.data.AppsCache(app)
+    private val appsCache = AppsCache(app)
     val shizukuManager = ShizukuManager(app)
     private val weatherRepo by lazy { WeatherRepository(app) }
 
     val llm by lazy { getSharedLlm(app) }
     val tts by lazy { TtsManager(app) }
     val downloader by lazy { getSharedDownloader(app) }
-    private val prefs = getApplication<android.app.Application>().getSharedPreferences("llm_prefs", android.content.Context.MODE_PRIVATE)
-    var downloadingModelId by androidx.compose.runtime.mutableStateOf<String?>(null)
-    var currentModelId by androidx.compose.runtime.mutableStateOf(prefs.getString("current_model_id", "gemma-4-E2B-cpu") ?: "gemma-4-E2B-cpu")
+    private val prefs = getApplication<Application>().getSharedPreferences("llm_prefs", Context.MODE_PRIVATE)
+    var downloadingModelId by mutableStateOf<String?>(null)
+    var currentModelId by mutableStateOf(prefs.getString("current_model_id", "gemma-4-E2B-cpu") ?: "gemma-4-E2B-cpu")
 
     private val _downloadProgress = MutableStateFlow<ModelDownloader.Progress?>(null)
     val downloadProgress: StateFlow<ModelDownloader.Progress?> = _downloadProgress.asStateFlow()
@@ -143,14 +168,14 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     // Публічний, але НЕ торкається llm поки не спитають
 
-    private var llmUnloadJob: kotlinx.coroutines.Job? = null
+    private var llmUnloadJob: Job? = null
     
     /** Авто-вивантаження LLM через 3 хв неактивності. */
     fun startLlmAutoUnload() {
         llmUnloadJob?.cancel()
         llmUnloadJob = viewModelScope.launch {
             while (true) {
-                kotlinx.coroutines.delay(20_000L)
+                delay(20_000L)
                 try {
                     // Рушій спільний для всіх екранів, а прапорець — у кожної ViewModel окремо: синхронізуємо з реальним станом
                     if (_llmReady.value != llm.isReady && !_llmRestarting.value) _llmReady.value = llm.isReady
@@ -158,7 +183,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                         val idle = System.currentTimeMillis() - llm.lastUsedAt
                         val limitMin = settings.value.llmUnloadMinutes
                         if (limitMin > 0 && idle > limitMin * 60_000L) {
-                            android.util.Log.e("LlmUnload", "Auto-unloading LLM after ${idle / 1000}s idle")
+                            Log.e("LlmUnload", "Auto-unloading LLM after ${idle / 1000}s idle")
                             llm.close()
                             _llmReady.value = false
                             MemLog.note(getApplication(), "LLM_UNLOAD idle=${idle / 1000}s")
@@ -200,21 +225,21 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 val ok = modelOpMutex.withLock {
                     withContext(Dispatchers.IO) {
                         try { llm.close() } catch (t: Throwable) {
-                            android.util.Log.e("LLM_DEBUG", "close failed: ${t.message}")
+                            Log.e("LLM_DEBUG", "close failed: ${t.message}")
                         }
                         if (clearGpuCache) {
-                            val n = com.dynamicai.launcher.llm.LiteRtLlmEngine.clearGpuCache(getApplication())
+                            val n = LiteRtLlmEngine.clearGpuCache(getApplication())
                             _llmStatusText.value = "Кеш GPU очищено ($n)"
                         }
                         System.gc()
                     }
-                    kotlinx.coroutines.delay(300)
+                    delay(300)
                     _llmStatusText.value = "Завантаження моделі…"
                     ensureLlmLoadedLocked()
                 }
                 _llmStatusText.value = if (ok) "✓ Рушій перезапущено" else "✗ Не вдалося завантажити (див. logcat)"
             } catch (t: Throwable) {
-                android.util.Log.e("LLM_DEBUG", "restartLlmEngine failed: ${t.message}", t)
+                Log.e("LLM_DEBUG", "restartLlmEngine failed: ${t.message}", t)
                 _llmStatusText.value = "✗ Помилка: ${t.message}"
                 _llmReady.value = false
             } finally {
@@ -232,39 +257,39 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         // === MNN special case ===
         if (currentModelId.startsWith("mnn-")) {
             val modelName = currentModelId.removePrefix("mnn-")
-            val mnnBase = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")
+            val mnnBase = File(getApplication<Application>().filesDir, "mnn_models")
             val mnnDir = File(mnnBase, modelName)
-            android.util.Log.e("LLM_DEBUG", "MNN dir: ${mnnDir.absolutePath}, exists=${mnnDir.exists()}")
+            Log.e("LLM_DEBUG", "MNN dir: ${mnnDir.absolutePath}, exists=${mnnDir.exists()}")
             if (!mnnDir.exists() || !mnnDir.isDirectory) {
-                android.util.Log.e("LLM_DEBUG", "MNN dir not found")
+                Log.e("LLM_DEBUG", "MNN dir not found")
                 _llmReady.value = false
                 return false
             }
             return try {
                 val ok = llm.initialize(mnnDir)
                 _llmReady.value = ok
-                android.util.Log.e("LLM_DEBUG", "MNN init: $ok")
+                Log.e("LLM_DEBUG", "MNN init: $ok")
                 MemLog.note(getApplication(), "LLM_LOAD ok=$ok")
                 ok
             } catch (t: Throwable) {
-                android.util.Log.e("LLM_DEBUG", "MNN init failed: ${t.message}", t)
+                Log.e("LLM_DEBUG", "MNN init failed: ${t.message}", t)
                 _llmReady.value = false
                 false
             }
         }
         
         // Спочатку завантажуємо нативну бібліотеку LLM
-        if (!com.dynamicai.launcher.ocr.NativeLibManager.ensureLlmLoaded(getApplication())) {
-            android.util.Log.e("LLM_DEBUG", "Failed to load LLM native lib")
+        if (!NativeLibManager.ensureLlmLoaded(getApplication())) {
+            Log.e("LLM_DEBUG", "Failed to load LLM native lib")
             return false
         }
-        android.util.Log.d("LLM_DEBUG", "Checking model file: ${downloader.modelFile.absolutePath}")
-        android.util.Log.d("LLM_DEBUG", "Exists: ${downloader.modelFile.exists()}, Size: ${downloader.modelFile.length()} bytes")
-        val model = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.find { it.id == currentModelId }
-            ?: com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.first()
-        val modelFile = com.dynamicai.launcher.llm.ModelRepository.getModelFile(getApplication(), model)
+        Log.d("LLM_DEBUG", "Checking model file: ${downloader.modelFile.absolutePath}")
+        Log.d("LLM_DEBUG", "Exists: ${downloader.modelFile.exists()}, Size: ${downloader.modelFile.length()} bytes")
+        val model = ModelRepository.AVAILABLE_MODELS.find { it.id == currentModelId }
+            ?: ModelRepository.AVAILABLE_MODELS.first()
+        val modelFile = ModelRepository.getModelFile(getApplication(), model)
         if (!modelFile.exists()) {
-            android.util.Log.e("LLM_DEBUG", "Model NOT downloaded: ${model.name}")
+            Log.e("LLM_DEBUG", "Model NOT downloaded: ${model.name}")
             return false
         }
         return try {
@@ -273,7 +298,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             MemLog.note(getApplication(), "LLM_LOAD ok=$ok")
             ok
         } catch (t: Throwable) {
-            android.util.Log.e("LLM_DEBUG", "initialize failed: ${t.message}", t)
+            Log.e("LLM_DEBUG", "initialize failed: ${t.message}", t)
             _llmReady.value = false
             false
         }
@@ -287,7 +312,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     private var pendingText: String = ""
 
-    private val runtimePrefs = app.getSharedPreferences("dynamicai_runtime", android.content.Context.MODE_PRIVATE)
+    private val runtimePrefs = app.getSharedPreferences("dynamicai_runtime", Context.MODE_PRIVATE)
     private val _downloadTrigger = MutableStateFlow(0)
     val downloadTrigger: StateFlow<Int> = _downloadTrigger.asStateFlow()
 
@@ -297,18 +322,18 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshDownloadedModels() {
         viewModelScope.launch(Dispatchers.IO) {
-            _downloadedModelIds.value = com.dynamicai.launcher.llm.ModelRepository
+            _downloadedModelIds.value = ModelRepository
                 .getDownloadedModels(getApplication()).map { it.id }.toSet()
         }
     }
 
-    private val downloadReceiver = object : android.content.BroadcastReceiver() {
-        override fun onReceive(context: android.content.Context?, intent: android.content.Intent?) {
+    private val downloadReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
             val action = intent?.action ?: return
             val modelId = intent.getStringExtra(ModelDownloadService.EXTRA_MODEL_ID)
             when (action) {
                 ModelDownloadService.BROADCAST_COMPLETE -> {
-                    android.util.Log.e("MNN_DL", "✅ Service reported complete: $modelId")
+                    Log.e("MNN_DL", "✅ Service reported complete: $modelId")
                     if (modelId != null) {
                         downloadingModelId = null
                         _downloadProgress.value = null
@@ -318,7 +343,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 ModelDownloadService.BROADCAST_ERROR -> {
                     val error = intent.getStringExtra("error") ?: "Unknown"
-                    android.util.Log.e("MNN_DL", "❌ Service reported error: $error")
+                    Log.e("MNN_DL", "❌ Service reported error: $error")
                     downloadingModelId = null
                     _downloadProgress.value = ModelDownloader.Progress.Error(error)
                     _downloadTrigger.value++
@@ -327,9 +352,9 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private val pkgChangeListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+    private val pkgChangeListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "apps_changed_at") {
-            android.util.Log.e("AppListVM", "package changed, refreshing")
+            Log.e("AppListVM", "package changed, refreshing")
             refresh()
         }
     }
@@ -338,20 +363,20 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         // Список завантажених моделей оновлюється автоматично після будь-якої зміни (завантаження, видалення, очищення)
         viewModelScope.launch { downloadTrigger.collect { refreshDownloadedModels() } }
         try {
-            val filter = android.content.IntentFilter().apply {
+            val filter = IntentFilter().apply {
                 addAction(ModelDownloadService.BROADCAST_COMPLETE)
                 addAction(ModelDownloadService.BROADCAST_ERROR)
             }
-            if (android.os.Build.VERSION.SDK_INT >= 33) {
-                app.registerReceiver(downloadReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+            if (Build.VERSION.SDK_INT >= 33) {
+                app.registerReceiver(downloadReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
             } else {
                 app.registerReceiver(downloadReceiver, filter)
             }
         } catch (t: Throwable) {
-            android.util.Log.w("MNN_DL", "registerReceiver failed: ${t.message}")
+            Log.w("MNN_DL", "registerReceiver failed: ${t.message}")
         }
         runtimePrefs.registerOnSharedPreferenceChangeListener(pkgChangeListener)
-        android.util.Log.d("APPINIT", "init start, RSS before everything")
+        Log.d("APPINIT", "init start, RSS before everything")
         viewModelScope.launch {
             executor.flashlightOn.collect {
                 updateQuery("")
@@ -362,17 +387,17 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         _history.value = historyStorage.get()
         refresh()
         startLlmAutoUnload()
-        com.dynamicai.launcher.macro.FocusModes.init(app)
-        viewModelScope.launch { com.dynamicai.launcher.macro.FocusModes.active.collect { updateQuery("") } }
+        FocusModes.init(app)
+        viewModelScope.launch { FocusModes.active.collect { updateQuery("") } }
         // Фонове завантаження моделі: перший запит не чекатиме ~15 с на старт рушія
         // Усі питання йдуть у хмару — локальну модель наперед не вантажимо
         if (settingsStorage.load().llmPreload && !chatEngine.cloudOnly()) {
             viewModelScope.launch {
-                kotlinx.coroutines.delay(4000)
-                try { ensureLlmLoaded() } catch (t: Throwable) { android.util.Log.e("LLM_DEBUG", "preload failed: ${t.message}") }
+                delay(4000)
+                try { ensureLlmLoaded() } catch (t: Throwable) { Log.e("LLM_DEBUG", "preload failed: ${t.message}") }
             }
         }
-        android.util.Log.d("APPINIT", "init done")
+        Log.d("APPINIT", "init done")
     }
 
     private var lastPackageSig = 0
@@ -413,7 +438,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private var queryJob: kotlinx.coroutines.Job? = null
+    private var queryJob: Job? = null
     private var lastQueryText = ""
 
     fun updateQuery(query: String) {
@@ -421,8 +446,8 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         queryJob?.cancel()
         queryJob = viewModelScope.launch {
             // Затримка 70 мс при наборі + обчислення поза головним потоком (раніше — на кожен символ у Main)
-            if (query.isNotBlank()) kotlinx.coroutines.delay(35)
-            val focusHidden = com.dynamicai.launcher.macro.FocusModes.hiddenFor(com.dynamicai.launcher.macro.FocusModes.active.value, _apps.value)
+            if (query.isNotBlank()) delay(35)
+            val focusHidden = FocusModes.hiddenFor(FocusModes.active.value, _apps.value)
             val visibleApps = _apps.value.filter {
                 // Додатки з папок теж шукаються й показуються у списку — приховані лише ті, що в «Прихованих»/режимі фокусу
                 it.packageName !in _hidden.value && it.packageName !in focusHidden
@@ -435,14 +460,14 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             // Підказки пошуку з інтернету — окремо й пізніше, щоб не гальмувати список (лише якщо ввімкнено)
             val q = query.trim()
             if (q.length >= 3 && _settings.value.webSuggest) {
-                kotlinx.coroutines.delay(250)
+                delay(250)
                 val web = withContext(Dispatchers.IO) {
-                    com.dynamicai.launcher.suggestion.BrowserBridge.webSuggestions(q)
+                    BrowserBridge.webSuggestions(q)
                 }
                 if (web.isNotEmpty()) {
                     val extra = web.map {
                         Suggestion.Extra("web", "🔎", it, "Підказка пошуку",
-                            com.dynamicai.launcher.suggestion.BrowserBridge.searchUrl(it), 11)
+                            BrowserBridge.searchUrl(it), 11)
                     }
                     _suggestions.value = (_suggestions.value + extra)
                         .distinctBy { it.stableKey() }
@@ -460,7 +485,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun launch(pkg: String, smooth: Boolean = false) {
-        try { com.dynamicai.launcher.suggestion.AppUsage.bump(getApplication(), pkg) } catch (_: Throwable) {}
+        try { AppUsage.bump(getApplication(), pkg) } catch (_: Throwable) {}
         repo.launchApp(pkg, smooth)
     }
 
@@ -477,7 +502,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun executeSuggestion(s: Suggestion) {
         if (lastQueryText.isNotBlank()) {
-            com.dynamicai.launcher.suggestion.SearchHistory.add(getApplication(), lastQueryText)
+            SearchHistory.add(getApplication(), lastQueryText)
             lastQueryText = ""
         }
         when (s) {
@@ -488,14 +513,14 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             }
             is Suggestion.Setting -> {
                 val result = executor.execute(
-                    com.dynamicai.launcher.command.Command.OpenSettings(s.route),
+                    Command.OpenSettings(s.route),
                     _apps.value
                 )
                 handleResult(result, s.label)
             }
             is Suggestion.Contact -> executeContact(s)
             is Suggestion.Extra -> {
-                if (!com.dynamicai.launcher.suggestion.SuggestionRunner.run(getApplication(), s) && s.kind == "note") {
+                if (!SuggestionRunner.run(getApplication(), s) && s.kind == "note") {
                     _openNotesRequest.value = true
                 }
             }
@@ -503,7 +528,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private fun executeContact(s: Suggestion.Contact) {
-        val result = com.dynamicai.launcher.suggestion.ContactLauncher.run(
+        val result = ContactLauncher.run(
             getApplication(), s, _contacts.value, _apps.value, executor
         )
         handleResult(result, s.label)
@@ -612,7 +637,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun folderOf(pkg: String): Folder? = folderStorage.folderOf(pkg)
 
-    private var weatherJob: kotlinx.coroutines.Job? = null
+    private var weatherJob: Job? = null
 
     fun startWeatherAutoRefresh(screenOnCheck: () -> Boolean) {
         weatherJob?.cancel()
@@ -622,7 +647,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             _weather.value = weatherRepo.fetch()
 
             while (true) {
-                kotlinx.coroutines.delay(60 * 60 * 1000L)  // 1 година
+                delay(60 * 60 * 1000L)  // 1 година
                 if (screenOnCheck()) {
                     _weather.value = weatherRepo.fetch()
                 }
@@ -669,15 +694,15 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun isCommand(text: String) = parser.parse(text) !is com.dynamicai.launcher.command.Command.Raw
+    fun isCommand(text: String) = parser.parse(text) !is Command.Raw
 
     fun executeCommand(text: String) {
         if (text.isBlank()) return
-        com.dynamicai.launcher.suggestion.SearchHistory.add(getApplication(), text)
+        SearchHistory.add(getApplication(), text)
         val cmd = parser.parse(text)
 
         // Питання → ChatEngine (LLM + Web Search)
-        if (cmd is com.dynamicai.launcher.command.Command.AskQuestion) {
+        if (cmd is Command.AskQuestion) {
             viewModelScope.launch {
                 val answer = if (chatEngine.cloudPreferred(cmd.query)) {
                     _response.value = "🔍 Шукаю…"
@@ -703,7 +728,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
 
-        if (cmd is com.dynamicai.launcher.command.Command.Raw) {
+        if (cmd is Command.Raw) {
             val asApp = executor.resolveOpenApp(text, _apps.value)
             if (asApp is CommandResult.Success || asApp is CommandResult.ChooseApp) {
                 handleResult(asApp, text)
@@ -760,7 +785,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             _response.value = "🌐 Роблю скріншот…"
             try {
                 ensureLlmLoaded()
-                val translator = com.dynamicai.launcher.ocr.ScreenTranslator(getApplication(), llm)
+                val translator = ScreenTranslator(getApplication(), llm)
                 val blocks = translator.captureAndTranslate(
                     ocrLangs = "ukr+eng+pol",
                     targetLang = targetLang
@@ -771,7 +796,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                     _response.value = "Не вдалось розпізнати текст (перевір чи завантажено OCR-мови в налаштуваннях)"
                     return@launch
                 }
-                com.dynamicai.launcher.ocr.ScreenTranslateOverlay.show(
+                ScreenTranslateOverlay.show(
                     context = getApplication(),
                     blocks = blocks,
                     targetLang = targetLang
@@ -877,7 +902,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
-        try { getApplication<android.app.Application>().unregisterReceiver(downloadReceiver) } catch (_: Throwable) {}
+        try { getApplication<Application>().unregisterReceiver(downloadReceiver) } catch (_: Throwable) {}
         llm.close()
         tts.shutdown()
         super.onCleared()
@@ -885,10 +910,10 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setCurrentModel(modelId: String) {
         // SANITY CHECK: не дозволяємо активувати модель, якої немає на диску
-        val isDownloaded = com.dynamicai.launcher.llm.ModelRepository.getDownloadedModels(getApplication()).any { it.id == modelId }
+        val isDownloaded = ModelRepository.getDownloadedModels(getApplication()).any { it.id == modelId }
         if (!isDownloaded) {
-            android.util.Log.e("LLM_DEBUG", "BLOCKED setCurrentModel: $modelId is not downloaded")
-            _downloadProgress.value = com.dynamicai.launcher.llm.ModelDownloader.Progress.Error("Спочатку завантажте модель!")
+            Log.e("LLM_DEBUG", "BLOCKED setCurrentModel: $modelId is not downloaded")
+            _downloadProgress.value = ModelDownloader.Progress.Error("Спочатку завантажте модель!")
             return
         }
 
@@ -898,17 +923,17 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         // Перезавантажуємо LLM з новою моделлю
         viewModelScope.launch {
             try {
-                android.util.Log.e("LLM_DEBUG", "Перемикання на модель: $modelId")
+                Log.e("LLM_DEBUG", "Перемикання на модель: $modelId")
                 _llmReady.value = false          // скидаємо прапорець для UI
                 val ok = modelOpMutex.withLock {
                     // close() чекає кінця поточної генерації; робимо це поза головним потоком
                     withContext(Dispatchers.IO) { llm.close(); System.gc() }
-                    kotlinx.coroutines.delay(300)
+                    delay(300)
                     ensureLlmLoadedLocked()
                 }
-                android.util.Log.e("LLM_DEBUG", "Перемикання ${if (ok) "успішне" else "невдале"}: $modelId")
+                Log.e("LLM_DEBUG", "Перемикання ${if (ok) "успішне" else "невдале"}: $modelId")
             } catch (t: Throwable) {
-                android.util.Log.e("LLM_DEBUG", "setCurrentModel failed: ${t.message}", t)
+                Log.e("LLM_DEBUG", "setCurrentModel failed: ${t.message}", t)
                 _llmReady.value = false
             }
         }
@@ -946,8 +971,8 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val baseDir = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")
-                val targetDir = java.io.File(baseDir, folderName)
+                val baseDir = File(getApplication<Application>().filesDir, "mnn_models")
+                val targetDir = File(baseDir, folderName)
                 if (!targetDir.exists()) targetDir.mkdirs()
 
                 targetDir.listFiles()?.forEach { f ->
@@ -982,7 +1007,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
                 for ((file, minSize) in files) {
                     if (downloadingModelId != modelId) return@launch
-                    val target = java.io.File(targetDir, file)
+                    val target = File(targetDir, file)
                     if (target.exists() && target.length() >= minSize) continue
 
                     val url = "$correctUrl/$file"
@@ -1001,7 +1026,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 // is_mrope=true і jinja-шаблон з eos/bos. Примусове is_mrope=false та видалення jinja
                 // ламали генерацію (1 токен / 0 токенів). Зір вимикається в runtime-конфігу
                 // (LlmSession.load -> "is_visual":false), файли моделі лишаються оригінальними.
-                android.util.Log.e("MNN_CONFIG", "Model configs left untouched for $modelId")
+                Log.e("MNN_CONFIG", "Model configs left untouched for $modelId")
 
                 _downloadTrigger.value = (_downloadTrigger.value ?: 0) + 1
             } catch (e: Exception) {
@@ -1011,22 +1036,22 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun cleanupOpenClWeights(targetDir: java.io.File) {
+    private fun cleanupOpenClWeights(targetDir: File) {
         try {
             targetDir.listFiles()?.forEach { f ->
                 if (f.name.endsWith(".opencl.weight") || f.name == "mnn_cachefile.bin") {
                     val deleted = f.delete()
-                    android.util.Log.e("MNN_CLEANUP", "${if (deleted) "🗑️" else "❌"} ${f.name} (${f.length()} bytes)")
+                    Log.e("MNN_CLEANUP", "${if (deleted) "🗑️" else "❌"} ${f.name} (${f.length()} bytes)")
                 }
             }
         } catch (t: Throwable) {
-            android.util.Log.w("MNN_CLEANUP", "cleanup failed: ${t.message}")
+            Log.w("MNN_CLEANUP", "cleanup failed: ${t.message}")
         }
     }
 
     fun clearMnnCache() {
         viewModelScope.launch(Dispatchers.IO) {
-            val baseDir = java.io.File(getApplication<android.app.Application>().filesDir, "mnn_models")
+            val baseDir = File(getApplication<Application>().filesDir, "mnn_models")
             var count = 0
             if (baseDir.exists()) {
                 baseDir.walkTopDown().forEach { file ->
@@ -1035,7 +1060,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
             }
-            android.util.Log.e("MNN_CLEANUP", "Manual cache clear: deleted $count files")
+            Log.e("MNN_CLEANUP", "Manual cache clear: deleted $count files")
             withContext(Dispatchers.Main) {
                 _downloadTrigger.value = (_downloadTrigger.value ?: 0) + 1
                 _downloadProgress.value = null
@@ -1044,13 +1069,13 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
 
-    fun downloadModel(model: com.dynamicai.launcher.llm.LlmModel) {
+    fun downloadModel(model: LlmModel) {
         viewModelScope.launch {
             downloadingModelId = model.id
             _downloadProgress.value = null
             downloader.downloadUrl(model.url, model.fileName).collect { progress ->
                 _downloadProgress.value = progress
-                if (progress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Complete) {
+                if (progress is ModelDownloader.Progress.Complete) {
                     _downloadProgress.value = null
                     downloadingModelId = null
                     _downloadTrigger.value++
@@ -1065,7 +1090,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
         downloadingModelId = null
     }
 
-    fun deleteModel(model: com.dynamicai.launcher.llm.LlmModel) {
+    fun deleteModel(model: LlmModel) {
         // Не видаляємо модель, яка зараз завантажується
         if (downloadingModelId == model.id) return
         viewModelScope.launch {
@@ -1075,7 +1100,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 _llmReady.value = false
                 try { llm.close() } catch (_: Throwable) {}
             }
-            com.dynamicai.launcher.llm.ModelRepository.deleteModel(getApplication(), model)
+            ModelRepository.deleteModel(getApplication(), model)
             if (wasCurrent) {
                 currentModelId = "gemma-4-E2B-cpu" // Фолбек
                 prefs.edit().putString("current_model_id", "gemma-4-E2B-cpu").apply()

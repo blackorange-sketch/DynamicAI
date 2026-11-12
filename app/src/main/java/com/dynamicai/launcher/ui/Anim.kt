@@ -10,12 +10,13 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import androidx.compose.animation.core.CubicBezierEasing
 
 /** Єдині криві руху: швидкий старт із м'яким гальмуванням для появи, розгін для зникнення. */
 object Motion {
-    val Decel = androidx.compose.animation.core.CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
-    val Accel = androidx.compose.animation.core.CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
-    val Standard = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0f, 0f, 1f)
+    val Decel = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+    val Accel = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
+    val Standard = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 }
 
 /** Анімація появи головного екрана програється один раз за запуск процесу. */

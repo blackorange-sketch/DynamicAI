@@ -18,6 +18,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.PlaybackException
 
 class VideoWallpaperService : WallpaperService() {
 
@@ -214,7 +215,7 @@ class VideoWallpaperService : WallpaperService() {
                                     log("state=$state")
                                 }
 
-                                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                                override fun onPlayerError(error: PlaybackException) {
                                     log("error: ${error.message}")
                                 }
                             })

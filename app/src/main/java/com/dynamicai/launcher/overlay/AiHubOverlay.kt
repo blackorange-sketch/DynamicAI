@@ -50,13 +50,20 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import android.speech.RecognizerIntent
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.dynamicai.launcher.ocr.RegionSelectorOverlay
+import com.dynamicai.launcher.ocr.ScreenTranslateOverlay
+import com.dynamicai.launcher.ocr.ScreenTranslator
+import com.dynamicai.launcher.ui.theme.StoredAppTheme
+import kotlinx.coroutines.delay
 
 object AiHubOverlay {
     private const val TAG = "AiHubOverlay"
     private var wm: WindowManager? = null
     private var view: ComposeView? = null
     private var owner: HubLifecycleOwner? = null
-    private var appContext: android.content.Context? = null
+    private var appContext: Context? = null
 
     fun show(context: Context, vm: com.dynamicai.launcher.AppListViewModel? = null) {
         if (view != null) return
@@ -72,7 +79,7 @@ object AiHubOverlay {
                 setViewTreeLifecycleOwner(lcOwner)
                 setViewTreeSavedStateRegistryOwner(lcOwner)
                 setContent {
-                    com.dynamicai.launcher.ui.theme.StoredAppTheme {
+                    StoredAppTheme {
                         AiHubContent(
                             ctx = context,
                             vm = vm,
@@ -140,7 +147,7 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
     val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(200)
+        delay(200)
         focusRequester.requestFocus()
         keyboard?.show()
     }
@@ -150,7 +157,7 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.4f)) // Додаткове затемнення
             .clickable(
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onClose() } // Клік по фону закриває хаб
     ) {
@@ -160,7 +167,7 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 24.dp)
                 .clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) { } // Блокуємо клік по самій панелі
                 .imePadding(),
@@ -207,15 +214,15 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                 ActionChip("Переклад", AppTheme.colors.warning) {
                     Toast.makeText(ctx, "Переклад...", Toast.LENGTH_SHORT).show()
                     onClose()
-                    com.dynamicai.launcher.ocr.RegionSelectorOverlay.show(
+                    RegionSelectorOverlay.show(
                         context = ctx,
                         onSelected = { rect ->
                             CoroutineScope(Dispatchers.Main).launch {
-                                kotlinx.coroutines.delay(150)
-                                val translator = com.dynamicai.launcher.ocr.ScreenTranslator(ctx, null)
+                                delay(150)
+                                val translator = ScreenTranslator(ctx, null)
                                 val blocks = translator.captureRegionAndTranslate(rect, targetLang = "uk")
                                 if (blocks.isNotEmpty()) {
-                                    com.dynamicai.launcher.ocr.ScreenTranslateOverlay.show(ctx, blocks, "uk")
+                                    ScreenTranslateOverlay.show(ctx, blocks, "uk")
                                 }
                             }
                         },
@@ -224,21 +231,21 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                 }
                 ActionChip("🎙️ Розмова", AppTheme.colors.pink) {
                     try {
-                        ctx.startActivity(android.content.Intent(ctx, com.dynamicai.launcher.VoiceChatActivity::class.java).apply {
-                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        ctx.startActivity(Intent(ctx, com.dynamicai.launcher.VoiceChatActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         })
                     } catch (t: Throwable) {
-                        android.util.Log.e("AiHubOverlay", "VoiceChat failed: ${t.message}", t)
+                        Log.e("AiHubOverlay", "VoiceChat failed: ${t.message}", t)
                     }
                     onClose()
                 }
                 ActionChip("🎮 Wild Rift", AppTheme.colors.purple) {
                     try {
-                        ctx.startActivity(android.content.Intent(ctx, com.dynamicai.launcher.WildRiftAdvisorActivity::class.java).apply {
-                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        ctx.startActivity(Intent(ctx, com.dynamicai.launcher.WildRiftAdvisorActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         })
                     } catch (t: Throwable) {
-                        android.util.Log.e("AiHubOverlay", "Wild Rift launch failed: ${t.message}", t)
+                        Log.e("AiHubOverlay", "Wild Rift launch failed: ${t.message}", t)
                     }
                     onClose()
                 }
@@ -319,10 +326,10 @@ private fun AiHubContent(ctx: Context, vm: com.dynamicai.launcher.AppListViewMod
                         .clickable {
                             Toast.makeText(ctx, "Мікрофон...", Toast.LENGTH_SHORT).show()
                             onClose()
-                            val voiceIntent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
-                                putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Слухаю...")
+                            val voiceIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
+                                putExtra(RecognizerIntent.EXTRA_PROMPT, "Слухаю...")
                                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             }
                             try { ctx.startActivity(voiceIntent) } catch (_: Throwable) {}

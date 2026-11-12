@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import com.dynamicai.launcher.macro.MacroTriggerService
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -15,6 +16,6 @@ class BootReceiver : BroadcastReceiver() {
                 FloatingDockService.start(context)
             }
         } catch (_: Throwable) {}
-        try { com.dynamicai.launcher.macro.MacroTriggerService.sync(context, fromBoot = true) } catch (_: Throwable) {}
+        try { MacroTriggerService.sync(context, fromBoot = true) } catch (_: Throwable) {}
     }
 }

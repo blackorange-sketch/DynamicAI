@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.content.SharedPreferences
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityWindowInfo
 
 class KeyboardAccessibilityService : AccessibilityService() {
 
@@ -36,7 +37,7 @@ class KeyboardAccessibilityService : AccessibilityService() {
             // Також перевіримо через вікна сервісу
             val windows = windows
             val imeVisible = windows?.any { w ->
-                w.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD
+                w.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD
             } ?: isIme
 
             if (imeVisible) {

@@ -3,6 +3,7 @@ package com.dynamicai.launcher.data
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 data class Champion(
     val id: String,
@@ -66,7 +67,7 @@ class WildRiftRepository(private val context: Context) {
 
             // Російські назви чемпіонів
             try {
-                val file = java.io.File(context.filesDir, "wildrift/ru_champions_raw.json")
+                val file = File(context.filesDir, "wildrift/ru_champions_raw.json")
                 val ruChampionsJson = if (file.exists()) file.bufferedReader().use { it.readText() } else "[]"
                 val ruArr = JSONArray(ruChampionsJson)
                 val champMap = mutableMapOf<Int, String>()
@@ -81,7 +82,7 @@ class WildRiftRepository(private val context: Context) {
 
             // Російські назви предметів
             try {
-                val file = java.io.File(context.filesDir, "wildrift/item_names_ru.json")
+                val file = File(context.filesDir, "wildrift/item_names_ru.json")
                 val ruItemsJson = if (file.exists()) file.bufferedReader().use { it.readText() } else "{}"
                 val itemsObj = JSONObject(ruItemsJson)
                 val itemMap = mutableMapOf<String, String>()
@@ -89,7 +90,7 @@ class WildRiftRepository(private val context: Context) {
                 ruItemsByName = itemMap
             } catch (_: Exception) { }
 
-            val file = java.io.File(context.filesDir, "wildrift/counters.json")
+            val file = File(context.filesDir, "wildrift/counters.json")
                 val countersJson = if (file.exists()) file.bufferedReader().use { it.readText() } else "{}"
             val countersObj = JSONObject(countersJson)
             val map = mutableMapOf<String, List<String>>()

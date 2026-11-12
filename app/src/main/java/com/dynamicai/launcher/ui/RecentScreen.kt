@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import com.dynamicai.launcher.system.ShizukuManager
+import androidx.compose.animation.core.tween
 
 @Composable
 fun RecentScreen(
@@ -44,8 +45,8 @@ fun RecentScreen(
 ) {
     AnimatedVisibility(
         visible = visible,
-        enter = slideInVertically(androidx.compose.animation.core.tween(animMs(360), easing = Motion.Decel)) { it / 4 } + fadeIn(androidx.compose.animation.core.tween(animMs(220))),
-        exit = slideOutVertically(androidx.compose.animation.core.tween(animMs(220), easing = Motion.Accel)) { it / 5 } + fadeOut(androidx.compose.animation.core.tween(animMs(180)))
+        enter = slideInVertically(tween(animMs(360), easing = Motion.Decel)) { it / 4 } + fadeIn(tween(animMs(220))),
+        exit = slideOutVertically(tween(animMs(220), easing = Motion.Accel)) { it / 5 } + fadeOut(tween(animMs(180)))
     ) {
         Box(
             modifier = Modifier
@@ -253,7 +254,7 @@ private fun RecentCard(
                     )
             ) {
                 task.icon?.let {
-                    androidx.compose.material3.Icon(
+                    Icon(
                         bitmap = it.toBitmap(128, 128).asImageBitmap(),
                         contentDescription = task.label,
                         tint = Color.Unspecified,

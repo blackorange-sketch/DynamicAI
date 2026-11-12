@@ -14,6 +14,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import android.app.ActivityOptions
+import android.graphics.drawable.ColorDrawable
 
 class AppRepository(private val context: Context) {
 
@@ -23,7 +25,7 @@ class AppRepository(private val context: Context) {
     // Обмежує і паралелізм, і кількість тредів у пулі
     private val ioLimited = Dispatchers.IO.limitedParallelism(4)
 
-    private val placeholderIcon: Drawable = android.graphics.drawable.ColorDrawable(0xFF1E1E1E.toInt())
+    private val placeholderIcon: Drawable = ColorDrawable(0xFF1E1E1E.toInt())
 
     private val iconCache = object : LruCache<String, Drawable>(80) {
         override fun sizeOf(key: String, value: Drawable): Int = 1
@@ -121,7 +123,7 @@ class AppRepository(private val context: Context) {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return try {
             // smooth: власна анімація лаунчера вже грає, тож системну замінюємо м'яким перетином
-            val opts = if (smooth) android.app.ActivityOptions
+            val opts = if (smooth) ActivityOptions
                 .makeCustomAnimation(context, com.dynamicai.launcher.R.anim.launch_fade_in, 0).toBundle() else null
             context.startActivity(intent, opts)
             true

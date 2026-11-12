@@ -9,6 +9,9 @@ import android.content.Intent
 import android.media.RingtoneManager
 import android.os.Build
 import com.dynamicai.launcher.MainActivity
+import android.speech.tts.TextToSpeech
+import androidx.core.app.NotificationCompat
+import java.util.Locale
 
 class PomodoroReceiver : BroadcastReceiver() {
     companion object {
@@ -64,12 +67,12 @@ class PomodoroReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val builder = androidx.core.app.NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
             .setContentText(text)
-            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
-            .setCategory(androidx.core.app.NotificationCompat.CATEGORY_ALARM)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setContentIntent(openPi)
             .setAutoCancel(false)
             .setOngoing(true)
@@ -84,10 +87,10 @@ class PomodoroReceiver : BroadcastReceiver() {
         nm.notify(NOTIF_ID, builder.build())
 
         try {
-            val tts = android.speech.tts.TextToSpeech(context, null)
-            tts.language = java.util.Locale("uk", "UA")
+            val tts = TextToSpeech(context, null)
+            tts.language = Locale("uk", "UA")
             val speak = if (mode == "work") "\u0427\u0430\u0441 \u043f\u0435\u0440\u0435\u0440\u0432\u0438" else "\u041f\u043e\u0432\u0435\u0440\u0442\u0430\u0439\u0441\u044f \u0434\u043e \u0440\u043e\u0431\u043e\u0442\u0438"
-            tts.speak(speak, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "pomodoro")
+            tts.speak(speak, TextToSpeech.QUEUE_FLUSH, null, "pomodoro")
         } catch (_: Throwable) {}
     }
 }

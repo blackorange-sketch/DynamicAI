@@ -6,6 +6,10 @@ import com.dynamicai.launcher.command.Command
 import com.dynamicai.launcher.command.CommandExecutor
 import com.dynamicai.launcher.command.CommandResult
 import com.dynamicai.launcher.model.AppInfo
+import android.content.ContentUris
+import android.net.Uri
+import android.provider.ContactsContract
+import com.dynamicai.launcher.llm.MessengerCaller
 
 /** Виконання рядка контакту (дзвінок, месенджери, Instagram). Спільне для головного екрана і оверлея з плаваючого дока. */
 object ContactLauncher {
@@ -36,7 +40,7 @@ object ContactLauncher {
                 val accountPkg = parts.getOrNull(2).orEmpty()
                 val pm = app.packageManager
                 fun viewIntent() = Intent(Intent.ACTION_VIEW).setDataAndType(
-                    android.content.ContentUris.withAppendedId(android.provider.ContactsContract.Data.CONTENT_URI, id ?: 0L), mime ?: ""
+                    ContentUris.withAppendedId(ContactsContract.Data.CONTENT_URI, id ?: 0L), mime ?: ""
                 )
                 val known = mapOf(
                     "telegram" to listOf("org.telegram.messenger", "org.telegram.messenger.web", "org.thunderdog.challegram"),
@@ -59,7 +63,7 @@ object ContactLauncher {
                     if (phone != null && tgPkg != null) {
                         ok = startView(
                             app,
-                            Intent(Intent.ACTION_VIEW, android.net.Uri.parse("tg://resolve?phone=${normalizePhone(phone)}")).setPackage(tgPkg)
+                            Intent(Intent.ACTION_VIEW, Uri.parse("tg://resolve?phone=${normalizePhone(phone)}")).setPackage(tgPkg)
                         )
                     }
                 }
@@ -72,11 +76,11 @@ object ContactLauncher {
                 val msg = if (isHandle) {
                     startView(
                         app,
-                        Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://ig.me/m/${s.target}")).setPackage("com.instagram.android")
+                        Intent(Intent.ACTION_VIEW, Uri.parse("https://ig.me/m/${s.target}")).setPackage("com.instagram.android")
                     )
-                    if (call) com.dynamicai.launcher.llm.MessengerCaller(app).pressInstagramCall()
+                    if (call) MessengerCaller(app).pressInstagramCall()
                     else "Відкриваю чат @${s.target}"
-                } else if (call) com.dynamicai.launcher.llm.MessengerCaller(app).callInInstagram(s.target)
+                } else if (call) MessengerCaller(app).callInInstagram(s.target)
                 else return executor.execute(Command.SearchInApp("insta", s.target), apps)
                 return CommandResult.Success(msg)
             }

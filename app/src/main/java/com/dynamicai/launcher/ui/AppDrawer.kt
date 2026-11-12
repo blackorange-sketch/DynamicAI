@@ -41,6 +41,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dynamicai.launcher.model.AppInfo
+import androidx.compose.animation.scaleIn
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 
 private data class Category(val id: String, val label: String)
 
@@ -63,13 +67,13 @@ fun AppDrawer(
     val dismissThreshold = 120f
     
     val nestedScrollConnection = remember {
-        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+        object : NestedScrollConnection {
             override fun onPostScroll(
-                consumed: androidx.compose.ui.geometry.Offset,
-                available: androidx.compose.ui.geometry.Offset,
-                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
-            ): androidx.compose.ui.geometry.Offset {
-                if (source == androidx.compose.ui.input.nestedscroll.NestedScrollSource.Drag) {
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (source == NestedScrollSource.Drag) {
                     val atTop = gridState.firstVisibleItemIndex == 0 
                                 && gridState.firstVisibleItemScrollOffset == 0
                     if (atTop && available.y > 0f) {
@@ -82,17 +86,17 @@ fun AppDrawer(
                         accumulatedDrag = 0f
                     }
                 }
-                return androidx.compose.ui.geometry.Offset.Zero
+                return Offset.Zero
             }
             
             override fun onPreScroll(
-                available: androidx.compose.ui.geometry.Offset,
-                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
-            ): androidx.compose.ui.geometry.Offset {
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
                 if (available.y < 0f) {
                     accumulatedDrag = 0f
                 }
-                return androidx.compose.ui.geometry.Offset.Zero
+                return Offset.Zero
             }
         }
     }
@@ -128,7 +132,7 @@ fun AppDrawer(
             initialOffsetY = { it / 6 },
             animationSpec = tween(animMs(360), easing = Motion.Decel)
         ) + fadeIn(tween(animMs(200))) +
-            androidx.compose.animation.scaleIn(tween(animMs(360), easing = Motion.Decel), initialScale = 0.96f),
+            scaleIn(tween(animMs(360), easing = Motion.Decel), initialScale = 0.96f),
         exit = slideOutVertically(
             targetOffsetY = { it / 8 },
             animationSpec = tween(animMs(200), easing = Motion.Accel)

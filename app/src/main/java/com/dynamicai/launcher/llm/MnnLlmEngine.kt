@@ -12,6 +12,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
 import kotlin.concurrent.withLock
+import java.util.concurrent.locks.ReentrantLock
 
 /**
  * Реалізація LlmEngine через MNN (libmnnllmapp.so + LlmSession).
@@ -50,7 +51,7 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
     private var session: LlmSession? = null
 
     /** Захищає нативну сесію: release() під час generate() або паралельний load() = SIGSEGV. */
-    private val sessionLock = java.util.concurrent.locks.ReentrantLock()
+    private val sessionLock = ReentrantLock()
 
     @Volatile
     var lastUsedAt: Long = 0L
@@ -61,7 +62,7 @@ class MnnLlmEngine(private val context: Context) : LlmEngine {
 
     private var currentSettings: LauncherSettings = LauncherSettings()
     private var currentModelName: String = ""
-    private val initializeMutex = kotlinx.coroutines.sync.Mutex()
+    private val initializeMutex = Mutex()
 
     override val isReady: Boolean get() = session?.isReady() == true
 

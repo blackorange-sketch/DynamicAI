@@ -60,10 +60,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.LinearProgressIndicator
 import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.model.AppInfo
+import android.os.Build
+import androidx.compose.foundation.layout.ColumnScope
 
 /** Налаштування → Вигляд: тема, фон, іконки й сітка, елементи екрана, ефекти, жести, анімації, плаваючий док. */
 @Composable
-internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAppearanceSection(
+internal fun ColumnScope.SettingsAppearanceSection(
     settings: LauncherSettings,
     onSettingsChange: (LauncherSettings) -> Unit,
     overlayActive: Boolean,
@@ -75,7 +77,7 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAppearanceSe
     onOpenFolderManager: () -> Unit
 ) {
     val ctx = LocalContext.current
-    val bgScope = androidx.compose.runtime.rememberCoroutineScope()
+    val bgScope = rememberCoroutineScope()
     val bgPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri ->
@@ -103,7 +105,7 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAppearanceSe
                     ThemeChip("Океан", "glass_ocean", settings.appTheme) { onSettingsChange(settings.copy(appTheme = it)) }
                 }
                 // Material You: кольори з шпалер (Android 12+)
-                if (android.os.Build.VERSION.SDK_INT >= 31) {
+                if (Build.VERSION.SDK_INT >= 31) {
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ThemeChip("Material You (з шпалер)", "glass_dynamic", settings.appTheme) { onSettingsChange(settings.copy(appTheme = it)) }

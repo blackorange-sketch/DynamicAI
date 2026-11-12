@@ -28,6 +28,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.dynamicai.launcher.overlay.VoiceCommandOverlay
 
 class WakeWordService : Service() {
 
@@ -57,7 +58,7 @@ class WakeWordService : Service() {
     private var restartJob: Job? = null
     private var wakeWord: String = ""
     private var enabled = true
-    private val overlay by lazy { com.dynamicai.launcher.overlay.VoiceCommandOverlay(this) }
+    private val overlay by lazy { VoiceCommandOverlay(this) }
 
     override fun onCreate() {
         super.onCreate()

@@ -6,6 +6,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import com.dynamicai.launcher.llm.AgentEngine
 
 /** Єдина точка запуску макросів за подіями: викликається службою, слухачем сповіщень і NFC-активністю. */
 object MacroDispatcher {
@@ -30,7 +31,7 @@ object MacroDispatcher {
                 launch {
                     Log.e(TAG, "▶ macro '${m.name}' on $event $payload")
                     try {
-                        val agent = com.dynamicai.launcher.llm.AgentEngine(app, null)
+                        val agent = AgentEngine(app, null)
                         val tools = MacroTools(app)
                         val vars = mutableMapOf("trigger" to event, "device" to "", "level" to "")
                         payload.forEach { (k, v) -> vars[k] = v }

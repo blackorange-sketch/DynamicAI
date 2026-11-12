@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dynamicai.launcher.data.LauncherSettings
 import com.dynamicai.launcher.wallpaper.VideoWallpaperService
+import kotlinx.coroutines.delay
 
 @Composable
 fun WallpaperScreen(
@@ -44,7 +45,7 @@ fun WallpaperScreen(
     LaunchedEffect(Unit) {
         while (true) {
             lastLog = VideoWallpaperService.lastLog
-            kotlinx.coroutines.delay(1500)
+            delay(1500)
         }
     }
 

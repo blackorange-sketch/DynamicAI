@@ -62,6 +62,17 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.LinearProgressIndicator
 import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.model.AppInfo
+import android.os.Process
+import androidx.compose.foundation.Image
+import androidx.compose.ui.text.style.TextOverflow
+import com.dynamicai.launcher.macro.BtDevicePickerDialog
+import com.dynamicai.launcher.macro.MacroStorage
+import com.dynamicai.launcher.smarthome.VacuumControl
+import com.dynamicai.launcher.util.BackupManager
+import com.dynamicai.launcher.voice.VoskEngine
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun SettingsScreen(
@@ -240,7 +251,7 @@ internal fun formatModelSize(bytes: Long): String =
 internal fun VoskSettingsBlock(settings: LauncherSettings, onSettingsChange: (LauncherSettings) -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    var installed by remember { mutableStateOf(com.dynamicai.launcher.voice.VoskEngine.isInstalled(ctx)) }
+    var installed by remember { mutableStateOf(VoskEngine.isInstalled(ctx)) }
     var status by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
 
@@ -260,7 +271,7 @@ internal fun VoskSettingsBlock(settings: LauncherSettings, onSettingsChange: (La
     if (installed) {
         Text("Модель Vosk встановлено", color = AppTheme.colors.success, fontSize = 12.sp)
         TextButton(onClick = {
-            com.dynamicai.launcher.voice.VoskEngine.delete(ctx)
+            VoskEngine.delete(ctx)
             installed = false
             status = ""
             if (settings.voiceEngine != "google") onSettingsChange(settings.copy(voiceEngine = "google"))
@@ -270,7 +281,7 @@ internal fun VoskSettingsBlock(settings: LauncherSettings, onSettingsChange: (La
             busy = true
             status = "Початок завантаження…"
             scope.launch {
-                val err = com.dynamicai.launcher.voice.VoskEngine.download(ctx) { msg -> status = msg }
+                val err = VoskEngine.download(ctx) { msg -> status = msg }
                 busy = false
                 if (err == null) {
                     installed = true
@@ -300,7 +311,7 @@ internal fun CarModeSettingsBlock(settings: LauncherSettings, onSettingsChange: 
             color = if (settings.carBtName.isBlank()) AppTheme.colors.warning else AppTheme.colors.successLight)
     }
     if (showPicker) {
-        com.dynamicai.launcher.macro.BtDevicePickerDialog(
+        BtDevicePickerDialog(
             title = "🚗 Bluetooth-пристрій авто", current = settings.carBtName, anyLabel = "Не вибрано",
             onPick = { onSettingsChange(settings.copy(carBtName = it)); showPicker = false },
             onDismiss = { showPicker = false }
@@ -312,7 +323,7 @@ internal fun CarModeSettingsBlock(settings: LauncherSettings, onSettingsChange: 
 /** Локальне керування Xiaomi-пилососом (miIO): IP, токен, протокол і перевірка зв'язку. */
 @Composable
 internal fun VacuumSettingsBlock(settings: LauncherSettings, onSettingsChange: (LauncherSettings) -> Unit) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var testResult by remember { mutableStateOf("") }
     var testing by remember { mutableStateOf(false) }
@@ -352,7 +363,7 @@ internal fun VacuumSettingsBlock(settings: LauncherSettings, onSettingsChange: (
     TextButton(onClick = {
         testing = true; testResult = "Перевіряю…"
         scope.launch {
-            testResult = try { com.dynamicai.launcher.smarthome.VacuumControl(ctx).run("status") } catch (t: Throwable) { "Помилка: ${t.message}" }
+            testResult = try { VacuumControl(ctx).run("status") } catch (t: Throwable) { "Помилка: ${t.message}" }
             testing = false
         }
     }, enabled = !testing) { Text("Перевірити зв'язок", color = AppTheme.colors.successLight) }
@@ -385,14 +396,14 @@ internal fun HiddenAppsSection(vm: com.dynamicai.launcher.AppListViewModel) {
                     list.forEach { app ->
                         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                             app.bitmap?.let {
-                                androidx.compose.foundation.Image(
+                                Image(
                                     bitmap = it.asImageBitmap(), contentDescription = null,
                                     modifier = Modifier.size(34.dp)
                                 )
                             }
                             Spacer(Modifier.width(10.dp))
                             Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 14.sp,
-                                maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f))
                             TextButton(onClick = { vm.unhideApp(app.packageName) }) {
                                 Text("Показати", color = AppTheme.colors.accent, fontSize = 12.sp)
@@ -414,10 +425,10 @@ internal fun HiddenAppsSection(vm: com.dynamicai.launcher.AppListViewModel) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun GestureRow(title: String, value: String, onPick: (String) -> Unit) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val ctx = LocalContext.current
     var showMacros by remember { mutableStateOf(false) }
     val macroName = remember(value) {
-        if (value.startsWith("macro:")) com.dynamicai.launcher.macro.MacroStorage(ctx).get().firstOrNull { it.id == value.removePrefix("macro:") }?.name else null
+        if (value.startsWith("macro:")) MacroStorage(ctx).get().firstOrNull { it.id == value.removePrefix("macro:") }?.name else null
     }
     Text(title, color = AppTheme.colors.textPrimary, fontSize = 14.sp)
     Spacer(Modifier.height(6.dp))
@@ -429,7 +440,7 @@ internal fun GestureRow(title: String, value: String, onPick: (String) -> Unit) 
     }
     if (macroName != null) Text("⚡ $macroName", color = AppTheme.colors.successLight, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
     if (showMacros) {
-        val macros = remember { com.dynamicai.launcher.macro.MacroStorage(ctx).get() }
+        val macros = remember { MacroStorage(ctx).get() }
         AlertDialog(
             onDismissRequest = { showMacros = false },
             containerColor = AppTheme.colors.surface,
@@ -453,24 +464,24 @@ internal fun GestureRow(title: String, value: String, onPick: (String) -> Unit) 
 /** Експорт/імпорт налаштувань, макросів, нотаток, віджетів і розмов одним файлом. */
 @Composable
 internal fun BackupSettingsBlock() {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val ctx = LocalContext.current
     var status by remember { mutableStateOf("") }
     var askRestart by remember { mutableStateOf(false) }
-    val exportLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         if (uri != null) status = try {
-            ctx.contentResolver.openOutputStream(uri)?.use { it.write(com.dynamicai.launcher.util.BackupManager.export(ctx).toByteArray(Charsets.UTF_8)) }
+            ctx.contentResolver.openOutputStream(uri)?.use { it.write(BackupManager.export(ctx).toByteArray(Charsets.UTF_8)) }
             "✓ Копію збережено"
         } catch (t: Throwable) { "Помилка збереження: ${t.message}" }
     }
-    val importLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
             try {
                 val text = ctx.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } ?: ""
-                val n = com.dynamicai.launcher.util.BackupManager.import(ctx, text)
+                val n = BackupManager.import(ctx, text)
                 status = "✓ Відновлено розділів: $n"
                 askRestart = true
             } catch (t: Throwable) { status = "Помилка імпорту: ${t.message}" }
@@ -483,7 +494,7 @@ internal fun BackupSettingsBlock() {
     Spacer(Modifier.height(6.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         TextButton(onClick = {
-            exportLauncher.launch("dynamicai-backup-" + java.text.SimpleDateFormat("yyyyMMdd-HHmm", java.util.Locale.US).format(java.util.Date()) + ".json")
+            exportLauncher.launch("dynamicai-backup-" + SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date()) + ".json")
         }) { Text("Експортувати", color = AppTheme.colors.successLight) }
         TextButton(onClick = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) }) {
             Text("Імпортувати", color = AppTheme.colors.accent)
@@ -497,7 +508,7 @@ internal fun BackupSettingsBlock() {
             title = { Text("Копію відновлено", color = AppTheme.colors.textPrimary) },
             text = { Text("Щоб застосувати зміни, лаунчер потрібно перезапустити. Він запуститься знову автоматично.", color = AppTheme.colors.textSecondary) },
             confirmButton = {
-                TextButton(onClick = { android.os.Process.killProcess(android.os.Process.myPid()) }) {
+                TextButton(onClick = { Process.killProcess(Process.myPid()) }) {
                     Text("Перезапустити", color = AppTheme.colors.accent)
                 }
             },

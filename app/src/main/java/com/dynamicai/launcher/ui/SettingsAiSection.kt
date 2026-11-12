@@ -60,10 +60,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.LinearProgressIndicator
 import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.model.AppInfo
+import android.content.Context
+import android.os.Build
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.material3.SwitchDefaults
+import com.dynamicai.launcher.llm.LlmModel
+import com.dynamicai.launcher.llm.ModelDownloader
+import com.dynamicai.launcher.llm.ModelRepository
+import com.dynamicai.launcher.llm.PromptManager
+import com.dynamicai.launcher.overlay.FloatingOrbService
+import com.dynamicai.launcher.voice.WakeWordService
+import kotlinx.coroutines.delay
 
 /** Налаштування → ШІ: асистент, моделі (локальні й хмарна), голос. */
 @Composable
-internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
+internal fun ColumnScope.SettingsAiSection(
     vm: com.dynamicai.launcher.AppListViewModel,
     settings: LauncherSettings,
     onSettingsChange: (LauncherSettings) -> Unit,
@@ -76,17 +87,17 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
     onNeedOverlayPermission: () -> Unit
 ) {
     val ctx = LocalContext.current
-        var modelFilter by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("all") }
+        var modelFilter by remember { mutableStateOf("all") }
         if (showAssistant) {
         GlassSectionHeader("🤖 ШІ та Асистент")
         GlassSectionHeader("🫧 Плаваючий асистент")
         GlassCard {
-            val prefs = remember { ctx.getSharedPreferences("floating_orb", android.content.Context.MODE_PRIVATE) }
+            val prefs = remember { ctx.getSharedPreferences("floating_orb", Context.MODE_PRIVATE) }
             var orbEnabled by remember { mutableStateOf(prefs.getBoolean("enabled", false)) }
             
             Row(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Плаваюча куля JARVIS", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
@@ -95,7 +106,7 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                         color = AppTheme.colors.textSecondary, fontSize = 11.sp
                     )
                 }
-                androidx.compose.material3.Switch(
+                Switch(
                     checked = orbEnabled,
                     onCheckedChange = { enabled ->
                         if (enabled) {
@@ -104,8 +115,8 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                                 ctx.startActivity(intent)
                                 return@Switch
                             }
-                            val intent = Intent(ctx, com.dynamicai.launcher.overlay.FloatingOrbService::class.java)
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                            val intent = Intent(ctx, FloatingOrbService::class.java)
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                 ctx.startForegroundService(intent)
                             } else {
                                 ctx.startService(intent)
@@ -113,13 +124,13 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                             orbEnabled = true
                             prefs.edit().putBoolean("enabled", true).apply()
                         } else {
-                            val intent = Intent(ctx, com.dynamicai.launcher.overlay.FloatingOrbService::class.java)
+                            val intent = Intent(ctx, FloatingOrbService::class.java)
                             ctx.stopService(intent)
                             orbEnabled = false
                             prefs.edit().putBoolean("enabled", false).apply()
                         }
                     },
-                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                    colors = SwitchDefaults.colors(
                         checkedThumbColor = AppTheme.colors.success
                     )
                 )
@@ -137,7 +148,7 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
             
             Row(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Розумний ранковий брифінг", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
@@ -153,7 +164,7 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                         morningEnabled = it
                         wakeDetector.setEnabled(it)
                     },
-                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                    colors = SwitchDefaults.colors(
                         checkedThumbColor = AppTheme.colors.success
                     )
                 )
@@ -161,7 +172,7 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
             
             ActionRow(
                 "Тестувати брифінг зараз",
-                androidx.compose.material.icons.Icons.Default.PlayArrow,
+                Icons.Default.PlayArrow,
                 AppTheme.colors.warning
             ) {
                 MorningBriefingService.start(ctx)
@@ -198,7 +209,7 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
 
         // Реактивний стан: оновлюється автоматично після завантаження / видалення
         val downloadedIds by vm.downloadedModelIds.collectAsStateWithLifecycle()
-        var modelToDelete by remember { mutableStateOf<com.dynamicai.launcher.llm.LlmModel?>(null) }
+        var modelToDelete by remember { mutableStateOf<LlmModel?>(null) }
         modelToDelete?.let { m ->
             AlertDialog(
                 onDismissRequest = { modelToDelete = null },
@@ -253,7 +264,7 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
         val llmReadyNow by vm.llmReady.collectAsStateWithLifecycle()
         val llmStatus by vm.llmStatusText.collectAsStateWithLifecycle()
         LaunchedEffect(Unit) {
-            while (true) { vm.checkLlmReady(); kotlinx.coroutines.delay(3000) }
+            while (true) { vm.checkLlmReady(); delay(3000) }
         }
         // --- Відповіді ---
         GlassSectionHeader("Відповіді")
@@ -441,7 +452,7 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
         if (modelFilter == "all" || modelFilter == "mnn") {
             // Список і розміри беремо з ModelRepository (єдине джерело правди)
             val mnnModels = remember {
-                com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS
+                ModelRepository.AVAILABLE_MODELS
                     .filter { it.id.startsWith("mnn-") }
                     .map { Triple(it.id, it.name.removePrefix("MNN ").substringBefore(" ("), formatModelSize(it.sizeBytes)) }
             }
@@ -469,7 +480,7 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                     mnnModels.forEach { (id, name, size) ->
                         val isCurrent = vm.currentModelId == id
                         val isDownloaded = id in downloadedIds
-                        val isDownloading = vm.downloadingModelId == id && mnnProgress is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading
+                        val isDownloading = vm.downloadingModelId == id && mnnProgress is ModelDownloader.Progress.Downloading
 
                         Row(
                             modifier = Modifier
@@ -489,7 +500,7 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                                 if (isDownloaded) {
                                     Text(if (isCurrent) "✓ Активна" else "✓ Завантажено • Обрати", color = if (isCurrent) AppTheme.colors.success else AppTheme.colors.accent, fontSize = 11.sp)
                                 } else if (isDownloading) {
-                                    val prog = mnnProgress as com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading
+                                    val prog = mnnProgress as ModelDownloader.Progress.Downloading
                                     LinearProgressIndicator(progress = { prog.percent / 100f }, modifier = Modifier.fillMaxWidth().height(4.dp).padding(top = 6.dp), color = AppTheme.colors.accent)
                                     Text("${prog.percent}% (${prog.downloadedMb} / ${prog.totalMb} МБ)", color = AppTheme.colors.accent, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
                                 } else {
@@ -498,10 +509,10 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                             }
                             if (isDownloaded) {
                                 IconButton(enabled = !isDownloading, onClick = {
-                                    modelToDelete = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.find { it.id == id }
+                                    modelToDelete = ModelRepository.AVAILABLE_MODELS.find { it.id == id }
                                 }) {
                                     Icon(
-                                        androidx.compose.material.icons.Icons.Default.Delete,
+                                        Icons.Default.Delete,
                                         contentDescription = "Видалити",
                                         tint = AppTheme.colors.danger
                                     )
@@ -515,7 +526,7 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
         GlassCard {
             val progressState = vm.downloadProgress.collectAsStateWithLifecycle().value
 
-            val filteredModels = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS.filter { m ->
+            val filteredModels = ModelRepository.AVAILABLE_MODELS.filter { m ->
             when (modelFilter) {
                 "litert" -> !m.id.startsWith("mnn-")
                 "mnn" -> m.id.startsWith("mnn-")
@@ -539,7 +550,7 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                             val statusText = if (isDownloaded) "Завантажено" else "Не завантажено (${model.sizeBytes / 1_000_000} МБ)"
                             Text(statusText, color = AppTheme.colors.textSecondary, fontSize = 11.sp)
                             
-                            if (vm.downloadingModelId == model.id && progressState is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading && !isDownloaded) {
+                            if (vm.downloadingModelId == model.id && progressState is ModelDownloader.Progress.Downloading && !isDownloaded) {
                                 Text("Завантаження... ${progressState.percent}%", color = AppTheme.colors.accent, fontSize = 11.sp)
                             }
                         }
@@ -553,10 +564,10 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                                 }
                             }
                             IconButton(onClick = { modelToDelete = model }) {
-                                Icon(androidx.compose.material.icons.Icons.Default.Delete, contentDescription = "Видалити", tint = AppTheme.colors.danger)
+                                Icon(Icons.Default.Delete, contentDescription = "Видалити", tint = AppTheme.colors.danger)
                             }
                         } else {
-                            if (vm.downloadingModelId == model.id && progressState is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading) {
+                            if (vm.downloadingModelId == model.id && progressState is ModelDownloader.Progress.Downloading) {
                                 CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AppTheme.colors.accent, strokeWidth = 2.dp)
                             } else {
                                 TextButton(
@@ -572,7 +583,7 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                     // Блок прогресу та помилок (з'являється тільки для моделі, що завантажується)
                     if (vm.downloadingModelId == model.id) {
                         val prog = vm.downloadProgress.value
-                        if (prog is com.dynamicai.launcher.llm.ModelDownloader.Progress.Downloading) {
+                        if (prog is ModelDownloader.Progress.Downloading) {
                             Spacer(modifier = Modifier.height(4.dp))
                             LinearProgressIndicator(
                                 progress = { prog.percent / 100f },
@@ -583,11 +594,11 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                                 "${prog.percent}% (${prog.downloadedMb} / ${prog.totalMb} МБ)" 
                             else 
                                 "${prog.downloadedMb} МБ завантажено..."
-                            Text(progressText, color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
-                        } else if (prog is com.dynamicai.launcher.llm.ModelDownloader.Progress.Error) {
+                            Text(progressText, color = AppTheme.colors.textMuted, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
+                        } else if (prog is ModelDownloader.Progress.Error) {
                             Text("Помилка: ${prog.message}", color = AppTheme.colors.danger, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
                             TextButton(onClick = { vm.clearDownloadError() }) {
-                                Text("Сховати", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 11.sp)
+                                Text("Сховати", color = AppTheme.colors.textMuted, fontSize = 11.sp)
                             }
                         }
                     }
@@ -648,13 +659,13 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                 if (on) {
                     val ok = ContextCompat.checkSelfPermission(appCtx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
                     if (ok) {
-                        com.dynamicai.launcher.voice.WakeWordService.start(appCtx)
+                        WakeWordService.start(appCtx)
                     }
-                    if (android.os.Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(appCtx)) {
+                    if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(appCtx)) {
                         onNeedOverlayPermission()
                     }
                 } else {
-                    com.dynamicai.launcher.voice.WakeWordService.stop(appCtx)
+                    WakeWordService.stop(appCtx)
                 }
             }
             if (settings.wakeWordEnabled) {
@@ -670,11 +681,11 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                         fontSize = 13.sp,
                         modifier = Modifier.width(60.dp)
                     )
-                    androidx.compose.foundation.text.BasicTextField(
+                    BasicTextField(
                         value = settings.wakeWord,
                         onValueChange = { onSettingsChange(settings.copy(wakeWord = it)) },
-                        textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
-                        cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.accent),
+                        textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
+                        cursorBrush = SolidColor(AppTheme.colors.accent),
                         singleLine = true,
                         modifier = Modifier
                             .weight(1f)
@@ -697,16 +708,16 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                         GlassSectionHeader("Промпти для рушіїв (файли)")
         GlassCard {
             Column(modifier = Modifier.padding(16.dp)) {
-                val localCtx = androidx.compose.ui.platform.LocalContext.current
-                var mnnText by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.dynamicai.launcher.llm.PromptManager.loadMnn(localCtx)) }
-                var litertText by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(com.dynamicai.launcher.llm.PromptManager.loadLitert(localCtx)) }
+                val localCtx = LocalContext.current
+                var mnnText by remember { mutableStateOf(PromptManager.loadMnn(localCtx)) }
+                var litertText by remember { mutableStateOf(PromptManager.loadLitert(localCtx)) }
 
                 Text("MNN Prompt ({{question}})", color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text("Шаблон чату (<|im_start|>…) MNN додає сам. Тут — інструкція й {{question}}", color = AppTheme.colors.textSecondary, fontSize = 10.sp, modifier = Modifier.padding(bottom = 4.dp))
-                androidx.compose.foundation.text.BasicTextField(
+                BasicTextField(
                     value = mnnText,
                     onValueChange = { mnnText = it },
-                    textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 12.sp),
+                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 12.sp),
                     modifier = Modifier.fillMaxWidth().height(100.dp).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f), RoundedCornerShape(8.dp)).padding(8.dp)
                 )
                 
@@ -714,18 +725,18 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsAiSection(
                 
                 Text("LiteRT Prompt (Gemma та інші)", color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 Text("Шаблон чату (<start_of_turn>…) LiteRT додає сам. Тут — інструкція й {{question}}", color = AppTheme.colors.textSecondary, fontSize = 10.sp, modifier = Modifier.padding(bottom = 4.dp))
-                androidx.compose.foundation.text.BasicTextField(
+                BasicTextField(
                     value = litertText,
                     onValueChange = { litertText = it },
-                    textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 12.sp),
+                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 12.sp),
                     modifier = Modifier.fillMaxWidth().height(100.dp).background(AppTheme.colors.textPrimary.copy(alpha = 0.05f), RoundedCornerShape(8.dp)).padding(8.dp)
                 )
                 
                 Spacer(Modifier.height(12.dp))
                 TextButton(
                     onClick = {
-                        com.dynamicai.launcher.llm.PromptManager.saveMnn(localCtx, mnnText)
-                        com.dynamicai.launcher.llm.PromptManager.saveLitert(localCtx, litertText)
+                        PromptManager.saveMnn(localCtx, mnnText)
+                        PromptManager.saveLitert(localCtx, litertText)
                     },
                     modifier = Modifier.align(Alignment.End)
                 ) {

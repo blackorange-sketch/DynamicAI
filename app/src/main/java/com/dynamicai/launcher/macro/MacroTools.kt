@@ -17,6 +17,13 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
+import android.app.Notification
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.telephony.SmsManager
 
 /** Додаткові дії макросів: вібрація, режим дзвінка, DND, дані, політ, сповіщення, озвучення, HTTP, shell (Shizuku). */
 class MacroTools(private val context: Context) {
@@ -93,16 +100,16 @@ class MacroTools(private val context: Context) {
     }
 
     fun notify(title: String, text: String): String {
-        if (context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+        if (context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
             return "Немає дозволу на сповіщення"
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (nm.getNotificationChannel("macro_notify") == null)
             nm.createNotificationChannel(NotificationChannel("macro_notify", "Макроси", NotificationManager.IMPORTANCE_DEFAULT))
-        val n = android.app.Notification.Builder(context, "macro_notify")
+        val n = Notification.Builder(context, "macro_notify")
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle(title.ifBlank { "DynamicAI" })
             .setContentText(text)
-            .setStyle(android.app.Notification.BigTextStyle().bigText(text))
+            .setStyle(Notification.BigTextStyle().bigText(text))
             .setAutoCancel(true)
             .build()
         nm.notify((System.currentTimeMillis() % 100000).toInt() + 9000, n)
@@ -129,19 +136,19 @@ class MacroTools(private val context: Context) {
 
     fun sendSms(number: String, text: String): String {
         if (number.isBlank() || text.isBlank()) return "Потрібні номер і текст"
-        if (context.checkSelfPermission(android.Manifest.permission.SEND_SMS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+        if (context.checkSelfPermission(android.Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED)
             return "Немає дозволу на надсилання SMS"
         return try {
-            val sm = if (android.os.Build.VERSION.SDK_INT >= 31) context.getSystemService(android.telephony.SmsManager::class.java)
-            else @Suppress("DEPRECATION") android.telephony.SmsManager.getDefault()
+            val sm = if (Build.VERSION.SDK_INT >= 31) context.getSystemService(SmsManager::class.java)
+            else @Suppress("DEPRECATION") SmsManager.getDefault()
             sm.sendMultipartTextMessage(number, null, sm.divideMessage(text), null, null)
             "SMS надіслано на $number"
         } catch (t: Throwable) { "Не вдалося надіслати SMS: ${t.message}" }
     }
 
     fun copyText(text: String): String = try {
-        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-        cm.setPrimaryClip(android.content.ClipData.newPlainText("macro", text))
+        val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cm.setPrimaryClip(ClipData.newPlainText("macro", text))
         "Скопійовано"
     } catch (t: Throwable) { "Не вдалося скопіювати: ${t.message}" }
 
@@ -165,7 +172,7 @@ class MacroTools(private val context: Context) {
 
     fun setAutoRotate(on: Boolean): String {
         if (!Settings.System.canWrite(context)) {
-            try { context.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, android.net.Uri.parse("package:${context.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Throwable) {}
+            try { context.startActivity(Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:${context.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Throwable) {}
             return "Немає дозволу змінювати налаштування системи"
         }
         Settings.System.putInt(context.contentResolver, Settings.System.ACCELEROMETER_ROTATION, if (on) 1 else 0)

@@ -53,6 +53,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.LinearProgressIndicator
 import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.model.AppInfo
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import com.dynamicai.launcher.llm.CloudLlm
+import com.dynamicai.launcher.system.BluetoothManager
 
 @Composable
 internal fun SizeSliderRow(
@@ -91,7 +99,7 @@ internal fun SizeSliderRow(
 internal fun SwitchRow(
     label: String,
     checked: Boolean,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    icon: ImageVector? = null,
     tint: Color = AppTheme.colors.accent,
     onChange: (Boolean) -> Unit
 ) {
@@ -134,7 +142,7 @@ internal fun SwitchRow(
 @Composable
 internal fun ActionRow(
     label: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    icon: ImageVector? = null,
     tint: Color = AppTheme.colors.accent,
     onClick: () -> Unit
 ) {
@@ -283,7 +291,7 @@ internal fun ShizukuTestRow() {
     var tasks by remember { mutableStateOf("") }
     var permCode by remember { mutableStateOf(0) }
 
-    val manager = remember { com.dynamicai.launcher.system.ShizukuManager(ctx) }
+    val manager = remember { ShizukuManager(ctx) }
 
     LaunchedEffect(Unit) {
         status = buildString {
@@ -353,8 +361,8 @@ internal fun LlmTestRow(onTest: suspend (String) -> String?) {
         BasicTextField(
             value = query,
             onValueChange = { query = it },
-            textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
-            cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.textPrimary),
+            textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
+            cursorBrush = SolidColor(AppTheme.colors.textPrimary),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
@@ -363,7 +371,7 @@ internal fun LlmTestRow(onTest: suspend (String) -> String?) {
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             decorationBox = { inner ->
                 if (query.isEmpty()) {
-                    Text("Prompt", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 14.sp)
+                    Text("Prompt", color = AppTheme.colors.textMuted, fontSize = 14.sp)
                 }
                 inner()
             }
@@ -404,27 +412,27 @@ internal fun LlmTestRow(onTest: suspend (String) -> String?) {
 internal fun BluetoothTestRow() {
     val ctx = LocalContext.current
         val scope = rememberCoroutineScope()
-    val manager = remember { com.dynamicai.launcher.system.BluetoothManager(ctx) }
+    val manager = remember { BluetoothManager(ctx) }
     var diagnostic by remember { mutableStateOf("") }
     var nameInput by remember { mutableStateOf("") }
     var hasPermission by remember { mutableStateOf(false) }
 
-    val permLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    val permLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { result ->
         hasPermission = result.values.all { it }
         diagnostic = manager.getDiagnostic()
     }
 
     fun checkPermission(): Boolean {
-        if (android.os.Build.VERSION.SDK_INT < 31) return true
-        return androidx.core.content.ContextCompat.checkSelfPermission(
+        if (Build.VERSION.SDK_INT < 31) return true
+        return ContextCompat.checkSelfPermission(
             ctx, android.Manifest.permission.BLUETOOTH_CONNECT
-        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     fun requestPermissions() {
-        if (android.os.Build.VERSION.SDK_INT >= 31) {
+        if (Build.VERSION.SDK_INT >= 31) {
             permLauncher.launch(arrayOf(
                 android.Manifest.permission.BLUETOOTH_CONNECT,
                 android.Manifest.permission.BLUETOOTH_SCAN
@@ -460,8 +468,8 @@ internal fun BluetoothTestRow() {
             BasicTextField(
                 value = nameInput,
                 onValueChange = { nameInput = it },
-                textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
-                cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.textPrimary),
+                textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
+                cursorBrush = SolidColor(AppTheme.colors.textPrimary),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp)
@@ -470,7 +478,7 @@ internal fun BluetoothTestRow() {
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 decorationBox = { inner ->
                     if (nameInput.isEmpty()) {
-                        Text("Назва пристрою (напр. Toyota)", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 14.sp)
+                        Text("Назва пристрою (напр. Toyota)", color = AppTheme.colors.textMuted, fontSize = 14.sp)
                     }
                     inner()
                 }
@@ -612,7 +620,7 @@ internal fun AppPickerRow(
     label: String,
     currentPkg: String,
     apps: List<AppInfo>,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     tint: Color,
     onPick: (String) -> Unit
 ) {
@@ -677,8 +685,8 @@ internal fun TextFieldRow(label: String, value: String, placeholder: String, sec
             textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 13.sp),
             cursorBrush = SolidColor(AppTheme.colors.accent),
             singleLine = true,
-            visualTransformation = if (secret) androidx.compose.ui.text.input.PasswordVisualTransformation()
-                else androidx.compose.ui.text.input.VisualTransformation.None,
+            visualTransformation = if (secret) PasswordVisualTransformation()
+                else VisualTransformation.None,
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(10.dp))
@@ -708,7 +716,7 @@ internal fun CloudTestRow(settings: LauncherSettings) {
                     busy = true; status = ""
                     scope.launch {
                         status = try {
-                            val r = com.dynamicai.launcher.llm.CloudLlm.generate(
+                            val r = CloudLlm.generate(
                                 settings, "Відповідай одним словом.", "Скажи слово: готово"
                             ) { }
                             "✅ Працює (${com.dynamicai.launcher.llm.CloudLlm.lastProvider}): ${r.trim().take(40)}"

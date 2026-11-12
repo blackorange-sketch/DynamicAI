@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dynamicai.launcher.folder.Folder
 import com.dynamicai.launcher.model.AppInfo
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 
 @Composable
 fun FolderTabs(
@@ -57,11 +59,11 @@ fun FolderTabs(
             enter = expandVertically(
                 animationSpec = tween(animMs(300), easing = Motion.Decel),
                 expandFrom = Alignment.Bottom
-            ) + androidx.compose.animation.fadeIn(tween(animMs(220), delayMillis = animMs(40))),
+            ) + fadeIn(tween(animMs(220), delayMillis = animMs(40))),
             exit = shrinkVertically(
                 animationSpec = tween(animMs(200), easing = Motion.Accel),
                 shrinkTowards = Alignment.Bottom
-            ) + androidx.compose.animation.fadeOut(tween(animMs(120)))
+            ) + fadeOut(tween(animMs(120)))
         ) {
             val cols = gridCells()
             LazyVerticalGrid(

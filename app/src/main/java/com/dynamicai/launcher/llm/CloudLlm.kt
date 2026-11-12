@@ -9,6 +9,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlinx.coroutines.CancellationException
 
 /**
  * Хмарні моделі зі стрімінгом: Google Gemini (основна) і Groq (запасна, формат OpenAI).
@@ -56,7 +57,7 @@ object CloudLlm {
                 lastProvider = "Gemini"
                 return r
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is CancellationException) throw e
                 errors.add("Gemini: ${e.message}")
                 // Якщо частину відповіді вже озвучено — не перемикаємось, щоб не дублювати
                 if (emitted) throw e
@@ -68,7 +69,7 @@ object CloudLlm {
                 lastProvider = "Groq"
                 return r
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is CancellationException) throw e
                 errors.add("Groq: ${e.message}")
             }
         }

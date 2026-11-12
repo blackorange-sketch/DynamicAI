@@ -36,6 +36,35 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.content.res.Configuration
+import android.graphics.Outline
+import android.os.Handler
+import android.os.Looper
+import android.text.Editable
+import android.text.TextUtils
+import android.text.TextWatcher
+import android.view.KeyEvent
+import android.view.ViewOutlineProvider
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
+import android.widget.TextView
+import android.widget.Toast
+import com.dynamicai.launcher.command.Command
+import com.dynamicai.launcher.command.CommandExecutorProvider
+import com.dynamicai.launcher.command.CommandParser
+import com.dynamicai.launcher.command.CommandResult
+import com.dynamicai.launcher.command.FuzzyMatcher
+import com.dynamicai.launcher.command.SettingsRoutes
+import com.dynamicai.launcher.llm.LiteRtLlmEngine
+import com.dynamicai.launcher.llm.ModelDownloader
+import com.dynamicai.launcher.ocr.RegionSelectorOverlay
+import com.dynamicai.launcher.ocr.ScreenTranslateOverlay
+import com.dynamicai.launcher.ocr.ScreenTranslator
+import com.dynamicai.launcher.suggestion.ActionCatalog
+import kotlinx.coroutines.delay
 
 class FloatingDockService : Service() {
 
@@ -51,14 +80,14 @@ class FloatingDockService : Service() {
     private val folderStorage by lazy { FolderStorage(applicationContext) }
 
     @Volatile private var apps: List<AppInfo> = emptyList()
-    private var searchOverlayView: android.view.View? = null
+    private var searchOverlayView: View? = null
     private var searchOverlayParams: WindowManager.LayoutParams? = null
-    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private val commandParser by lazy { com.dynamicai.launcher.command.CommandParser() }
-    private val llmEngine by lazy { com.dynamicai.launcher.llm.LiteRtLlmEngine(applicationContext) }
-    private val modelDownloader by lazy { com.dynamicai.launcher.llm.ModelDownloader(applicationContext) }
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val commandParser by lazy { CommandParser() }
+    private val llmEngine by lazy { LiteRtLlmEngine(applicationContext) }
+    private val modelDownloader by lazy { ModelDownloader(applicationContext) }
 
-    private val commandExecutor by lazy { com.dynamicai.launcher.command.CommandExecutorProvider.get(applicationContext) }
+    private val commandExecutor by lazy { CommandExecutorProvider.get(applicationContext) }
 
     private val dockPrefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == "apps") {
@@ -72,8 +101,8 @@ class FloatingDockService : Service() {
     }
     @Volatile private var expanded = false
     @Volatile private var keyboardUp = false
-    private val keyboardReceiver = object : android.content.BroadcastReceiver() {
-        override fun onReceive(ctx: android.content.Context?, intent: android.content.Intent?) {
+    private val keyboardReceiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context?, intent: Intent?) {
             val isOpen = intent?.getBooleanExtra("is_open", false) ?: false
             // Авто-приховування дока, поки відкрита клавіатура
             if (isOpen != keyboardUp) {
@@ -101,7 +130,7 @@ class FloatingDockService : Service() {
     private fun updateDockVisibility() {
         try {
             if (!::rootLayout.isInitialized) return
-            val landscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+            val landscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
             val hide = (keyboardUp && settings.overlayHideOnKeyboard) || (landscape && settings.overlayHideInLandscape)
             if (hide == dockHidden) return
             dockHidden = hide
@@ -115,7 +144,7 @@ class FloatingDockService : Service() {
         } catch (_: Throwable) {}
     }
 
-    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+    override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         try {
             applyPosition()
@@ -260,7 +289,7 @@ class FloatingDockService : Service() {
         if (searchOverlayView != null) return
         try {
             // ===== Overlay =====
-            val overlay = android.widget.FrameLayout(this).apply {
+            val overlay = FrameLayout(this).apply {
                 setBackgroundColor(0x66000000.toInt())
                 isFocusableInTouchMode = true
                 isFocusable = true
@@ -271,30 +300,30 @@ class FloatingDockService : Service() {
 
             // Back
             overlay.setOnKeyListener { _, keyCode, event ->
-                if (keyCode == android.view.KeyEvent.KEYCODE_BACK &&
-                    event.action == android.view.KeyEvent.ACTION_UP) {
+                if (keyCode == KeyEvent.KEYCODE_BACK &&
+                    event.action == KeyEvent.ACTION_UP) {
                     hideSearchOverlay()
                     true
                 } else false
             }
 
             // ===== Контейнер (зверху) =====
-            val container = android.widget.LinearLayout(this).apply {
-                orientation = android.widget.LinearLayout.VERTICAL
+            val container = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
                 setPadding(dp(12), dp(60), dp(12), dp(12))
                 isClickable = false
             }
 
             // ===== Поле введення =====
-            val editText = android.widget.EditText(this).apply {
+            val editText = EditText(this).apply {
                 hint = "Пошук або команда…"
                 setHintTextColor(0x80FFFFFF.toInt())
-                setTextColor(android.graphics.Color.WHITE)
+                setTextColor(Color.WHITE)
                 textSize = 17f
                 setSingleLine(true)
                 setPadding(dp(20), dp(14), dp(20), dp(14))
-                background = android.graphics.drawable.GradientDrawable(
-                    android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                background = GradientDrawable(
+                    GradientDrawable.Orientation.TOP_BOTTOM,
                     intArrayOf(0xF01F1F1F.toInt(), 0xE00D0D0D.toInt())
                 ).apply {
                     cornerRadius = dp(24).toFloat()
@@ -304,34 +333,34 @@ class FloatingDockService : Service() {
             container.addView(editText)
 
             // ===== Підказки =====
-            val resultsList = android.widget.LinearLayout(this).apply {
-                orientation = android.widget.LinearLayout.VERTICAL
+            val resultsList = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
                 setPadding(0, dp(8), 0, 0)
             }
             container.addView(resultsList)
 
             // ===== LayoutParams — container притиснутий догори =====
-            val containerParams = android.widget.FrameLayout.LayoutParams(
-                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
+            val containerParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                gravity = android.view.Gravity.TOP
+                gravity = Gravity.TOP
             }
 
             overlay.addView(container, containerParams)
 
             // ===== Логіка підказок =====
-            editText.addTextChangedListener(object : android.text.TextWatcher {
+            editText.addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
                 override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-                override fun afterTextChanged(s: android.text.Editable?) {
+                override fun afterTextChanged(s: Editable?) {
                     val query = s?.toString().orEmpty().trim()
                     resultsList.removeAllViews()
                     if (query.isBlank()) return
                     val lower = query.lowercase()
 
-                    com.dynamicai.launcher.suggestion.ActionCatalog.all
-                        .map { a -> a to a.keywords.maxOf { kw -> com.dynamicai.launcher.command.FuzzyMatcher.score(kw, lower) } }
+                    ActionCatalog.all
+                        .map { a -> a to a.keywords.maxOf { kw -> FuzzyMatcher.score(kw, lower) } }
                         .filter { it.second >= 55 }
                         .sortedByDescending { it.second }
                         .take(3)
@@ -342,15 +371,15 @@ class FloatingDockService : Service() {
                             })
                         }
 
-                    com.dynamicai.launcher.command.SettingsRoutes.all().keys
-                        .map { it to com.dynamicai.launcher.command.FuzzyMatcher.score(it, lower) }
+                    SettingsRoutes.all().keys
+                        .map { it to FuzzyMatcher.score(it, lower) }
                         .filter { it.second >= 60 }
                         .sortedByDescending { it.second }
                         .take(2)
                         .forEach { (route, _) ->
                             resultsList.addView(makeResultRow("⚙", "Налаштування: $route") {
                                 commandExecutor.execute(
-                                    com.dynamicai.launcher.command.Command.OpenSettings(route),
+                                    Command.OpenSettings(route),
                                     apps
                                 )
                                 hideSearchOverlay()
@@ -373,18 +402,18 @@ class FloatingDockService : Service() {
 
             // ===== Enter =====
             editText.setOnEditorActionListener { _, actionId, event ->
-                if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH ||
-                    (event != null && event.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_DOWN)) {
+                if (actionId == EditorInfo.IME_ACTION_SEARCH ||
+                    (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
                     val text = editText.text.toString().trim()
                     if (text.isNotBlank()) {
                         val cmd = commandParser.parse(text)
                         val result = commandExecutor.execute(cmd, apps)
-                        if (result is com.dynamicai.launcher.command.CommandResult.Success) {
+                        if (result is CommandResult.Success) {
                             hideSearchOverlay()
-                        } else if (result is com.dynamicai.launcher.command.CommandResult.Error) {
-                            android.widget.Toast.makeText(
+                        } else if (result is CommandResult.Error) {
+                            Toast.makeText(
                                 this@FloatingDockService, result.message,
-                                android.widget.Toast.LENGTH_SHORT
+                                Toast.LENGTH_SHORT
                             ).show()
                         }
                     }
@@ -393,7 +422,7 @@ class FloatingDockService : Service() {
             }
 
             // ===== WindowManager =====
-            val type = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
+            val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             else
                 @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
@@ -405,7 +434,7 @@ class FloatingDockService : Service() {
                 WindowManager.LayoutParams.FLAG_DIM_BEHIND or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
-                android.graphics.PixelFormat.TRANSLUCENT
+                PixelFormat.TRANSLUCENT
             ).apply {
                 dimAmount = 0.5f
                 softInputMode = WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or
@@ -421,8 +450,8 @@ class FloatingDockService : Service() {
                 try {
                     overlay.requestFocus()
                     editText.requestFocus()
-                    val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-                    imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
                 } catch (_: Throwable) {}
             }, 100)
         } catch (t: Throwable) {
@@ -430,44 +459,44 @@ class FloatingDockService : Service() {
         }
     }
 
-    private fun makeResultRow(emoji: String, label: String, onClick: () -> Unit): android.view.View {
-        val row = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.HORIZONTAL
+    private fun makeResultRow(emoji: String, label: String, onClick: () -> Unit): View {
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
             setPadding(dp(16), dp(14), dp(16), dp(14))
             isClickable = true
             setOnClickListener { onClick() }
 
             // Glass-фон
-            background = android.graphics.drawable.GradientDrawable(
-                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+            background = GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
                 intArrayOf(0xE0202020.toInt(), 0xD00D0D0D.toInt())
             ).apply {
                 cornerRadius = dp(16).toFloat()
                 setStroke(dp(1), 0x33FFFFFF)
             }
 
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
-                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
                 setMargins(0, dp(4), 0, dp(4))
             }
         }
 
         // Emoji-іконка
-        row.addView(android.widget.TextView(this).apply {
+        row.addView(TextView(this).apply {
             text = emoji
             textSize = 20f
             setPadding(0, 0, dp(14), 0)
         })
 
         // Текст
-        row.addView(android.widget.TextView(this).apply {
+        row.addView(TextView(this).apply {
             text = label
-            setTextColor(android.graphics.Color.WHITE)
+            setTextColor(Color.WHITE)
             textSize = 16f
             maxLines = 1
-            ellipsize = android.text.TextUtils.TruncateAt.END
+            ellipsize = TextUtils.TruncateAt.END
         })
 
         return row
@@ -482,7 +511,7 @@ class FloatingDockService : Service() {
     }
 
     private fun applyPosition() {
-        val land = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        val land = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
         val side = if (land) settings.overlayPositionLandscape else settings.overlayPosition
         val horizontal = if (side == "left") Gravity.START else Gravity.END
         params.gravity = Gravity.CENTER_VERTICAL or horizontal
@@ -495,9 +524,9 @@ class FloatingDockService : Service() {
     private fun registerKeyboardReceiver() {
         try {
             if (!receiverRegistered) {
-                val filter = android.content.IntentFilter("com.dynamicai.KEYBOARD_STATE_CHANGED")
-                if (android.os.Build.VERSION.SDK_INT >= 33) {
-                    registerReceiver(keyboardReceiver, filter, android.content.Context.RECEIVER_NOT_EXPORTED)
+                val filter = IntentFilter("com.dynamicai.KEYBOARD_STATE_CHANGED")
+                if (Build.VERSION.SDK_INT >= 33) {
+                    registerReceiver(keyboardReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
                 } else {
                     registerReceiver(keyboardReceiver, filter)
                 }
@@ -532,8 +561,8 @@ class FloatingDockService : Service() {
             elevation = dp(4).toFloat()
             // Тінь через elevation на Android 5+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                outlineProvider = object : android.view.ViewOutlineProvider() {
-                    override fun getOutline(view: View, outline: android.graphics.Outline) {
+                outlineProvider = object : ViewOutlineProvider() {
+                    override fun getOutline(view: View, outline: Outline) {
                         outline.setRoundRect(0, 0, view.width, view.height, visualWidth / 2f)
                     }
                 }
@@ -693,35 +722,35 @@ class FloatingDockService : Service() {
             rebuildContent()
 
             val app = applicationContext
-            com.dynamicai.launcher.ocr.RegionSelectorOverlay.show(
+            RegionSelectorOverlay.show(
                 context = app,
                 onSelected = { rect ->
-                    kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                    CoroutineScope(Dispatchers.Main).launch {
                         try {
-                            android.util.Log.e("FloatingDock", "Region: $rect")
+                            Log.e("FloatingDock", "Region: $rect")
                             // Невелика затримка щоб overlay зник з екрана перед скріншотом
-                            kotlinx.coroutines.delay(150)
-                            val translator = com.dynamicai.launcher.ocr.ScreenTranslator(app, llmEngine)
+                            delay(150)
+                            val translator = ScreenTranslator(app, llmEngine)
                             val blocks = translator.captureRegionAndTranslate(
                                 rect = rect,
                                 ocrLangs = "ukr+eng+pol",
                                 targetLang = "uk"
                             )
                             if (blocks.isEmpty()) {
-                                android.widget.Toast.makeText(
+                                Toast.makeText(
                                     app,
                                     "Не вдалось перекласти",
-                                    android.widget.Toast.LENGTH_SHORT
+                                    Toast.LENGTH_SHORT
                                 ).show()
                             } else {
-                                com.dynamicai.launcher.ocr.ScreenTranslateOverlay.show(
+                                ScreenTranslateOverlay.show(
                                     context = app,
                                     blocks = blocks,
                                     targetLang = "uk"
                                 )
                             }
                         } catch (t: Throwable) {
-                            android.util.Log.e("FloatingDock", "translate region failed: ${t.message}", t)
+                            Log.e("FloatingDock", "translate region failed: ${t.message}", t)
                         }
                     }
                 },

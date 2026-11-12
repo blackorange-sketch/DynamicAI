@@ -18,6 +18,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.dynamicai.launcher.data.LauncherSettings
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun MainBackground(settings: LauncherSettings) {
@@ -43,7 +44,7 @@ fun MainBackground(settings: LauncherSettings) {
     // Малюємо ТІЛЬКИ якщо є кастомне фото.
     // Якщо немає — нічого не малюємо, і системні шпалери просвічують крізь прозорий Activity.
     if (customBg != null) {
-        Box(modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color(0xFF000000))) {
+        Box(modifier = Modifier.fillMaxSize().background(Color(0xFF000000))) {
             Image(
                 bitmap = customBg!!,
                 contentDescription = null,

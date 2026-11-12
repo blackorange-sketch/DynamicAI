@@ -8,6 +8,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import rikka.shizuku.Shizuku
 import java.lang.reflect.Method
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.ComponentName
+import android.content.Intent
+import android.content.pm.ApplicationInfo
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
+import android.os.Build
+import com.dynamicai.launcher.alarm.AlarmReceiver
+import java.io.InputStream
+import java.util.Calendar
+import java.util.concurrent.ConcurrentHashMap
 
 class ShizukuManager(private val context: Context) {
 
@@ -21,13 +33,13 @@ class ShizukuManager(private val context: Context) {
      * при кожному оновленні списку, і ROM щоразу сипав помилками про відсутні файли теми іконок.
      * Для кожного споживача створюється власна копія Drawable.
      */
-    private val iconStates = java.util.concurrent.ConcurrentHashMap<String, android.graphics.drawable.Drawable.ConstantState>()
+    private val iconStates = ConcurrentHashMap<String, Drawable.ConstantState>()
 
     private fun cachedIcon(
-        pm: android.content.pm.PackageManager,
+        pm: PackageManager,
         pkg: String,
-        appInfo: android.content.pm.ApplicationInfo
-    ): android.graphics.drawable.Drawable {
+        appInfo: ApplicationInfo
+    ): Drawable {
         iconStates[pkg]?.let { return it.newDrawable().mutate() }
         val d = pm.getApplicationIcon(appInfo)
         d.constantState?.let { iconStates[pkg] = it; return it.newDrawable().mutate() }
@@ -38,8 +50,8 @@ class ShizukuManager(private val context: Context) {
         val id: Int,
         val packageName: String,
         val label: String,
-        val icon: android.graphics.drawable.Drawable?,
-        val snapshot: android.graphics.Bitmap? = null
+        val icon: Drawable?,
+        val snapshot: Bitmap? = null
     )
 
     @Volatile private var binderReceived = false
@@ -205,14 +217,14 @@ class ShizukuManager(private val context: Context) {
                     var pkg: String? = null
                     try {
                         val topField = taskClass.getField("topActivity")
-                        val top = topField.get(taskInfo) as? android.content.ComponentName
+                        val top = topField.get(taskInfo) as? ComponentName
                         pkg = top?.packageName
                     } catch (_: Throwable) {}
 
                     if (pkg.isNullOrBlank()) {
                         try {
                             val baseField = taskClass.getField("baseIntent")
-                            val base = baseField.get(taskInfo) as? android.content.Intent
+                            val base = baseField.get(taskInfo) as? Intent
                             pkg = base?.component?.packageName
                         } catch (_: Throwable) {}
                     }
@@ -245,7 +257,7 @@ class ShizukuManager(private val context: Context) {
         result
     }
 
-    private fun getTaskSnapshot(taskId: Int): android.graphics.Bitmap? {
+    private fun getTaskSnapshot(taskId: Int): Bitmap? {
         return try {
             val atm = getActivityTaskManagerService() ?: return null
 
@@ -269,7 +281,7 @@ class ShizukuManager(private val context: Context) {
                 Class.forName("android.hardware.HardwareBuffer"),
                 Class.forName("android.graphics.ColorSpace")
             )
-            val bitmap = wrapMethod.invoke(null, hardwareBuffer, null) as? android.graphics.Bitmap
+            val bitmap = wrapMethod.invoke(null, hardwareBuffer, null) as? Bitmap
             bitmap
         } catch (t: Throwable) {
             Log.e(TAG, "getTaskSnapshot failed for taskId=$taskId: ${t.message}")
@@ -327,36 +339,36 @@ class ShizukuManager(private val context: Context) {
         try {
             // Використовуємо прямий AlarmManager через контекст
             // (Shizuku тут допомагає обійти обмеження на API 31+)
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-            val cal = java.util.Calendar.getInstance().apply {
-                set(java.util.Calendar.HOUR_OF_DAY, hour)
-                set(java.util.Calendar.MINUTE, minute)
-                set(java.util.Calendar.SECOND, 0)
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val cal = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, hour)
+                set(Calendar.MINUTE, minute)
+                set(Calendar.SECOND, 0)
                 if (timeInMillis < System.currentTimeMillis()) {
-                    add(java.util.Calendar.DAY_OF_YEAR, 1)
+                    add(Calendar.DAY_OF_YEAR, 1)
                 }
             }
 
-            val intent = android.content.Intent(context, com.dynamicai.launcher.alarm.AlarmReceiver::class.java).apply {
+            val intent = Intent(context, AlarmReceiver::class.java).apply {
                 putExtra("label", label ?: "DynamicAI Alarm")
                 putExtra("hour", hour)
                 putExtra("minute", minute)
             }
-            val pending = android.app.PendingIntent.getBroadcast(
+            val pending = PendingIntent.getBroadcast(
                 context,
                 System.currentTimeMillis().toInt(),
                 intent,
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            if (android.os.Build.VERSION.SDK_INT >= 31) {
+            if (Build.VERSION.SDK_INT >= 31) {
                 if (!alarmManager.canScheduleExactAlarms()) {
                     Log.d(TAG, "Немає дозволу SCHEDULE_EXACT_ALARM")
                     return@withContext false
                 }
             }
             alarmManager.setAlarmClock(
-                android.app.AlarmManager.AlarmClockInfo(cal.timeInMillis, pending),
+                AlarmManager.AlarmClockInfo(cal.timeInMillis, pending),
                 pending
             )
             Log.d(TAG, "Будильник встановлено: %02d:%02d".format(hour, minute))
@@ -424,8 +436,8 @@ class ShizukuManager(private val context: Context) {
     private fun readProcessOutput(process: Any): String {
         return try {
             val processClass = process.javaClass
-            val inputStream = processClass.getMethod("getInputStream").invoke(process) as java.io.InputStream
-            val errorStream = processClass.getMethod("getErrorStream").invoke(process) as java.io.InputStream
+            val inputStream = processClass.getMethod("getInputStream").invoke(process) as InputStream
+            val errorStream = processClass.getMethod("getErrorStream").invoke(process) as InputStream
             val waitFor = processClass.getMethod("waitFor")
             
             val output = inputStream.bufferedReader().readText().trim()

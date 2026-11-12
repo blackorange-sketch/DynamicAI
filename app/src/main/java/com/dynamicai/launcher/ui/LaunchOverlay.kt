@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.dynamicai.launcher.model.AppInfo
 import com.dynamicai.launcher.ui.theme.AppTheme
+import androidx.compose.ui.graphics.Color
 
 private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
 
@@ -60,7 +61,7 @@ fun LaunchOverlay(app: AppInfo?, origin: Offset) {
         for (i in 1..4) {
             val grow = i * 5.dp.toPx() * (1f - p * 0.7f)
             drawRoundRect(
-                color = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.11f * (1f - p) * fill.coerceAtLeast(0.4f)),
+                color = Color.Black.copy(alpha = 0.11f * (1f - p) * fill.coerceAtLeast(0.4f)),
                 topLeft = Offset(left - grow, top - grow + 3.dp.toPx()),
                 size = Size(right - left + grow * 2, bottom - top + grow * 2),
                 cornerRadius = CornerRadius(radius + grow, radius + grow)

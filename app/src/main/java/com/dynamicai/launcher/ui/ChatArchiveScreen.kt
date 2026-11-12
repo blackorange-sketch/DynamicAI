@@ -27,6 +27,8 @@ import com.dynamicai.launcher.ui.theme.AppTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 
 /** Список збережених розмов: пошук, закріплення, видалення, відкриття. */
 @Composable
@@ -88,18 +90,18 @@ fun ChatArchiveScreen(onOpen: (SavedChat) -> Unit, onClose: () -> Unit) {
             }
         }
         confirmDelete?.let { c ->
-            androidx.compose.material3.AlertDialog(
+            AlertDialog(
                 onDismissRequest = { confirmDelete = null },
                 containerColor = AppTheme.colors.surface,
                 title = { Text("Видалити розмову?", color = AppTheme.colors.textPrimary) },
                 text = { Text(c.title, color = AppTheme.colors.textSecondary) },
                 confirmButton = {
-                    androidx.compose.material3.TextButton(onClick = {
+                    TextButton(onClick = {
                         ChatArchive.delete(c.id); chats = ChatArchive.sorted(); confirmDelete = null
                     }) { Text("Видалити", color = AppTheme.colors.danger) }
                 },
                 dismissButton = {
-                    androidx.compose.material3.TextButton(onClick = { confirmDelete = null }) { Text("Скасувати", color = AppTheme.colors.textSecondary) }
+                    TextButton(onClick = { confirmDelete = null }) { Text("Скасувати", color = AppTheme.colors.textSecondary) }
                 }
             )
         }

@@ -86,15 +86,24 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
+import androidx.compose.foundation.layout.Box
+import com.dynamicai.launcher.data.WeatherState
+import com.dynamicai.launcher.note.Note
+import com.dynamicai.launcher.note.NotesStorage
+import com.dynamicai.launcher.widget.PlacedWidget
+import com.dynamicai.launcher.widget.RenderPlacedWidget
+import com.dynamicai.launcher.widget.WidgetSettingsDialog
+import com.dynamicai.launcher.widget.WidgetStack
+import com.dynamicai.launcher.widget.WidgetsStorage
 
 /** Одна сторінка головного екрана: віджети (зі стеками) і їхні налаштування. */
 @Composable
 fun HomeWidgetPage(
     page: Int,
     pageCount: Int,
-    placedWidgets: List<com.dynamicai.launcher.widget.PlacedWidget>,
-    storage: com.dynamicai.launcher.widget.WidgetsStorage,
-    weather: com.dynamicai.launcher.data.WeatherState,
+    placedWidgets: List<PlacedWidget>,
+    storage: WidgetsStorage,
+    weather: WeatherState,
     showWeather: Boolean,
     clockOnlyMode: Boolean,
     scrollable: Boolean,
@@ -107,9 +116,9 @@ fun HomeWidgetPage(
     modifier: Modifier = Modifier
 ) {
     val ctx = LocalContext.current
-    var widgetSettingsFor by remember { mutableStateOf<com.dynamicai.launcher.widget.PlacedWidget?>(null) }
-    val notesStorage = remember { com.dynamicai.launcher.note.NotesStorage(ctx) }
-    var notesList by remember { mutableStateOf<List<com.dynamicai.launcher.note.Note>>(emptyList()) }
+    var widgetSettingsFor by remember { mutableStateOf<PlacedWidget?>(null) }
+    val notesStorage = remember { NotesStorage(ctx) }
+    var notesList by remember { mutableStateOf<List<Note>>(emptyList()) }
     LaunchedEffect(notesScreenOpen, page) {
         if (!notesScreenOpen) notesList = notesStorage.get()
     }
@@ -127,15 +136,15 @@ fun HomeWidgetPage(
         val clockOnly = if (clockOnlyMode) baseWidgets.filter { it.type == "weather_clock" } else emptyList()
         val visibleWidgets = if (clockOnly.isNotEmpty()) clockOnly else baseWidgets
 
-        val renderOne: @Composable (com.dynamicai.launcher.widget.PlacedWidget) -> Unit = { widget ->
-                androidx.compose.foundation.layout.Box(
+        val renderOne: @Composable (PlacedWidget) -> Unit = { widget ->
+                Box(
                     modifier = Modifier.pointerInput(widget.id) {
                         detectTapGestures(
                             onLongPress = { widgetSettingsFor = widget }
                         )
                     }
                 ) {
-                    com.dynamicai.launcher.widget.RenderPlacedWidget(
+                    RenderPlacedWidget(
                         widget = widget,
                         weather = weather,
                         showWeather = showWeather,
@@ -150,12 +159,12 @@ fun HomeWidgetPage(
                         onWidgetLongPress = { widgetSettingsFor = widget },
                         onOpenMacros = onOpenMacros,
                         onOpenVoice = {
-                            ctx.startActivity(android.content.Intent(ctx, com.dynamicai.launcher.VoiceChatActivity::class.java))
+                            ctx.startActivity(Intent(ctx, com.dynamicai.launcher.VoiceChatActivity::class.java))
                         }
                     )
                 }
                 if (widgetSettingsFor?.id == widget.id) {
-                    com.dynamicai.launcher.widget.WidgetSettingsDialog(
+                    WidgetSettingsDialog(
                         widget = widget,
                         pageCount = pageCount,
                         onDismiss = { widgetSettingsFor = null },
@@ -186,15 +195,15 @@ fun HomeWidgetPage(
                 }
         }
         // Віджети з однаковим group малюємо як стек на місці першого
-        val slots = mutableListOf<MutableList<com.dynamicai.launcher.widget.PlacedWidget>>()
+        val slots = mutableListOf<MutableList<PlacedWidget>>()
         for (w in visibleWidgets) {
             val s = if (w.group.isNotBlank() && w.size != "full") slots.firstOrNull { it.first().group == w.group } else null
             if (s != null) s.add(w) else slots.add(mutableListOf(w))
         }
         slots.forEachIndexed { i, s ->
-            androidx.compose.foundation.layout.Box(Modifier.appearStagger(i)) {
+            Box(Modifier.appearStagger(i)) {
                 if (s.size == 1) renderOne(s[0])
-                else com.dynamicai.launcher.widget.WidgetStack(s) { renderOne(it) }
+                else WidgetStack(s) { renderOne(it) }
             }
         }
     }

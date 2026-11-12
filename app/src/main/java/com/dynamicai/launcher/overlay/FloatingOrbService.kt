@@ -30,6 +30,15 @@ import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import com.dynamicai.launcher.llm.ChatEngine
+import com.dynamicai.launcher.ui.theme.StoredAppTheme
+import com.dynamicai.launcher.voice.OfflineSpeech
+import com.dynamicai.launcher.voice.TtsManager
 
 class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
     private lateinit var windowManager: WindowManager
@@ -49,9 +58,9 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     
     private val scope = CoroutineScope(Dispatchers.Main)
     private var isThinking by mutableStateOf(false)
-    private lateinit var chatEngine: com.dynamicai.launcher.llm.ChatEngine
-    private lateinit var tts: com.dynamicai.launcher.voice.TtsManager
-    private var speechRecognizer: android.speech.SpeechRecognizer? = null
+    private lateinit var chatEngine: ChatEngine
+    private lateinit var tts: TtsManager
+    private var speechRecognizer: SpeechRecognizer? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -60,7 +69,7 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         startForegroundNotification()
 
         chatEngine = com.dynamicai.launcher.AppListViewModel.getSharedChatEngine(applicationContext)
-        tts = com.dynamicai.launcher.voice.TtsManager(applicationContext)
+        tts = TtsManager(applicationContext)
 
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         createOverlay()
@@ -99,7 +108,7 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             setViewTreeViewModelStoreOwner(this@FloatingOrbService)
             setViewTreeSavedStateRegistryOwner(this@FloatingOrbService)
             setContent {
-                com.dynamicai.launcher.ui.theme.StoredAppTheme {
+                StoredAppTheme {
                     var isExpanded by remember { mutableStateOf(false) }
                     FloatingOrb(
                         isExpanded = isExpanded,
@@ -200,15 +209,15 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     private fun startListening() {
-        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            android.widget.Toast.makeText(this, "Потрібен дозвіл на мікрофон! Надайте його в налаштуваннях.", android.widget.Toast.LENGTH_LONG).show()
+        if (checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "Потрібен дозвіл на мікрофон! Надайте його в налаштуваннях.", Toast.LENGTH_LONG).show()
             return
         }
-        if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this)) return
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) return
         speechRecognizer?.destroy()
-        speechRecognizer = android.speech.SpeechRecognizer.createSpeechRecognizer(this).apply {
-            setRecognitionListener(object : android.speech.RecognitionListener {
-                override fun onReadyForSpeech(params: android.os.Bundle?) {}
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
+            setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) {}
                 override fun onBeginningOfSpeech() {
                     if (tts.isReady) tts.stop()
                 }
@@ -216,18 +225,18 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 override fun onBufferReceived(buffer: ByteArray?) {}
                 override fun onEndOfSpeech() {}
                 override fun onError(error: Int) { isThinking = false }
-                override fun onResults(results: android.os.Bundle?) {
-                    val text = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
+                override fun onResults(results: Bundle?) {
+                    val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
                     if (text.isNotBlank()) processQuery(text)
                 }
-                override fun onPartialResults(partialResults: android.os.Bundle?) {}
-                override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
+                override fun onPartialResults(partialResults: Bundle?) {}
+                override fun onEvent(eventType: Int, params: Bundle?) {}
             })
         }
-        val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
-            putExtra(android.speech.RecognizerIntent.EXTRA_PREFER_OFFLINE, com.dynamicai.launcher.voice.OfflineSpeech.preferOffline(this@FloatingOrbService))
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, OfflineSpeech.preferOffline(this@FloatingOrbService))
         }
         speechRecognizer?.startListening(intent)
     }

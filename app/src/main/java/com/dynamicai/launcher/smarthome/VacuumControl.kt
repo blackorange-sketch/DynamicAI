@@ -3,6 +3,7 @@ package com.dynamicai.launcher.smarthome
 import android.content.Context
 import com.dynamicai.launcher.data.SettingsStorage
 import org.json.JSONObject
+import java.io.IOException
 
 /** Керування роботом-пилососом Xiaomi по локальній мережі: miot (Dreame/Mi Robot Vacuum-Mop) або Roborock. */
 class VacuumControl(private val context: Context) {
@@ -78,7 +79,7 @@ class VacuumControl(private val context: Context) {
                     "home" -> "Пилосос їде на базу"
                     else -> "Пилосос подає сигнал"
                 }
-            } catch (t: Throwable) { lastErr = t.message ?: "помилка"; if (t is java.io.IOException) break }
+            } catch (t: Throwable) { lastErr = t.message ?: "помилка"; if (t is IOException) break }
         }
         return "Не вдалося керувати пилососом: $lastErr"
     }

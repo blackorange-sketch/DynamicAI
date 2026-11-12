@@ -10,6 +10,7 @@ import java.net.URL
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.net.URLEncoder
 
 class WeatherRepository(private val context: Context) {
 
@@ -197,7 +198,7 @@ class WeatherRepository(private val context: Context) {
 
     private fun geocode(cityName: String): Pair<Double, Double>? {
         return try {
-            val encoded = java.net.URLEncoder.encode(cityName, "UTF-8")
+            val encoded = URLEncoder.encode(cityName, "UTF-8")
             val url = "https://geocoding-api.open-meteo.com/v1/search?name=$encoded&count=1&language=uk&format=json"
             val conn = (URL(url).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 8_000

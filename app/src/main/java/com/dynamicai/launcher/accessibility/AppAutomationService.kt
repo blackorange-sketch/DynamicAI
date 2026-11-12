@@ -5,6 +5,9 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+import android.content.Intent
+import android.os.Bundle
+import android.view.accessibility.AccessibilityWindowInfo
 
 class AppAutomationService : AccessibilityService() {
     companion object {
@@ -44,11 +47,11 @@ class AppAutomationService : AccessibilityService() {
         val t = event?.eventType ?: return
         if (t != AccessibilityEvent.TYPE_WINDOWS_CHANGED && t != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         try {
-            val open = windows.any { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }
+            val open = windows.any { it.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD }
             if (open != imeVisible) {
                 imeVisible = open
                 sendBroadcast(
-                    android.content.Intent("com.dynamicai.KEYBOARD_STATE_CHANGED")
+                    Intent("com.dynamicai.KEYBOARD_STATE_CHANGED")
                         .setPackage(packageName).putExtra("is_open", open)
                 )
             }
@@ -168,7 +171,7 @@ class AppAutomationService : AccessibilityService() {
     private fun inputText(text: String): Boolean {
         val root = rootInActiveWindow ?: return false
         val editText = findFirstEditText(root) ?: return false
-        val arguments = android.os.Bundle().apply {
+        val arguments = Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
         }
         return editText.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)

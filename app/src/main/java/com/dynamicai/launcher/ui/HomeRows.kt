@@ -86,6 +86,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontWeight
 
 @Composable
 fun AppContextMenu(
@@ -149,7 +151,7 @@ fun SuggestionActionRow(s: Suggestion.Action, onClick: () -> Unit) {
         Spacer(Modifier.width(14.dp))
         Column {
             Text(s.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
-            s.subtitle?.let { Text(it, color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 12.sp) }
+            s.subtitle?.let { Text(it, color = AppTheme.colors.textMuted, fontSize = 12.sp) }
         }
     }
 }
@@ -233,7 +235,7 @@ fun SuggestionContactRow(s: Suggestion.Contact, onClick: () -> Unit) {
         Spacer(Modifier.width(14.dp))
         Column {
             Text(s.name, color = AppTheme.colors.textPrimary, fontSize = 16.sp)
-            Text(s.subtitle, color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 12.sp)
+            Text(s.subtitle, color = AppTheme.colors.textMuted, fontSize = 12.sp)
         }
     }
 }
@@ -286,7 +288,7 @@ fun AppRow(
                     if (i < 0) append(app.label)
                     else {
                         append(app.label.substring(0, i))
-                        withStyle(androidx.compose.ui.text.SpanStyle(color = hl, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)) {
+                        withStyle(SpanStyle(color = hl, fontWeight = FontWeight.Bold)) {
                             append(app.label.substring(i, i + highlight.trim().length))
                         }
                         append(app.label.substring(i + highlight.trim().length))

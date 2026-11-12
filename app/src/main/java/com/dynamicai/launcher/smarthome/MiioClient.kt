@@ -13,6 +13,7 @@ import java.security.MessageDigest
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import java.io.IOException
 
 /**
  * Мінімальний клієнт локального протоколу Xiaomi miIO (UDP 54321, AES-128-CBC).
@@ -54,7 +55,7 @@ class MiioClient(private val context: Context, private val ip: String, tokenHex:
                 return buf.copyOf(p.length)
             } catch (t: Throwable) { last = t }
         }
-        throw java.io.IOException("Пристрій не відповідає (${last?.message ?: "таймаут"}). Перевірте IP і що телефон у тій самій Wi-Fi мережі")
+        throw IOException("Пристрій не відповідає (${last?.message ?: "таймаут"}). Перевірте IP і що телефон у тій самій Wi-Fi мережі")
     }
 
     /** Виконує метод і повертає JSON-відповідь пристрою як текст. */
@@ -65,7 +66,7 @@ class MiioClient(private val context: Context, private val ip: String, tokenHex:
             val hello = ByteArray(32) { 0xFF.toByte() }
             hello[0] = 0x21.toByte(); hello[1] = 0x31.toByte(); hello[2] = 0x00.toByte(); hello[3] = 0x20.toByte()
             val h = exchange(s, addr, hello)
-            if (h.size < 32) throw java.io.IOException("Некоректна відповідь пристрою")
+            if (h.size < 32) throw IOException("Некоректна відповідь пристрою")
             val devId = h.copyOfRange(8, 12)
             val stamp = ByteBuffer.wrap(h, 12, 4).int + 1
 
@@ -80,7 +81,7 @@ class MiioClient(private val context: Context, private val ip: String, tokenHex:
             pkt.put(header.array(), 0, 16).put(sum).put(enc)
 
             val r = exchange(s, addr, pkt.array())
-            if (r.size <= 32) throw java.io.IOException("Порожня відповідь")
+            if (r.size <= 32) throw IOException("Порожня відповідь")
             val dec = crypt(Cipher.DECRYPT_MODE, r.copyOfRange(32, r.size))
             String(dec, Charsets.UTF_8).trimEnd('\u0000')
         } finally { s.close() }

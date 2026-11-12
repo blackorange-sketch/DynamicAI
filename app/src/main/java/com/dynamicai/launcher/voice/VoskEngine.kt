@@ -12,6 +12,8 @@ import org.vosk.android.RecognitionListener
 import org.vosk.android.SpeechService
 import java.io.File
 import java.util.zip.ZipInputStream
+import android.os.Handler
+import android.os.Looper
 
 /** Офлайн-розпізнавання української через Vosk. Модель завантажується з налаштувань. */
 object VoskEngine {
@@ -113,7 +115,7 @@ object VoskEngine {
     ) {
         @Volatile private var service: SpeechService? = null
         @Volatile private var cancelled = false
-        private val main = android.os.Handler(android.os.Looper.getMainLooper())
+        private val main = Handler(Looper.getMainLooper())
 
         fun start() {
             Thread {

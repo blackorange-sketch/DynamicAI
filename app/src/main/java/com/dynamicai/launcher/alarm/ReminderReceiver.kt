@@ -9,6 +9,9 @@ import android.content.Intent
 import android.media.RingtoneManager
 import android.os.Build
 import com.dynamicai.launcher.MainActivity
+import android.speech.tts.TextToSpeech
+import androidx.core.app.NotificationCompat
+import java.util.Locale
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -38,13 +41,13 @@ class ReminderReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val notif = androidx.core.app.NotificationCompat.Builder(context, channelId)
+        val notif = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setContentTitle("⏰ Нагадування")
             .setContentText(text)
-            .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(text))
-            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
-            .setCategory(androidx.core.app.NotificationCompat.CATEGORY_REMINDER)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setContentIntent(pi)
             .setAutoCancel(true)
             .build()
@@ -52,9 +55,9 @@ class ReminderReceiver : BroadcastReceiver() {
         nm.notify(id, notif)
 
         try {
-            val tts = android.speech.tts.TextToSpeech(context, null)
-            tts.language = java.util.Locale("uk", "UA")
-            tts.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "reminder_$id")
+            val tts = TextToSpeech(context, null)
+            tts.language = Locale("uk", "UA")
+            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "reminder_$id")
         } catch (_: Throwable) {}
     }
 }

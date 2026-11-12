@@ -2,6 +2,7 @@ package com.dynamicai.launcher.system
 
 import android.content.Context
 import android.util.Log
+import android.os.IBinder
 
 class StatusBarController(private val context: Context) {
 
@@ -46,7 +47,7 @@ class StatusBarController(private val context: Context) {
             val binder = getService.invoke(null, "statusbar") ?: return false
 
             val stub = Class.forName("com.android.internal.statusbar.IStatusBarService\$Stub")
-            val asInterface = stub.getMethod("asInterface", android.os.IBinder::class.java)
+            val asInterface = stub.getMethod("asInterface", IBinder::class.java)
             val service = asInterface.invoke(null, binder) ?: return false
 
             // виклик expandNotificationsPanel

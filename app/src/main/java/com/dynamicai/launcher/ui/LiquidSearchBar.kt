@@ -29,6 +29,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.input.PlatformImeOptions
 
 @Composable
 fun LiquidSearchBar(
@@ -55,7 +56,7 @@ fun LiquidSearchBar(
                 textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
                 cursorBrush = SolidColor(AppTheme.colors.textPrimary),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search, platformImeOptions = androidx.compose.ui.text.input.PlatformImeOptions("flagNoExtractUi")),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search, platformImeOptions = PlatformImeOptions("flagNoExtractUi")),
                 keyboardActions = KeyboardActions(onSearch = { onSearch() }),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -134,7 +135,7 @@ private fun micIcon(): ImageVector = ImageVector.Builder(
 
 @Composable
 private fun GlassIconButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     tint: Color,
     onClick: () -> Unit
 ) {

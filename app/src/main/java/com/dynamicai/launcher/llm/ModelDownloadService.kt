@@ -18,6 +18,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 import java.io.File
+import android.content.pm.ServiceInfo
 
 class ModelDownloadService : Service() {
 
@@ -63,11 +64,11 @@ class ModelDownloadService : Service() {
                 val folderName = intent.getStringExtra(EXTRA_FOLDER_NAME) ?: return START_NOT_STICKY
 
                 cancelRequested = false
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     startForeground(
                         NOTIFICATION_ID,
                         buildNotification("Підготовка...", 0, 0, 0, true),
-                        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+                        ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
                     )
                 } else {
                     startForeground(NOTIFICATION_ID, buildNotification("Підготовка...", 0, 0, 0, true))

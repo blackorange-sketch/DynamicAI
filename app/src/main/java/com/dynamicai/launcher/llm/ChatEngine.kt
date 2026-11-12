@@ -2,19 +2,43 @@ package com.dynamicai.launcher.llm
 
 import android.util.Log
 import com.dynamicai.launcher.command.Command as C
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import com.dynamicai.launcher.accessibility.AppAutomationService
+import com.dynamicai.launcher.command.Command
+import com.dynamicai.launcher.command.CommandExecutorProvider
+import com.dynamicai.launcher.command.CommandParser
+import com.dynamicai.launcher.command.CommandResult
+import com.dynamicai.launcher.data.LauncherSettings
+import com.dynamicai.launcher.data.SettingsStorage
+import com.dynamicai.launcher.data.WeatherRepository
+import com.dynamicai.launcher.data.WeatherState
+import com.dynamicai.launcher.data.WildRiftRepository
+import com.dynamicai.launcher.macro.MacroStorage
+import com.dynamicai.launcher.model.AppInfo
+import com.dynamicai.launcher.overlay.ChatHistoryManager
+import com.dynamicai.launcher.overlay.ChatMessage
+import com.dynamicai.launcher.suggestion.ContactInfo
+import com.dynamicai.launcher.suggestion.ContactRepository
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Chat-режим: LLM + Web Search (RAG).
  */
 class ChatEngine(
-    private val context: android.content.Context,
+    private val context: Context,
     private val llm: LlmEngine,
     private val webSearch: WebSearchRepository
 ) {
     private val newsRepo = NewsRepository()
     private val koleoClient = KoleoClient()
     private val translationRepo = TranslationRepository()
-    private val wildRiftRepo = com.dynamicai.launcher.data.WildRiftRepository(context)
+    private val wildRiftRepo = WildRiftRepository(context)
     private val agentEngine = AgentEngine(context, llm)
     private val smalltalkPrompt: String by lazy {
         try {
@@ -47,7 +71,7 @@ class ChatEngine(
 
     /** Усі питання (крім екрана й макросів) йдуть у хмару — локальну модель не потрібно завантажувати наперед. */
     fun cloudOnly(): Boolean {
-        val s = com.dynamicai.launcher.data.SettingsStorage(context).load()
+        val s = SettingsStorage(context).load()
         return s.cloudEnabled && CloudLlm.hasKey(s) && s.cloudMode == "always"
     }
 
@@ -61,7 +85,7 @@ class ChatEngine(
      * Репліки, що вийшли за вікно останніх 16, стискаються моделлю в короткий підсумок. Оновлюється пачками по 4 репліки,
      * щоб не робити зайвих запитів; при зміні розмови скидається.
      */
-    private suspend fun olderSummary(s: com.dynamicai.launcher.data.LauncherSettings, older: List<com.dynamicai.launcher.overlay.ChatMessage>): String {
+    private suspend fun olderSummary(s: LauncherSettings, older: List<ChatMessage>): String {
         if (older.isEmpty()) return ""
         val fp = older.first().content.hashCode()
         if (fp != summaryFp || older.size < summaryCount) { summaryText = ""; summaryCount = 0; summaryFp = fp }
@@ -77,7 +101,7 @@ class ChatEngine(
             }
         }.takeLast(5000)
         val r = try {
-            kotlinx.coroutines.withTimeoutOrNull(9_000) {
+            withTimeoutOrNull(9_000) {
                 CloudLlm.generate(
                     s,
                     "Ти стискаєш розмову. Зроби стислий підсумок (до 8 коротких пунктів, до 900 символів): теми, " +
@@ -87,7 +111,7 @@ class ChatEngine(
                 ) { }.trim()
             }
         } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (e is CancellationException) throw e
             null
         }
         if (r.isNullOrBlank()) {
@@ -100,7 +124,7 @@ class ChatEngine(
 
     /** Чи відповідатиме на це питання хмарна модель (тоді локальну завантажувати не потрібно). */
     fun cloudPreferred(question: String): Boolean {
-        val s = com.dynamicai.launcher.data.SettingsStorage(context).load()
+        val s = SettingsStorage(context).load()
         if (!s.cloudEnabled || !CloudLlm.hasKey(s)) return false
         if (System.currentTimeMillis() < cloudCooldownUntil) return false
         val t = question.lowercase()
@@ -263,7 +287,7 @@ class ChatEngine(
     suspend fun getWildRiftAdvice(myChampion: String, enemies: List<String>): String {
         if (!llm.isReady) return "LLM не активна"
         try {
-            val repo = com.dynamicai.launcher.data.WildRiftRepository(context)
+            val repo = WildRiftRepository(context)
             val me = repo.findChampion(myChampion) ?: return "Чемпіон не знайдений: $myChampion"
             val enemyChamps = enemies.mapNotNull { repo.findChampion(it) }
             if (enemyChamps.isEmpty()) return "Не вказано ворожих чемпіонів"
@@ -310,8 +334,8 @@ class ChatEngine(
         
         // Час → локально
         if (q.contains("який час") || q.contains("котра година") || q.contains("current time")) {
-            val now = java.time.LocalDateTime.now()
-            val fmt = java.time.format.DateTimeFormatter.ofPattern("HH:mm, d MMMM yyyy", java.util.Locale("uk", "UA"))
+            val now = LocalDateTime.now()
+            val fmt = DateTimeFormatter.ofPattern("HH:mm, d MMMM yyyy", Locale("uk", "UA"))
             return "Поточний час: ${now.format(fmt)}"
         }
         
@@ -392,19 +416,19 @@ class ChatEngine(
 
             Log.d(TAG, "Weather: city=$city")
 
-            val repo = com.dynamicai.launcher.data.WeatherRepository(context)
+            val repo = WeatherRepository(context)
             val state = repo.fetch(cityOverride = city)
 
             when (state) {
-                is com.dynamicai.launcher.data.WeatherState.Data -> {
+                is WeatherState.Data -> {
                     val cityLabel = city?.takeIf { it.isNotBlank() }
-                        ?: com.dynamicai.launcher.data.SettingsStorage(context).load().cityName
+                        ?: SettingsStorage(context).load().cityName
                             .takeIf { it.isNotBlank() } ?: "\u0432\u0430\u0448\u043e\u043c\u0443 \u043c\u0456\u0441\u0442\u0456"
                     "\u041f\u043e\u0442\u043e\u0447\u043d\u0430 \u043f\u043e\u0433\u043e\u0434\u0430 \u0432 $cityLabel: ${state.tempC}\u00b0${state.unit}, ${state.description}. " +
                     "\u0412\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0442\u044c\u0441\u044f \u044f\u043a ${state.feelsLike}\u00b0. \u0412\u043e\u043b\u043e\u0433\u0456\u0441\u0442\u044c ${state.humidity}%, \u0432\u0456\u0442\u0435\u0440 ${state.windSpeed} \u043a\u043c/\u0433\u043e\u0434. " +
                     "\u041c\u0456\u043d\u0456\u043c\u0443\u043c ${state.tempMin}\u00b0, \u043c\u0430\u043a\u0441\u0438\u043c\u0443\u043c ${state.tempMax}\u00b0."
                 }
-                is com.dynamicai.launcher.data.WeatherState.Error -> {
+                is WeatherState.Error -> {
                     Log.d(TAG, "Weather error: ${state.message}")
                     state.message
                 }
@@ -439,7 +463,7 @@ class ChatEngine(
     private suspend fun gatherFacts(question: String): String {
         val query = searchQueryFrom(question)
         val wiki = try { webSearch.toContext(webSearch.search(query)) } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e; ""
+            if (e is CancellationException) throw e; ""
         }
         val needWeb = EXPLICIT_SEARCH.containsMatchIn(question.lowercase()) ||
             CURRENT_DATA.containsMatchIn(question.lowercase()) || wiki.length < 200
@@ -461,7 +485,7 @@ class ChatEngine(
 
     private val fastRouter by lazy { FastRouter { agentEngine.runTool(it) } }
 
-    private val commandParser by lazy { com.dynamicai.launcher.command.CommandParser() }
+    private val commandParser by lazy { CommandParser() }
 
     // ===== Підтвердження небезпечних дій («так» / «ні» наступною фразою) =====
     private var pendingAction: Pair<String, suspend () -> String>? = null
@@ -477,7 +501,7 @@ class ChatEngine(
     private val NO = Regex("^(ні|не треба|скасуй|скасувати|відміна|стоп|не роби|не потрібно)(?!\\p{L}).*")
     private val REMEMBER = Regex("^запам.?ятай,?\\s+(?:що\\s+)?(.+?)\\s+(?:це|є|—|-|=)\\s+(.+)$")
 
-    private fun findContact(contacts: List<com.dynamicai.launcher.suggestion.ContactInfo>, name: String): com.dynamicai.launcher.suggestion.ContactInfo? {
+    private fun findContact(contacts: List<ContactInfo>, name: String): ContactInfo? {
         val n = name.lowercase().trim()
         contacts.firstOrNull { it.name.lowercase().contains(n) }?.let { return it }
         val stems = n.split(Regex("\\s+")).filter { it.isNotBlank() }.map { AliasStore.stem(it) }
@@ -491,7 +515,7 @@ class ChatEngine(
         if (name.any { it.isDigit() } && name.count { it.isDigit() } >= 5) {
             return dial(name)
         }
-        val contacts = try { com.dynamicai.launcher.suggestion.ContactRepository(context).loadAll() } catch (e: Exception) { emptyList() }
+        val contacts = try { ContactRepository(context).loadAll() } catch (e: Exception) { emptyList() }
         val c = findContact(contacts, name)
         val number = c?.phones?.firstOrNull()
         if (c == null || number == null) return "Контакт «$rawName» не знайдено. Можна сказати: «запам'ятай, що $rawName — це Ім'я Прізвище»."
@@ -499,8 +523,8 @@ class ChatEngine(
     }
 
     private fun dial(number: String, label: String? = null): String = try {
-        context.startActivity(android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:" + android.net.Uri.encode(number)))
-            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(number)))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         "Набираю ${label ?: number}. Натисніть виклик."
     } catch (e: Exception) { "Не вдалося відкрити набір номера." }
 
@@ -509,7 +533,7 @@ class ChatEngine(
      * Спершу канонічний CommandParser/CommandExecutor проєкту (таймери, нагадування, дзвінки, медіа, перемикачі,
      * калькулятор…), потім FastRouter (погода, навігація, камера, валюта, YouTube, нотатки).
      */
-    suspend fun tryFastRoute(question: String, apps: List<com.dynamicai.launcher.model.AppInfo> = emptyList()): String? {
+    suspend fun tryFastRoute(question: String, apps: List<AppInfo> = emptyList()): String? {
         val t = question.lowercase().trim().trimEnd('.', '!', '?', ',', ' ')
         // Відповідь на запит підтвердження
         pendingAction?.let { (_, action) ->
@@ -526,36 +550,36 @@ class ChatEngine(
         if (MacroBuilder.looksLikeRequest(question)) return null
         // Власні макроси: назва або тригер, сказані повністю («доброї ночі», «режим роботи»)
         try {
-            com.dynamicai.launcher.macro.MacroStorage(context).matchUtterance(t)?.let { m ->
+            MacroStorage(context).matchUtterance(t)?.let { m ->
                 val macroName = m.name.replace('"', ' ')
                 return agentEngine.runTool("runMacro(name=\"" + macroName + "\")")
             }
-        } catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e }
+        } catch (e: Exception) { if (e is CancellationException) throw e }
         if (fastRouter.isToggleOrMedia(question)) fastRouter.tryHandle(question)?.let { return it }
         commandRoute(question, apps)?.let { return it }
         return fastRouter.tryHandle(question)
     }
 
-    private suspend fun commandRoute(question: String, apps: List<com.dynamicai.launcher.model.AppInfo>): String? {
+    private suspend fun commandRoute(question: String, apps: List<AppInfo>): String? {
         val cmd = try { commandParser.parse(question) } catch (e: Exception) { return null }
         // Ці типи або не прості, або обробляються окремо (пошук, питання, переклад, нотатки) — лишаємо моделі
-        fun blocked(c: com.dynamicai.launcher.command.Command) =
+        fun blocked(c: Command) =
             c is C.Unknown || c is C.Raw || c is C.AskQuestion || c is C.WebSearch || c is C.OpenNotes ||
                 c is C.TranslateScreen || c is C.TranslateText
         if (blocked(cmd)) return null
         // Дзвінок за іменем: парсер набирає ім'я як номер, тому шукаємо контакт самі
         if (cmd is C.Call) return callContact(cmd.name)
         if (cmd is C.Compound && cmd.steps.any { blocked(it) }) return null
-        val executor = com.dynamicai.launcher.command.CommandExecutorProvider.get(context)
+        val executor = CommandExecutorProvider.get(context)
         val result = try { executor.execute(cmd, apps) } catch (e: Exception) {
             Log.e(TAG, "command execute failed", e); return null
         }
         Log.e(TAG, "⚡ command ${cmd::class.simpleName} → $result")
         return when (result) {
-            is com.dynamicai.launcher.command.CommandResult.Success -> result.message
-            is com.dynamicai.launcher.command.CommandResult.Error ->
+            is CommandResult.Success -> result.message
+            is CommandResult.Error ->
                 if (result.message.startsWith("__") || result.message.contains("не знайд", ignoreCase = true)) null else result.message
-            is com.dynamicai.launcher.command.CommandResult.ChooseApp ->
+            is CommandResult.ChooseApp ->
                 "Знайшов кілька додатків: " + result.candidates.take(4).joinToString(", ") { it.label } + ". Уточніть назву."
         }
     }
@@ -564,7 +588,7 @@ class ChatEngine(
     private suspend fun macroFlow(question: String): String? {
         if (!MacroBuilder.looksLikeRequest(question)) return null
         val draft = try { MacroBuilder.build(context, llm, question) } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e; null
+            if (e is CancellationException) throw e; null
         } ?: return "Не вдалося скласти макрос із цього опису. Спробуйте простіше або створіть його вручну в розділі «Макроси»."
         pendingAction = "створити макрос" to {
             MacroBuilder.save(context, draft.macro)
@@ -603,7 +627,7 @@ class ChatEngine(
         macroFlow(question)?.let { return it }
         return try {
             val isMnn = llm.isMnn
-            val settings = com.dynamicai.launcher.data.SettingsStorage(context).load()
+            val settings = SettingsStorage(context).load()
             // «Коротко»: додається до питання, а не до шаблону, тож власні промпти з налаштувань лишаються недоторканими
             // Фактичні питання («хто такий…», «коли народився…»): спершу дані з Вікіпедії — мала модель вигадує дати й імена
             // Пам'ять діалогу: додаємо лише коли питання залежить від попередніх реплік
@@ -616,7 +640,7 @@ class ChatEngine(
                     val ctx = gatherFacts(searchText)
                     Log.e(TAG, "🔎 auto-search for '$question': ${ctx.length} chars; ${webSearch.lastError}")
                     ctx
-                } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) { "" }
+                } catch (e: CancellationException) { throw e } catch (e: Exception) { "" }
             } else ""
             // Явне «пошукай в інтернеті», а результатів немає — чесно кажемо, а не даємо моделі вигадувати
             if (settings.autoSearch && facts.isBlank() && EXPLICIT_SEARCH.containsMatchIn(question.lowercase()) && looksFactual(question)) {
@@ -625,9 +649,9 @@ class ChatEngine(
             // «Що на екрані?»: передаємо моделі текст екрана (сервіс доступності)
             val screenAsk = Regex("(що|про що)\\s+(там\\s+)?(на|в|у)\\s+(цьому\\s+)?(екрані|вікні)|прочитай\\s+(екран|це)|підсумуй\\s+(екран|це|сторінку)|переказуй\\s+екран")
                 .containsMatchIn(question.lowercase())
-            val screenText = if (screenAsk && com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled())
-                com.dynamicai.launcher.accessibility.AppAutomationService.getScreenText().take(2500) else ""
-            if (screenAsk && screenText.isBlank() && !com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
+            val screenText = if (screenAsk && AppAutomationService.isEnabled())
+                AppAutomationService.getScreenText().take(2500) else ""
+            if (screenAsk && screenText.isBlank() && !AppAutomationService.isEnabled()) {
                 return "Щоб бачити екран, увімкніть сервіс доступності (DynamicAI Automation) у налаштуваннях Android."
             }
             val baseCore = if (screenText.isNotBlank())
@@ -645,9 +669,9 @@ class ChatEngine(
 
             // Беремо шаблон з файлу (не з SharedPreferences — надійніше)
             val template = if (isMnn) {
-                com.dynamicai.launcher.llm.PromptManager.loadMnn(context)
+                PromptManager.loadMnn(context)
             } else {
-                com.dynamicai.launcher.llm.PromptManager.loadLitert(context)
+                PromptManager.loadLitert(context)
             }
             Log.e("MNN_PROMPT", "Template from file (isMnn=$isMnn): ${template.replace("\n", "\\n")}")
             // LiteRT сам застосовує chat template (Conversation API). Старий шаблон за замовчуванням з
@@ -666,7 +690,7 @@ class ChatEngine(
             Log.d(TAG, "simpleAnswer: prompt len=${prompt.length}, response=${response?.take(100)}")
             response?.trim() ?: "LLM не відповіла"
         } catch (t: Throwable) {
-            if (t is kotlinx.coroutines.CancellationException) throw t
+            if (t is CancellationException) throw t
             Log.e(TAG, "simpleAnswer failed", t)
             "Помилка: ${t.message}"
         }
@@ -699,10 +723,10 @@ class ChatEngine(
     }
 
     /** Робить із уточнення («а в Кракові?») самостійний пошуковий запит за допомогою моделі; null — не вдалося. */
-    private suspend fun rewriteQuery(s: com.dynamicai.launcher.data.LauncherSettings, hist: List<Pair<String, String>>, question: String): String? {
+    private suspend fun rewriteQuery(s: LauncherSettings, hist: List<Pair<String, String>>, question: String): String? {
         if (hist.isEmpty()) return null
         return try {
-            kotlinx.coroutines.withTimeoutOrNull(6_000) {
+            withTimeoutOrNull(6_000) {
                 CloudLlm.generate(
                     s,
                     "Перепиши останнє повідомлення користувача як самостійний пошуковий запит (до 12 слів), враховуючи попередню розмову. " +
@@ -711,7 +735,7 @@ class ChatEngine(
                 ) { }.trim().trim('"', '«', '»').takeIf { it.length in 3..120 }
             }
         } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (e is CancellationException) throw e
             null
         }
     }
@@ -719,14 +743,14 @@ class ChatEngine(
     private suspend fun cloudAnswer(
         question: String, onToken: ((String) -> Unit)?, history: String, onStatus: ((String) -> Unit)?
     ): String? {
-        val s = com.dynamicai.launcher.data.SettingsStorage(context).load()
+        val s = SettingsStorage(context).load()
         lastSources = emptyList()
         val followUp = history.isNotBlank() && isFollowUp(question)
         val prevUser = history.lines().lastOrNull { it.startsWith("Користувач:") }?.removePrefix("Користувач:")?.trim().orEmpty()
         val searchText = if (followUp && prevUser.isNotBlank()) "$prevUser. $question" else question
         val histMsgs = parseHistory(history)
         // Репліки поточної теми, що не влізли у вікно останніх 16 → підсумок
-        val conv = com.dynamicai.launcher.overlay.ChatHistoryManager.currentTopic().dropLast(1)
+        val conv = ChatHistoryManager.currentTopic().dropLast(1)
         val older = conv.dropLast(minOf(16, conv.size))
         val summary = olderSummary(s, older)
         val bare = question.removePrefix("а ").removePrefix("і ").removePrefix("ну ")
@@ -742,7 +766,7 @@ class ChatEngine(
                 Log.e(TAG, "☁️ search query: $query")
                 val hits = webSearch.searchHits(query, 6)
                 val wiki = try { webSearch.toContext(webSearch.search(query)) } catch (e: Exception) {
-                    if (e is kotlinx.coroutines.CancellationException) throw e; ""
+                    if (e is CancellationException) throw e; ""
                 }
                 val top = hits.take(3)
                 val pages = if (top.isNotEmpty()) {
@@ -764,13 +788,13 @@ class ChatEngine(
                 lastSources = used.take(4)
                 Log.e(TAG, "☁️ smart search '$query': ${used.size} sources, ${sourcesText.length} chars")
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is CancellationException) throw e
                 Log.e(TAG, "smart search failed: ${e.message}")
             }
         }
 
-        val now = java.time.LocalDateTime.now()
-        val date = now.format(java.time.format.DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy, HH:mm", java.util.Locale("uk", "UA")))
+        val now = LocalDateTime.now()
+        val date = now.format(DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy, HH:mm", Locale("uk", "UA")))
         val lang = when (s.answerLanguage) {
             "en" -> "Відповідай англійською."
             "auto" -> "Відповідай мовою питання."
@@ -803,7 +827,7 @@ class ChatEngine(
             Log.e(TAG, "☁️ cloud answer via ${CloudLlm.lastProvider}: ${r.length} chars")
             r.trim()
         } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (e is CancellationException) throw e
             Log.e(TAG, "cloud failed: ${e.message}")
             lastSources = if (acc.length > 40) lastSources else emptyList()
             if (acc.length > 40) acc.toString().trim()      // частину вже озвучено: лишаємо її
@@ -816,7 +840,7 @@ class ChatEngine(
 
     /** Чи варто віддати це прохання хмарному агентові (керування телефоном без локальної моделі). */
     fun cloudAgentEligible(question: String): Boolean {
-        val s = com.dynamicai.launcher.data.SettingsStorage(context).load()
+        val s = SettingsStorage(context).load()
         if (!s.cloudEnabled || !CloudLlm.hasKey(s)) return false
         if (System.currentTimeMillis() < cloudCooldownUntil) return false
         if (SCREEN_ASK.containsMatchIn(question.lowercase())) return false
@@ -826,13 +850,13 @@ class ChatEngine(
 
     /** Керування телефоном через Gemini/Groq: хмара обирає інструмент, виконуємо його на пристрої. CLOUD_FAILED — хмара недоступна. */
     suspend fun cloudAgent(question: String, history: String = ""): String {
-        val s = com.dynamicai.launcher.data.SettingsStorage(context).load()
+        val s = SettingsStorage(context).load()
         return try {
             val r = agentEngine.processWithTools(question, compactHistory(history), cloud = s)
             Log.e(TAG, "☁️ cloud agent via ${CloudLlm.lastProvider}: ${r.take(80)}")
             r
         } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (e is CancellationException) throw e
             Log.e(TAG, "cloud agent failed: ${e.message}")
             cloudCooldownUntil = System.currentTimeMillis() + 90_000
             CLOUD_FAILED
@@ -846,7 +870,7 @@ class ChatEngine(
             // Використовуємо наш власний AgentEngine, який вже написаний і працює
             agentEngine.processWithTools(question, compactHistory(history))
         } catch (t: Throwable) {
-            android.util.Log.e("ChatEngine", "Agent error", t)
+            Log.e("ChatEngine", "Agent error", t)
             "Помилка агента: ${t.message}"
         }
     }

@@ -8,6 +8,7 @@ import android.os.SystemClock
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.io.File
 
 /**
  * Журнал пам'яті та життєвого циклу екранів: допомагає побачити витік (ріст PSS з часом)
@@ -52,7 +53,7 @@ object MemLog {
             sb.appendLine("java max=${Runtime.getRuntime().maxMemory() shr 20}MB, memoryClass=${am.memoryClass}MB, large=${am.largeMemoryClass}MB")
         } catch (_: Throwable) {}
         try {
-            java.io.File("/proc/self/status").readLines()
+            File("/proc/self/status").readLines()
                 .filter { it.startsWith("VmRSS") || it.startsWith("VmSwap") || it.startsWith("Threads") }
                 .forEach { sb.appendLine(it.replace(Regex("\\s+"), " ")) }
         } catch (_: Throwable) {}

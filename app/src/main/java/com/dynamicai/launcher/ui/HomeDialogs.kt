@@ -86,15 +86,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
+import androidx.compose.material3.Checkbox
+import com.dynamicai.launcher.folder.Folder
 
 /** Поле назви папки з підказкою. */
 @Composable
 private fun FolderNameField(value: String, onChange: (String) -> Unit) {
-    androidx.compose.foundation.text.BasicTextField(
+    BasicTextField(
         value = value,
         onValueChange = onChange,
-        textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
-        cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.textPrimary),
+        textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
+        cursorBrush = SolidColor(AppTheme.colors.textPrimary),
         singleLine = true,
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         decorationBox = { inner ->
@@ -153,7 +155,7 @@ fun CreateFolderDialog(app: AppInfo, onCreate: (String) -> Unit, onDismiss: () -
 
 /** Вибір папки, куди додати застосунок. */
 @Composable
-fun AddToFolderDialog(app: AppInfo, folders: List<com.dynamicai.launcher.folder.Folder>, onPick: (com.dynamicai.launcher.folder.Folder) -> Unit, onDismiss: () -> Unit) {
+fun AddToFolderDialog(app: AppInfo, folders: List<Folder>, onPick: (Folder) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         modifier = Modifier.popIn(),
         onDismissRequest = onDismiss,
@@ -195,7 +197,7 @@ fun FolderAppMenuDialog(app: AppInfo, onRemove: () -> Unit, onLaunch: () -> Unit
 
 /** Довге натискання на заголовок папки. */
 @Composable
-fun FolderHeaderDialog(folder: com.dynamicai.launcher.folder.Folder, onDelete: () -> Unit, onDismiss: () -> Unit) {
+fun FolderHeaderDialog(folder: Folder, onDelete: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         modifier = Modifier.popIn(),
         onDismissRequest = onDismiss,
@@ -226,7 +228,7 @@ fun NewFolderDialog(apps: List<AppInfo>, onCreate: (String, List<String>) -> Uni
                 Spacer(Modifier.height(12.dp))
                 Text("Обери застосунки:", color = AppTheme.colors.textMuted, fontSize = 13.sp)
                 Spacer(Modifier.height(6.dp))
-                androidx.compose.foundation.lazy.LazyColumn(
+                LazyColumn(
                     modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp)
                 ) {
                     items(apps) { app ->
@@ -241,7 +243,7 @@ fun NewFolderDialog(apps: List<AppInfo>, onCreate: (String, List<String>) -> Uni
                                 .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            androidx.compose.material3.Checkbox(
+                            Checkbox(
                                 checked = app.packageName in selection,
                                 onCheckedChange = { toggle() }
                             )
@@ -297,7 +299,7 @@ private fun DialogAppRow(app: AppInfo, iconDp: Int, vPad: Int, onClick: () -> Un
 /** Вміст відкритої папки. */
 @Composable
 fun OpenFolderDialog(
-    folder: com.dynamicai.launcher.folder.Folder,
+    folder: Folder,
     apps: List<AppInfo>,
     inDock: Boolean,
     onLaunch: (AppInfo) -> Unit,
@@ -310,7 +312,7 @@ fun OpenFolderDialog(
         onDismissRequest = onDismiss,
         title = { Text(folder.name, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
         text = {
-            androidx.compose.foundation.lazy.LazyColumn(
+            LazyColumn(
                 modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)
             ) {
                 items(folderApps, key = { it.packageName }) { app ->

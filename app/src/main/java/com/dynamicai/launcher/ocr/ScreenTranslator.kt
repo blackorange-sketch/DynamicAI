@@ -10,6 +10,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
+import android.graphics.Bitmap
+import java.util.concurrent.ConcurrentHashMap
 
 
 object OcrUsageTracker {
@@ -80,7 +82,7 @@ class ScreenTranslator(
             Log.e(TAG, "Screenshot failed: ${screenshot.lastError}")
             return@withContext emptyList()
         }
-        val fullRect = android.graphics.Rect(0, 0, bmp.width, bmp.height)
+        val fullRect = Rect(0, 0, bmp.width, bmp.height)
         bmp.recycle()
         captureRegionAndTranslate(
             rect = fullRect,
@@ -95,7 +97,7 @@ class ScreenTranslator(
      * rect — координати в пікселях екрана.
      */
     suspend fun captureRegionAndTranslate(
-        rect: android.graphics.Rect,
+        rect: Rect,
         ocrLangs: String = "ukr+eng+pol",
         targetLang: String = "uk",
         onProgress: (stage: String) -> Unit = {}
@@ -134,7 +136,7 @@ class ScreenTranslator(
                 return@withContext emptyList()
             }
 
-            val cropped = android.graphics.Bitmap.createBitmap(full, left, top, w, h)
+            val cropped = Bitmap.createBitmap(full, left, top, w, h)
             full.recycle()
 
             onProgress("Розпізнаю текст…")
@@ -179,7 +181,7 @@ class ScreenTranslator(
             for (from in pairs) mlkit.downloadModel(from, targetLang)
 
             val translated: List<String?> = kotlinx.coroutines.coroutineScope {
-                val cache = java.util.concurrent.ConcurrentHashMap<String, String?>()
+                val cache = ConcurrentHashMap<String, String?>()
                 merged.map { block ->
                     async {
                         val from = detectLang(block.text)
@@ -193,7 +195,7 @@ class ScreenTranslator(
             for ((i, block) in merged.withIndex()) {
                 val tr = translated[i]
                 if (tr.isNullOrBlank() || tr.equals(block.text, ignoreCase = true)) continue
-                val shifted = android.graphics.Rect(
+                val shifted = Rect(
                     block.bounds.left + left,
                     block.bounds.top + top,
                     block.bounds.right + left,
@@ -255,7 +257,7 @@ class ScreenTranslator(
             val text = group.joinToString(" ") { it.text.trim() }
                 .replace(Regex("\\s+"), " ")
                 .trim()
-            val bounds = group.fold(android.graphics.Rect(
+            val bounds = group.fold(Rect(
                 group[0].bounds.left, group[0].bounds.top,
                 group[0].bounds.right, group[0].bounds.bottom
             )) { acc, blk -> acc.apply {

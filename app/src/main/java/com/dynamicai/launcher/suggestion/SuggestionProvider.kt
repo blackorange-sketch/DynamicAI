@@ -5,6 +5,21 @@ import com.dynamicai.launcher.command.Command
 import com.dynamicai.launcher.command.FuzzyMatcher
 import com.dynamicai.launcher.command.SettingsRoutes
 import com.dynamicai.launcher.model.AppInfo
+import android.content.ContentUris
+import android.net.Uri
+import android.provider.MediaStore
+import com.dynamicai.launcher.data.SettingsStorage
+import com.dynamicai.launcher.macro.Macro
+import com.dynamicai.launcher.macro.MacroStorage
+import com.dynamicai.launcher.note.Note
+import com.dynamicai.launcher.note.NotesStorage
+import com.dynamicai.launcher.overlay.ChatArchive
+import com.dynamicai.launcher.overlay.SavedChat
+import com.dynamicai.launcher.util.Calculator
+import com.dynamicai.launcher.util.UnitConverter
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 class SuggestionProvider(private val context: Context) {
 
@@ -12,20 +27,20 @@ class SuggestionProvider(private val context: Context) {
 
     // Кеш важких сховищ: раніше макроси/нотатки/архів чатів читались і парсились на кожен символ запиту
     private class Extras(
-        val macros: List<com.dynamicai.launcher.macro.Macro>,
-        val notes: List<com.dynamicai.launcher.note.Note>,
-        val chats: List<com.dynamicai.launcher.overlay.SavedChat>,
+        val macros: List<Macro>,
+        val notes: List<Note>,
+        val chats: List<SavedChat>,
         val at: Long
     )
     @Volatile private var extras: Extras? = null
     private fun extras(): Extras {
         val e = extras
         if (e != null && System.currentTimeMillis() - e.at < 4000) return e
-        val macros = try { com.dynamicai.launcher.macro.MacroStorage(context).get() } catch (_: Throwable) { emptyList() }
-        val notes = try { com.dynamicai.launcher.note.NotesStorage(context).get() } catch (_: Throwable) { emptyList() }
+        val macros = try { MacroStorage(context).get() } catch (_: Throwable) { emptyList() }
+        val notes = try { NotesStorage(context).get() } catch (_: Throwable) { emptyList() }
         val chats = try {
-            com.dynamicai.launcher.overlay.ChatArchive.init(context)
-            com.dynamicai.launcher.overlay.ChatArchive.sorted()
+            ChatArchive.init(context)
+            ChatArchive.sorted()
         } catch (_: Throwable) { emptyList() }
         return Extras(macros, notes, chats, System.currentTimeMillis()).also { extras = it }
     }
@@ -184,14 +199,14 @@ class SuggestionProvider(private val context: Context) {
 
         // Калькулятор та конвертер
         try {
-            val conv = com.dynamicai.launcher.util.UnitConverter.convert(q)
+            val conv = UnitConverter.convert(q)
             if (conv != null) {
                 result.add(Suggestion.Extra("calc", "🔁", "= $conv", "Скопіювати результат", conv, 99))
             } else if (q.any { it.isDigit() } && q.any { it in "+-*/×÷" } && q.matches(Regex("^[\\d\\s+\\-*/×÷().,]+$"))) {
-                val r = com.dynamicai.launcher.util.Calculator.calculate(q)
-                if (r is com.dynamicai.launcher.util.Calculator.Result.success && !r.value.isNaN() && !r.value.isInfinite()) {
+                val r = Calculator.calculate(q)
+                if (r is Calculator.Result.success && !r.value.isNaN() && !r.value.isInfinite()) {
                     val txt = if (r.value == Math.floor(r.value) && kotlin.math.abs(r.value) < 1e15) r.value.toLong().toString()
-                    else String.format(java.util.Locale.US, "%.6f", r.value).trimEnd('0').trimEnd('.')
+                    else String.format(Locale.US, "%.6f", r.value).trimEnd('0').trimEnd('.')
                     result.add(Suggestion.Extra("calc", "🧮", "= $txt", "Скопіювати результат", txt, 99))
                 }
             }
@@ -215,7 +230,7 @@ class SuggestionProvider(private val context: Context) {
             ex.notes
                 .filter { it.text.contains(q, ignoreCase = true) }.take(2)
                 .forEach { result.add(Suggestion.Extra("note", "📝", it.text.replace("\n", " ").take(60), "Нотатка", it.id, 50)) }
-            val fmt = java.text.SimpleDateFormat("d MMM", java.util.Locale("uk", "UA"))
+            val fmt = SimpleDateFormat("d MMM", Locale("uk", "UA"))
             ex.chats
                 .filter { c -> c.title.contains(q, ignoreCase = true) || c.messages.any { it.content.contains(q, ignoreCase = true) } }
                 .take(2)
@@ -227,15 +242,15 @@ class SuggestionProvider(private val context: Context) {
             }
         } catch (_: Throwable) {}
         if (q.length >= 2) {
-            val enc = android.net.Uri.encode(query.trim())
+            val enc = Uri.encode(query.trim())
             result.add(Suggestion.Extra("web", "🌐", "Шукати «${query.trim().take(40)}» в Google", "Браузер", "https://www.google.com/search?q=$enc", 9))
             result.add(Suggestion.Extra("web", "▶️", "Шукати в YouTube", "YouTube у браузері або додатку", "https://www.youtube.com/results?search_query=$enc", 8))
         }
         if (q.length >= 2) {
             try {
-                if (com.dynamicai.launcher.data.SettingsStorage(context).load().browserSuggest) {
+                if (SettingsStorage(context).load().browserSuggest) {
                     BrowserBridge.pages(context, query).forEach { p ->
-                        val host = android.net.Uri.parse(p.url).host ?: p.url
+                        val host = Uri.parse(p.url).host ?: p.url
                         val bookmark = p.kind == "bookmark"
                         result.add(Suggestion.Extra(
                             "web", if (bookmark) "🔖" else "🕘",
@@ -259,14 +274,14 @@ class SuggestionProvider(private val context: Context) {
     private fun findMedia(q: String): List<Suggestion> {
         val out = mutableListOf<Suggestion>()
         val sources = listOf(
-            android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI to "🖼",
-            android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI to "🎞"
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI to "🖼",
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI to "🎞"
         )
         for ((uri, icon) in sources) {
             try {
                 context.contentResolver.query(
                     uri,
-                    arrayOf(android.provider.MediaStore.MediaColumns._ID, android.provider.MediaStore.MediaColumns.DISPLAY_NAME),
+                    arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME),
                     "${android.provider.MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?",
                     arrayOf("%$q%"),
                     "${android.provider.MediaStore.MediaColumns.DATE_ADDED} DESC"
@@ -275,7 +290,7 @@ class SuggestionProvider(private val context: Context) {
                     while (c.moveToNext() && n < 2) {
                         val id = c.getLong(0)
                         out.add(Suggestion.Extra("file", icon, c.getString(1) ?: "файл", "Файл · відкрити",
-                            android.content.ContentUris.withAppendedId(uri, id).toString(), 40))
+                            ContentUris.withAppendedId(uri, id).toString(), 40))
                         n++
                     }
                 }
@@ -284,7 +299,7 @@ class SuggestionProvider(private val context: Context) {
         return out
     }
 
-    private val installedCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+    private val installedCache = ConcurrentHashMap<String, Boolean>()
     private fun installed(pkg: String): Boolean = installedCache.getOrPut(pkg) {
         try { context.packageManager.getPackageInfo(pkg, 0); true } catch (_: Throwable) { false }
     }
@@ -319,8 +334,8 @@ class SuggestionProvider(private val context: Context) {
 
     private fun contactScore(name: String, q: String): Int {
         val n = name.lowercase().trim()
-        val nt = com.dynamicai.launcher.command.FuzzyMatcher.transliterate(n)
-        val qt = com.dynamicai.launcher.command.FuzzyMatcher.transliterate(q)
+        val nt = FuzzyMatcher.transliterate(n)
+        val qt = FuzzyMatcher.transliterate(q)
 
         fun score(a: String, b: String): Int = when {
             a == b -> 100

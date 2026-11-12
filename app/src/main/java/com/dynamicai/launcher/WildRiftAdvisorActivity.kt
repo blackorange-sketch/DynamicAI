@@ -41,6 +41,11 @@ import com.dynamicai.launcher.data.WildRiftRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import android.graphics.BitmapFactory
+import android.widget.Toast
+import androidx.compose.foundation.Image
+import com.dynamicai.launcher.data.AssetDownloader
+import com.dynamicai.launcher.ui.theme.StoredAppTheme
 
 class WildRiftAdvisorActivity : ComponentActivity() {
     private val vm: AppListViewModel by viewModels()
@@ -58,13 +63,13 @@ class WildRiftAdvisorActivity : ComponentActivity() {
         
         // Перевіряємо та завантажуємо ресурси Wild Rift
         lifecycleScope.launch {
-            if (!com.dynamicai.launcher.data.AssetDownloader.downloadWildRiftAssets(this@WildRiftAdvisorActivity)) {
-                android.widget.Toast.makeText(this@WildRiftAdvisorActivity, "Помилка завантаження ресурсів Wild Rift", android.widget.Toast.LENGTH_LONG).show()
+            if (!AssetDownloader.downloadWildRiftAssets(this@WildRiftAdvisorActivity)) {
+                Toast.makeText(this@WildRiftAdvisorActivity, "Помилка завантаження ресурсів Wild Rift", Toast.LENGTH_LONG).show()
             }
         }
         enableEdgeToEdge()
         setContent {
-            com.dynamicai.launcher.ui.theme.StoredAppTheme {
+            StoredAppTheme {
                 WildRiftAdvisorScreen(vm, onClose = { finish() })
             }
         }
@@ -322,7 +327,7 @@ fun ItemIcon(itemId: String, size: Dp = 44.dp) {
             for (ext in extensions) {
                 try {
                     ctx.assets.open("wildrift/item_icons/$itemId.$ext").use { stream ->
-                        val bmp = android.graphics.BitmapFactory.decodeStream(stream)
+                        val bmp = BitmapFactory.decodeStream(stream)
                         if (bmp != null) return@remember bmp.asImageBitmap()
                     }
                 } catch (_: Exception) { }
@@ -332,7 +337,7 @@ fun ItemIcon(itemId: String, size: Dp = 44.dp) {
     }
 
     if (bitmap != null) {
-        androidx.compose.foundation.Image(
+        Image(
             bitmap = bitmap,
             contentDescription = null,
             modifier = Modifier

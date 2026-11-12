@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
+import androidx.compose.material3.LocalTextStyle
 
 @Composable
 fun AlphabetSidebar(
@@ -184,7 +185,7 @@ fun AlphabetSidebar(
                             ),
                             maxLines = 1,
                             textAlign = TextAlign.Center,
-                            style = androidx.compose.material3.LocalTextStyle.current.copy(
+                            style = LocalTextStyle.current.copy(
                                 fontSize = 11.sp,
                                 lineHeight = 11.sp,
                                 platformStyle = PlatformTextStyle(includeFontPadding = false),

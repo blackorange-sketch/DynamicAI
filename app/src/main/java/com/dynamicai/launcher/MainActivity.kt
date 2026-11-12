@@ -27,6 +27,18 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.ui.platform.LocalContext
 import com.dynamicai.launcher.ui.HomeScreen
+import android.content.Intent
+import android.graphics.Rect
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.Color
+import com.dynamicai.launcher.data.SettingsStorage
+import com.dynamicai.launcher.macro.MacroTriggerService
+import com.dynamicai.launcher.overlay.FloatingDockService
+import com.dynamicai.launcher.ui.IconLayoutProvider
 
 data class HubEvent(val action: String, val query: String, val id: Long)
 
@@ -36,32 +48,32 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        try { com.dynamicai.launcher.overlay.FloatingDockService.hide(this) } catch (_: Exception) {}
+        try { FloatingDockService.hide(this) } catch (_: Exception) {}
         try { vm.refreshIfStale() } catch (_: Throwable) {}
     }
 
     override fun onPause() {
         super.onPause()
-        try { com.dynamicai.launcher.overlay.FloatingDockService.show(this) } catch (_: Exception) {}
+        try { FloatingDockService.show(this) } catch (_: Exception) {}
     }
 
     private var aiQuery: String? = null
 
-    private fun handleHubIntent(intent: android.content.Intent?) {
+    private fun handleHubIntent(intent: Intent?) {
         val action = intent?.getStringExtra("hub_action") ?: return
         val q = intent.getStringExtra("hub_query") ?: ""
         hubEvent.value = HubEvent(action, q, System.currentTimeMillis())
     }
 
-    private fun handleAssistIntent(intent: android.content.Intent?) {
+    private fun handleAssistIntent(intent: Intent?) {
         val action = intent?.action ?: return
-        if (action == android.content.Intent.ACTION_ASSIST ||
+        if (action == Intent.ACTION_ASSIST ||
             action == "android.intent.action.VOICE_COMMAND") {
             // Невелика затримка щоб activity встигла стати foreground
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            Handler(Looper.getMainLooper()).postDelayed({
                                     try {
-                        val i = android.content.Intent(this@MainActivity, com.dynamicai.launcher.VoiceChatActivity::class.java)
-                        i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        val i = Intent(this@MainActivity, com.dynamicai.launcher.VoiceChatActivity::class.java)
+                        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         startActivity(i)
                     } catch (_: Throwable) {}
             }, 300)
@@ -74,7 +86,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    override fun onNewIntent(intent: android.content.Intent) {
+    override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleAssistIntent(intent)
         handleHubIntent(intent)
@@ -89,12 +101,12 @@ class MainActivity : ComponentActivity() {
         // Детектор клавіатури → broadcast для FloatingDockService
         window.decorView.viewTreeObserver.addOnGlobalLayoutListener {
             try {
-                val rect = android.graphics.Rect()
+                val rect = Rect()
                 window.decorView.getWindowVisibleDisplayFrame(rect)
                 val screenHeight = resources.displayMetrics.heightPixels
                 val keypadHeight = screenHeight - rect.bottom
                 val isOpen = keypadHeight > screenHeight * 0.15
-                val intent = android.content.Intent("com.dynamicai.KEYBOARD_STATE_CHANGED")
+                val intent = Intent("com.dynamicai.KEYBOARD_STATE_CHANGED")
                     .setPackage(packageName)
                     .putExtra("is_open", isOpen)
                 sendBroadcast(intent)
@@ -102,12 +114,12 @@ class MainActivity : ComponentActivity() {
         }
         
         // Запит дозволів на читання шпалер (потрібно для Nubia/MyOS/Xiaomi)
-        if (android.os.Build.VERSION.SDK_INT >= 33) {
-            if (checkSelfPermission(android.Manifest.permission.READ_MEDIA_IMAGES) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (checkSelfPermission(android.Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(arrayOf(android.Manifest.permission.READ_MEDIA_IMAGES), 100)
             }
         } else {
-            if (checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            if (checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE), 100)
             }
         }
@@ -118,38 +130,38 @@ class MainActivity : ComponentActivity() {
                 ActivityResultContracts.RequestPermission()
             ) { granted ->
                 if (granted) {
-                    val on = com.dynamicai.launcher.data.SettingsStorage(applicationContext).load().wakeWordEnabled
+                    val on = SettingsStorage(applicationContext).load().wakeWordEnabled
                     if (on) {
-                    com.dynamicai.launcher.voice.WakeWordService.start(applicationContext)
+                    WakeWordService.start(applicationContext)
                 }
                 }
             }
             val appCtx = applicationContext
-            androidx.compose.runtime.LaunchedEffect(Unit) {
+            LaunchedEffect(Unit) {
                 val granted = ContextCompat.checkSelfPermission(
                     appCtx, Manifest.permission.RECORD_AUDIO
                 ) == PackageManager.PERMISSION_GRANTED
                 if (!granted) {
                     permLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 } else {
-                    val on = com.dynamicai.launcher.data.SettingsStorage(appCtx).load().wakeWordEnabled
-                    if (on) com.dynamicai.launcher.voice.WakeWordService.start(appCtx)
+                    val on = SettingsStorage(appCtx).load().wakeWordEnabled
+                    if (on) WakeWordService.start(appCtx)
                 }
                 // Автозапуск макросів за подіями (якщо є макроси з тригерами)
-                com.dynamicai.launcher.macro.MacroTriggerService.sync(appCtx)
+                MacroTriggerService.sync(appCtx)
             }
 
             val settings by vm.settings.collectAsStateWithLifecycle()
             // Динамічна прозорість: якщо є кастомне фото — непрозорий фон (щоб системні шпалери не просвічували),
             // якщо немає — прозорий (системні шпалери видно, як раніше)
             val hasCustomBg = settings.backgroundImageUri.isNotBlank()
-            val dynamicBg = if (hasCustomBg) androidx.compose.ui.graphics.Color(0xFF000000) else androidx.compose.ui.graphics.Color.Transparent
+            val dynamicBg = if (hasCustomBg) Color(0xFF000000) else Color.Transparent
             // Єдина тема: наші кольори + Material-схема, побудована з них
             DynamicAITheme(themeId = settings.appTheme, backgroundOverride = dynamicBg, accentOverride = settings.accentColor) {
-                androidx.compose.material3.Surface(color = dynamicBg, modifier = Modifier.fillMaxSize()) {
+                Surface(color = dynamicBg, modifier = Modifier.fillMaxSize()) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         MainBackground(settings)
-                        com.dynamicai.launcher.ui.IconLayoutProvider(settings) {
+                        IconLayoutProvider(settings) {
                             HomeScreen(vm = vm, hubEvent = hubEvent.value)
                         }
                     }

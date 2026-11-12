@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import com.dynamicai.launcher.model.AppInfo
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 
 @Composable
 fun DockEditorScreen(
@@ -59,7 +61,7 @@ fun DockEditorScreen(
         // Поле пошуку
         Text(
             "Обери застосунки для дока — вони з'являться і в лаунчері, і в плаваючому доку",
-            color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted,
+            color = AppTheme.colors.textMuted,
             fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
         )
@@ -67,21 +69,21 @@ fun DockEditorScreen(
         BasicTextField(
             value = query,
             onValueChange = { query = it },
-            textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 18.sp),
-            cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.textPrimary),
+            textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 18.sp),
+            cursorBrush = SolidColor(AppTheme.colors.textPrimary),
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             decorationBox = { inner ->
                 if (query.isEmpty()) {
-                    Text("Пошук застосунків…", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 18.sp)
+                    Text("Пошук застосунків…", color = AppTheme.colors.textMuted, fontSize = 18.sp)
                 }
                 inner()
             }
         )
 
-        HorizontalDivider(color = com.dynamicai.launcher.ui.theme.AppTheme.colors.glassBorder)
+        HorizontalDivider(color = AppTheme.colors.glassBorder)
 
         // Порядок у доку: стрілки зсувають елемент ліворуч/праворуч
         if (dockPkgs.isNotEmpty() && query.isBlank()) {
@@ -160,7 +162,7 @@ fun DockEditorScreen(
                         Icon(
                             Icons.Default.Add,
                             contentDescription = null,
-                            tint = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted,
+                            tint = AppTheme.colors.textMuted,
                             modifier = Modifier.size(24.dp)
                         )
                     }

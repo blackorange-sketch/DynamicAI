@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Calendar
 import kotlin.math.abs
+import android.os.Environment
 
 /** Збір показників системи для віджета «Ресурси». Список процесів і ЦП — через Shizuku, решта — без особливих прав. */
 object SystemStats {
@@ -84,7 +85,7 @@ object SystemStats {
         val avail = (mi["MemAvailable"] ?: 0L) / 1024
         val swapT = (mi["SwapTotal"] ?: 0L) / 1024
         val swapU = swapT - (mi["SwapFree"] ?: 0L) / 1024
-        val sf = try { StatFs(android.os.Environment.getDataDirectory().path) } catch (_: Throwable) { null }
+        val sf = try { StatFs(Environment.getDataDirectory().path) } catch (_: Throwable) { null }
         val stTotal = sf?.let { it.blockCountLong * it.blockSizeLong / 1e9f } ?: 0f
         val stFree = sf?.let { it.availableBlocksLong * it.blockSizeLong / 1e9f } ?: 0f
         val b: Intent? = try { ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) } catch (_: Throwable) { null }

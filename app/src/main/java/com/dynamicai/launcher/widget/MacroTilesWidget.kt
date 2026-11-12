@@ -27,6 +27,12 @@ import com.dynamicai.launcher.suggestion.ContextActions
 import com.dynamicai.launcher.suggestion.SmartAction
 import com.dynamicai.launcher.ui.theme.AppTheme
 import kotlinx.coroutines.delay
+import com.dynamicai.launcher.macro.FocusModes
+import com.dynamicai.launcher.macro.MacroTools
+import com.dynamicai.launcher.macro.NotificationDigest
+import com.dynamicai.launcher.ui.LaunchedWhileStarted
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Плитки макросів: тап — запуск, довгий тап — налаштування віджета. */
 @Composable
@@ -39,9 +45,9 @@ fun MacroTilesWidget(
     val ctx = LocalContext.current
     var macros by remember { mutableStateOf(MacroStorage(ctx).get().filter { it.enabled }) }
     val running by MacroLauncher.running.collectAsState()
-    com.dynamicai.launcher.ui.LaunchedWhileStarted {
+    LaunchedWhileStarted {
         while (true) {
-            macros = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { MacroStorage(ctx).get().filter { it.enabled } }
+            macros = withContext(Dispatchers.Default) { MacroStorage(ctx).get().filter { it.enabled } }
             delay(5000)
         }
     }
@@ -101,9 +107,9 @@ fun SmartActionsWidget(
 ) {
     val ctx = LocalContext.current
     var actions by remember { mutableStateOf<List<SmartAction>>(emptyList()) }
-    com.dynamicai.launcher.ui.LaunchedWhileStarted {
+    LaunchedWhileStarted {
         while (true) {
-            actions = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { try { ContextActions.build(ctx) } catch (_: Throwable) { emptyList() } }
+            actions = withContext(Dispatchers.Default) { try { ContextActions.build(ctx) } catch (_: Throwable) { emptyList() } }
             delay(30_000)
         }
     }
@@ -153,16 +159,16 @@ private fun ActionChip(a: SmartAction, onClick: () -> Unit) {
 @Composable
 fun FocusWidget(onLongPress: () -> Unit, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
-    LaunchedEffect(Unit) { com.dynamicai.launcher.macro.FocusModes.init(ctx) }
-    val active by com.dynamicai.launcher.macro.FocusModes.active.collectAsState()
+    LaunchedEffect(Unit) { FocusModes.init(ctx) }
+    val active by FocusModes.active.collectAsState()
     Column(modifier = modifier.widgetCard().pointerInput(Unit) { detectTapGestures(onLongPress = { onLongPress() }) }.padding(12.dp)) {
         Text(
-            "🎯 Фокус" + (com.dynamicai.launcher.macro.FocusModes.find(active)?.let { " · ${it.name}" } ?: ""),
+            "🎯 Фокус" + (FocusModes.find(active)?.let { " · ${it.name}" } ?: ""),
             color = AppTheme.colors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
         )
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            com.dynamicai.launcher.macro.FocusModes.presets.forEach { m ->
+            FocusModes.presets.forEach { m ->
                 val on = m.id == active
                 Row(
                     modifier = Modifier
@@ -171,8 +177,8 @@ fun FocusWidget(onLongPress: () -> Unit, modifier: Modifier = Modifier) {
                         .border(1.dp, if (on) AppTheme.colors.accent else AppTheme.colors.glassBorder.copy(alpha = 0.7f), RoundedCornerShape(20.dp))
                         .pointerInput(m.id, on) {
                             detectTapGestures(onTap = {
-                                if (on) com.dynamicai.launcher.macro.FocusModes.deactivate(ctx)
-                                else com.dynamicai.launcher.macro.FocusModes.activate(ctx, m.id)
+                                if (on) FocusModes.deactivate(ctx)
+                                else FocusModes.activate(ctx, m.id)
                             }, onLongPress = { onLongPress() })
                         }
                         .padding(horizontal = 12.dp, vertical = 8.dp),
@@ -192,9 +198,9 @@ fun FocusWidget(onLongPress: () -> Unit, modifier: Modifier = Modifier) {
 fun NotificationDigestWidget(onLongPress: () -> Unit, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     var text by remember { mutableStateOf("") }
-    com.dynamicai.launcher.ui.LaunchedWhileStarted {
+    LaunchedWhileStarted {
         while (true) {
-            text = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { try { com.dynamicai.launcher.macro.NotificationDigest.build(ctx) } catch (_: Throwable) { "" } }
+            text = withContext(Dispatchers.Default) { try { NotificationDigest.build(ctx) } catch (_: Throwable) { "" } }
             delay(15_000)
         }
     }
@@ -203,7 +209,7 @@ fun NotificationDigestWidget(onLongPress: () -> Unit, modifier: Modifier = Modif
             .widgetCard()
             .pointerInput(Unit) {
                 detectTapGestures(
-                    onTap = { com.dynamicai.launcher.macro.MacroTools(ctx).speak(text) },
+                    onTap = { MacroTools(ctx).speak(text) },
                     onLongPress = { onLongPress() }
                 )
             }

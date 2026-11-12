@@ -30,6 +30,9 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import com.dynamicai.launcher.folder.Folder
 import com.dynamicai.launcher.model.AppInfo
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 
 @Composable
 fun FolderManagerScreen(
@@ -49,7 +52,7 @@ fun FolderManagerScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(com.dynamicai.launcher.ui.theme.AppTheme.colors.background.copy(alpha = 0.95f))
+            .background(AppTheme.colors.background.copy(alpha = 0.95f))
             .statusBarsPadding()
     ) {
         // Заголовок
@@ -106,11 +109,11 @@ fun FolderManagerScreen(
             onDismissRequest = { showCreateDialog = false; newFolderName = "" },
             title = { Text("Нова папка", color = AppTheme.colors.textPrimary) },
             text = {
-                androidx.compose.foundation.text.BasicTextField(
+                BasicTextField(
                     value = newFolderName,
                     onValueChange = { newFolderName = it },
-                    textStyle = androidx.compose.ui.text.TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
-                    cursorBrush = androidx.compose.ui.graphics.SolidColor(AppTheme.colors.textPrimary),
+                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 16.sp),
+                    cursorBrush = SolidColor(AppTheme.colors.textPrimary),
                     singleLine = true,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -120,7 +123,7 @@ fun FolderManagerScreen(
                         .padding(horizontal = 12.dp, vertical = 10.dp),
                     decorationBox = { inner ->
                         if (newFolderName.isEmpty()) {
-                            Text("Назва папки", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 16.sp)
+                            Text("Назва папки", color = AppTheme.colors.textMuted, fontSize = 16.sp)
                         }
                         inner()
                     }
@@ -154,7 +157,7 @@ fun FolderManagerScreen(
             title = { Text("Додати до «${folder.name}»", color = AppTheme.colors.textPrimary) },
             text = {
                 if (availableApps.isEmpty()) {
-                    Text("Немає застосунків для додавання", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 14.sp)
+                    Text("Немає застосунків для додавання", color = AppTheme.colors.textMuted, fontSize = 14.sp)
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp)

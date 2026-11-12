@@ -9,6 +9,7 @@ import org.json.JSONArray
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import com.dynamicai.launcher.data.SettingsStorage
 
 /**
  * Зв'язок з браузером OperaFast (org.blackorange.operafast):
@@ -59,7 +60,7 @@ object BrowserBridge {
     fun open(ctx: Context, url: String): Boolean {
         val view = Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val preferred = try {
-            com.dynamicai.launcher.data.SettingsStorage(ctx).load().defaultBrowser
+            SettingsStorage(ctx).load().defaultBrowser
         } catch (_: Throwable) { "" }
         val pkg = when {
             preferred.isNotBlank() -> preferred

@@ -6,6 +6,14 @@ import android.os.BatteryManager
 import com.dynamicai.launcher.voice.OfflineSpeech
 import kotlinx.coroutines.delay
 import java.util.Calendar
+import android.bluetooth.BluetoothAdapter
+import android.net.wifi.WifiManager
+import android.provider.Settings
+import com.dynamicai.launcher.system.BluetoothManager
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlinx.coroutines.CancellationException
 
 /**
  * Виконує макрос. Крок — це або виклик інструмента («toggleWifi(state="on")», префікс TOOL_CALL: необов'язковий),
@@ -41,7 +49,7 @@ class MacroRunner(
         val total = macro.steps.size
         for ((i, raw) in macro.steps.withIndex()) {
             onProgress(Progress(i + 1, total, raw))
-            val r = try { runStep(raw) } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            val r = try { runStep(raw) } catch (e: CancellationException) { throw e } catch (e: Exception) {
                 StepResult("Помилка: ${e.message}", true)
             }
             log.append(i + 1).append(". ").append(r.text).append('\n')
@@ -57,8 +65,8 @@ class MacroRunner(
         return Regex("\\{(\\w+)\\}").replace(s) { m ->
             val k = m.groupValues[1]
             vars[k] ?: when (k) {
-                "time" -> java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
-                "date" -> java.text.SimpleDateFormat("d MMMM", java.util.Locale("uk", "UA")).format(java.util.Date())
+                "time" -> SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+                "date" -> SimpleDateFormat("d MMMM", Locale("uk", "UA")).format(Date())
                 "battery" -> try { (context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager).getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY).toString() } catch (_: Throwable) { "?" }
                 else -> m.value
             }
@@ -148,10 +156,10 @@ class MacroRunner(
         return try {
             when {
                 c == "online" -> OfflineSpeech.isOnline(context)
-                c == "wifi_on" -> (context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager).isWifiEnabled
-                c == "bt_on" -> android.bluetooth.BluetoothAdapter.getDefaultAdapter()?.isEnabled == true
-                c == "bt_connected" -> com.dynamicai.launcher.system.BluetoothManager(context).getPairedDevices().any { it.isConnected }
-                c == "airplane" -> android.provider.Settings.Global.getInt(context.contentResolver, android.provider.Settings.Global.AIRPLANE_MODE_ON, 0) == 1
+                c == "wifi_on" -> (context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager).isWifiEnabled
+                c == "bt_on" -> BluetoothAdapter.getDefaultAdapter()?.isEnabled == true
+                c == "bt_connected" -> BluetoothManager(context).getPairedDevices().any { it.isConnected }
+                c == "airplane" -> Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) == 1
                 c == "charging" -> (context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager).isCharging
                 c == "music" -> (context.getSystemService(Context.AUDIO_SERVICE) as AudioManager).isMusicActive
                 c.startsWith("battery") -> {

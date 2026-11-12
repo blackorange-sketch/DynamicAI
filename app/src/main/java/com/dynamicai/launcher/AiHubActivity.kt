@@ -49,6 +49,20 @@ import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import android.app.Activity
+import android.app.Application
+import android.graphics.BitmapFactory
+import android.os.Build
+import android.util.Log
+import android.view.ViewGroup
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.dynamicai.launcher.ocr.RegionSelectorOverlay
+import com.dynamicai.launcher.ocr.ScreenTranslateOverlay
+import com.dynamicai.launcher.ocr.ScreenTranslator
+import com.dynamicai.launcher.ui.theme.StoredAppTheme
+import java.io.File
+import kotlinx.coroutines.delay
 
 class AiHubActivity : ComponentActivity() {
     private val vm: AppListViewModel by viewModels()
@@ -70,7 +84,7 @@ class AiHubActivity : ComponentActivity() {
         window.setBackgroundDrawableResource(android.R.color.transparent)
 
         // iOS-style blur на Android 12+
-        if (android.os.Build.VERSION.SDK_INT >= 31) {
+        if (Build.VERSION.SDK_INT >= 31) {
             window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
             window.attributes = window.attributes.apply {
                 blurBehindRadius = 80
@@ -83,7 +97,7 @@ class AiHubActivity : ComponentActivity() {
         }
 
         setContent {
-            com.dynamicai.launcher.ui.theme.StoredAppTheme {
+            StoredAppTheme {
                 AiHubScreen(vm = vm, blurBgPath = intent.getStringExtra("blur_bg_path"), onClose = { finish() })
             }
         }
@@ -105,7 +119,7 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
     val voiceLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
+        if (result.resultCode == Activity.RESULT_OK) {
             val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
             if (!text.isNullOrBlank()) {
                 query = text
@@ -134,7 +148,7 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
     }
 
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(200)
+        delay(200)
         focusRequester.requestFocus()
         keyboard?.show()
     }
@@ -144,7 +158,7 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.3f))
             .clickable(
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) { onClose() }
     ) {
@@ -152,15 +166,15 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
         if (blurBgPath != null) {
             val bmp = remember(blurBgPath) {
                 try {
-                    val f = java.io.File(blurBgPath)
-                    if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.absolutePath) else null
+                    val f = File(blurBgPath)
+                    if (f.exists()) BitmapFactory.decodeFile(f.absolutePath) else null
                 } catch (_: Throwable) { null }
             }
             if (bmp != null) {
-                androidx.compose.foundation.Image(
+                Image(
                     bitmap = bmp.asImageBitmap(),
                     contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -178,9 +192,9 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                         WebView(ctx).apply {
                             webViewClient = WebViewClient()
                             settings.javaScriptEnabled = true
-                            layoutParams = android.view.ViewGroup.LayoutParams(
-                                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                                android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                            layoutParams = ViewGroup.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                ViewGroup.LayoutParams.MATCH_PARENT
                             )
                         }
                     },
@@ -196,7 +210,7 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 24.dp)
                     .clickable(
-                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        interactionSource = remember { MutableInteractionSource() },
                         indication = null
                     ) { }
                     .imePadding(),
@@ -239,15 +253,15 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                     }
                     ActionChip("Переклад", AppTheme.colors.warning) {
                         onClose()
-                        com.dynamicai.launcher.ocr.RegionSelectorOverlay.show(
+                        RegionSelectorOverlay.show(
                             context = vm.getApplication(),
                             onSelected = { rect ->
                                 CoroutineScope(Dispatchers.Main).launch {
-                                    kotlinx.coroutines.delay(150)
-                                    val translator = com.dynamicai.launcher.ocr.ScreenTranslator(vm.getApplication(), null)
+                                    delay(150)
+                                    val translator = ScreenTranslator(vm.getApplication(), null)
                                     val blocks = translator.captureRegionAndTranslate(rect, targetLang = "uk")
                                     if (blocks.isNotEmpty()) {
-                                        com.dynamicai.launcher.ocr.ScreenTranslateOverlay.show(vm.getApplication(), blocks, "uk")
+                                        ScreenTranslateOverlay.show(vm.getApplication(), blocks, "uk")
                                     }
                                 }
                             },
@@ -256,23 +270,23 @@ fun AiHubScreen(vm: AppListViewModel, blurBgPath: String?, onClose: () -> Unit) 
                     }
                     ActionChip("Розмова", AppTheme.colors.pink) {
                         try {
-                            val app = vm.getApplication<android.app.Application>()
-                            app.startActivity(android.content.Intent(app, com.dynamicai.launcher.VoiceChatActivity::class.java).apply {
-                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            val app = vm.getApplication<Application>()
+                            app.startActivity(Intent(app, com.dynamicai.launcher.VoiceChatActivity::class.java).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             })
                         } catch (t: Throwable) {
-                            android.util.Log.e("AiHub", "VoiceChat failed: ${t.message}", t)
+                            Log.e("AiHub", "VoiceChat failed: ${t.message}", t)
                         }
                         onClose()
                     }
                     ActionChip("Wild Rift", AppTheme.colors.purple) {
                         try {
-                            val app = vm.getApplication<android.app.Application>()
-                            app.startActivity(android.content.Intent(app, com.dynamicai.launcher.WildRiftAdvisorActivity::class.java).apply {
-                                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            val app = vm.getApplication<Application>()
+                            app.startActivity(Intent(app, com.dynamicai.launcher.WildRiftAdvisorActivity::class.java).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             })
                         } catch (t: Throwable) {
-                            android.util.Log.e("AiHub", "Wild Rift launch failed: ${t.message}", t)
+                            Log.e("AiHub", "Wild Rift launch failed: ${t.message}", t)
                         }
                         onClose()
                     }

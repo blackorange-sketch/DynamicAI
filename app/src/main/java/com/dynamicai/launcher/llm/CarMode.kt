@@ -10,6 +10,10 @@ import com.dynamicai.launcher.system.BluetoothManager
 import com.dynamicai.launcher.system.ShizukuManager
 import com.dynamicai.launcher.voice.OfflineSpeech
 import kotlinx.coroutines.delay
+import android.bluetooth.BluetoothAdapter
+import android.content.pm.PackageManager
+import android.os.Build
+import com.dynamicai.launcher.data.SettingsStorage
 
 /**
  * Сценарій «Музика в авто»: інтернет → Bluetooth → підключення до машини → YouTube Music → відтворення.
@@ -66,10 +70,10 @@ class CarMode(private val context: Context) {
 
     /** Вмикає Bluetooth і підключається до пристрою (за назвою; порожньо — до збереженого авто). */
     suspend fun connectBluetooth(nameArg: String): String {
-        val name = nameArg.ifBlank { com.dynamicai.launcher.data.SettingsStorage(context).load().carBtName }
-        val adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter() ?: return "Bluetooth недоступний"
-        if (android.os.Build.VERSION.SDK_INT >= 31 &&
-            context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        val name = nameArg.ifBlank { SettingsStorage(context).load().carBtName }
+        val adapter = BluetoothAdapter.getDefaultAdapter() ?: return "Bluetooth недоступний"
+        if (Build.VERSION.SDK_INT >= 31 &&
+            context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
         ) return "Немає дозволу Bluetooth (Налаштування → Система → Bluetooth)"
 
         if (!adapter.isEnabled) {

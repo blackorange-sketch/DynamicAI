@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.sp
 import com.dynamicai.launcher.suggestion.TelegramIndex
 import com.dynamicai.launcher.ui.theme.AppTheme
 import kotlinx.coroutines.delay
+import com.dynamicai.launcher.ui.LaunchedWhileStarted
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private fun startSafe(ctx: Context, i: Intent) {
     try { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Throwable) {}
@@ -47,9 +50,9 @@ fun TgChatsWidget(size: String, onLongPress: () -> Unit, modifier: Modifier = Mo
     val rows = when (size) { "small" -> 3; "large" -> 8; "full" -> 12; else -> 5 }
     var chats by remember { mutableStateOf(TelegramIndex.recent(ctx, rows)) }
     // Оновлюємо лише поки лаунчер на екрані, і читаємо індекс поза головним потоком
-    com.dynamicai.launcher.ui.LaunchedWhileStarted(rows) {
+    LaunchedWhileStarted(rows) {
         while (true) {
-            chats = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { TelegramIndex.recent(ctx, rows) }
+            chats = withContext(Dispatchers.Default) { TelegramIndex.recent(ctx, rows) }
             delay(5000)
         }
     }

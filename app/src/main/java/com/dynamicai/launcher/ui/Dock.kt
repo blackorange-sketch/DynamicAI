@@ -32,13 +32,18 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.dynamicai.launcher.model.AppInfo
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
+import androidx.compose.material3.Text
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.TextUnitType
 
 data class DockItem(
     val id: String,
     val label: String,
-    val icon: android.graphics.drawable.Drawable?,
+    val icon: Drawable?,
     val isFolder: Boolean,
-    val bitmap: android.graphics.Bitmap? = null
+    val bitmap: Bitmap? = null
 )
 
 @Composable
@@ -194,10 +199,10 @@ fun Dock(
                                     .background(AppTheme.colors.accent)
                                     .padding(horizontal = 4.dp)
                             ) {
-                                androidx.compose.material3.Text(
+                                Text(
                                     if (n > 9) "9+" else n.toString(),
                                     color = Color.White,
-                                    fontSize = androidx.compose.ui.unit.TextUnit(10f, androidx.compose.ui.unit.TextUnitType.Sp)
+                                    fontSize = TextUnit(10f, TextUnitType.Sp)
                                 )
                             }
                         }

@@ -38,6 +38,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import com.dynamicai.launcher.ui.theme.StoredAppTheme
 
 object RegionSelectorOverlay {
 
@@ -61,7 +62,7 @@ object RegionSelectorOverlay {
                 setViewTreeLifecycleOwner(lcOwner)
                 setViewTreeSavedStateRegistryOwner(lcOwner)
                 setContent {
-                    com.dynamicai.launcher.ui.theme.StoredAppTheme {
+                    StoredAppTheme {
                         RegionSelectorContent(
                             onSelected = { rect ->
                                 hide()

@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import android.util.Log
 
 object CustomBackgroundLoader {
 
@@ -24,10 +25,10 @@ object CustomBackgroundLoader {
             ctx.contentResolver.openInputStream(uri)?.use { input ->
                 file.outputStream().use { output -> input.copyTo(output) }
             } ?: return@withContext null
-            android.util.Log.d("CustomBg", "saved ${file.length()} bytes to ${file.absolutePath}")
+            Log.d("CustomBg", "saved ${file.length()} bytes to ${file.absolutePath}")
             "${file.absolutePath}?v=${System.currentTimeMillis()}"
         } catch (e: Throwable) {
-            android.util.Log.e("CustomBg", "saveFromUri failed: ${e.message}", e)
+            Log.e("CustomBg", "saveFromUri failed: ${e.message}", e)
             null
         }
     }
@@ -50,7 +51,7 @@ object CustomBackgroundLoader {
                 val cleanPath = filePath.substringBefore("?v=")
                 val file = File(cleanPath)
                 if (!file.exists()) {
-                    android.util.Log.w("CustomBg", "file not found: $cleanPath")
+                    Log.w("CustomBg", "file not found: $cleanPath")
                     return@withContext null
                 }
                 // Спершу лише розміри, потім декодування з inSampleSize — без повнорозмірного bitmap у пам'яті
@@ -60,7 +61,7 @@ object CustomBackgroundLoader {
                 while (bounds.outWidth / (sample * 2) >= targetWidth) sample *= 2
                 val opts = BitmapFactory.Options().apply { inSampleSize = sample }
                 val bitmap = BitmapFactory.decodeFile(file.absolutePath, opts) ?: run {
-                    android.util.Log.w("CustomBg", "decodeFile failed: $cleanPath")
+                    Log.w("CustomBg", "decodeFile failed: $cleanPath")
                     return@withContext null
                 }
                 val scale = if (bitmap.width > targetWidth) targetWidth.toFloat() / bitmap.width else 1f
@@ -72,13 +73,13 @@ object CustomBackgroundLoader {
                         true
                     ).also { if (it !== bitmap) bitmap.recycle() }
                 } else bitmap
-                android.util.Log.d("CustomBg", "loaded ${scaled.width}x${scaled.height} sample=$sample")
+                Log.d("CustomBg", "loaded ${scaled.width}x${scaled.height} sample=$sample")
                 val img = scaled.asImageBitmap()
                 cachedKey = key
                 cachedImage = img
                 img
             } catch (e: Throwable) {
-                android.util.Log.e("CustomBg", "loadFromFile failed: ${e.message}", e)
+                Log.e("CustomBg", "loadFromFile failed: ${e.message}", e)
                 null
             }
         }

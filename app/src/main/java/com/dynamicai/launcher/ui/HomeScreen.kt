@@ -86,6 +86,51 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
+import android.content.Context
+import android.content.res.Configuration
+import android.os.Build
+import android.util.Log
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.unit.Dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.dynamicai.launcher.folder.Folder
+import com.dynamicai.launcher.macro.FocusModes
+import com.dynamicai.launcher.macro.MacroLauncher
+import com.dynamicai.launcher.macro.MacroScreen
+import com.dynamicai.launcher.macro.MacroStorage
+import com.dynamicai.launcher.macro.NotificationDigest
+import com.dynamicai.launcher.overlay.FloatingDockService
+import com.dynamicai.launcher.suggestion.AppUsage
+import com.dynamicai.launcher.suggestion.SearchHistory
+import com.dynamicai.launcher.system.StatusBarController
+import com.dynamicai.launcher.widget.AddWidgetDialog
+import com.dynamicai.launcher.widget.PlacedWidget
+import com.dynamicai.launcher.widget.WidgetsStorage
+import java.util.Calendar
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launcher.HubEvent? = null) {
@@ -97,7 +142,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     val suggestions by vm.suggestions.collectAsStateWithLifecycle()
     val settings by vm.settings.collectAsStateWithLifecycle()
     // background береться з зовнішньої теми (MainActivity): прозорий або чорний залежно від кастомного фону
-    DynamicAITheme(themeId = settings.appTheme, accentOverride = settings.accentColor, backgroundOverride = androidx.compose.material3.MaterialTheme.colorScheme.background) {
+    DynamicAITheme(themeId = settings.appTheme, accentOverride = settings.accentColor, backgroundOverride = MaterialTheme.colorScheme.background) {
     val hidden by vm.hidden.collectAsStateWithLifecycle()
     val folders by vm.folders.collectAsStateWithLifecycle()
     val weather by vm.weather.collectAsStateWithLifecycle()
@@ -107,14 +152,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     val dockAppeared by vm.dockAppeared.collectAsStateWithLifecycle()
 
     // Плавна поява іконок — тільки один раз, потім завжди 1
-    val contentAlpha by androidx.compose.animation.core.animateFloatAsState(
+    val contentAlpha by animateFloatAsState(
         targetValue = 1f,
-        animationSpec = androidx.compose.animation.core.tween(450),
+        animationSpec = tween(450),
         label = "contentAlpha"
     )
 
     val ctx = LocalContext.current
-    val statusBarCtrl = remember { com.dynamicai.launcher.system.StatusBarController(ctx.applicationContext) }
+    val statusBarCtrl = remember { StatusBarController(ctx.applicationContext) }
     val keyboard = LocalSoftwareKeyboardController.current
     val haptic = LocalHapticFeedback.current
 
@@ -125,8 +170,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     var showFolderManager by remember { mutableStateOf(false) }
     var showMacroManager by remember { mutableStateOf(false) }
     var showNotesScreen by remember { mutableStateOf(false) }
-    val placedWidgetsStorage = remember { com.dynamicai.launcher.widget.WidgetsStorage(ctx) }
-    var placedWidgets by remember { mutableStateOf<List<com.dynamicai.launcher.widget.PlacedWidget>>(placedWidgetsStorage.get()) }
+    val placedWidgetsStorage = remember { WidgetsStorage(ctx) }
+    var placedWidgets by remember { mutableStateOf<List<PlacedWidget>>(placedWidgetsStorage.get()) }
     var showAddWidgetDialog by remember { mutableStateOf(false) }
     var currentSettingsCategory by remember { mutableStateOf<String?>(null) }
     var currentPage by remember { mutableStateOf(if (placedWidgetsStorage.hasDashboard()) 1 else 0) }
@@ -141,9 +186,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     var searchMode by remember { mutableStateOf(false) }
     var menuApp by remember { mutableStateOf<AppInfo?>(null) }
     var folderMenuApp by remember { mutableStateOf<AppInfo?>(null) }
-    var folderMenuFolder by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
-    var folderHeaderMenu by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
-    var openFolder by remember { mutableStateOf<com.dynamicai.launcher.folder.Folder?>(null) }
+    var folderMenuFolder by remember { mutableStateOf<Folder?>(null) }
+    var folderHeaderMenu by remember { mutableStateOf<Folder?>(null) }
+    var openFolder by remember { mutableStateOf<Folder?>(null) }
     var selectedTabFolderId by remember { mutableStateOf<String?>(null) }
     var showMainMenu by remember { mutableStateOf(false) }
     var showNewFolderDialog by remember { mutableStateOf(false) }
@@ -153,14 +198,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     var drawerOpen by remember { mutableStateOf(false) }
     var drawerCategory by remember { mutableStateOf("all") }
     // Анімація зникнення HomeScreen при відкритті drawer
-    val homeAlpha by androidx.compose.animation.core.animateFloatAsState(
+    val homeAlpha by animateFloatAsState(
         targetValue = if (drawerOpen) 0f else 1f,
-        animationSpec = androidx.compose.animation.core.tween(animMs(if (drawerOpen) 180 else 300), easing = Motion.Standard),
+        animationSpec = tween(animMs(if (drawerOpen) 180 else 300), easing = Motion.Standard),
         label = "homeAlpha"
     )
-    val homeScale by androidx.compose.animation.core.animateFloatAsState(
+    val homeScale by animateFloatAsState(
         targetValue = if (drawerOpen) 0.93f else 1f,
-        animationSpec = androidx.compose.animation.core.tween(animMs(if (drawerOpen) 260 else 340), easing = Motion.Decel),
+        animationSpec = tween(animMs(if (drawerOpen) 260 else 340), easing = Motion.Decel),
         label = "homeScale"
     )
     var launchingApp by remember { mutableStateOf<AppInfo?>(null) }
@@ -169,7 +214,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
 
     val focusRequester = remember { FocusRequester() }
-    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
     val searchGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     val drawerGridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
@@ -185,7 +230,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
     // Скидаємо таймер при прокручуванні списку
     LaunchedEffect(listState) {
-        androidx.compose.runtime.snapshotFlow { listState.isScrollInProgress }
+        snapshotFlow { listState.isScrollInProgress }
             .collect { scrolling ->
                 if (scrolling && listVisible) {
                     listTimerJob?.cancel()
@@ -273,29 +318,29 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
     LaunchedEffect(hubEvent) {
         val ev = hubEvent ?: return@LaunchedEffect
-        kotlinx.coroutines.delay(300) // Затримка, щоб лаунчер встиг з'явитися на екрані
+        delay(300) // Затримка, щоб лаунчер встиг з'явитися на екрані
         when (ev.action) {
             "ai" -> {
                 vm.executeCommand(ev.query)
             }
             "search" -> {
-                val i = android.content.Intent(android.content.Intent.ACTION_WEB_SEARCH).apply {
+                val i = Intent(Intent.ACTION_WEB_SEARCH).apply {
                     putExtra("query", ev.query)
-                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 try { ctx.startActivity(i) } catch (_: Throwable) {}
             }
             "mic" -> {
-                val voiceIntent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
-                    putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Слухаю...")
-                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                val voiceIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
+                    putExtra(RecognizerIntent.EXTRA_PROMPT, "Слухаю...")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 try {
                     ctx.startActivity(voiceIntent)
                 } catch (t: Throwable) {
-                    android.util.Log.e("HomeScreen", "mic launch failed", t)
+                    Log.e("HomeScreen", "mic launch failed", t)
                 }
             }
         }
@@ -305,10 +350,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         overlayPermissionGranted = Settings.canDrawOverlays(ctx)
     }
 
-    androidx.compose.runtime.DisposableEffect(Unit) {
-        android.util.Log.e("HS_LIFE", "HomeScreen composed")
+    DisposableEffect(Unit) {
+        Log.e("HS_LIFE", "HomeScreen composed")
         onDispose {
-            android.util.Log.e("HS_LIFE", "HomeScreen DISPOSED — composition destroyed!")
+            Log.e("HS_LIFE", "HomeScreen DISPOSED — composition destroyed!")
         }
     }
 
@@ -317,44 +362,44 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
 
     // Після першого показу вхідна анімація більше не програється
-    LaunchedEffect(Unit) { kotlinx.coroutines.delay(1200); HomeAnim.played = true }
+    LaunchedEffect(Unit) { delay(1200); HomeAnim.played = true }
 
     // Нічний режим «лише годинник» (00:00–06:00)
     var isNightNow by remember { mutableStateOf(false) }
     LaunchedWhileStarted {
         while (true) {
-            val h = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+            val h = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
             isNightNow = h in 0..5
-            kotlinx.coroutines.delay(60_000)
+            delay(60_000)
         }
     }
 
     // Точка останнього дотику — звідси «розкривається» запуск додатка
-    var lastTouch by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Unspecified) }
+    var lastTouch by remember { mutableStateOf(Offset.Unspecified) }
 
     // Бейджі сповіщень на іконках дока (потрібен доступ до сповіщень)
     var dockBadges by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     LaunchedWhileStarted {
         while (true) {
             // Запит до системи сповіщень — поза головним потоком, щоб не збивати кадри під час жестів
-            val m = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                try { com.dynamicai.launcher.macro.NotificationDigest.counts(ctx) } catch (_: Throwable) { emptyMap() }
+            val m = withContext(Dispatchers.Default) {
+                try { NotificationDigest.counts(ctx) } catch (_: Throwable) { emptyMap() }
             }
             if (m != dockBadges) dockBadges = m
-            kotlinx.coroutines.delay(4000)
+            delay(4000)
         }
     }
 
     LaunchedEffect(Unit) {
-        android.util.Log.e("HS_LIFE", "LaunchedEffect(Unit) fired — composition restarted or first launch")
+        Log.e("HS_LIFE", "LaunchedEffect(Unit) fired — composition restarted or first launch")
         vm.startWeatherAutoRefresh { isScreenOn(ctx) }
 
         // Автозапуск плаваючого дока, якщо був увімкнений
-        val overlayPrefs = ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
+        val overlayPrefs = ctx.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
         val wasEnabled = overlayPrefs.getBoolean("overlayEnabled", false)
         if (wasEnabled && Settings.canDrawOverlays(ctx)) {
             try {
-                com.dynamicai.launcher.overlay.FloatingDockService.start(ctx)
+                FloatingDockService.start(ctx)
                 overlayActive = true
             } catch (_: Throwable) {}
         }
@@ -423,7 +468,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         if (response.isNotBlank()) {
             responseOverlayText = response
             responseOverlayVisible = true
-            kotlinx.coroutines.delay(8000)
+            delay(8000)
             responseOverlayVisible = false
         }
     }
@@ -431,9 +476,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     LaunchedEffect(query) { vm.updateQuery(query) }
 
     // Режим фокусу ховає відволікаючі додатки (ігри, соцмережі) поверх ручного списку прихованих
-    LaunchedEffect(Unit) { com.dynamicai.launcher.macro.FocusModes.init(ctx) }
-    val activeFocus by com.dynamicai.launcher.macro.FocusModes.active.collectAsStateWithLifecycle()
-    val hiddenEff = remember(hidden, apps, activeFocus) { hidden + com.dynamicai.launcher.macro.FocusModes.hiddenFor(activeFocus, apps) }
+    LaunchedEffect(Unit) { FocusModes.init(ctx) }
+    val activeFocus by FocusModes.active.collectAsStateWithLifecycle()
+    val hiddenEff = remember(hidden, apps, activeFocus) { hidden + FocusModes.hiddenFor(activeFocus, apps) }
 
     val settingsNow by rememberUpdatedState(settings)
     fun runGesture(spec: String) {
@@ -442,11 +487,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             spec == "notifications" -> statusBarCtrl.expandNotifications()
             spec == "drawer" -> drawerOpen = true
             spec == "search" -> searchMode = true
-            spec == "voice" -> ctx.startActivity(android.content.Intent(ctx, com.dynamicai.launcher.VoiceChatActivity::class.java))
-            spec == "lock" -> com.dynamicai.launcher.macro.MacroLauncher.runTool(ctx, "systemAction(action=\"lock\")")
-            spec.startsWith("macro:") -> com.dynamicai.launcher.macro.MacroStorage(ctx).get()
-                .firstOrNull { it.id == spec.removePrefix("macro:") }?.let { com.dynamicai.launcher.macro.MacroLauncher.run(ctx, it) }
-            spec.startsWith("tool:") -> com.dynamicai.launcher.macro.MacroLauncher.runTool(ctx, spec.removePrefix("tool:"))
+            spec == "voice" -> ctx.startActivity(Intent(ctx, com.dynamicai.launcher.VoiceChatActivity::class.java))
+            spec == "lock" -> MacroLauncher.runTool(ctx, "systemAction(action=\"lock\")")
+            spec.startsWith("macro:") -> MacroStorage(ctx).get()
+                .firstOrNull { it.id == spec.removePrefix("macro:") }?.let { MacroLauncher.run(ctx, it) }
+            spec.startsWith("tool:") -> MacroLauncher.runTool(ctx, spec.removePrefix("tool:"))
         }
     }
 
@@ -482,8 +527,8 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     // Поле пошуку видно (постійно або при активації)
     val showSearchField = settings.showSearchBar || searchActive
     // Ландшафт: ліворуч віджети/дошка, праворуч постійна панель додатків
-    val isLandscape = androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
-        android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val isLandscape = LocalConfiguration.current.orientation ==
+        Configuration.ORIENTATION_LANDSCAPE
     val landscapePane = isLandscape && !searchActive && !listVisible
 
     if (showWeatherDetail) {
@@ -499,7 +544,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
 
     if (showAddWidgetDialog) {
-        com.dynamicai.launcher.widget.AddWidgetDialog(
+        AddWidgetDialog(
             currentPageCount = pageCount,
             onDismiss = { showAddWidgetDialog = false },
             onAdd = { type, page ->
@@ -517,7 +562,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
     if (showMacroManager) {
         ScreenEnter {
-            com.dynamicai.launcher.macro.MacroScreen(
+            MacroScreen(
                 onClose = { showMacroManager = false },
                 carBtName = settings.carBtName,
                 onCarChange = { vm.updateSettings(settings.copy(carBtName = it)) }
@@ -547,7 +592,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 apps.firstOrNull { it.packageName == pkg }?.let { launchAppWithAnimation(it) }
                     ?: run {
                         val intent = ctx.packageManager.getLaunchIntentForPackage(pkg)
-                        intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         try { ctx.startActivity(intent) } catch (_: Exception) {}
                     }
             },
@@ -582,7 +627,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     }
 
     if (showSettings) {
-        androidx.compose.animation.Crossfade(targetState = currentSettingsCategory, animationSpec = androidx.compose.animation.core.tween(220, easing = Motion.Standard), label = "settingsNav") { category ->
+        Crossfade(targetState = currentSettingsCategory, animationSpec = tween(220, easing = Motion.Standard), label = "settingsNav") { category ->
         if (category == null) {
             SettingsMenuScreen(
                 onCategorySelected = { currentSettingsCategory = it },
@@ -605,14 +650,14 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     overlayPermissionGranted = overlayPermissionGranted,
                     onToggleOverlay = {
                         if (overlayActive) {
-                            com.dynamicai.launcher.overlay.FloatingDockService.stop(ctx)
+                            FloatingDockService.stop(ctx)
                             overlayActive = false
-                            ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
+                            ctx.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
                                 .edit().putBoolean("overlayEnabled", false).commit()
                         } else {
-                            com.dynamicai.launcher.overlay.FloatingDockService.start(ctx)
+                            FloatingDockService.start(ctx)
                             overlayActive = true
-                            ctx.getSharedPreferences("dynamicai_settings", android.content.Context.MODE_PRIVATE)
+                            ctx.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
                                 .edit().putBoolean("overlayEnabled", true).commit()
                         }
                     },
@@ -644,7 +689,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         }
     }
 
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(launchingApp) {
         val app = launchingApp ?: return@LaunchedEffect
         // Запускаємо одразу: поки грає анімація, додаток уже стартує і до її кінця готовий
@@ -653,20 +698,20 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         androidx.compose.runtime.withFrameNanos { }
         androidx.compose.runtime.withFrameNanos { }
         val smoothLaunch = settings.animSpeedPercent > 0
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+        withContext(Dispatchers.Default) {
             vm.launch(app.packageName, smooth = smoothLaunch)
         }
         // Тримаємо оверлей, доки лаунчер не стане повністю невидимим (додаток уже намальований), максимум 1,3 с.
         // PAUSED настає ще до появи вікна додатка, тому чекаємо саме STOPPED — інакше головний екран блимає.
-        kotlinx.coroutines.withTimeoutOrNull(1300) {
-            lifecycleOwner.lifecycle.currentStateFlow.first { !it.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED) }
+        withTimeoutOrNull(1300) {
+            lifecycleOwner.lifecycle.currentStateFlow.first { !it.isAtLeast(Lifecycle.State.STARTED) }
         }
         launchingApp = null
     }
 
-    val launchFade by androidx.compose.animation.core.animateFloatAsState(
+    val launchFade by animateFloatAsState(
         targetValue = if (launchingApp != null) 0f else 1f,
-        animationSpec = androidx.compose.animation.core.tween(300, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        animationSpec = tween(300, easing = FastOutSlowInEasing),
         label = "launchFade"
     )
 
@@ -680,12 +725,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 val s = 1f - 0.07f * t
                 scaleX = s
                 scaleY = s
-                if (t > 0.02f && android.os.Build.VERSION.SDK_INT >= 31) {
+                if (t > 0.02f && Build.VERSION.SDK_INT >= 31) {
                     val r = 18.dp.toPx() * t
-                    renderEffect = androidx.compose.ui.graphics.BlurEffect(r, r, androidx.compose.ui.graphics.TileMode.Decal)
+                    renderEffect = BlurEffect(r, r, TileMode.Decal)
                 } else renderEffect = null
-                if (lastTouch != androidx.compose.ui.geometry.Offset.Unspecified && size.width > 0f) {
-                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(
+                if (lastTouch != Offset.Unspecified && size.width > 0f) {
+                    transformOrigin = TransformOrigin(
                         (lastTouch.x / size.width).coerceIn(0f, 1f), (lastTouch.y / size.height).coerceIn(0f, 1f)
                     )
                 }
@@ -693,7 +738,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
-                        val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        val ev = awaitPointerEvent(PointerEventPass.Initial)
                         ev.changes.firstOrNull { it.pressed && !it.previousPressed }?.let { lastTouch = it.position }
                     }
                 }
@@ -736,34 +781,34 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         // Затемнення фону коли список/пошук/drawer активний
         androidx.compose.animation.AnimatedVisibility(
             visible = listVisible || searchMode || query.isNotBlank(),
-            enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(animMs(240), easing = Motion.Standard)),
-            exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(animMs(200), easing = Motion.Standard))
+            enter = fadeIn(tween(animMs(240), easing = Motion.Standard)),
+            exit = fadeOut(tween(animMs(200), easing = Motion.Standard))
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(com.dynamicai.launcher.ui.theme.AppTheme.colors.background.copy(alpha = 0.85f))
+                    .background(AppTheme.colors.background.copy(alpha = 0.85f))
             )
         }
 
         var paneReady by remember { mutableStateOf(false) }
         LaunchedEffect(Unit) { paneReady = true }
-        val leftFraction by androidx.compose.animation.core.animateFloatAsState(
+        val leftFraction by animateFloatAsState(
             targetValue = if (isLandscape) 0.46f else 1f,
-            animationSpec = androidx.compose.animation.core.tween(animMs(420), easing = androidx.compose.animation.core.FastOutSlowInEasing),
+            animationSpec = tween(animMs(420), easing = FastOutSlowInEasing),
             label = "leftFraction"
         )
         val resultsBlock: @Composable (Modifier) -> Unit = { mod ->
             Box(modifier = mod) {
                 androidx.compose.animation.AnimatedVisibility(
                     visible = listVisible || searchMode || query.isNotBlank(),
-                    enter = fadeIn(androidx.compose.animation.core.tween(110)),
-                    exit = fadeOut(androidx.compose.animation.core.tween(90)),
+                    enter = fadeIn(tween(110)),
+                    exit = fadeOut(tween(90)),
                     modifier = Modifier.fillMaxSize()
                 ) {
             if (query.isNotBlank()) {
             // Набраний запит: додатки — квадратні плитки, решта результатів — рядки на всю ширину
-            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+            LazyVerticalGrid(
                 state = searchGridState,
                 columns = gridCells(),
                 modifier = Modifier.fillMaxSize(),
@@ -772,16 +817,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 verticalArrangement = gridGapV()
             ) {
                 if (suggestions.isEmpty()) {
-                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
                         Column(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("Нічого не знайдено за \"$query\"", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 16.sp)
+                            Text("Нічого не знайдено за \"$query\"", color = AppTheme.colors.textMuted, fontSize = 16.sp)
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 "Спробуй: ліхтарик · wifi · Аня",
-                                color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted.copy(alpha = 0.7f), fontSize = 13.sp
+                                color = AppTheme.colors.textMuted.copy(alpha = 0.7f), fontSize = 13.sp
                             )
                         }
                     }
@@ -793,7 +838,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     orderedSuggestions,
                     key = { it.stableKey() },
                     span = { s ->
-                        androidx.compose.foundation.lazy.grid.GridItemSpan(if (s is Suggestion.App) 1 else maxLineSpan)
+                        GridItemSpan(if (s is Suggestion.App) 1 else maxLineSpan)
                     }
                 ) { s ->
                     when (s) {
@@ -836,11 +881,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("Нічого не знайдено за \"$query\"", color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 16.sp)
+                            Text("Нічого не знайдено за \"$query\"", color = AppTheme.colors.textMuted, fontSize = 16.sp)
                             Spacer(Modifier.height(8.dp))
                             Text(
                                 "Спробуй: ліхтарик · wifi · Аня",
-                                color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted.copy(alpha = 0.7f), fontSize = 13.sp
+                                color = AppTheme.colors.textMuted.copy(alpha = 0.7f), fontSize = 13.sp
                             )
                         }
                     }
@@ -881,7 +926,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 }
             }
         }
-        val folderBlock: @Composable (Modifier, androidx.compose.ui.unit.Dp) -> Unit = { mod, bottomPad ->
+        val folderBlock: @Composable (Modifier, Dp) -> Unit = { mod, bottomPad ->
             Column(
                 modifier = mod
                     .graphicsLayer {
@@ -991,7 +1036,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 .pointerInput(drawerOpen) {
                     if (drawerOpen) awaitPointerEventScope {
                         while (true) {
-                            val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                            val e = awaitPointerEvent(PointerEventPass.Initial)
                             e.changes.forEach { it.consume() }
                         }
                     }
@@ -1005,7 +1050,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 .padding(start = 16.dp, end = 24.dp)
         ) {
             // Режим однієї руки: весь вміст зсунуто вниз, ближче до великого пальця
-            Spacer(Modifier.height(if (settings.oneHandMode) (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.2f).dp else 8.dp))
+            Spacer(Modifier.height(if (settings.oneHandMode) (LocalConfiguration.current.screenHeightDp * 0.2f).dp else 8.dp))
 
             if (!searchActive) {
                 if (!listVisible) {
@@ -1014,7 +1059,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         pageCount = { pageCount }
                     )
                     
-                    androidx.compose.foundation.pager.HorizontalPager(
+                    HorizontalPager(
                         state = pagerState,
                         // Перемикання сторінок лише на головному екрані: не у шторці, папці чи пошуку
                         userScrollEnabled = !drawerOpen && openFolder == null && !searchMode,
@@ -1084,7 +1129,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                             scaleX = sc; scaleY = sc
                                             alpha = 0.35f + 0.65f * sel
                                         }
-                                        .clip(androidx.compose.foundation.shape.CircleShape)
+                                        .clip(CircleShape)
                                         .background(AppTheme.colors.textPrimary)
                                 )
                             }
@@ -1095,19 +1140,19 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
             androidx.compose.animation.AnimatedVisibility(
                 visible = showSearchField,
-                enter = androidx.compose.animation.expandHorizontally(
-                    animationSpec = androidx.compose.animation.core.tween(320, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+                enter = expandHorizontally(
+                    animationSpec = tween(320, easing = FastOutSlowInEasing),
                     expandFrom = Alignment.Start
-                ) + androidx.compose.animation.fadeIn(
-                    animationSpec = androidx.compose.animation.core.tween(240, delayMillis = 40)
-                ) + androidx.compose.animation.scaleIn(
+                ) + fadeIn(
+                    animationSpec = tween(240, delayMillis = 40)
+                ) + scaleIn(
                     initialScale = 0.92f,
-                    animationSpec = androidx.compose.animation.core.tween(320, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                    animationSpec = tween(320, easing = FastOutSlowInEasing)
                 ),
-                exit = androidx.compose.animation.shrinkHorizontally(
-                    animationSpec = androidx.compose.animation.core.tween(200)
-                ) + androidx.compose.animation.fadeOut(
-                    animationSpec = androidx.compose.animation.core.tween(120)
+                exit = shrinkHorizontally(
+                    animationSpec = tween(200)
+                ) + fadeOut(
+                    animationSpec = tween(120)
                 )
             ) {
                 LiquidSearchBar(
@@ -1143,16 +1188,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             // Порожній пошук: часті додатки та історія запитів
             if (searchMode && query.isBlank()) {
                 var historyTick by remember { mutableStateOf(0) }
-                val history = remember(historyTick, searchMode) { com.dynamicai.launcher.suggestion.SearchHistory.get(ctx) }
+                val history = remember(historyTick, searchMode) { SearchHistory.get(ctx) }
                 val frequent = remember(apps, searchMode) {
-                    com.dynamicai.launcher.suggestion.AppUsage.top(ctx, 6).mapNotNull { pkg -> apps.firstOrNull { it.packageName == pkg } }
+                    AppUsage.top(ctx, 6).mapNotNull { pkg -> apps.firstOrNull { it.packageName == pkg } }
                 }
                 if (frequent.isNotEmpty()) {
                     Text("Часті", color = AppTheme.colors.textSecondary, fontSize = 11.sp,
                         modifier = Modifier.padding(start = 10.dp, top = 6.dp, bottom = 4.dp))
                     Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         frequent.forEach { a ->
-                            androidx.compose.foundation.Image(
+                            Image(
                                 bitmap = (a.bitmap ?: a.icon.toBitmap(96, 96)).asImageBitmap(),
                                 contentDescription = a.label,
                                 modifier = Modifier
@@ -1188,7 +1233,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             modifier = Modifier
                                 .pointerInput(Unit) {
                                     detectTapGestures {
-                                        com.dynamicai.launcher.suggestion.SearchHistory.clear(ctx); historyTick++
+                                        SearchHistory.clear(ctx); historyTick++
                                     }
                                 }
                                 .padding(horizontal = 10.dp, vertical = 7.dp)
@@ -1216,13 +1261,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             val paneApps = remember(apps, hiddenEff) { apps.filter { it.packageName !in hiddenEff } }
             androidx.compose.animation.AnimatedVisibility(
                 visible = paneReady && landscapePane,
-                enter = fadeIn(androidx.compose.animation.core.tween(animMs(360), delayMillis = animMs(120))) +
-                    androidx.compose.animation.slideInHorizontally(
-                        androidx.compose.animation.core.tween(animMs(420), easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                enter = fadeIn(tween(animMs(360), delayMillis = animMs(120))) +
+                    slideInHorizontally(
+                        tween(animMs(420), easing = FastOutSlowInEasing)
                     ) { it / 3 } +
-                    androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(animMs(420)), initialScale = 0.94f),
-                exit = fadeOut(androidx.compose.animation.core.tween(animMs(140))) +
-                    androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(animMs(200))) { it / 6 },
+                    scaleIn(tween(animMs(420)), initialScale = 0.94f),
+                exit = fadeOut(tween(animMs(140))) +
+                    slideOutHorizontally(tween(animMs(200))) { it / 6 },
                 modifier = paneFrame
             ) {
                 LandscapeAppPane(
@@ -1234,11 +1279,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             }
             androidx.compose.animation.AnimatedVisibility(
                 visible = !landscapePane,
-                enter = fadeIn(androidx.compose.animation.core.tween(animMs(240))) +
-                    androidx.compose.animation.slideInHorizontally(
-                        androidx.compose.animation.core.tween(animMs(320), easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                enter = fadeIn(tween(animMs(240))) +
+                    slideInHorizontally(
+                        tween(animMs(320), easing = FastOutSlowInEasing)
                     ) { it / 4 },
-                exit = fadeOut(androidx.compose.animation.core.tween(animMs(120))),
+                exit = fadeOut(tween(animMs(120))),
                 modifier = paneFrame
             ) {
                 resultsBlock(
@@ -1280,7 +1325,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         } else {
                             // Список щойно відкрився: чекаємо, доки з'являться дані й розмітка, інакше перший дотик нікуди не прокручує
                             val idx = withTimeoutOrNull(800) {
-                                androidx.compose.runtime.snapshotFlow {
+                                snapshotFlow {
                                     suggestions.indexOfFirst {
                                         it is Suggestion.App && (it.app.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
                                     }
@@ -1288,7 +1333,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                             } ?: -1
                             if (idx >= 0) {
                                 withTimeoutOrNull(800) {
-                                    androidx.compose.runtime.snapshotFlow { listState.layoutInfo.totalItemsCount }.first { it > idx }
+                                    snapshotFlow { listState.layoutInfo.totalItemsCount }.first { it > idx }
                                 }
                                 if (listWasHidden) {
                                     listState.scrollToItem(idx)   // список ще проявляється — одразу стаємо на букву
@@ -1322,10 +1367,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
         AnimatedVisibility(
             visible = showOverlay && activeLetter != null,
-            enter = fadeIn(androidx.compose.animation.core.tween(120)) +
-                androidx.compose.animation.scaleIn(androidx.compose.animation.core.spring(dampingRatio = 0.7f, stiffness = 500f), initialScale = 0.8f),
-            exit = fadeOut(androidx.compose.animation.core.tween(180)) +
-                androidx.compose.animation.scaleOut(androidx.compose.animation.core.tween(180), targetScale = 0.9f),
+            enter = fadeIn(tween(120)) +
+                scaleIn(spring(dampingRatio = 0.7f, stiffness = 500f), initialScale = 0.8f),
+            exit = fadeOut(tween(180)) +
+                scaleOut(tween(180), targetScale = 0.9f),
             modifier = Modifier.align(Alignment.Center).zIndex(20f)
         ) {
             Box(

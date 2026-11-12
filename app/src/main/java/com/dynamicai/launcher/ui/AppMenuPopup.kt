@@ -29,6 +29,8 @@ import com.dynamicai.launcher.model.AppInfo
 import com.dynamicai.launcher.ui.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import android.os.Process
+import androidx.compose.ui.platform.LocalDensity
 
 /** Ярлик додатка (як «Нова вкладка» в Chrome): статичні/динамічні shortcuts через LauncherApps. */
 class AppShortcut(val info: ShortcutInfo, val label: String, val icon: Drawable?)
@@ -46,7 +48,7 @@ object AppShortcuts {
                         LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST or
                         LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED
                 )
-            (la.getShortcuts(q, android.os.Process.myUserHandle()) ?: emptyList())
+            (la.getShortcuts(q, Process.myUserHandle()) ?: emptyList())
                 .filter { it.isEnabled }
                 .sortedBy { it.rank }
                 .take(4)
@@ -94,7 +96,7 @@ fun AppMenuPopup(
     val shortcuts by produceState(initialValue = emptyList<AppShortcut>(), app.packageName) {
         value = withContext(Dispatchers.IO) { AppShortcuts.load(ctx, app.packageName) }
     }
-    val gap = with(androidx.compose.ui.platform.LocalDensity.current) { 8.dp.roundToPx() }
+    val gap = with(LocalDensity.current) { 8.dp.roundToPx() }
     Popup(
         popupPositionProvider = remember(anchor) { AnchorPositionProvider(anchor, gap) },
         onDismissRequest = onDismiss,
@@ -153,7 +155,7 @@ fun LauncherMenuPopup(
     tiles: List<MenuTile>,
     items: List<MenuItemSpec>
 ) {
-    val gap = with(androidx.compose.ui.platform.LocalDensity.current) { 8.dp.roundToPx() }
+    val gap = with(LocalDensity.current) { 8.dp.roundToPx() }
     Popup(
         popupPositionProvider = remember(anchor) { AnchorPositionProvider(anchor, gap) },
         onDismissRequest = onDismiss,

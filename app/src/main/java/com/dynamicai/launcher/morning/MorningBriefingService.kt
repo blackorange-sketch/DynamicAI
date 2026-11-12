@@ -14,6 +14,10 @@ import androidx.core.app.NotificationCompat
 import kotlinx.coroutines.*
 import java.text.SimpleDateFormat
 import java.util.*
+import android.app.Notification
+import android.os.BatteryManager
+import com.dynamicai.launcher.data.WeatherRepository
+import com.dynamicai.launcher.voice.TtsManager
 
 class MorningBriefingService : Service() {
     companion object {
@@ -64,7 +68,7 @@ class MorningBriefingService : Service() {
             // Пробуємо отримати погоду через WeatherRepository
             var weatherText = ""
             try {
-                val weatherRepo = com.dynamicai.launcher.data.WeatherRepository(applicationContext)
+                val weatherRepo = WeatherRepository(applicationContext)
                 val cached = weatherRepo.loadCachedWeather()
                 if (cached != null) {
                     val tempWords = UkrainianSpeechUtils.temperatureToWords(cached.tempC)
@@ -84,7 +88,7 @@ class MorningBriefingService : Service() {
             // Озвучуємо через TTS
             try {
                 val tts = com.dynamicai.launcher.AppListViewModel.getSharedLlm(applicationContext) // ініціалізуємо для TTS
-                val ttsManager = com.dynamicai.launcher.voice.TtsManager(applicationContext)
+                val ttsManager = TtsManager(applicationContext)
                 delay(500)
                 ttsManager.speak(briefing)
             } catch (_: Exception) {}
@@ -102,11 +106,11 @@ class MorningBriefingService : Service() {
     }
 
     private fun getBatteryLevel(): Int {
-        val bm = getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
-        return bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        val bm = getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+        return bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
     }
 
-    private fun buildNotification(text: String): android.app.Notification {
+    private fun buildNotification(text: String): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("JARVIS")
             .setContentText(text)

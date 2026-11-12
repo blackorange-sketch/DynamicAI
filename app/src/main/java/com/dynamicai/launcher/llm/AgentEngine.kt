@@ -11,12 +11,44 @@ import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.data.WildRiftRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import android.bluetooth.BluetoothManager
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.pm.PackageManager
+import android.hardware.camera2.CameraCharacteristics
+import android.media.AudioManager
+import android.net.ConnectivityManager
+import android.net.wifi.WifiManager
+import android.os.BatteryManager
+import android.os.Build
+import android.provider.MediaStore
+import android.view.KeyEvent
+import com.dynamicai.launcher.accessibility.AppAutomationService
+import com.dynamicai.launcher.data.LauncherSettings
+import com.dynamicai.launcher.data.WeatherRepository
+import com.dynamicai.launcher.data.WeatherState
+import com.dynamicai.launcher.macro.AppUtils
+import com.dynamicai.launcher.macro.FocusModes
+import com.dynamicai.launcher.macro.MacroRunner
+import com.dynamicai.launcher.macro.MacroStorage
+import com.dynamicai.launcher.macro.MacroTools
+import com.dynamicai.launcher.macro.NotificationDigest
+import com.dynamicai.launcher.macro.SystemTools
+import com.dynamicai.launcher.music.MusicService
+import com.dynamicai.launcher.note.NotesStorage
+import com.dynamicai.launcher.smarthome.VacuumControl
+import com.dynamicai.launcher.system.ShizukuManager
+import java.net.HttpURLConnection
+import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
     private val appRepo = AppRepository(context)
     private val wildRiftRepo = WildRiftRepository(context)
-    private val notesStorage = com.dynamicai.launcher.note.NotesStorage(context)
-    private val shizuku = com.dynamicai.launcher.system.ShizukuManager(context)
+    private val notesStorage = NotesStorage(context)
+    private val shizuku = ShizukuManager(context)
     private val deepLink = DeepLinkEngine(context)
     private val messengerCaller = MessengerCaller(context)
 
@@ -204,7 +236,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         "Доступні інструменти:\n" + allToolLines.filter { it.first !in cloudHiddenTools }.joinToString("\n") { "- ${it.second}" }
 
     /** Один крок хмарного агента; відповідь приводимо до формату «TOOL_CALL: інструмент(...)» без зайвого тексту. */
-    private suspend fun cloudComplete(s: com.dynamicai.launcher.data.LauncherSettings, prompt: String): String {
+    private suspend fun cloudComplete(s: LauncherSettings, prompt: String): String {
         val raw = CloudLlm.generate(
             s,
             "Ти — агент керування телефоном Android. Суворо дотримуйся формату з інструкції. Без markdown і без пояснень перед командою.",
@@ -219,7 +251,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
 
     suspend fun processWithTools(
         question: String, history: String = "",
-        cloud: com.dynamicai.launcher.data.LauncherSettings? = null
+        cloud: LauncherSettings? = null
     ): String = withContext(Dispatchers.IO) {
         if (llm == null && cloud == null) return@withContext "Помилка: LLM не ініціалізована"
         var currentContext = "Запит користувача: $question"
@@ -327,7 +359,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
         )
         for (url in feeds) {
             try {
-                val conn = (java.net.URL(url).openConnection() as java.net.HttpURLConnection).apply {
+                val conn = (URL(url).openConnection() as HttpURLConnection).apply {
                     connectTimeout = 6000; readTimeout = 6000
                     setRequestProperty("User-Agent", "DynamicAI/1.0")
                 }
@@ -347,7 +379,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
     /** Курс валют з відкритого API (без ключа). */
     private suspend fun fetchRate(from: String, to: String): Double? = withContext(Dispatchers.IO) {
         try {
-            val conn = (java.net.URL("https://open.er-api.com/v6/latest/$from").openConnection() as java.net.HttpURLConnection).apply {
+            val conn = (URL("https://open.er-api.com/v6/latest/$from").openConnection() as HttpURLConnection).apply {
                 connectTimeout = 6000; readTimeout = 6000
             }
             val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -368,7 +400,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
             when {
                 toolCall.startsWith("openApp") && getArg(toolCall, "package").isNotBlank() -> {
                     val pkg = getArg(toolCall, "package")
-                    val label = com.dynamicai.launcher.macro.AppUtils.labelFor(context, pkg)
+                    val label = AppUtils.labelFor(context, pkg)
                     if (appRepo.launchApp(pkg)) "Відкриваю $label" else "Не вдалося відкрити $label"
                 }
                 toolCall.startsWith("openApp") -> {
@@ -406,7 +438,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 }
                 toolCall.startsWith("playMusic") -> {
                     val query = getArg(toolCall, "query")
-                    val intent = Intent(context, com.dynamicai.launcher.music.MusicService::class.java).apply {
+                    val intent = Intent(context, MusicService::class.java).apply {
                         putExtra("query", query)
                     }
                     context.startService(intent)
@@ -477,49 +509,49 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 toolCall.startsWith("getWeather") -> {
                     val city = getArg(toolCall, "city")
                     // Справжня погода (Open-Meteo через WeatherRepository); порожнє місто = поточна локація з налаштувань
-                    val st = com.dynamicai.launcher.data.WeatherRepository(context).fetch(city.ifEmpty { null })
-                    if (st is com.dynamicai.launcher.data.WeatherState.Data) {
+                    val st = WeatherRepository(context).fetch(city.ifEmpty { null })
+                    if (st is WeatherState.Data) {
                         "Погода${if (city.isNotEmpty()) " ($city)" else ""}: ${st.tempC}°, ${st.description}. " +
                             "Відчувається як ${st.feelsLike}°, вологість ${st.humidity}%, вітер ${st.windSpeed}. " +
                             "Сьогодні від ${st.tempMin}° до ${st.tempMax}°."
                     } else "Не вдалося отримати погоду${if (city.isNotEmpty()) " для «$city»" else ""}."
                 }
                 toolCall.startsWith("tapText") -> {
-                    if (!com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) needAccessibility()
+                    if (!AppAutomationService.isEnabled()) needAccessibility()
                     else {
                         val text = getArg(toolCall, "text")
-                        val ok = com.dynamicai.launcher.accessibility.AppAutomationService.clickText(text) ||
-                            com.dynamicai.launcher.accessibility.AppAutomationService.clickDescription(text)
+                        val ok = AppAutomationService.clickText(text) ||
+                            AppAutomationService.clickDescription(text)
                         if (ok) "Натиснув «$text»." else "Не знайшов на екрані «$text»."
                     }
                 }
                 toolCall.startsWith("scrollScreen") -> {
-                    if (!com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) needAccessibility()
+                    if (!AppAutomationService.isEnabled()) needAccessibility()
                     else {
                         val down = getArg(toolCall, "direction").lowercase() != "up"
-                        if (com.dynamicai.launcher.accessibility.AppAutomationService.scroll(down)) "Прокрутив ${if (down) "вниз" else "вгору"}."
+                        if (AppAutomationService.scroll(down)) "Прокрутив ${if (down) "вниз" else "вгору"}."
                         else "На екрані немає чого прокручувати."
                     }
                 }
                 toolCall.startsWith("systemAction") -> {
-                    if (!com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) needAccessibility()
+                    if (!AppAutomationService.isEnabled()) needAccessibility()
                     else {
                         val a = getArg(toolCall, "action").lowercase()
-                        if (com.dynamicai.launcher.accessibility.AppAutomationService.systemAction(a)) "Виконано: $a." else "Не вдалося виконати: $a."
+                        if (AppAutomationService.systemAction(a)) "Виконано: $a." else "Не вдалося виконати: $a."
                     }
                 }
                 toolCall.startsWith("typeText") -> {
-                    if (!com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) needAccessibility()
+                    if (!AppAutomationService.isEnabled()) needAccessibility()
                     else {
                         val text = getArg(toolCall, "text")
-                        if (com.dynamicai.launcher.accessibility.AppAutomationService.typeText(text)) "Ввів текст." else "Не знайшов поле для вводу."
+                        if (AppAutomationService.typeText(text)) "Ввів текст." else "Не знайшов поле для вводу."
                     }
                 }
                 toolCall.startsWith("getNews") -> fetchNews()
                 toolCall.startsWith("openCamera") -> {
                     val mode = getArg(toolCall, "mode")
-                    val action = if (mode == "video") android.provider.MediaStore.INTENT_ACTION_VIDEO_CAMERA
-                                 else android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA
+                    val action = if (mode == "video") MediaStore.INTENT_ACTION_VIDEO_CAMERA
+                                 else MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA
                     val intent = Intent(action).apply {
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         if (mode == "selfie") {
@@ -536,7 +568,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                     val to = getArg(toolCall, "to").uppercase()
                     val rate = fetchRate(from, to)
                     if (rate == null) "Не вдалося отримати курс $from → $to."
-                    else String.format(java.util.Locale.US, "%s %s = %.2f %s (курс %.4f)", trimNum(amount), from, amount * rate, to, rate)
+                    else String.format(Locale.US, "%s %s = %.2f %s (курс %.4f)", trimNum(amount), from, amount * rate, to, rate)
                 }
                 toolCall.startsWith("navigateTo") -> {
                     val dest = getArg(toolCall, "destination")
@@ -546,49 +578,49 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                     context.startActivity(intent)
                     "Будую маршрут до: $dest"
                 }
-                toolCall.startsWith("vibrate") -> com.dynamicai.launcher.macro.MacroTools(context).vibrate(getArg(toolCall, "ms").toLongOrNull() ?: 300L)
-                toolCall.startsWith("setRingerMode") -> com.dynamicai.launcher.macro.MacroTools(context).setRingerMode(getArg(toolCall, "mode"))
-                toolCall.startsWith("setDnd") -> com.dynamicai.launcher.macro.MacroTools(context).setDnd(getArg(toolCall, "state") == "on")
-                toolCall.startsWith("setMobileData") -> com.dynamicai.launcher.macro.MacroTools(context).setMobileData(getArg(toolCall, "state") == "on")
-                toolCall.startsWith("setAirplane") -> com.dynamicai.launcher.macro.MacroTools(context).setAirplane(getArg(toolCall, "state") == "on")
-                toolCall.startsWith("sendSms") -> com.dynamicai.launcher.macro.MacroTools(context).sendSms(getArg(toolCall, "number"), getArg(toolCall, "text"))
-                toolCall.startsWith("copyText") -> com.dynamicai.launcher.macro.MacroTools(context).copyText(getArg(toolCall, "text"))
-                toolCall.startsWith("toggleNfc") -> com.dynamicai.launcher.macro.MacroTools(context).setNfc(getArg(toolCall, "state") == "on")
-                toolCall.startsWith("toggleLocation") -> com.dynamicai.launcher.macro.MacroTools(context).setLocation(getArg(toolCall, "state") == "on")
-                toolCall.startsWith("setAutoRotate") -> com.dynamicai.launcher.macro.MacroTools(context).setAutoRotate(getArg(toolCall, "state") == "on")
-                toolCall.startsWith("forceStop") -> com.dynamicai.launcher.macro.MacroTools(context).forceStop(getArg(toolCall, "package"))
-                toolCall.substringBefore("(").trim() in com.dynamicai.launcher.macro.SystemTools.NAMES ->
-                    com.dynamicai.launcher.macro.SystemTools(context).run(toolCall.substringBefore("(").trim()) { k -> getArg(toolCall, k) }
+                toolCall.startsWith("vibrate") -> MacroTools(context).vibrate(getArg(toolCall, "ms").toLongOrNull() ?: 300L)
+                toolCall.startsWith("setRingerMode") -> MacroTools(context).setRingerMode(getArg(toolCall, "mode"))
+                toolCall.startsWith("setDnd") -> MacroTools(context).setDnd(getArg(toolCall, "state") == "on")
+                toolCall.startsWith("setMobileData") -> MacroTools(context).setMobileData(getArg(toolCall, "state") == "on")
+                toolCall.startsWith("setAirplane") -> MacroTools(context).setAirplane(getArg(toolCall, "state") == "on")
+                toolCall.startsWith("sendSms") -> MacroTools(context).sendSms(getArg(toolCall, "number"), getArg(toolCall, "text"))
+                toolCall.startsWith("copyText") -> MacroTools(context).copyText(getArg(toolCall, "text"))
+                toolCall.startsWith("toggleNfc") -> MacroTools(context).setNfc(getArg(toolCall, "state") == "on")
+                toolCall.startsWith("toggleLocation") -> MacroTools(context).setLocation(getArg(toolCall, "state") == "on")
+                toolCall.startsWith("setAutoRotate") -> MacroTools(context).setAutoRotate(getArg(toolCall, "state") == "on")
+                toolCall.startsWith("forceStop") -> MacroTools(context).forceStop(getArg(toolCall, "package"))
+                toolCall.substringBefore("(").trim() in SystemTools.NAMES ->
+                    SystemTools(context).run(toolCall.substringBefore("(").trim()) { k -> getArg(toolCall, k) }
                 toolCall.startsWith("notifDigest") -> {
-                    val d = com.dynamicai.launcher.macro.NotificationDigest.build(context)
-                    if (getArg(toolCall, "speak") == "true") com.dynamicai.launcher.macro.MacroTools(context).speak(d)
+                    val d = NotificationDigest.build(context)
+                    if (getArg(toolCall, "speak") == "true") MacroTools(context).speak(d)
                     d
                 }
                 toolCall.startsWith("focusMode") -> {
                     val id = getArg(toolCall, "id")
-                    if (id == "off" || id.isBlank()) com.dynamicai.launcher.macro.FocusModes.deactivate(context)
-                    else com.dynamicai.launcher.macro.FocusModes.activate(context, id)
+                    if (id == "off" || id.isBlank()) FocusModes.deactivate(context)
+                    else FocusModes.activate(context, id)
                 }
-                toolCall.startsWith("vacuum") -> com.dynamicai.launcher.smarthome.VacuumControl(context).run(getArg(toolCall, "action"))
-                toolCall.startsWith("shell") -> com.dynamicai.launcher.macro.MacroTools(context).shell(getArg(toolCall, "cmd"))
-                toolCall.startsWith("httpGet") -> com.dynamicai.launcher.macro.MacroTools(context).httpGet(getArg(toolCall, "url"))
-                toolCall.startsWith("notify") -> com.dynamicai.launcher.macro.MacroTools(context).notify(getArg(toolCall, "title"), getArg(toolCall, "text"))
-                toolCall.startsWith("speak") -> com.dynamicai.launcher.macro.MacroTools(context).speak(getArg(toolCall, "text"))
-                toolCall.startsWith("carMode") -> com.dynamicai.launcher.llm.CarMode(context).run()
-                toolCall.startsWith("ensureInternet") -> com.dynamicai.launcher.llm.CarMode(context).ensureInternet()
-                toolCall.startsWith("connectBluetooth") -> com.dynamicai.launcher.llm.CarMode(context).connectBluetooth(getArg(toolCall, "name"))
-                toolCall.startsWith("playYouTubeMusic") -> com.dynamicai.launcher.llm.CarMode(context).playYouTubeMusic()
+                toolCall.startsWith("vacuum") -> VacuumControl(context).run(getArg(toolCall, "action"))
+                toolCall.startsWith("shell") -> MacroTools(context).shell(getArg(toolCall, "cmd"))
+                toolCall.startsWith("httpGet") -> MacroTools(context).httpGet(getArg(toolCall, "url"))
+                toolCall.startsWith("notify") -> MacroTools(context).notify(getArg(toolCall, "title"), getArg(toolCall, "text"))
+                toolCall.startsWith("speak") -> MacroTools(context).speak(getArg(toolCall, "text"))
+                toolCall.startsWith("carMode") -> CarMode(context).run()
+                toolCall.startsWith("ensureInternet") -> CarMode(context).ensureInternet()
+                toolCall.startsWith("connectBluetooth") -> CarMode(context).connectBluetooth(getArg(toolCall, "name"))
+                toolCall.startsWith("playYouTubeMusic") -> CarMode(context).playYouTubeMusic()
                 toolCall.startsWith("mediaKey") -> {
                     val key = getArg(toolCall, "key")
                     val code = when (key) {
-                        "next" -> android.view.KeyEvent.KEYCODE_MEDIA_NEXT
-                        "prev" -> android.view.KeyEvent.KEYCODE_MEDIA_PREVIOUS
-                        "pause" -> android.view.KeyEvent.KEYCODE_MEDIA_PAUSE
-                        else -> android.view.KeyEvent.KEYCODE_MEDIA_PLAY
+                        "next" -> KeyEvent.KEYCODE_MEDIA_NEXT
+                        "prev" -> KeyEvent.KEYCODE_MEDIA_PREVIOUS
+                        "pause" -> KeyEvent.KEYCODE_MEDIA_PAUSE
+                        else -> KeyEvent.KEYCODE_MEDIA_PLAY
                     }
-                    val am = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-                    am.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, code))
-                    am.dispatchMediaKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, code))
+                    val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                    am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
+                    am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
                     when (key) { "next" -> "Наступний трек"; "prev" -> "Попередній трек"; "pause" -> "Пауза"; else -> "Відтворюю" }
                 }
                 toolCall.startsWith("toggleFlashlight") -> {
@@ -596,7 +628,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                     val cameraManager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
                     val cameraId = cameraManager.cameraIdList.firstOrNull { id ->
                         val chars = cameraManager.getCameraCharacteristics(id)
-                        chars.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+                        chars.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
                     }
                     if (cameraId != null) {
                         cameraManager.setTorchMode(cameraId, state)
@@ -623,7 +655,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 }
                 toolCall.startsWith("searchWeb") -> {
                     val query = getArg(toolCall, "query")
-                    val webSearch = com.dynamicai.launcher.llm.WebSearchRepository()
+                    val webSearch = WebSearchRepository()
                     val wiki = webSearch.toContext(webSearch.search(query))
                     val web = webSearch.searchWeb(query)
                     val text = listOf(wiki.take(900), web.take(1200)).filter { it.isNotBlank() }.joinToString("\n\n")
@@ -631,7 +663,7 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 }
                                 toolCall.startsWith("toggleWifi") -> {
                     val state = getArg(toolCall, "state").lowercase() == "on"
-                    val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+                    val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
                     val label = "Wi-Fi ${if (state) "увімкнено" else "вимкнено"}"
                     if (shizuku.isShizukuAvailable() && shizuku.hasPermission()) {
                         shizuku.execShell("svc wifi ${if (state) "enable" else "disable"}")
@@ -655,10 +687,10 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                         shizuku.execShell("svc bluetooth ${if (state) "enable" else "disable"}")
                         label
                     } else {
-                        val granted = android.os.Build.VERSION.SDK_INT < 31 ||
-                            context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                        val granted = Build.VERSION.SDK_INT < 31 ||
+                            context.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
                         val ok = granted && try {
-                            val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as android.bluetooth.BluetoothManager).adapter
+                            val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter
                             @Suppress("DEPRECATION", "MissingPermission")
                             if (state) adapter?.enable() == true else adapter?.disable() == true
                         } catch (_: Throwable) { false }
@@ -673,8 +705,8 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 }
                 toolCall.startsWith("copyToClipboard") -> {
                     val text = getArg(toolCall, "text")
-                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("DynamicAI", text))
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("DynamicAI", text))
                     "Скопійовано в буфер: $text"
                 }
                 toolCall.startsWith("calculate") -> {
@@ -701,30 +733,30 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                     "Сповіщення створено: $title — $text" // Потребує дозволу NOTIFICATIONS
                 }
                                 toolCall.startsWith("getTime") -> {
-                    val now = java.text.SimpleDateFormat("HH:mm, EEEE, d MMMM", java.util.Locale("uk", "UA")).format(java.util.Date())
+                    val now = SimpleDateFormat("HH:mm, EEEE, d MMMM", Locale("uk", "UA")).format(Date())
                     "Зараз $now"
                 }
                 toolCall.startsWith("getBattery") -> {
-                    val bm = context.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
-                    val level = bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+                    val bm = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+                    val level = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
                     "Заряд батареї: $level%"
                 }
                 toolCall.startsWith("setVolume") -> {
                     val level = getArg(toolCall, "level").toIntOrNull() ?: 50
-                    val am = context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager
-                    val max = am.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+                    val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+                    val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
                     val target = (max * (level / 100f)).toInt()
-                    am.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, target, 0)
+                    am.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
                     "Гучність встановлено на $level%"
                 }
                 toolCall.startsWith("getDeviceInfo") -> {
-                    val bm = context.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
-                    val level = bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
-                    val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-                    val isWifi = cm.activeNetworkInfo?.type == android.net.ConnectivityManager.TYPE_WIFI
-                    val isMobile = cm.activeNetworkInfo?.type == android.net.ConnectivityManager.TYPE_MOBILE
+                    val bm = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+                    val level = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+                    val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+                    val isWifi = cm.activeNetworkInfo?.type == ConnectivityManager.TYPE_WIFI
+                    val isMobile = cm.activeNetworkInfo?.type == ConnectivityManager.TYPE_MOBILE
                     val netStatus = if (isWifi) "Wi-Fi" else if (isMobile) "Мобільна мережа" else "Немає інтернету"
-                    val now = java.text.SimpleDateFormat("HH:mm", java.util.Locale("uk", "UA")).format(java.util.Date())
+                    val now = SimpleDateFormat("HH:mm", Locale("uk", "UA")).format(Date())
                     "Час: $now | Заряд: $level% | Мережа: $netStatus"
                 }
                                 toolCall.startsWith("flipCoin") -> {
@@ -743,12 +775,12 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 }
                                 toolCall.startsWith("runMacro") -> {
                     val name = getArg(toolCall, "name")
-                    val storage = com.dynamicai.launcher.macro.MacroStorage(context)
+                    val storage = MacroStorage(context)
                     val macro = storage.get().find { it.name.contains(name, ignoreCase = true) }
                     if (macro == null) {
                         "Макрос '$name' не знайдено."
                     } else {
-                        val log = com.dynamicai.launcher.macro.MacroRunner(context, { executeTool(it) }).run(macro)
+                        val log = MacroRunner(context, { executeTool(it) }).run(macro)
                         "Макрос «${macro.name}» виконано:\n$log"
                     }
                 }
@@ -769,10 +801,10 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                 )
                 toolCall.startsWith("searchSpotify") -> deepLink.openSpotifySearch(getArg(toolCall, "query"))
                                 toolCall.startsWith("readScreen") -> {
-                    if (!com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
+                    if (!AppAutomationService.isEnabled()) {
                         "Спочатку увімкніть сервіс доступності (DynamicAI Automation) у налаштуваннях Android."
                     } else {
-                        val text = com.dynamicai.launcher.accessibility.AppAutomationService.getScreenText()
+                        val text = AppAutomationService.getScreenText()
                         if (text.isBlank()) {
                             "На екрані немає тексту."
                         } else {
@@ -783,13 +815,13 @@ class AgentEngine(private val context: Context, private val llm: LlmEngine?) {
                     }
                 }
                                 toolCall.startsWith("callInTelegram") -> {
-                    val who = com.dynamicai.launcher.llm.AliasStore(context).resolve(getArg(toolCall, "contactName"))
+                    val who = AliasStore(context).resolve(getArg(toolCall, "contactName"))
                     val hook = confirmHook
                     if (hook != null) hook("зателефонувати в Telegram: $who") { messengerCaller.callInTelegram(who) }
                     else messengerCaller.callInTelegram(who)
                 }
                 toolCall.startsWith("callInInstagram") -> {
-                    val who = com.dynamicai.launcher.llm.AliasStore(context).resolve(getArg(toolCall, "contactName"))
+                    val who = AliasStore(context).resolve(getArg(toolCall, "contactName"))
                     val hook = confirmHook
                     if (hook != null) hook("зателефонувати в Instagram: $who") { messengerCaller.callInInstagram(who) }
                     else messengerCaller.callInInstagram(who)

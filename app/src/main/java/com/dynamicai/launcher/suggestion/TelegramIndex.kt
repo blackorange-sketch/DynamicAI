@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.pm.LauncherApps
 import org.json.JSONArray
 import org.json.JSONObject
+import android.content.Intent
+import android.os.Process
+import com.dynamicai.launcher.command.FuzzyMatcher
 
 /**
  * Локальний індекс чатів Telegram для пошуку.
@@ -77,7 +80,7 @@ object TelegramIndex {
                         LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST or
                         LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED
                 )
-                val shortcuts = try { la.getShortcuts(q, android.os.Process.myUserHandle()) } catch (_: Throwable) { null } ?: continue
+                val shortcuts = try { la.getShortcuts(q, Process.myUserHandle()) } catch (_: Throwable) { null } ?: continue
                 for (s in shortcuts) {
                     if (!s.isEnabled) continue
                     val name = (s.shortLabel ?: s.longLabel ?: "").toString().trim()
@@ -103,7 +106,7 @@ object TelegramIndex {
     fun search(ctx: Context, query: String): List<Pair<Chat, Int>> {
         refreshShortcuts(ctx)
         return read(ctx).mapNotNull { c ->
-            val sc = com.dynamicai.launcher.command.FuzzyMatcher.score(c.name, query)
+            val sc = FuzzyMatcher.score(c.name, query)
             if (sc >= 60) c to sc else null
         }.sortedByDescending { it.second }.take(5)
     }
@@ -113,13 +116,13 @@ object TelegramIndex {
         if (shortcutId.isNotBlank()) {
             try {
                 (app.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps)
-                    .startShortcut(pkg, shortcutId, null, null, android.os.Process.myUserHandle())
+                    .startShortcut(pkg, shortcutId, null, null, Process.myUserHandle())
                 return
             } catch (_: Throwable) {}
         }
         try {
             app.packageManager.getLaunchIntentForPackage(pkg)?.let {
-                app.startActivity(it.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                app.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
         } catch (_: Throwable) {}
     }

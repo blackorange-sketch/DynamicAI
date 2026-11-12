@@ -68,7 +68,7 @@ fun WeatherDetailScreen(
             is WeatherState.Loading -> {
                 Text(
                     "Завантаження…",
-                    color = com.dynamicai.launcher.ui.theme.AppTheme.colors.textMuted, fontSize = 15.sp,
+                    color = AppTheme.colors.textMuted, fontSize = 15.sp,
                     modifier = Modifier.padding(vertical = 40.dp)
                 )
             }

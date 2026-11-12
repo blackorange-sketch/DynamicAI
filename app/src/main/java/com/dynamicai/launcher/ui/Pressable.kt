@@ -16,6 +16,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.animation.core.tween
 
 /** Press scale + haptic. Без bounds. */
 fun Modifier.pressable(
@@ -46,7 +47,7 @@ fun Modifier.pressableWithBounds(
 
     val dim by animateFloatAsState(
         targetValue = if (pressed) 0.82f else 1f,
-        animationSpec = androidx.compose.animation.core.tween(90),
+        animationSpec = tween(90),
         label = "pressDim"
     )
     this

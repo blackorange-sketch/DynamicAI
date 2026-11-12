@@ -60,10 +60,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.LinearProgressIndicator
 import com.dynamicai.launcher.data.AppRepository
 import com.dynamicai.launcher.model.AppInfo
+import android.widget.Toast
+import androidx.compose.foundation.layout.ColumnScope
+import com.dynamicai.launcher.suggestion.BrowserBridge
 
 /** Налаштування → Інструменти: застосунки за замовчуванням, приховані, нотатки/макроси, віджети, погода. */
 @Composable
-internal fun androidx.compose.foundation.layout.ColumnScope.SettingsToolsSection(
+internal fun ColumnScope.SettingsToolsSection(
     vm: com.dynamicai.launcher.AppListViewModel,
     settings: LauncherSettings,
     onSettingsChange: (LauncherSettings) -> Unit,
@@ -73,10 +76,10 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsToolsSection
     val ctx = LocalContext.current
         var installedApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
         LaunchedEffect(Unit) { installedApps = AppRepository(ctx).loadCached() }
-        val pagesPermLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-            androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+        val pagesPermLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
         ) { granted ->
-            if (!granted) android.widget.Toast.makeText(ctx, "Без дозволу закладки браузера не показуються", android.widget.Toast.LENGTH_LONG).show()
+            if (!granted) Toast.makeText(ctx, "Без дозволу закладки браузера не показуються", Toast.LENGTH_LONG).show()
         }
 
         GlassSectionHeader("Застосунки за замовчуванням")
@@ -92,10 +95,10 @@ internal fun androidx.compose.foundation.layout.ColumnScope.SettingsToolsSection
             }
             SwitchRow("Закладки й історія OperaFast", settings.browserSuggest, Icons.Default.Search, AppTheme.colors.accentDark) { on ->
                 if (on) {
-                    if (!com.dynamicai.launcher.suggestion.BrowserBridge.installed(ctx)) {
-                        android.widget.Toast.makeText(ctx, "OperaFast не встановлено", android.widget.Toast.LENGTH_LONG).show()
-                    } else if (!com.dynamicai.launcher.suggestion.BrowserBridge.hasAccess(ctx)) {
-                        pagesPermLauncher.launch(com.dynamicai.launcher.suggestion.BrowserBridge.PERM)
+                    if (!BrowserBridge.installed(ctx)) {
+                        Toast.makeText(ctx, "OperaFast не встановлено", Toast.LENGTH_LONG).show()
+                    } else if (!BrowserBridge.hasAccess(ctx)) {
+                        pagesPermLauncher.launch(BrowserBridge.PERM)
                     }
                 }
                 onSettingsChange(settings.copy(browserSuggest = on))

@@ -9,6 +9,12 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import android.text.Html
+import java.io.IOException
+import java.net.URI
+import java.net.URLDecoder
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Пошук в інтернеті: Wikipedia API (для фактів) та JokeAPI (для анекдотів).
@@ -49,7 +55,7 @@ class WebSearchRepository {
         }
         try {
             val code = conn.responseCode
-            if (code !in 200..299) throw java.io.IOException("HTTP $code")
+            if (code !in 200..299) throw IOException("HTTP $code")
             return conn.inputStream.bufferedReader().use { it.readText() }
         } finally {
             conn.disconnect()
@@ -57,7 +63,7 @@ class WebSearchRepository {
     }
 
     private fun cleanHtml(s: String): String =
-        android.text.Html.fromHtml(s, android.text.Html.FROM_HTML_MODE_LEGACY).toString().replace(Regex("\\s+"), " ").trim()
+        Html.fromHtml(s, Html.FROM_HTML_MODE_LEGACY).toString().replace(Regex("\\s+"), " ").trim()
 
     private fun formatResults(titles: List<String>, snippets: List<String>, limit: Int): List<String> =
         snippets.indices.take(limit).mapNotNull { i ->
@@ -108,7 +114,7 @@ class WebSearchRepository {
                 }
                 errors.append("$name: empty; ")
             } catch (t: Throwable) {
-                if (t is kotlinx.coroutines.CancellationException) throw t
+                if (t is CancellationException) throw t
                 errors.append("$name: ${t.message}; ")
             }
         }
@@ -118,7 +124,7 @@ class WebSearchRepository {
     }
 
     data class WebHit(val title: String, val snippet: String, val url: String) {
-        val domain: String get() = try { java.net.URI(url).host.orEmpty().removePrefix("www.") } catch (_: Exception) { url }
+        val domain: String get() = try { URI(url).host.orEmpty().removePrefix("www.") } catch (_: Exception) { url }
     }
 
     private fun unescapeAmp(s: String) = s.replace("&amp;", "&").replace("&quot;", "\"").replace("&#x27;", "'")
@@ -133,7 +139,7 @@ class WebSearchRepository {
             val href = Regex("href=\"([^\"]+)\"").find(m.value)?.groupValues?.get(1)?.let { unescapeAmp(it) } ?: continue
             var url = href
             if (url.contains("uddg=")) {
-                url = java.net.URLDecoder.decode(url.substringAfter("uddg=").substringBefore("&"), "UTF-8")
+                url = URLDecoder.decode(url.substringAfter("uddg=").substringBefore("&"), "UTF-8")
             } else if (url.startsWith("//")) url = "https:$url"
             if (!url.startsWith("http")) continue
             if (url.contains("duckduckgo.com")) continue   // реклама й службові посилання
@@ -161,7 +167,7 @@ class WebSearchRepository {
                 val r = fn(q, limit)
                 if (r.isNotEmpty()) { lastError = "Hits[$name] OK: ${r.size}"; return@withContext r }
             } catch (t: Throwable) {
-                if (t is kotlinx.coroutines.CancellationException) throw t
+                if (t is CancellationException) throw t
                 lastError = "Hits[$name] failed: ${t.message}"
             }
         }
@@ -179,9 +185,9 @@ class WebSearchRepository {
             setRequestProperty("Accept-Language", "uk,en;q=0.8")
         }
         try {
-            if (conn.responseCode !in 200..299) throw java.io.IOException("HTTP ${conn.responseCode}")
+            if (conn.responseCode !in 200..299) throw IOException("HTTP ${conn.responseCode}")
             val type = conn.contentType.orEmpty().lowercase()
-            if (type.isNotEmpty() && !type.contains("html") && !type.contains("text")) throw java.io.IOException("not html: $type")
+            if (type.isNotEmpty() && !type.contains("html") && !type.contains("text")) throw IOException("not html: $type")
             val sb = StringBuilder()
             conn.inputStream.bufferedReader().use { r ->
                 val buf = CharArray(8192)
@@ -224,9 +230,9 @@ class WebSearchRepository {
             kotlinx.coroutines.coroutineScope {
                 urls.map { u ->
                     async {
-                        u to (kotlinx.coroutines.withTimeoutOrNull(7_000) {
+                        u to (withTimeoutOrNull(7_000) {
                             try { extractRelevant(fetchHtmlLimited(u), query, maxCharsEach) } catch (t: Throwable) {
-                                if (t is kotlinx.coroutines.CancellationException) throw t
+                                if (t is CancellationException) throw t
                                 ""
                             }
                         } ?: "")

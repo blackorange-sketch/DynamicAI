@@ -10,6 +10,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.dynamicai.launcher.llm.AgentEngine
+import kotlinx.coroutines.CancellationException
 
 /** Ручний запуск макросів і окремих інструментів з віджетів головного екрана (+ облік частоти для пропозицій). */
 object MacroLauncher {
@@ -38,11 +40,11 @@ object MacroLauncher {
         bump(app, "macro:" + macro.id)
         scope.launch {
             try {
-                val agent = com.dynamicai.launcher.llm.AgentEngine(app, null)
+                val agent = AgentEngine(app, null)
                 val tools = MacroTools(app)
                 MacroRunner(app, { agent.runTool(it) }, { tools.notify(macro.name, it) }, mutableMapOf("trigger" to "manual")).run(macro)
                 toast(app, "«${macro.name}» виконано")
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (t: Throwable) {
                 toast(app, "«${macro.name}»: ${t.message}")
@@ -58,8 +60,8 @@ object MacroLauncher {
         if (usageKey.isNotBlank()) bump(app, usageKey)
         scope.launch {
             val r = try {
-                com.dynamicai.launcher.llm.AgentEngine(app, null).runTool(call)
-            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (t: Throwable) { "Помилка: ${t.message}" }
+                AgentEngine(app, null).runTool(call)
+            } catch (e: CancellationException) { throw e } catch (t: Throwable) { "Помилка: ${t.message}" }
             toast(app, r.take(120))
         }
     }

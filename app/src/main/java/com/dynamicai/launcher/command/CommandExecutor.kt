@@ -19,26 +19,47 @@ import com.dynamicai.launcher.model.AppInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.graphics.Bitmap
+import android.hardware.camera2.CameraCharacteristics
+import android.os.BatteryManager
+import android.os.Build
+import android.os.Environment
+import com.dynamicai.launcher.alarm.AlarmReceiver
+import com.dynamicai.launcher.alarm.PomodoroReceiver
+import com.dynamicai.launcher.alarm.ReminderReceiver
+import com.dynamicai.launcher.data.SettingsStorage
+import com.dynamicai.launcher.macro.MacroStorage
+import com.dynamicai.launcher.note.NotesStorage
+import com.dynamicai.launcher.system.MediaController
+import com.dynamicai.launcher.system.QuickSettingsManager
+import com.dynamicai.launcher.system.ScreenshotController
+import com.dynamicai.launcher.system.ShizukuManager
+import com.dynamicai.launcher.util.Calculator
+import java.io.File
+import java.util.Calendar
+import kotlinx.coroutines.runBlocking
 
 class CommandExecutor(private val context: Context) {
     private val systemManager by lazy {
-        com.dynamicai.launcher.system.QuickSettingsManager(context)
+        QuickSettingsManager(context)
     }
     private val mediaController by lazy {
-        com.dynamicai.launcher.system.MediaController(context)
+        MediaController(context)
     }
     private val screenshotController by lazy {
-        com.dynamicai.launcher.system.ScreenshotController(context)
+        ScreenshotController(context)
     }
     private val quickManager by lazy {
-        com.dynamicai.launcher.system.QuickSettingsManager(context)
+        QuickSettingsManager(context)
     }
     private val shizukuManager by lazy {
-        com.dynamicai.launcher.system.ShizukuManager(context)
+        ShizukuManager(context)
     }
 
     private fun defaultPkg(key: String): String? {
-        val st = com.dynamicai.launcher.data.SettingsStorage(context).load()
+        val st = SettingsStorage(context).load()
         val pkg = when (key) {
             "music" -> st.defaultMusicApp
             "browser" -> st.defaultBrowser
@@ -107,7 +128,7 @@ class CommandExecutor(private val context: Context) {
     }
 
     private fun runMacro(name: String, apps: List<AppInfo>): CommandResult {
-        val storage = com.dynamicai.launcher.macro.MacroStorage(context)
+        val storage = MacroStorage(context)
         val macro = storage.findByName(name)
             ?: return CommandResult.Error("Макрос не знайдено: $name")
         if (macro.steps.isEmpty()) return CommandResult.Error("Макрос порожній")
@@ -218,26 +239,26 @@ class CommandExecutor(private val context: Context) {
         val triggerAt = System.currentTimeMillis() + seconds * 1000L
         val id = (triggerAt % Int.MAX_VALUE).toInt()
         return try {
-            val am = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-            if (android.os.Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
+            val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
                 try {
                     context.startActivity(
-                        Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                            android.net.Uri.parse("package:${context.packageName}")
+                        Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                            Uri.parse("package:${context.packageName}")
                         ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     )
                 } catch (_: Throwable) {}
                 return CommandResult.Error("Дай дозвіл на точні будильники")
             }
-            val intent = Intent(context, com.dynamicai.launcher.alarm.ReminderReceiver::class.java).apply {
+            val intent = Intent(context, ReminderReceiver::class.java).apply {
                 putExtra("text", text)
                 putExtra("id", id)
             }
-            val pi = android.app.PendingIntent.getBroadcast(
+            val pi = PendingIntent.getBroadcast(
                 context, id, intent,
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            am.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
             CommandResult.Success("Нагадаю через $display: $text")
         } catch (e: Exception) {
             CommandResult.Error("Нагадування: ${e.message}")
@@ -247,18 +268,18 @@ class CommandExecutor(private val context: Context) {
     private fun setPomodoro(minutes: Int): CommandResult {
         val triggerAt = System.currentTimeMillis() + minutes * 60_000L
         return try {
-            val am = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-            val intent = Intent(context, com.dynamicai.launcher.alarm.PomodoroReceiver::class.java).apply {
+            val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val intent = Intent(context, PomodoroReceiver::class.java).apply {
                 putExtra("mode", "work")
             }
-            val pi = android.app.PendingIntent.getBroadcast(
+            val pi = PendingIntent.getBroadcast(
                 context, 9101, intent,
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             try {
-                am.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, triggerAt, pi)
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
             } catch (_: SecurityException) {
-                am.set(android.app.AlarmManager.RTC_WAKEUP, triggerAt, pi)
+                am.set(AlarmManager.RTC_WAKEUP, triggerAt, pi)
             }
             CommandResult.Success("Помодоро на $minutes хв")
         } catch (e: Exception) {
@@ -271,17 +292,17 @@ class CommandExecutor(private val context: Context) {
             ?: return CommandResult.Error("Не розпізнав час: \"$time\"")
 
         // Перевіряємо дозвіл exact alarm
-        if (android.os.Build.VERSION.SDK_INT >= 31) {
+        if (Build.VERSION.SDK_INT >= 31) {
             try {
-                val am = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+                val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
                 if (!am.canScheduleExactAlarms()) {
                     // Відкриваємо системні налаштування для дозволу
                     try {
                         context.startActivity(
-                            android.content.Intent(
-                                android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                                android.net.Uri.parse("package:${context.packageName}")
-                            ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            Intent(
+                                Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                Uri.parse("package:${context.packageName}")
+                            ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         )
                     } catch (_: Throwable) {}
                     return CommandResult.Error("Дай дозвіл на точні будильники у налаштуваннях")
@@ -291,32 +312,32 @@ class CommandExecutor(private val context: Context) {
 
         // Ставимо будильник напряму
         return try {
-            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-            val cal = java.util.Calendar.getInstance().apply {
-                set(java.util.Calendar.HOUR_OF_DAY, hour)
-                set(java.util.Calendar.MINUTE, minute)
-                set(java.util.Calendar.SECOND, 0)
-                set(java.util.Calendar.MILLISECOND, 0)
+            val cal = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, hour)
+                set(Calendar.MINUTE, minute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
                 if (timeInMillis <= System.currentTimeMillis()) {
-                    add(java.util.Calendar.DAY_OF_YEAR, 1)
+                    add(Calendar.DAY_OF_YEAR, 1)
                 }
             }
 
-            val intent = Intent(context, com.dynamicai.launcher.alarm.AlarmReceiver::class.java).apply {
+            val intent = Intent(context, AlarmReceiver::class.java).apply {
                 putExtra("label", label ?: "DynamicAI")
                 putExtra("hour", hour)
                 putExtra("minute", minute)
             }
-            val pending = android.app.PendingIntent.getBroadcast(
+            val pending = PendingIntent.getBroadcast(
                 context,
                 (hour * 100 + minute),
                 intent,
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
             alarmManager.setAlarmClock(
-                android.app.AlarmManager.AlarmClockInfo(cal.timeInMillis, pending),
+                AlarmManager.AlarmClockInfo(cal.timeInMillis, pending),
                 pending
             )
 
@@ -448,7 +469,7 @@ class CommandExecutor(private val context: Context) {
             val cm = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
             val id = cm.cameraIdList.firstOrNull { camId ->
                 cm.getCameraCharacteristics(camId)
-                    .get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+                    .get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
             } ?: return CommandResult.Error("Ліхтарик недоступний")
 
             val newState = !_flashlightOn.value
@@ -558,7 +579,7 @@ class CommandExecutor(private val context: Context) {
 
     private fun createNote(text: String): CommandResult {
         return try {
-            com.dynamicai.launcher.note.NotesStorage(context).add(text)
+            NotesStorage(context).add(text)
             CommandResult.Success("Нотатку збережено: $text")
         } catch (e: Exception) {
             CommandResult.Error("Помилка нотатки: ${e.message}")
@@ -567,18 +588,18 @@ class CommandExecutor(private val context: Context) {
 
     private fun takeScreenshot(): CommandResult {
         return try {
-            val bmp = kotlinx.coroutines.runBlocking {
+            val bmp = runBlocking {
                 screenshotController.takeScreenshot()
             }
             if (bmp != null) {
                 // Зберігаємо у Pictures для галереї
                 try {
-                    val dir = android.os.Environment.getExternalStoragePublicDirectory(
-                        android.os.Environment.DIRECTORY_PICTURES
+                    val dir = Environment.getExternalStoragePublicDirectory(
+                        Environment.DIRECTORY_PICTURES
                     )
                     if (!dir.exists()) dir.mkdirs()
-                    val out = java.io.File(dir, "DynamicAI_${System.currentTimeMillis()}.png")
-                    out.outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+                    val out = File(dir, "DynamicAI_${System.currentTimeMillis()}.png")
+                    out.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
                     // На Android 10+ файл не з'явиться у галереї без MediaStore, але у файловому менеджері буде
                     CommandResult.Success("Скріншот: ${out.name}")
                 } catch (t: Throwable) {
@@ -595,9 +616,9 @@ class CommandExecutor(private val context: Context) {
     private fun setBrightness(level: Int): CommandResult {
         return try {
             val resolver = context.contentResolver
-            val current = android.provider.Settings.System.getInt(
+            val current = Settings.System.getInt(
                 resolver,
-                android.provider.Settings.System.SCREEN_BRIGHTNESS,
+                Settings.System.SCREEN_BRIGHTNESS,
                 128
             )
             val target = when {
@@ -606,9 +627,9 @@ class CommandExecutor(private val context: Context) {
                 level == 1 -> (current + 30).coerceAtMost(255)
                 else -> level
             }
-            android.provider.Settings.System.putInt(
+            Settings.System.putInt(
                 resolver,
-                android.provider.Settings.System.SCREEN_BRIGHTNESS,
+                Settings.System.SCREEN_BRIGHTNESS,
                 target
             )
             CommandResult.Success("Яскравість: $target/255")
@@ -620,13 +641,13 @@ class CommandExecutor(private val context: Context) {
 
     private fun toggleWifi(enabled: Boolean): CommandResult {
         return try {
-            val result = kotlinx.coroutines.runBlocking {
+            val result = runBlocking {
                 quickManager.setWifi(enabled)
             }
             when (result) {
-                is com.dynamicai.launcher.system.QuickSettingsManager.Result.success ->
+                is QuickSettingsManager.Result.success ->
                     CommandResult.Success("WiFi ${if (enabled) "увімкнено" else "вимкнено"}")
-                is com.dynamicai.launcher.system.QuickSettingsManager.Result.failure ->
+                is QuickSettingsManager.Result.failure ->
                     CommandResult.Error("WiFi: ${result.msg}")
             }
         } catch (e: Exception) {
@@ -636,13 +657,13 @@ class CommandExecutor(private val context: Context) {
 
     private fun toggleBluetooth(enabled: Boolean): CommandResult {
         return try {
-            val result = kotlinx.coroutines.runBlocking {
+            val result = runBlocking {
                 quickManager.setBluetooth(enabled)
             }
             when (result) {
-                is com.dynamicai.launcher.system.QuickSettingsManager.Result.success ->
+                is QuickSettingsManager.Result.success ->
                     CommandResult.Success("Bluetooth ${if (enabled) "увімкнено" else "вимкнено"}")
-                is com.dynamicai.launcher.system.QuickSettingsManager.Result.failure ->
+                is QuickSettingsManager.Result.failure ->
                     CommandResult.Error("Bluetooth: ${result.msg}")
             }
         } catch (e: Exception) {
@@ -652,13 +673,13 @@ class CommandExecutor(private val context: Context) {
 
     private fun toggleDnd(enabled: Boolean): CommandResult {
         return try {
-            val result = kotlinx.coroutines.runBlocking {
+            val result = runBlocking {
                 quickManager.setDnd(enabled)
             }
             when (result) {
-                is com.dynamicai.launcher.system.QuickSettingsManager.Result.success ->
+                is QuickSettingsManager.Result.success ->
                     CommandResult.Success("Не турбувати ${if (enabled) "увімкнено" else "вимкнено"}")
-                is com.dynamicai.launcher.system.QuickSettingsManager.Result.failure ->
+                is QuickSettingsManager.Result.failure ->
                     CommandResult.Error("DND: ${result.msg}")
             }
         } catch (e: Exception) {
@@ -669,7 +690,7 @@ class CommandExecutor(private val context: Context) {
 
     private fun handleToggle(target: String, enabled: Boolean): CommandResult {
         return try {
-            kotlinx.coroutines.runBlocking {
+            runBlocking {
                 val result = when (target) {
                     "wifi" -> quickManager.setWifi(enabled)
                     "bluetooth" -> quickManager.setBluetooth(enabled)
@@ -681,10 +702,10 @@ class CommandExecutor(private val context: Context) {
                     "auto_rotate" -> quickManager.setAutoRotate(enabled)
                     "battery_saver" -> quickManager.setBatterySaver(enabled)
                     "auto_brightness" -> quickManager.setBrightnessAuto(enabled)
-                    else -> com.dynamicai.launcher.system.QuickSettingsManager.Result.failure("Невідомо: $target")
+                    else -> QuickSettingsManager.Result.failure("Невідомо: $target")
                 }
                 when (result) {
-                    is com.dynamicai.launcher.system.QuickSettingsManager.Result.success -> {
+                    is QuickSettingsManager.Result.success -> {
                         val label = mapOf(
                             "wifi" to "WiFi",
                             "bluetooth" to "Bluetooth",
@@ -699,7 +720,7 @@ class CommandExecutor(private val context: Context) {
                         )[target] ?: target
                         CommandResult.Success("$label ${if (enabled) "увімкнено" else "вимкнено"}")
                     }
-                    is com.dynamicai.launcher.system.QuickSettingsManager.Result.failure -> {
+                    is QuickSettingsManager.Result.failure -> {
                         CommandResult.Error("${target}: ${result.msg}")
                     }
                 }
@@ -787,8 +808,8 @@ class CommandExecutor(private val context: Context) {
 
     private fun batteryStatus(): CommandResult {
         return try {
-            val bm = context.getSystemService(Context.BATTERY_SERVICE) as android.os.BatteryManager
-            val level = bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+            val bm = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+            val level = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
             val charging = bm.isCharging
             val text = "Батарея: $level%" + if (charging) " (заряджається)" else ""
             CommandResult.Success(text)
@@ -798,14 +819,14 @@ class CommandExecutor(private val context: Context) {
     }
 
     private fun calculate(expr: String): CommandResult {
-        return when (val result = com.dynamicai.launcher.util.Calculator.calculate(expr)) {
-            is com.dynamicai.launcher.util.Calculator.Result.success -> {
+        return when (val result = Calculator.calculate(expr)) {
+            is Calculator.Result.success -> {
                 val v = result.value
                 val display = if (v == v.toLong().toDouble()) v.toLong().toString()
                               else "%.4f".format(v).trimEnd('0').trimEnd('.')
                 CommandResult.Success("$expr = $display")
             }
-            is com.dynamicai.launcher.util.Calculator.Result.failure ->
+            is Calculator.Result.failure ->
                 CommandResult.Error("Помилка: ${result.msg}")
         }
     }

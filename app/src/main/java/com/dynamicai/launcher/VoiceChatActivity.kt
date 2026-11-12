@@ -73,6 +73,31 @@ import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.sqrt
 import kotlin.math.sin
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.media.AudioManager
+import android.net.Uri
+import android.widget.Toast
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import com.dynamicai.launcher.data.SettingsStorage
+import com.dynamicai.launcher.llm.ChatEngine
+import com.dynamicai.launcher.llm.ModelRepository
+import com.dynamicai.launcher.ui.ChatArchiveScreen
+import com.dynamicai.launcher.ui.theme.AppColors
+import com.dynamicai.launcher.ui.theme.StoredAppTheme
+import com.dynamicai.launcher.voice.OfflineSpeech
+import com.dynamicai.launcher.voice.VoskEngine
+import java.net.URI
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
 
 class VoiceChatActivity : ComponentActivity() {
     override fun finish() {
@@ -89,14 +114,14 @@ class VoiceChatActivity : ComponentActivity() {
         enableEdgeToEdge()
         // Вмикаємо апаратне придушення відлуння (AEC)
         try {
-            val am = getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
-            am.mode = android.media.AudioManager.MODE_IN_COMMUNICATION
+            val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            am.mode = AudioManager.MODE_IN_COMMUNICATION
         } catch (_: Throwable) {}
 
         val askText = intent?.getStringExtra("ask")
         setContent {
             val vm: AppListViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-            com.dynamicai.launcher.ui.theme.StoredAppTheme {
+            StoredAppTheme {
                 VoiceChatScreen(vm = vm, onClose = { finish() }, initialQuery = askText)
             }
         }
@@ -115,7 +140,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
     val shouldListen = remember { mutableStateOf(true) }
     var lastSentText by remember { mutableStateOf("") }
     var lastSentAt by remember { mutableStateOf(0L) }
-    var voskSession by remember { mutableStateOf<com.dynamicai.launcher.voice.VoskEngine.Session?>(null) }
+    var voskSession by remember { mutableStateOf<VoskEngine.Session?>(null) }
 
     fun stopListening() {
         try { voskSession?.stop() } catch (_: Exception) {}
@@ -125,7 +150,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
         } catch (_: Exception) {}
     }
 
-    var activeJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var activeJob by remember { mutableStateOf<Job?>(null) }
     var showClearDialog by remember { mutableStateOf(false) }
     var showArchive by remember { mutableStateOf(false) }
 
@@ -140,7 +165,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
         val historyStr = ChatHistoryManager.currentTopic()
             .dropLast(1).takeLast(16)
             .joinToString("\n") { msg ->
-                val body = msg.content.substringBefore(com.dynamicai.launcher.llm.ChatEngine.SOURCES_TAG).trim()
+                val body = msg.content.substringBefore(ChatEngine.SOURCES_TAG).trim()
                 if (msg.role == "user") "Користувач: $body" else "Асистент: $body"
             }
         activeJob = processQuery(
@@ -158,11 +183,11 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
         if (!shouldListen.value) return
         voskSession?.stop()
         voskSession = null
-        val voiceMode = com.dynamicai.launcher.data.SettingsStorage(ctx).load().voiceEngine
-        if (com.dynamicai.launcher.voice.VoskEngine.shouldUse(ctx, voiceMode)) {
+        val voiceMode = SettingsStorage(ctx).load().voiceEngine
+        if (VoskEngine.shouldUse(ctx, voiceMode)) {
             recognizer?.destroy()
             recognizer = null
-            voskSession = com.dynamicai.launcher.voice.VoskEngine.Session(
+            voskSession = VoskEngine.Session(
                 ctx,
                 onReady = { voiceState = VoiceState.LISTENING },
                 onPartial = { if (voiceState == VoiceState.SPEAKING) { vm.tts.stop(); voiceState = VoiceState.LISTENING } },
@@ -170,7 +195,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
                 onError = {
                     voiceState = VoiceState.IDLE
                     if (shouldListen.value) {
-                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        Handler(Looper.getMainLooper()).postDelayed({
                             if (shouldListen.value && voiceState == VoiceState.IDLE) {
                                 try { startListening() } catch (_: Exception) {}
                             }
@@ -196,13 +221,13 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
                 override fun onEndOfSpeech() {}
                 override fun onError(error: Int) {
                     voiceState = VoiceState.IDLE
-                    if (com.dynamicai.launcher.voice.OfflineSpeech.isMissingLanguage(error)) {
-                        android.widget.Toast.makeText(ctx, com.dynamicai.launcher.voice.OfflineSpeech.HINT, android.widget.Toast.LENGTH_LONG).show()
+                    if (OfflineSpeech.isMissingLanguage(error)) {
+                        Toast.makeText(ctx, OfflineSpeech.HINT, Toast.LENGTH_LONG).show()
                         return
                     }
                     // Перезапускаємо мікрофон ТІЛЬКИ якщо екран активний
                     if (shouldListen.value) {
-                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        Handler(Looper.getMainLooper()).postDelayed({
                             if (shouldListen.value && voiceState == VoiceState.IDLE) {
                                 try { startListening() } catch (_: Exception) {}
                             }
@@ -226,7 +251,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "uk-UA")
             putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, com.dynamicai.launcher.voice.OfflineSpeech.preferOffline(ctx))
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, OfflineSpeech.preferOffline(ctx))
         }
         recognizer?.startListening(intent)
     }
@@ -416,7 +441,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
                     Box(
                         Modifier.fillMaxWidth().animateItem(
                             fadeInSpec = androidx.compose.animation.core.tween(260),
-                            placementSpec = androidx.compose.animation.core.spring(dampingRatio = 0.85f, stiffness = 380f),
+                            placementSpec = spring(dampingRatio = 0.85f, stiffness = 380f),
                             fadeOutSpec = androidx.compose.animation.core.tween(120)
                         )
                     ) {
@@ -497,7 +522,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
         }
 
         if (showArchive) {
-            com.dynamicai.launcher.ui.ChatArchiveScreen(
+            ChatArchiveScreen(
                 onOpen = { chat -> stopGeneration(); ChatHistoryManager.restore(chat.id); showArchive = false },
                 onClose = { showArchive = false }
             )
@@ -526,7 +551,7 @@ private fun ModelChip(vm: AppListViewModel) {
     var open by remember { mutableStateOf(false) }
     // Список завантажених моделей читаємо з диска щоразу при відкритті — не залежимо від того, чи вже оновився StateFlow
     LaunchedEffect(open) { if (open) vm.refreshDownloadedModels() }
-    val models = com.dynamicai.launcher.llm.ModelRepository.AVAILABLE_MODELS
+    val models = ModelRepository.AVAILABLE_MODELS
     val current = models.find { it.id == vm.currentModelId }
     val backend = when (settings.llmBackend) { "gpu" -> "GPU"; "cpu" -> "CPU"; else -> "Auto" }
     val dot = when {
@@ -581,13 +606,13 @@ private fun ModelChip(vm: AppListViewModel) {
 
 /** Бульбашка повідомлення: користувач (акцент), асистент (скло), помилка (з дією). Довге натискання — копіювати/поділитись. */
 @Composable
-private fun MessageBubble(msg: ChatMessage, maxWidth: androidx.compose.ui.unit.Dp, onAction: (String) -> Unit) {
+private fun MessageBubble(msg: ChatMessage, maxWidth: Dp, onAction: (String) -> Unit) {
     val ctx = LocalContext.current
     var menu by remember { mutableStateOf(false) }
     val c = AppTheme.colors
     val isUser = msg.role == "user"
     val isError = msg.role == "error"
-    val tag = com.dynamicai.launcher.llm.ChatEngine.SOURCES_TAG
+    val tag = ChatEngine.SOURCES_TAG
     val bodyText = msg.content.substringBefore(tag).trim()
     val sources = remember(msg.content) {
         if (!msg.content.contains(tag)) emptyList()
@@ -625,15 +650,15 @@ private fun MessageBubble(msg: ChatMessage, maxWidth: androidx.compose.ui.unit.D
                     Spacer(Modifier.height(8.dp))
                     Text("Джерела", color = c.textSecondary, fontSize = 11.sp)
                     sources.forEachIndexed { i, (title, url) ->
-                        val host = try { java.net.URI(url).host.orEmpty().removePrefix("www.") } catch (_: Exception) { url }
+                        val host = try { URI(url).host.orEmpty().removePrefix("www.") } catch (_: Exception) { url }
                         Text(
                             "${i + 1}. $host" + if (title.isNotBlank() && !title.equals(host, true)) " — $title" else "",
                             color = c.accent, fontSize = 12.sp, maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier
                                 .clickable {
                                     try {
-                                        ctx.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                                     } catch (_: Throwable) {}
                                 }
                                 .padding(vertical = 3.dp)
@@ -653,9 +678,9 @@ private fun MessageBubble(msg: ChatMessage, maxWidth: androidx.compose.ui.unit.D
                 DropdownMenuItem(text = { Text("Копіювати") }, onClick = {
                     menu = false
                     try {
-                        val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        cm.setPrimaryClip(android.content.ClipData.newPlainText("message", bodyText))
-                        android.widget.Toast.makeText(ctx, "Скопійовано", android.widget.Toast.LENGTH_SHORT).show()
+                        val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        cm.setPrimaryClip(ClipData.newPlainText("message", bodyText))
+                        Toast.makeText(ctx, "Скопійовано", Toast.LENGTH_SHORT).show()
                     } catch (_: Throwable) {}
                 })
                 DropdownMenuItem(text = { Text("Поділитись") }, onClick = {
@@ -673,7 +698,7 @@ private fun MessageBubble(msg: ChatMessage, maxWidth: androidx.compose.ui.unit.D
     }
 }
 
-private fun stateColor(voiceState: VoiceState, c: com.dynamicai.launcher.ui.theme.AppColors): Color = when (voiceState) {
+private fun stateColor(voiceState: VoiceState, c: AppColors): Color = when (voiceState) {
     VoiceState.LISTENING -> c.successLight
     VoiceState.SPEAKING -> c.pink
     VoiceState.THINKING -> c.accentLight
@@ -696,7 +721,7 @@ fun AuroraBackground(voiceState: VoiceState, modifier: Modifier = Modifier) {
         val h = size.height
         val a = (2.0 * Math.PI * phase).toFloat()
         fun blob(color: Color, cx: Float, cy: Float, r: Float, alpha: Float) {
-            val c = androidx.compose.ui.geometry.Offset(cx, cy)
+            val c = Offset(cx, cy)
             drawCircle(brush = Brush.radialGradient(listOf(color.copy(alpha = alpha), Color.Transparent), center = c, radius = r), radius = r, center = c)
         }
         blob(stateTint, w * (0.5f + 0.35f * cos(a)), h * (0.35f + 0.2f * sin(2f * a)), w * 0.95f, 0.17f)
@@ -715,7 +740,7 @@ fun AuroraBackground(voiceState: VoiceState, modifier: Modifier = Modifier) {
             drawCircle(
                 color = tint.copy(alpha = 0.06f + 0.2f * tw),
                 radius = (0.8f + (i % 3) * 0.7f).dp.toPx(),
-                center = androidx.compose.ui.geometry.Offset(x * w, y * h)
+                center = Offset(x * w, y * h)
             )
         }
     }
@@ -790,8 +815,8 @@ fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
         }
 
         // 3. Живі органічні кільця (хвилястий контур)
-        fun blobPath(radius: Float, ph: Float, dir: Float): androidx.compose.ui.graphics.Path {
-            val path = androidx.compose.ui.graphics.Path()
+        fun blobPath(radius: Float, ph: Float, dir: Float): Path {
+            val path = Path()
             val steps = 96
             for (n in 0..steps) {
                 val th = (n.toFloat() / steps) * 2f * Math.PI.toFloat()
@@ -819,7 +844,7 @@ fun JarvisOrb(voiceState: VoiceState, modifier: Modifier = Modifier) {
         // 5. Три світні точки, що обертаються навколо
         for (d in 0 until 3) {
             val ang = a * (if (voiceState == VoiceState.THINKING) 3f else 1f) + d * 2.0943952f
-            val pos = androidx.compose.ui.geometry.Offset(center.x + baseRadius * 1.9f * cos(ang), center.y + baseRadius * 1.9f * sin(ang))
+            val pos = Offset(center.x + baseRadius * 1.9f * cos(ang), center.y + baseRadius * 1.9f * sin(ang))
             drawCircle(color = primaryColor.copy(alpha = 0.35f * orbitAlpha), radius = 7.dp.toPx(), center = pos)
             drawCircle(color = core.copy(alpha = 0.9f * orbitAlpha), radius = 2.5.dp.toPx(), center = pos)
         }
@@ -885,9 +910,9 @@ class SentenceSplitter(private val onSentence: (String) -> Unit) {
 }
 
 fun processQuery(
-    text: String, history: String, vm: AppListViewModel, scope: kotlinx.coroutines.CoroutineScope,
+    text: String, history: String, vm: AppListViewModel, scope: CoroutineScope,
     onStateChange: (VoiceState) -> Unit, onMessage: (ChatMessage) -> Unit, stopListening: () -> Unit
-): kotlinx.coroutines.Job {
+): Job {
     onStateChange(VoiceState.THINKING)
     stopListening()
     onMessage(ChatMessage("status", "Думаю…"))
@@ -900,8 +925,8 @@ fun processQuery(
                     onMessage(ChatMessage("assistant", fast))
                     onStateChange(VoiceState.SPEAKING)
                     vm.tts.speakWithCallback(fast) {
-                        kotlinx.coroutines.MainScope().launch {
-                            kotlinx.coroutines.delay(400)
+                        MainScope().launch {
+                            delay(400)
                             onStateChange(VoiceState.LISTENING)
                         }
                     }
@@ -912,13 +937,13 @@ fun processQuery(
             if (vm.chatEngine.cloudAgentEligible(text)) {
                 onMessage(ChatMessage("status", "Виконую…"))
                 val r = vm.chatEngine.cloudAgent(text, history)
-                if (r != com.dynamicai.launcher.llm.ChatEngine.CLOUD_FAILED) {
+                if (r != ChatEngine.CLOUD_FAILED) {
                     val reply = limitAnswer(r, 700)
                     onMessage(ChatMessage("assistant", reply))
                     onStateChange(VoiceState.SPEAKING)
                     vm.tts.speakWithCallback(reply) {
-                        kotlinx.coroutines.MainScope().launch {
-                            kotlinx.coroutines.delay(400)
+                        MainScope().launch {
+                            delay(400)
                             onStateChange(VoiceState.LISTENING)
                         }
                     }
@@ -941,13 +966,13 @@ fun processQuery(
             val useAgent = vm.settings.value.useAgent
             val maxTokens = vm.settings.value.maxResponseTokens
             val simple = cloudFirst || vm.currentModelId.startsWith("mnn-") || !useAgent
-            val job = kotlin.coroutines.coroutineContext[kotlinx.coroutines.Job]
+            val job = kotlin.coroutines.coroutineContext[Job]
 
             // Потокове озвучення: перше речення звучить, поки модель дописує решту
             var streamed = false
             var spokenChars = 0
             val maxSpoken = (maxTokens * 2).coerceAtLeast(200)
-            val streamDone = kotlinx.coroutines.CompletableDeferred<Unit>()
+            val streamDone = CompletableDeferred<Unit>()
             val splitter = SentenceSplitter { sentence ->
                 if (job?.isActive == false) return@SentenceSplitter   // «Стоп»: нічого нового не озвучуємо
                 if (spokenChars >= maxSpoken) return@SentenceSplitter
@@ -968,7 +993,7 @@ fun processQuery(
                 vm.chatEngine.answerWithAgent(text, history)
             }
             var usedCloud = cloudFirst
-            if (rawAnswer == com.dynamicai.launcher.llm.ChatEngine.CLOUD_FAILED) {
+            if (rawAnswer == ChatEngine.CLOUD_FAILED) {
                 // Хмара недоступна (нема мережі/ліміт) — тихо переходимо на локальну модель
                 usedCloud = false
                 if (!localOrFail()) return@launch
@@ -996,28 +1021,28 @@ fun processQuery(
                     // Токени не стрімились (напр. fallback без стріму) — озвучуємо готову відповідь одним шматком
                     onStateChange(VoiceState.SPEAKING)
                     vm.tts.speakWithCallback(answer) {
-                        kotlinx.coroutines.MainScope().launch {
-                            kotlinx.coroutines.delay(400)
+                        MainScope().launch {
+                            delay(400)
                             onStateChange(VoiceState.LISTENING)
                         }
                     }
                 } else {
                     vm.tts.endStream()
                     streamDone.await()
-                    kotlinx.coroutines.delay(400)
+                    delay(400)
                     onStateChange(VoiceState.LISTENING)
                 }
             } else {
                 onStateChange(VoiceState.SPEAKING)
                 vm.tts.speakWithCallback(answer) {
                     // Чекаємо 400мс, щоб динамік повністю замовк і мікрофон не зчитав відлуння
-                    kotlinx.coroutines.MainScope().launch {
-                        kotlinx.coroutines.delay(400)
+                    MainScope().launch {
+                        delay(400)
                         onStateChange(VoiceState.LISTENING)
                     }
                 }
             }
-        } catch (e: kotlinx.coroutines.CancellationException) {
+        } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
             onMessage(ChatMessage("error", "Щось пішло не так: ${e.message}", "retry"))

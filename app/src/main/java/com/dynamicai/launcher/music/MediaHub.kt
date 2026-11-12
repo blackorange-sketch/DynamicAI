@@ -18,6 +18,8 @@ import com.dynamicai.launcher.macro.MacroNotificationListener
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import android.media.AudioManager
+import android.media.session.MediaSession
 
 data class QueueEntry(val id: Long, val title: String, val subtitle: String, val icon: Bitmap?)
 
@@ -58,7 +60,7 @@ object MediaHub {
     private val cb = object : MediaController.Callback() {
         override fun onMetadataChanged(metadata: MediaMetadata?) = refresh()
         override fun onPlaybackStateChanged(state: PlaybackState?) = refresh()
-        override fun onQueueChanged(queue: MutableList<android.media.session.MediaSession.QueueItem>?) = refresh()
+        override fun onQueueChanged(queue: MutableList<MediaSession.QueueItem>?) = refresh()
         override fun onSessionDestroyed() { pick() }
     }
 
@@ -132,7 +134,7 @@ object MediaHub {
 
     // --- керування ---
     private fun key(keyCode: Int) {
-        val am = appCtx?.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager ?: return
+        val am = appCtx?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
         am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
         am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
     }

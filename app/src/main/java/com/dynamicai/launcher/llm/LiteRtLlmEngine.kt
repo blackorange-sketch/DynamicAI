@@ -11,6 +11,9 @@ import com.google.ai.edge.litertlm.ExperimentalFlags
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import android.app.ActivityManager
+import com.dynamicai.launcher.data.LauncherSettings
+import com.dynamicai.launcher.data.SettingsStorage
 
 class LiteRtLlmEngine(private val context: Context) : LlmEngine {
 
@@ -37,8 +40,8 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
 
     @Volatile var lastError: String = ""
 
-    private var currentSettings: com.dynamicai.launcher.data.LauncherSettings =
-        com.dynamicai.launcher.data.LauncherSettings()
+    private var currentSettings: LauncherSettings =
+        LauncherSettings()
 
     /** Параметри GPU з налаштувань додатка (Налаштування → Локальна LLM → LiteRT GPU). */
     private data class LiteRtOverrides(
@@ -82,7 +85,7 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         }
 // Спроби різних API
         // Завантажуємо актуальні налаштування
-        currentSettings = com.dynamicai.launcher.data.SettingsStorage(context).load()
+        currentSettings = SettingsStorage(context).load()
         Log.e(TAG, "⚙️ Backend=${currentSettings.llmBackend}, Temp=${currentSettings.llmTemperature}")
 
         // Звільняємо стару модель перед завантаженням нової (щоб не було OOM)
@@ -345,8 +348,8 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
             Thread.sleep(150)
 
             // Логуємо РЕАЛЬНУ фізичну RAM через ActivityManager
-            val am = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
-            val memInfo = android.app.ActivityManager.MemoryInfo()
+            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            val memInfo = ActivityManager.MemoryInfo()
             am.getMemoryInfo(memInfo)
             val availMb = memInfo.availMem / 1024 / 1024
             val totalMb = memInfo.totalMem / 1024 / 1024

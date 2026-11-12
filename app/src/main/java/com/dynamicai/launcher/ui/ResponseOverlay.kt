@@ -34,6 +34,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import androidx.compose.animation.core.tween
 
 /**
  * Компактна нижня панель з відповіддю асистента.
@@ -51,8 +55,8 @@ fun ResponseOverlay(
     var copied by remember(text) { mutableStateOf(false) }
     AnimatedVisibility(
         visible = visible && text.isNotBlank(),
-        enter = slideInVertically(androidx.compose.animation.core.tween(animMs(340), easing = Motion.Decel)) { it / 2 } + fadeIn(androidx.compose.animation.core.tween(animMs(200))),
-        exit = slideOutVertically(androidx.compose.animation.core.tween(animMs(200), easing = Motion.Accel)) { it / 2 } + fadeOut(androidx.compose.animation.core.tween(animMs(160))),
+        enter = slideInVertically(tween(animMs(340), easing = Motion.Decel)) { it / 2 } + fadeIn(tween(animMs(200))),
+        exit = slideOutVertically(tween(animMs(200), easing = Motion.Accel)) { it / 2 } + fadeOut(tween(animMs(160))),
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp)
@@ -114,8 +118,8 @@ fun ResponseOverlay(
                     fontSize = 13.sp,
                     modifier = Modifier.clickable {
                         try {
-                            val cm = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                            cm.setPrimaryClip(android.content.ClipData.newPlainText("Відповідь", text))
+                            val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            cm.setPrimaryClip(ClipData.newPlainText("Відповідь", text))
                             copied = true
                         } catch (_: Throwable) {}
                     }.padding(vertical = 6.dp)

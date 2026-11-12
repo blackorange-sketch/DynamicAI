@@ -4,6 +4,7 @@ import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import android.util.Log
 
 data class LlmModel(
     val id: String,
@@ -175,7 +176,7 @@ object ModelRepository {
                 // Gemma 4 без цих файлів падає нативно — вважаємо її незавантаженою (UI запропонує докачати)
                 val gemmaComplete = !model.fileName.contains("gemma", ignoreCase = true) ||
                     listOf("ple_embeddings_int4.bin", "audio.mnn.weight", "visual.mnn.weight").all { File(dir, it).exists() }
-                android.util.Log.d("MNN_SCAN", "Model ${model.id} (${model.fileName}): dir=$hasDir, llm=$hasLlm, weight=$hasWeight, tok=$hasTokenizer, complete=$gemmaComplete")
+                Log.d("MNN_SCAN", "Model ${model.id} (${model.fileName}): dir=$hasDir, llm=$hasLlm, weight=$hasWeight, tok=$hasTokenizer, complete=$gemmaComplete")
                 hasDir && hasLlm && hasWeight && hasTokenizer && gemmaComplete
             } else {
                 File(context.filesDir, model.fileName).exists()

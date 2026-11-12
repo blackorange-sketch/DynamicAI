@@ -31,6 +31,13 @@ import com.dynamicai.launcher.ui.LaunchedWhileStarted
 import com.dynamicai.launcher.ui.theme.AppTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import android.content.Context
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.ImageBitmap
+import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 private fun levelColor(frac: Float): Color = when {
     frac < 0.6f -> Color(0xFF66BB6A)
@@ -220,30 +227,30 @@ private fun SystemDetailsDialog(snap: SystemStats.Snapshot?, onDismiss: () -> Un
     }
 
     confirmStop?.let { r ->
-        androidx.compose.material3.AlertDialog(
+        AlertDialog(
             onDismissRequest = { confirmStop = null },
             title = { Text("Зупинити ${r.label}?") },
             text = { Text("Додаток буде примусово закрито (${r.value}).") },
             confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
+                TextButton(onClick = {
                     scope.launch { SystemStats.stopPackage(ctx, r.pkg); confirmStop = null; reload++ }
                 }) { Text("Зупинити") }
             },
-            dismissButton = { androidx.compose.material3.TextButton(onClick = { confirmStop = null }) { Text("Скасувати") } }
+            dismissButton = { TextButton(onClick = { confirmStop = null }) { Text("Скасувати") } }
         )
     }
 }
 
 private object ProcIconCache {
-    private val map = java.util.concurrent.ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
-    private val failed = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private val map = ConcurrentHashMap<String, ImageBitmap>()
+    private val failed = ConcurrentHashMap.newKeySet<String>()
 
-    fun get(pkg: String): androidx.compose.ui.graphics.ImageBitmap? = map[pkg]
+    fun get(pkg: String): ImageBitmap? = map[pkg]
 
-    suspend fun load(ctx: android.content.Context, pkg: String): androidx.compose.ui.graphics.ImageBitmap? {
+    suspend fun load(ctx: Context, pkg: String): ImageBitmap? {
         map[pkg]?.let { return it }
         if (pkg in failed) return null
-        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        return withContext(Dispatchers.IO) {
             try {
                 ctx.packageManager.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap().also { map[pkg] = it }
             } catch (_: Throwable) { failed.add(pkg); null }

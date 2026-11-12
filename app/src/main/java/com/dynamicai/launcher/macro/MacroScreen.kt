@@ -33,6 +33,25 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.PackageManager
+import android.nfc.NfcAdapter
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import com.dynamicai.launcher.data.AppRepository
+import com.dynamicai.launcher.llm.AgentEngine
+import com.dynamicai.launcher.model.AppInfo
+import com.dynamicai.launcher.system.BluetoothManager
+import java.util.UUID
+import kotlinx.coroutines.CancellationException
 
 /** Шаблон кроку: {0}, {1} у template замінюються значеннями полів. */
 private data class StepSpec(val label: String, val template: String, val params: List<Pair<String, String>> = emptyList(), val desc: String = "", val pick: String = "")
@@ -203,7 +222,7 @@ private val TRIGGER_GROUPS: List<Pair<String, List<StepSpec>>> = listOf(
     )
 )
 
-private fun describeTrigger(t: String, ctx: android.content.Context? = null): String {
+private fun describeTrigger(t: String, ctx: Context? = null): String {
     fun app(p: String) = if (p.isBlank()) "будь-який додаток" else if (ctx != null) AppUtils.labelFor(ctx, p) else p
     val kind = t.substringBefore(':')
     val arg = t.substringAfter(':', "")
@@ -244,7 +263,7 @@ private fun describeTrigger(t: String, ctx: android.content.Context? = null): St
     }
 }
 
-private fun describeStep(step: String, ctx: android.content.Context? = null): String {
+private fun describeStep(step: String, ctx: Context? = null): String {
     val s = step.trim().removePrefix("TOOL_CALL:").trim()
     fun pkgOf() = Regex("""package="([^"]*)"""").find(s)?.groupValues?.get(1).orEmpty().let { if (ctx != null) AppUtils.labelFor(ctx, it) else it }
     return when {
@@ -278,7 +297,7 @@ fun MacroScreen(onClose: () -> Unit, carBtName: String = "", onCarChange: (Strin
     var editingMacro by remember { mutableStateOf<Macro?>(null) }
     var autoOn by remember { mutableStateOf(storage.autoEnabled()) }
     var showCarPicker by remember { mutableStateOf(false) }
-    fun syncService() = com.dynamicai.launcher.macro.MacroTriggerService.sync(ctx.applicationContext)
+    fun syncService() = MacroTriggerService.sync(ctx.applicationContext)
 
     Box(
         modifier = Modifier
@@ -348,13 +367,13 @@ fun MacroScreen(onClose: () -> Unit, carBtName: String = "", onCarChange: (Strin
                             runJob = scope.launch {
                                 runningMacro = macro.id
                                 progressText = "Старт…"
-                                val agent = com.dynamicai.launcher.llm.AgentEngine(ctx, null)
+                                val agent = AgentEngine(ctx, null)
                                 try {
                                     val log = MacroRunner(ctx, { agent.runTool(it) }).run(macro) { p ->
                                         progressText = "Крок ${p.index}/${p.total}: ${describeStep(p.step, ctx)}"
                                     }
                                     resultLog = "«${macro.name}»\n\n$log"
-                                } catch (e: kotlinx.coroutines.CancellationException) {
+                                } catch (e: CancellationException) {
                                     resultLog = "«${macro.name}» зупинено"
                                 } finally {
                                     runningMacro = null
@@ -453,11 +472,11 @@ private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
     ) { Text(label, color = AppTheme.colors.textPrimary, fontSize = 12.sp) }
 }
 
-internal fun pairedBtNames(ctx: android.content.Context): List<String> = try {
-    if (android.os.Build.VERSION.SDK_INT >= 31 &&
-        ctx.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != android.content.pm.PackageManager.PERMISSION_GRANTED
+internal fun pairedBtNames(ctx: Context): List<String> = try {
+    if (Build.VERSION.SDK_INT >= 31 &&
+        ctx.checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
     ) emptyList()
-    else com.dynamicai.launcher.system.BluetoothManager(ctx).getPairedDevices().map { it.name }.distinct()
+    else BluetoothManager(ctx).getPairedDevices().map { it.name }.distinct()
 } catch (_: Throwable) { emptyList() }
 
 /** Вибір Bluetooth-пристрою (зі спарених). Порожній результат = «будь-який». */
@@ -465,8 +484,8 @@ internal fun pairedBtNames(ctx: android.content.Context): List<String> = try {
 fun BtDevicePickerDialog(title: String, current: String, anyLabel: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     var names by remember { mutableStateOf(pairedBtNames(ctx)) }
-    val permLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    val permLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
     ) { names = pairedBtNames(ctx) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -499,14 +518,14 @@ fun BtDevicePickerDialog(title: String, current: String, anyLabel: String, onPic
 @Composable
 fun AppPickerDialog(title: String, anyLabel: String?, onPick: (String) -> Unit, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
-    var apps by remember { mutableStateOf<List<com.dynamicai.launcher.model.AppInfo>?>(null) }
+    var apps by remember { mutableStateOf<List<AppInfo>?>(null) }
     var query by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         apps = try {
-            com.dynamicai.launcher.data.AppRepository(ctx).loadInstalledApps().distinctBy { it.packageName }.sortedBy { it.label.lowercase() }
+            AppRepository(ctx).loadInstalledApps().distinctBy { it.packageName }.sortedBy { it.label.lowercase() }
         } catch (_: Throwable) { emptyList() }
     }
-    androidx.activity.compose.BackHandler(onBack = onDismiss)
+    BackHandler(onBack = onDismiss)
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AppTheme.colors.backdropStart, AppTheme.colors.backdropEnd)))) {
         Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -534,7 +553,7 @@ fun AppPickerDialog(title: String, anyLabel: String?, onPick: (String) -> Unit, 
                             Modifier.fillMaxWidth().clickable { onPick(app.packageName) }.padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (icon != null) androidx.compose.foundation.Image(icon, null, Modifier.size(36.dp))
+                            if (icon != null) Image(icon, null, Modifier.size(36.dp))
                             else Spacer(Modifier.size(36.dp))
                             Spacer(Modifier.width(12.dp))
                             Column {
@@ -555,21 +574,21 @@ fun NfcScanDialog(onPick: (String) -> Unit, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val activity = remember {
         var c = ctx
-        while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
-        c as? android.app.Activity
+        while (c is ContextWrapper && c !is Activity) c = c.baseContext
+        c as? Activity
     }
-    val adapter = remember { try { android.nfc.NfcAdapter.getDefaultAdapter(ctx) } catch (_: Throwable) { null } }
+    val adapter = remember { try { NfcAdapter.getDefaultAdapter(ctx) } catch (_: Throwable) { null } }
     var enabled by remember { mutableStateOf(adapter?.isEnabled == true) }
     var found by remember { mutableStateOf("") }
     DisposableEffect(adapter, enabled) {
         val a = activity
         if (adapter != null && enabled && a != null) {
-            val h = android.os.Handler(android.os.Looper.getMainLooper())
+            val h = Handler(Looper.getMainLooper())
             try {
                 adapter.enableReaderMode(
                     a, { tag -> h.post { found = NfcTagActivity.hex(tag.id) } },
-                    android.nfc.NfcAdapter.FLAG_READER_NFC_A or android.nfc.NfcAdapter.FLAG_READER_NFC_B or
-                        android.nfc.NfcAdapter.FLAG_READER_NFC_F or android.nfc.NfcAdapter.FLAG_READER_NFC_V, null
+                    NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or
+                        NfcAdapter.FLAG_READER_NFC_F or NfcAdapter.FLAG_READER_NFC_V, null
                 )
             } catch (_: Throwable) {}
         }
@@ -586,7 +605,7 @@ fun NfcScanDialog(onPick: (String) -> Unit, onDismiss: () -> Unit) {
                     !enabled -> {
                         Text("NFC вимкнено. Увімкніть його в налаштуваннях і поверніться.", color = AppTheme.colors.textSecondary, fontSize = 13.sp)
                         TextButton(onClick = {
-                            try { ctx.startActivity(Intent(android.provider.Settings.ACTION_NFC_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Throwable) {}
+                            try { ctx.startActivity(Intent(Settings.ACTION_NFC_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Throwable) {}
                         }) { Text("Відкрити налаштування NFC", color = AppTheme.colors.successLight) }
                         TextButton(onClick = { enabled = adapter.isEnabled }) { Text("Я увімкнув", color = AppTheme.colors.accent) }
                     }
@@ -609,8 +628,8 @@ fun NfcScanDialog(onPick: (String) -> Unit, onDismiss: () -> Unit) {
 @Composable
 fun PermissionNeedDialog(need: TriggerPermissions.Need, onClose: () -> Unit) {
     val ctx = LocalContext.current
-    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
     ) { onClose() }
     AlertDialog(
         onDismissRequest = onClose,
@@ -633,7 +652,7 @@ fun PermissionNeedDialog(need: TriggerPermissions.Need, onClose: () -> Unit) {
 /** Повноекранний вибір із групами; список завжди прокручується. */
 @Composable
 private fun PickerScreen(title: String, groups: List<Pair<String, List<StepSpec>>>, onPick: (StepSpec) -> Unit, onClose: () -> Unit) {
-    androidx.activity.compose.BackHandler(onBack = onClose)
+    BackHandler(onBack = onClose)
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AppTheme.colors.backdropStart, AppTheme.colors.backdropEnd)))) {
         Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 16.dp)) {
             Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -724,7 +743,7 @@ fun MacroEditorScreen(
     val iconOptions = listOf("⚡", "🏢", "🚗", "🎬", "🌙", "🏠", "🎮", "🎵", "☕", "💼", "🌞", "🚀")
     val colorOptions = listOf(0xFF2196F3, 0xFF4CAF50, 0xFFFF9800, 0xFF9C27B0, 0xFFE91E63, 0xFF00BCD4)
 
-    androidx.activity.compose.BackHandler(onBack = onDismiss)
+    BackHandler(onBack = onDismiss)
     val canSave = name.isNotBlank() && steps.isNotEmpty()
 
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AppTheme.colors.backdropStart, AppTheme.colors.backdropEnd)))) {
@@ -737,7 +756,7 @@ fun MacroEditorScreen(
                 }
                 Text("Зберегти", color = if (canSave) AppTheme.colors.successLight else AppTheme.colors.textMuted, fontSize = 15.sp, fontWeight = FontWeight.Bold,
                     modifier = Modifier.clickable(enabled = canSave) {
-                        val base = macro ?: Macro(id = java.util.UUID.randomUUID().toString(), name = name, steps = emptyList())
+                        val base = macro ?: Macro(id = UUID.randomUUID().toString(), name = name, steps = emptyList())
                         onSave(base.copy(
                             name = name.trim(), icon = icon, colorHex = colorHex, trigger = trigger.trim(),
                             steps = steps.map { it.trim() }.filter { it.isNotBlank() }, delayMs = delayMs, stopOnError = stopOnError,

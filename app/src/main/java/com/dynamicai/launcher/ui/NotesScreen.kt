@@ -32,12 +32,13 @@ import com.dynamicai.launcher.note.NotesStorage
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun NotesScreen(
     onClose: () -> Unit
 ) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val ctx = LocalContext.current
     val storage = remember { NotesStorage(ctx) }
     var notes by remember { mutableStateOf<List<Note>>(emptyList()) }
     var showEditor by remember { mutableStateOf(false) }

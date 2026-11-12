@@ -86,31 +86,36 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.first
+import android.content.Context
+import android.os.PowerManager
+import android.util.Log
+import com.dynamicai.launcher.data.SettingsStorage
+import com.dynamicai.launcher.suggestion.BrowserBridge
 
-internal fun openGoogleSearch(ctx: android.content.Context, query: String) {
-    val url = "https://www.google.com/search?q=" + android.net.Uri.encode(query)
-    if (com.dynamicai.launcher.suggestion.BrowserBridge.open(ctx, url)) return
-    val viewIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)).apply {
-        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+internal fun openGoogleSearch(ctx: Context, query: String) {
+    val url = "https://www.google.com/search?q=" + Uri.encode(query)
+    if (BrowserBridge.open(ctx, url)) return
+    val viewIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     
     try {
-        val st = com.dynamicai.launcher.data.SettingsStorage(ctx).load()
+        val st = SettingsStorage(ctx).load()
         if (st.defaultBrowser.isNotBlank()) {
-            val i = android.content.Intent(viewIntent).setPackage(st.defaultBrowser)
+            val i = Intent(viewIntent).setPackage(st.defaultBrowser)
             ctx.startActivity(i)
             return
         }
     } catch (_: Throwable) {}
     
     try {
-        val i = android.content.Intent(viewIntent).setPackage("com.google.android.googlequicksearchbox")
+        val i = Intent(viewIntent).setPackage("com.google.android.googlequicksearchbox")
         ctx.startActivity(i)
         return
     } catch (_: Throwable) {}
     
     try {
-        val i = android.content.Intent(viewIntent).setPackage("com.android.chrome")
+        val i = Intent(viewIntent).setPackage("com.android.chrome")
         ctx.startActivity(i)
         return
     } catch (_: Throwable) {}
@@ -120,9 +125,9 @@ internal fun openGoogleSearch(ctx: android.content.Context, query: String) {
     } catch (_: Throwable) {}
 }
 
-internal fun isScreenOn(ctx: android.content.Context): Boolean {
+internal fun isScreenOn(ctx: Context): Boolean {
     return try {
-        val pm = ctx.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+        val pm = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
         pm.isInteractive
     } catch (_: Throwable) { true }
 
@@ -131,7 +136,7 @@ internal fun isScreenOn(ctx: android.content.Context): Boolean {
 }
 
 /** Системна сторінка «Про застосунок». */
-internal fun openAppInfo(ctx: android.content.Context, packageName: String) {
+internal fun openAppInfo(ctx: Context, packageName: String) {
     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
         data = Uri.parse("package:$packageName")
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -140,7 +145,7 @@ internal fun openAppInfo(ctx: android.content.Context, packageName: String) {
 }
 
 /** Видалення застосунку: системний діалог, запасний ACTION_DELETE, наостанок — сторінка застосунку. */
-internal fun uninstallApp(ctx: android.content.Context, packageName: String) {
+internal fun uninstallApp(ctx: Context, packageName: String) {
     try {
         val uninstallIntent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
             data = Uri.fromParts("package", packageName, null)
@@ -150,7 +155,7 @@ internal fun uninstallApp(ctx: android.content.Context, packageName: String) {
         try {
             ctx.startActivity(uninstallIntent)
         } catch (e1: Exception) {
-            android.util.Log.e("Uninstall", "UNINSTALL failed: ${e1.message}", e1)
+            Log.e("Uninstall", "UNINSTALL failed: ${e1.message}", e1)
             val deleteIntent = Intent(Intent.ACTION_DELETE).apply {
                 data = Uri.parse("package:$packageName")
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

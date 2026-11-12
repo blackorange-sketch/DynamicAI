@@ -5,11 +5,14 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import java.util.Locale
+import android.os.Handler
+import android.os.Looper
+import com.dynamicai.launcher.data.SettingsStorage
 
 class TtsManager(private val context: Context) {
     companion object { private const val TAG = "TtsManager" }
 
-    private val settingsStorage = com.dynamicai.launcher.data.SettingsStorage(context)
+    private val settingsStorage = SettingsStorage(context)
     private var tts: TextToSpeech? = null
     private var ready = false
     private var pendingText: String? = null
@@ -62,7 +65,7 @@ class TtsManager(private val context: Context) {
         }
     }
 
-    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private var currentLocale: Locale? = null
 
@@ -164,7 +167,7 @@ class TtsManager(private val context: Context) {
             }
 
             var completed = false
-            val handler = android.os.Handler(android.os.Looper.getMainLooper())
+            val handler = Handler(Looper.getMainLooper())
             
             // Запобіжник часу (щоб додаток не завис назавжди, якщо двигун мовчить)
             val timeoutRunnable = Runnable {

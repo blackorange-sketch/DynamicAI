@@ -432,6 +432,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val loaded = repo.loadInstalledApps()
                 _apps.value = loaded
+                refreshSmartFolders()
                 try { appsCache.save(loaded) } catch (_: Exception) {}
                 updateQuery("")
             } catch (_: Throwable) {}
@@ -611,7 +612,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             "games" to "Ігри", "social" to "Соц. мережі", "media" to "Медіа",
             "tools" to "Інструменти", "maps" to "Навігація"
         )
-        val inFolders = _folders.value.flatMap { it.packageNames }.toSet()
+        val inFolders = _folders.value.filter { it.smart.isBlank() }.flatMap { it.packageNames }.toSet()
         val free = _apps.value.filter { it.packageName !in _hidden.value && it.packageName !in inFolders }
         var created = 0
         var filled = 0
@@ -636,6 +637,49 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun folderOf(pkg: String): Folder? = folderStorage.folderOf(pkg)
+
+    // ===== Розумні папки =====
+    private val installTimes = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    private fun smartContents(smart: String): List<String> {
+        val app = getApplication<android.app.Application>()
+        val visible = _apps.value.filter { it.packageName !in _hidden.value }
+        return when {
+            smart == "recent" -> visible.filter { !it.isSystem }
+                .sortedByDescending { a ->
+                    installTimes.getOrPut(a.packageName) {
+                        try { app.packageManager.getPackageInfo(a.packageName, 0).firstInstallTime } catch (_: Throwable) { 0L }
+                    }
+                }
+                .take(8).map { it.packageName }
+            smart == "frequent" -> {
+                val have = visible.map { it.packageName }.toSet()
+                com.dynamicai.launcher.suggestion.AppUsage.top(app, 40).filter { it in have }.take(8)
+            }
+            smart.startsWith("cat:") -> visible.filter { it.category == smart.removePrefix("cat:") }
+                .sortedBy { it.label.lowercase() }.map { it.packageName }
+            else -> emptyList()
+        }
+    }
+
+    /** Перераховує вміст розумних папок (нові / часті / за категорією). Викликається при поверненні на головний екран. */
+    fun refreshSmartFolders() {
+        if (_folders.value.none { it.smart.isNotBlank() } || _apps.value.isEmpty()) return
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
+            var changed = false
+            folderStorage.get().filter { it.smart.isNotBlank() }.forEach { f ->
+                val pkgs = smartContents(f.smart)
+                if (pkgs != f.packageNames) { folderStorage.setPackages(f.id, pkgs); changed = true }
+            }
+            if (changed) _folders.value = folderStorage.get()
+        }
+    }
+
+    fun createSmartFolder(smart: String, name: String) {
+        folderStorage.createSmart(name, smart)
+        _folders.value = folderStorage.get()
+        refreshSmartFolders()
+    }
 
     private var weatherJob: Job? = null
 

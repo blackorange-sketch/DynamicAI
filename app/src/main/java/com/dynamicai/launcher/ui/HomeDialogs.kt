@@ -213,6 +213,38 @@ fun FolderHeaderDialog(folder: Folder, onDelete: () -> Unit, onDismiss: () -> Un
     )
 }
 
+/** Розумна папка: вміст наповнюється й оновлюється сам. */
+@Composable
+fun SmartFolderDialog(onPick: (smart: String, name: String) -> Unit, onDismiss: () -> Unit) {
+    val options = listOf(
+        Triple("recent", "🆕 Нові", "Нові"),
+        Triple("frequent", "⭐ Часто вживані", "Часті"),
+        Triple("cat:games", "🎮 Ігри", "Ігри"),
+        Triple("cat:social", "💬 Соц. мережі", "Соц. мережі"),
+        Triple("cat:media", "🎬 Медіа", "Медіа"),
+        Triple("cat:tools", "🧰 Інструменти", "Інструменти"),
+        Triple("cat:maps", "🗺 Навігація", "Навігація")
+    )
+    AlertDialog(
+        modifier = Modifier.popIn(),
+        onDismissRequest = onDismiss,
+        title = { Text("Розумна папка", color = AppTheme.colors.textPrimary) },
+        text = {
+            Column {
+                Text(
+                    "Вміст такої папки оновлюється сам: щойно встановлені, найуживаніші або всі застосунки категорії.",
+                    color = AppTheme.colors.textMuted, fontSize = 13.sp
+                )
+                Spacer(Modifier.height(8.dp))
+                options.forEach { (smart, label, name) -> DialogAction(label) { onPick(smart, name) } }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { CancelButton(onClick = onDismiss) },
+        containerColor = AppTheme.colors.surface
+    )
+}
+
 /** Нова папка з вибором застосунків (з головного меню). */
 @Composable
 fun NewFolderDialog(apps: List<AppInfo>, onCreate: (String, List<String>) -> Unit, onDismiss: () -> Unit) {

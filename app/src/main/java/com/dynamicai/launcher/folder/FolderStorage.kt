@@ -20,7 +20,8 @@ class FolderStorage(context: Context) {
                 Folder(
                     id = o.getString("id"),
                     name = o.getString("name"),
-                    packageNames = pkgs
+                    packageNames = pkgs,
+                    smart = o.optString("smart", "")
                 )
             }
         } catch (_: Exception) { emptyList() }
@@ -61,11 +62,22 @@ class FolderStorage(context: Context) {
             if (f.id == folderId) f.copy(packageNames = f.packageNames - pkg)
             else f
         }
-        // Прибираємо порожні папки
-        save(list.filter { it.packageNames.isNotEmpty() })
+        // Прибираємо порожні папки (розумні лишаємо: їхній вміст наповнюється сам)
+        save(list.filter { it.packageNames.isNotEmpty() || it.smart.isNotBlank() })
     }
 
-    fun folderOf(pkg: String): Folder? = get().firstOrNull { pkg in it.packageNames }
+    /** Звичайна папка, де лежить застосунок. Розумні папки не рахуються: вони лише показують застосунки, а не забирають їх. */
+    fun folderOf(pkg: String): Folder? = get().firstOrNull { it.smart.isBlank() && pkg in it.packageNames }
+
+    fun createSmart(name: String, smart: String): Folder {
+        val f = Folder(id = UUID.randomUUID().toString(), name = name, packageNames = emptyList(), smart = smart)
+        add(f)
+        return f
+    }
+
+    /** Оновлює вміст папки, не змінюючи порядок папок. */
+    fun setPackages(id: String, pkgs: List<String>) =
+        save(get().map { if (it.id == id) it.copy(packageNames = pkgs) else it })
 
     private fun save(list: List<Folder>) {
         val arr = JSONArray()
@@ -73,6 +85,7 @@ class FolderStorage(context: Context) {
             val o = JSONObject().apply {
                 put("id", f.id)
                 put("name", f.name)
+                if (f.smart.isNotBlank()) put("smart", f.smart)
                 val pkgs = JSONArray()
                 f.packageNames.forEach { pkgs.put(it) }
                 put("pkgs", pkgs)

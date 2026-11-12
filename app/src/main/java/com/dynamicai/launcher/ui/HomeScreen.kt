@@ -192,6 +192,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     var selectedTabFolderId by remember { mutableStateOf<String?>(null) }
     var showMainMenu by remember { mutableStateOf(false) }
     var showNewFolderDialog by remember { mutableStateOf(false) }
+    var showSmartFolderDialog by remember { mutableStateOf(false) }
+    // Розумні папки перераховуються щоразу, коли головний екран повертається на передній план
+    LaunchedWhileStarted { vm.refreshSmartFolders() }
     var showCreateFolder by remember { mutableStateOf<AppInfo?>(null) }
     var addToFolderPicker by remember { mutableStateOf<AppInfo?>(null) }
     var overlayActive by remember { mutableStateOf(false) }
@@ -1368,6 +1371,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 ),
                 items = buildList {
                     add(MenuItemSpec("Створити папку") { showNewFolderDialog = true })
+                    add(MenuItemSpec("Розумна папка…") { showSmartFolderDialog = true })
                     add(MenuItemSpec("Автопапки за категоріями") { vm.createAutoFolders() })
                     if (placedWidgetsStorage.hasDashboard())
                         add(MenuItemSpec("Прибрати дошку зліва") {
@@ -1388,6 +1392,13 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     add(MenuItemSpec("Оновити контакти") { vm.loadContacts() })
                     add(MenuItemSpec("Очистити історію команд") { vm.clearHistory() })
                 }
+            )
+        }
+
+        if (showSmartFolderDialog) {
+            SmartFolderDialog(
+                onPick = { smart, name -> vm.createSmartFolder(smart, name); showSmartFolderDialog = false },
+                onDismiss = { showSmartFolderDialog = false }
             )
         }
 

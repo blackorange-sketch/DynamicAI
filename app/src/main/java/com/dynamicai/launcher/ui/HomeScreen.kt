@@ -1006,6 +1006,11 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 }
             }
 
+            // Проактивна підказка: подія календаря, низький заряд, дощ уранці, пізня година
+            if (settings.proactiveHints && !searchActive && !listVisible && !isLandscape) {
+                ProactiveHintCard(weather)
+            }
+
             androidx.compose.animation.AnimatedVisibility(
                 visible = showSearchField,
                 enter = expandHorizontally(

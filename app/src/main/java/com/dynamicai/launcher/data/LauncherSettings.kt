@@ -25,6 +25,7 @@ data class LauncherSettings(
     val overlayOffsetYPercentLandscape: Int = 50,
     val overlayPositionLandscape: String = "right",
     val pageParallax: Boolean = true,
+    val proactiveHints: Boolean = true,       // картка-підказка на головному екрані
     val nightClockMode: Boolean = false,
     val overlayHideInLandscape: Boolean = true,  // ховати плаваючий док у ландшафті (відео, ігри)
     val overlayHideOnKeyboard: Boolean = true,   // ховати плаваючий док при відкритій клавіатурі
@@ -123,6 +124,7 @@ class SettingsStorage(context: Context) {
         overlayOffsetYPercentLandscape = prefs.getInt("overlayOffsetYPercentLandscape", 50),
         overlayPositionLandscape = prefs.getString("overlayPositionLandscape", "right") ?: "right",
         pageParallax = prefs.getBoolean("pageParallax", true),
+        proactiveHints = prefs.getBoolean("proactiveHints", true),
         nightClockMode = prefs.getBoolean("nightClockMode", false),
         overlayAutoCollapseMs = prefs.getInt("overlayAutoCollapseMs", 0),
         overlayEdgePaddingDp = prefs.getInt("overlayEdgePaddingDp", 14),
@@ -219,6 +221,7 @@ class SettingsStorage(context: Context) {
             .putInt("overlayOffsetYPercentLandscape", s.overlayOffsetYPercentLandscape)
             .putString("overlayPositionLandscape", s.overlayPositionLandscape)
             .putBoolean("pageParallax", s.pageParallax)
+            .putBoolean("proactiveHints", s.proactiveHints)
             .putBoolean("nightClockMode", s.nightClockMode)
             .putInt("overlayAutoCollapseMs", s.overlayAutoCollapseMs)
             .putInt("overlayEdgePaddingDp", s.overlayEdgePaddingDp)

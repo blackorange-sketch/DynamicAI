@@ -299,6 +299,9 @@ internal fun ColumnScope.SettingsAppearanceSection(
                 SwitchRow("Жива аврора на фоні (більше споживає батарею)", settings.liveAurora, Icons.Default.Star, AppTheme.colors.accent) {
                     onSettingsChange(settings.copy(liveAurora = it))
                 }
+                SwitchRow("Підказки на головному екрані", settings.proactiveHints, Icons.Default.Star, AppTheme.colors.accent) {
+                    onSettingsChange(settings.copy(proactiveHints = it))
+                }
                 SwitchRow("Паралакс при гортанні сторінок", settings.pageParallax, Icons.Default.Star, AppTheme.colors.accent) {
                     onSettingsChange(settings.copy(pageParallax = it))
                 }

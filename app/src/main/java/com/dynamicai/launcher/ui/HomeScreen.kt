@@ -1326,6 +1326,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 letters = letters,
                 activeLetter = activeLetter,
                 onLetterSelected = { letter ->
+                    val listWasHidden = !listVisible
                     releaseJob?.cancel()
                     activeLetter = letter
                     showOverlay = true
@@ -1351,16 +1352,28 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                                 } catch (_: Throwable) {}
                             }
                         } else {
-                            val idx = suggestions.indexOfFirst {
-                                it is Suggestion.App && (it.app.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
-                            }
+                            // Список щойно відкрився: чекаємо, доки з'являться дані й розмітка, інакше перший дотик нікуди не прокручує
+                            val idx = withTimeoutOrNull(800) {
+                                androidx.compose.runtime.snapshotFlow {
+                                    suggestions.indexOfFirst {
+                                        it is Suggestion.App && (it.app.label.firstOrNull()?.uppercaseChar() ?: '#') == letter
+                                    }
+                                }.first { it >= 0 }
+                            } ?: -1
                             if (idx >= 0) {
-                                val current = listState.firstVisibleItemIndex
-                                val d = kotlin.math.abs(idx - current)
-                                if (d > 60) {
-                                    listState.scrollToItem((idx - 5).coerceAtLeast(0))
+                                withTimeoutOrNull(800) {
+                                    androidx.compose.runtime.snapshotFlow { listState.layoutInfo.totalItemsCount }.first { it > idx }
                                 }
-                                listState.animateScrollToItem(idx)
+                                if (listWasHidden) {
+                                    listState.scrollToItem(idx)   // список ще проявляється — одразу стаємо на букву
+                                } else {
+                                    val current = listState.firstVisibleItemIndex
+                                    val d = kotlin.math.abs(idx - current)
+                                    if (d > 60) {
+                                        listState.scrollToItem((idx - 5).coerceAtLeast(0))
+                                    }
+                                    listState.animateScrollToItem(idx)
+                                }
                             }
                         }
                     }

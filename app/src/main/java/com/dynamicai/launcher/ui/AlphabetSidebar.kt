@@ -7,7 +7,10 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -46,6 +49,9 @@ fun AlphabetSidebar(
     var lastLetter by remember { mutableStateOf<Char?>(null) }
 
     val activeIndex = letters.indexOf(activeLetter).takeIf { it >= 0 }
+    // Обробник жестів живе довше за одну композицію — завжди викликаємо найсвіжіші колбеки
+    val onSelected by rememberUpdatedState(onLetterSelected)
+    val onReleased by rememberUpdatedState(onLetterReleased)
 
     // Обчислюємо padding у @Composable scope
     val paddingPx = with(density) { 24.dp.toPx() }
@@ -65,7 +71,7 @@ fun AlphabetSidebar(
         if (letter != lastLetter) {
             lastLetter = letter
             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            onLetterSelected(letter)
+            onSelected(letter)
         }
     }
 
@@ -76,24 +82,28 @@ fun AlphabetSidebar(
             .onGloballyPositioned { coords ->
                 sidebarHeight = coords.size.height.toFloat()
             }
+            // Край екрана: не віддаємо дотик системному жесту «назад»
+            .systemGestureExclusion()
             .pointerInput(letters) {
-                detectDragGestures(
-                    onDragStart = { offset -> select(letterAtOffset(offset.y)) },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        select(letterAtOffset(change.position.y))
-                    },
-                    onDragEnd = { lastLetter = null; onLetterReleased(false) },
-                    onDragCancel = { lastLetter = null; onLetterReleased(false) }
-                )
-            }
-            .pointerInput(letters) {
-                detectTapGestures(
-                    onTap = { offset ->
-                        select(letterAtOffset(offset.y))
-                        onLetterReleased(true)
+                // Один обробник замість пари «тап + перетягування»: буква обирається в момент дотику,
+                // а не після зсуву пальця, і дотик не дістається жестам головного екрана
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    down.consume()
+                    select(letterAtOffset(down.position.y))
+                    val slop = viewConfiguration.touchSlop
+                    var moved = false
+                    while (true) {
+                        val ev = awaitPointerEvent()
+                        val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!ch.pressed) { ch.consume(); break }
+                        if (abs(ch.position.y - down.position.y) > slop || abs(ch.position.x - down.position.x) > slop) moved = true
+                        ch.consume()
+                        select(letterAtOffset(ch.position.y))
                     }
-                )
+                    lastLetter = null
+                    onReleased(!moved)
+                }
             },
         contentAlignment = Alignment.Center
     ) {

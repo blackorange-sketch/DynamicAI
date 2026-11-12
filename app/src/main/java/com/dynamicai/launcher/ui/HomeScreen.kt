@@ -799,132 +799,19 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             label = "leftFraction"
         )
         val resultsBlock: @Composable (Modifier) -> Unit = { mod ->
-            Box(modifier = mod) {
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = listVisible || searchMode || query.isNotBlank(),
-                    enter = fadeIn(tween(110)),
-                    exit = fadeOut(tween(90)),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-            if (query.isNotBlank()) {
-            // Набраний запит: додатки — квадратні плитки, решта результатів — рядки на всю ширину
-            LazyVerticalGrid(
-                state = searchGridState,
-                columns = gridCells(),
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 8.dp, bottom = if (dockPkgs.isNotEmpty()) 110.dp else 8.dp),
-                horizontalArrangement = gridGapH(),
-                verticalArrangement = gridGapV()
-            ) {
-                if (suggestions.isEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text("Нічого не знайдено за \"$query\"", color = AppTheme.colors.textMuted, fontSize = 16.sp)
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                "Спробуй: ліхтарик · wifi · Аня",
-                                color = AppTheme.colors.textMuted.copy(alpha = 0.7f), fontSize = 13.sp
-                            )
-                        }
-                    }
-                }
-                // Додатки — плитками зверху, решта результатів (дії, налаштування, контакти) — рядками знизу
-                val orderedSuggestions = suggestions.filterIsInstance<Suggestion.App>() +
-                    suggestions.filter { it !is Suggestion.App }
-                items(
-                    orderedSuggestions,
-                    key = { it.stableKey() },
-                    span = { s ->
-                        GridItemSpan(if (s is Suggestion.App) 1 else maxLineSpan)
-                    }
-                ) { s ->
-                    when (s) {
-                        is Suggestion.Action -> SuggestionActionRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.Setting -> SuggestionSettingRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.Extra -> SuggestionExtraRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.Contact -> SuggestionContactRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.App -> AppGridItem(
-                            app = s.app,
-                            onLongClick = { menuApp = s.app },
-                            onTap = { launchAppWithAnimation(s.app) }
-                        )
-                    }
-                }
-            }
-            } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    top = 8.dp,
-                    bottom = if (dockPkgs.isNotEmpty()) 110.dp else 8.dp
-                )
-            ) {
-                if (suggestions.isEmpty() && query.isNotBlank()) {
-                    item {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text("Нічого не знайдено за \"$query\"", color = AppTheme.colors.textMuted, fontSize = 16.sp)
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                "Спробуй: ліхтарик · wifi · Аня",
-                                color = AppTheme.colors.textMuted.copy(alpha = 0.7f), fontSize = 13.sp
-                            )
-                        }
-                    }
-                }
-                items(suggestions, key = { it.stableKey() }) { s ->
-                  // Без animateItem: при швидкому наборі рядки мають змінюватись різко, а не «пливти»
-                  androidx.compose.foundation.layout.Box {
-                    when (s) {
-                        is Suggestion.Action -> SuggestionActionRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.Setting -> SuggestionSettingRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.Extra -> SuggestionExtraRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.Contact -> SuggestionContactRow(s) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            vm.executeSuggestion(s); closeSearch()
-                        }
-                        is Suggestion.App -> AppRow(
-                            app = s.app,
-                            inDock = s.app.packageName in dockPkgs,
-                            showLabel = settings.showLabels,
-                            onClick = { launchAppWithAnimation(s.app) },
-                            onLongClick = { menuApp = s.app },
-                            highlight = query
-                        )
-                    }
-                  }
-                }
-            }
-            }
-                }
-            }
+            HomeSearchResults(
+                visible = listVisible || searchMode || query.isNotBlank(),
+                query = query,
+                suggestions = suggestions,
+                gridState = searchGridState,
+                listState = listState,
+                dockPkgs = dockPkgs,
+                showLabels = settings.showLabels,
+                onExecute = { s -> vm.executeSuggestion(s); closeSearch() },
+                onAppTap = { app -> launchAppWithAnimation(app) },
+                onAppLongClick = { app -> menuApp = app },
+                modifier = mod
+            )
         }
         val folderBlock: @Composable (Modifier, Dp) -> Unit = { mod, bottomPad ->
             Column(

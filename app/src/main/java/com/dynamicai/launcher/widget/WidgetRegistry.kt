@@ -38,10 +38,10 @@ object WidgetRegistry {
     )
 
     fun labelFor(type: String): String =
-        available.find { it.id == type }?.label ?: type
+        available.find { it.id == type }?.label ?: if (AppWidgetHolder.idOf(type) != null) "Віджет програми" else type
 
     fun iconFor(type: String): String =
-        available.find { it.id == type }?.icon ?: "📦"
+        available.find { it.id == type }?.icon ?: if (AppWidgetHolder.idOf(type) != null) "📱" else "📦"
 }
 
 @Composable
@@ -101,5 +101,7 @@ fun RenderPlacedWidget(
         "tgchats" -> TgChatsWidget(widget.size, onWidgetLongPress, sizeModifier)
         "quick_actions" -> QuickActionsWidget(widget.size, onWidgetLongPress, sizeModifier)
         "news" -> NewsWidget(widget.size, onWidgetLongPress, sizeModifier)
+        // Віджет іншої програми: тип "appwidget:<номер>"
+        else -> AppWidgetHolder.idOf(widget.type)?.let { SystemAppWidget(it, widget.size, onWidgetLongPress, sizeModifier) }
     }
 }

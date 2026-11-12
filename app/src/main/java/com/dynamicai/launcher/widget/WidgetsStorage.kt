@@ -8,6 +8,7 @@ import java.util.UUID
 class WidgetsStorage(context: Context) {
 
     private val prefs = context.getSharedPreferences("dynamicai_widgets", Context.MODE_PRIVATE)
+    private val appCtx = context.applicationContext
 
     fun get(): List<PlacedWidget> {
         val raw = prefs.getString("items", null) ?: return emptyList()
@@ -43,7 +44,10 @@ class WidgetsStorage(context: Context) {
     }
 
     fun remove(id: String) {
-        save(get().filterNot { it.id == id })
+        val list = get()
+        // Віджет іншої програми: повертаємо системі його номер
+        list.firstOrNull { it.id == id }?.let { w -> AppWidgetHolder.idOf(w.type)?.let { AppWidgetHolder.delete(appCtx, it) } }
+        save(list.filterNot { it.id == id })
     }
 
     fun updateSize(id: String, newSize: String) {

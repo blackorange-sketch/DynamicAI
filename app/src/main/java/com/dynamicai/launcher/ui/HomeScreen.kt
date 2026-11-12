@@ -192,6 +192,25 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     var selectedTabFolderId by remember { mutableStateOf<String?>(null) }
     var showMainMenu by remember { mutableStateOf(false) }
     var showNewFolderDialog by remember { mutableStateOf(false) }
+    // Віджети інших програм: системний вибір → розміщення на сторінці → за потреби екран налаштування віджета
+    com.dynamicai.launcher.widget.AppWidgetHostLifecycle()
+    var pendingWidgetPage by remember { mutableStateOf(0) }
+    var pendingWidgetId by remember { mutableStateOf(-1) }
+    val systemWidgetPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { res ->
+        val holder = com.dynamicai.launcher.widget.AppWidgetHolder
+        val id = res.data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId) ?: pendingWidgetId
+        if (res.resultCode == android.app.Activity.RESULT_OK && id != -1) {
+            placedWidgetsStorage.add(holder.typeFor(id), pendingWidgetPage)
+            placedWidgets = placedWidgetsStorage.get()
+            currentPage = pendingWidgetPage
+            holder.configureIfNeeded(ctx as? android.app.Activity, id)
+        } else if (pendingWidgetId != -1) {
+            holder.delete(ctx, pendingWidgetId)
+        }
+        pendingWidgetId = -1
+    }
     var showSmartFolderDialog by remember { mutableStateOf(false) }
     // Розумні папки перераховуються щоразу, коли головний екран повертається на передній план
     LaunchedWhileStarted { vm.refreshSmartFolders() }
@@ -554,6 +573,16 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                 placedWidgetsStorage.add(type, page)
                 placedWidgets = placedWidgetsStorage.get()
                 currentPage = page
+            },
+            onPickSystem = { page ->
+                showAddWidgetDialog = false
+                try {
+                    pendingWidgetPage = page
+                    pendingWidgetId = com.dynamicai.launcher.widget.AppWidgetHolder.allocate(ctx)
+                    systemWidgetPicker.launch(com.dynamicai.launcher.widget.AppWidgetHolder.pickIntent(pendingWidgetId))
+                } catch (t: Throwable) {
+                    android.widget.Toast.makeText(ctx, "Не вдалося відкрити список віджетів", android.widget.Toast.LENGTH_SHORT).show()
+                }
             }
         )
     }

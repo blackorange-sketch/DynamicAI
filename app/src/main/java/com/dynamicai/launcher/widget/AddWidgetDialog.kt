@@ -24,7 +24,8 @@ import androidx.compose.ui.unit.sp
 fun AddWidgetDialog(
     currentPageCount: Int,
     onDismiss: () -> Unit,
-    onAdd: (type: String, page: Int) -> Unit
+    onAdd: (type: String, page: Int) -> Unit,
+    onPickSystem: (page: Int) -> Unit = {}
 ) {
     var selectedType by remember { mutableStateOf(WidgetRegistry.available.first().id) }
     var selectedPage by remember { mutableStateOf(0) }
@@ -62,6 +63,26 @@ fun AddWidgetDialog(
                         Text(type.icon, fontSize = 20.sp)
                         Spacer(Modifier.width(10.dp))
                         Text(type.label, color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+                    }
+                }
+
+                // Віджет іншої програми: відкриває системний список на вибраній нижче сторінці
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(AppTheme.colors.textPrimary.copy(alpha = 0.05f))
+                        .border(1.dp, AppTheme.colors.accent.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .clickable { onPickSystem(selectedPage) }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("📱", fontSize = 20.sp)
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text("Віджет іншої програми…", color = AppTheme.colors.accent, fontSize = 14.sp)
+                        Text("Календар, музика, банк тощо", color = AppTheme.colors.textMuted, fontSize = 11.sp)
                     }
                 }
 

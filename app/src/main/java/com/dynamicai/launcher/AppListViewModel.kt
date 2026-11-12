@@ -20,7 +20,6 @@ import com.dynamicai.launcher.data.WeatherState
 import com.dynamicai.launcher.folder.Folder
 import com.dynamicai.launcher.folder.FolderStorage
 import com.dynamicai.launcher.llm.ChatEngine
-import com.dynamicai.launcher.llm.LlmAgent
 import com.dynamicai.launcher.llm.WebSearchRepository
 import com.dynamicai.launcher.llm.HybridLlmEngine
 import java.io.File
@@ -97,7 +96,6 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _downloadProgress = MutableStateFlow<ModelDownloader.Progress?>(null)
     val downloadProgress: StateFlow<ModelDownloader.Progress?> = _downloadProgress.asStateFlow()
-    private val llmAgent by lazy { LlmAgent(llm) }
     val chatEngine by lazy { getSharedChatEngine(app) }
 
     private val _apps = MutableStateFlow<List<AppInfo>>(emptyList())
@@ -737,18 +735,18 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 _response.value = "🧠 Думаю… (5-15 сек)"
                 try {
                     ensureLlmLoaded()
-                    val llmCmd = llmAgent.resolve(text)
-                    if (llmCmd != null) {
-                        val result = executor.execute(llmCmd, _apps.value)
-                        handleResult(result, text)
-                    } else {
-                        _response.value = "Не розумію команду: \"$text\""
+                    // Той самий агент і той самий набір інструментів, що й у чаті та в хмарному режимі
+                    val r = chatEngine.answerWithAgent(text)
+                    _response.value = r
+                    if (!r.startsWith("Помилка") && r != "LLM не активна") {
+                        historyStorage.add(text)
+                        _history.value = historyStorage.get()
+                        if (settings.useTts) tts.speak(r)
                     }
                 } catch (t: Throwable) {
                     _response.value = "Помилка LLM: ${t.message}"
                 }
             }
-            return
             return
         }
 

@@ -73,8 +73,8 @@ fun HomeWidget(
     ) {
         // Ліва колонка: годинник + дата
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                now.format(timeFmt),
+            RollingText(
+                text = now.format(timeFmt),
                 color = AppTheme.colors.textPrimary,
                 fontSize = 34.sp,
                 fontWeight = FontWeight.Light,

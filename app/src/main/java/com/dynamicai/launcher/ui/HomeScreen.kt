@@ -1001,29 +1001,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
 
                     // Dots під віджетами (перед search bar)
                     if (pageCount > 1) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            for (p in 0 until pageCount) {
-                                Box(
-                                    modifier = Modifier
-                                        .padding(horizontal = 3.dp)
-                                        .size(8.dp)
-                                        // Крапка плавно «перетікає» слідом за пальцем; читання в graphicsLayer — без перекомпонування
-                                        .graphicsLayer {
-                                            val pos = pagerState.currentPage + pagerState.currentPageOffsetFraction
-                                            val sel = (1f - kotlin.math.abs(pos - p)).coerceIn(0f, 1f)
-                                            val sc = 0.75f + 0.25f * sel
-                                            scaleX = sc; scaleY = sc
-                                            alpha = 0.35f + 0.65f * sel
-                                        }
-                                        .clip(CircleShape)
-                                        .background(AppTheme.colors.textPrimary)
-                                )
-                            }
-                        }
+                        PageDots(pagerState, pageCount, Modifier.fillMaxWidth().padding(vertical = 6.dp))
                     }
                 }
             }

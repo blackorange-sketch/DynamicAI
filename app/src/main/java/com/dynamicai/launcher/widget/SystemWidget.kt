@@ -57,7 +57,7 @@ private fun StatBar(label: String, value: String, frac: Float, color: Color, mod
             Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp))
                 .background(AppTheme.colors.textPrimary.copy(alpha = 0.1f))
         ) {
-            Box(Modifier.fillMaxWidth(frac.coerceIn(0f, 1f)).fillMaxHeight().background(color))
+            Box(Modifier.fillMaxWidth(com.dynamicai.launcher.ui.animatedFraction(frac)).fillMaxHeight().background(color))
         }
     }
 }

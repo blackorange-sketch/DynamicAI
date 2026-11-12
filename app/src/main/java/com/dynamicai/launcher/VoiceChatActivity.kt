@@ -731,7 +731,10 @@ private fun MessageBubble(msg: ChatMessage, maxWidth: Dp, onAction: (String) -> 
                     .pointerInput(msg) { detectTapGestures(onLongPress = { menu = true }) }
                     .padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
-                Text(
+                // Погоду, курс валют і маршрут показуємо карткою; решту — текстом
+                val card = remember(bodyText) { if (isUser || isError) null else com.dynamicai.launcher.ui.parseChatCard(bodyText) }
+                if (card != null) com.dynamicai.launcher.ui.ChatCardView(card)
+                else Text(
                     bodyText,
                     color = if (isError) c.danger else c.textPrimary,
                     fontSize = 15.sp,

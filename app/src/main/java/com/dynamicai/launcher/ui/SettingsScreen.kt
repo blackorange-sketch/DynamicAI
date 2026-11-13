@@ -186,6 +186,9 @@ fun SettingsScreen(
         if (initialCategory == null || cat == "system") {
             SettingsSystemSection(settings, onSettingsChange, onClearHistory, onRefreshContacts)
         }
+        if (cat == "permissions") {
+            SettingsPermissionsSection()
+        }
         SettingsAiSection(
             vm = vm, settings = settings, onSettingsChange = onSettingsChange,
             aiVisible = initialCategory == null || cat == "ai",

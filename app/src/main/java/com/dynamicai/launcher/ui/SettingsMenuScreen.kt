@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
@@ -58,7 +59,7 @@ private val SETTING_ENTRIES = listOf(
     SettingEntry("Макроси", "Модулі", "tools", "макрос автоматизація"),
     SettingEntry("Віджети та інструменти", "Модулі", "tools", "віджет wild rift ocr переклад модулі"),
     SettingEntry("Погода", "Модулі", "tools", "погода місто gps температура"),
-    SettingEntry("Дозволи", "Система", "system", "дозволи bluetooth доступ"),
+    SettingEntry("Дозволи", "Дозволи", "permissions", "дозволи доступ мікрофон контакти сповіщення накладання shizuku"),
     SettingEntry("Shizuku", "Система", "system", "shizuku adb права"),
     SettingEntry("Енергозбереження", "Система", "system", "батарея fps пауза шпалери екран")
 )
@@ -151,7 +152,9 @@ fun SettingsMenuScreen(
             Spacer(Modifier.height(12.dp))
             CategoryCard(Icons.Default.Build, "Модулі та Інструменти", "Wild Rift, OCR, Погода, Нотатки", AppTheme.colors.purple) { onCategorySelected("tools") }
             Spacer(Modifier.height(12.dp))
-            CategoryCard(Icons.Default.Settings, "Система", "Shizuku, Дозволи, Bluetooth, Док", AppTheme.colors.success) { onCategorySelected("system") }
+            CategoryCard(Icons.Default.Settings, "Система", "Shizuku, Bluetooth, Живлення, Резервна копія", AppTheme.colors.success) { onCategorySelected("system") }
+            Spacer(Modifier.height(12.dp))
+            CategoryCard(Icons.Default.Lock, "Дозволи", "Перевірити й надати все потрібне", AppTheme.colors.warning) { onCategorySelected("permissions") }
         }
     }
 }

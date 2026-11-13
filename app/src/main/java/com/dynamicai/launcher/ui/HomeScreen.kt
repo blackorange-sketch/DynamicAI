@@ -196,16 +196,20 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     com.dynamicai.launcher.widget.AppWidgetHostLifecycle()
     var pendingWidgetPage by remember { mutableStateOf(0) }
     var pendingWidgetId by remember { mutableStateOf(-1) }
+    var showSystemWidgetPicker by remember { mutableStateOf(false) }
+    fun placeSystemWidget(id: Int) {
+        placedWidgetsStorage.add(com.dynamicai.launcher.widget.AppWidgetHolder.typeFor(id), pendingWidgetPage)
+        placedWidgets = placedWidgetsStorage.get()
+        currentPage = pendingWidgetPage
+        com.dynamicai.launcher.widget.AppWidgetHolder.configureIfNeeded(ctx as? android.app.Activity, id)
+    }
     val systemWidgetPicker = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { res ->
         val holder = com.dynamicai.launcher.widget.AppWidgetHolder
         val id = res.data?.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, pendingWidgetId) ?: pendingWidgetId
         if (res.resultCode == android.app.Activity.RESULT_OK && id != -1) {
-            placedWidgetsStorage.add(holder.typeFor(id), pendingWidgetPage)
-            placedWidgets = placedWidgetsStorage.get()
-            currentPage = pendingWidgetPage
-            holder.configureIfNeeded(ctx as? android.app.Activity, id)
+            placeSystemWidget(id)
         } else if (pendingWidgetId != -1) {
             holder.delete(ctx, pendingWidgetId)
         }
@@ -576,12 +580,31 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             },
             onPickSystem = { page ->
                 showAddWidgetDialog = false
+                pendingWidgetPage = page
+                showSystemWidgetPicker = true
+            }
+        )
+    }
+
+    // Власний список віджетів інших програм із попереднім переглядом
+    if (showSystemWidgetPicker) {
+        com.dynamicai.launcher.widget.SystemWidgetPickerDialog(
+            onDismiss = { showSystemWidgetPicker = false },
+            onPick = { info ->
+                showSystemWidgetPicker = false
+                val holder = com.dynamicai.launcher.widget.AppWidgetHolder
                 try {
-                    pendingWidgetPage = page
-                    pendingWidgetId = com.dynamicai.launcher.widget.AppWidgetHolder.allocate(ctx)
-                    systemWidgetPicker.launch(com.dynamicai.launcher.widget.AppWidgetHolder.pickIntent(pendingWidgetId))
+                    val id = holder.allocate(ctx)
+                    pendingWidgetId = id
+                    if (holder.bind(ctx, id, info)) {
+                        placeSystemWidget(id)
+                        pendingWidgetId = -1
+                    } else {
+                        // Перший раз система питає, чи дозволити лаунчеру створювати віджети
+                        systemWidgetPicker.launch(holder.bindIntent(id, info))
+                    }
                 } catch (t: Throwable) {
-                    android.widget.Toast.makeText(ctx, "Не вдалося відкрити список віджетів", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(ctx, "Не вдалося додати віджет", android.widget.Toast.LENGTH_SHORT).show()
                 }
             }
         )

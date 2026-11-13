@@ -65,6 +65,18 @@ object AppWidgetHolder {
             .putParcelableArrayListExtra(AppWidgetManager.EXTRA_CUSTOM_INFO, ArrayList<AppWidgetProviderInfo>())
             .putParcelableArrayListExtra(AppWidgetManager.EXTRA_CUSTOM_EXTRAS, ArrayList<Bundle>())
 
+    /** Прив'язує вибраний віджет до номера. false — система ще не дозволила лаунчеру створювати віджети (потрібне підтвердження). */
+    fun bind(ctx: Context, appWidgetId: Int, info: AppWidgetProviderInfo): Boolean = try {
+        manager(ctx).bindAppWidgetIdIfAllowed(appWidgetId, info.profile, info.provider, null)
+    } catch (_: Throwable) { false }
+
+    /** Системне вікно «Дозволити DynamicAI створювати віджети?» — після згоди віджет прив'язується. */
+    fun bindIntent(appWidgetId: Int, info: AppWidgetProviderInfo): Intent =
+        Intent(AppWidgetManager.ACTION_APPWIDGET_BIND)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, info.provider)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, info.profile)
+
     /** Деякі віджети мають власний екран налаштування — відкриваємо його після вибору. */
     fun configureIfNeeded(activity: Activity?, appWidgetId: Int) {
         if (activity == null) return

@@ -229,6 +229,16 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             }
         }
 
+        // Повноекранна програма ховає статус-бар — ховаємо й острівець
+        composeView?.setOnApplyWindowInsetsListener { v, insets ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val fs = !insets.isVisible(android.view.WindowInsets.Type.statusBars())
+                if (fs != statusBarHidden) { statusBarHidden = fs; updateHidden() }
+            }
+            v.onApplyWindowInsets(insets)
+        }
+        landscape = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        updateHidden()
         // Дотик поза панеллю закриває її
         composeView?.setOnTouchListener { _, e ->
             if (e.action == MotionEvent.ACTION_OUTSIDE && panelOpen) setPanel(false)
@@ -264,6 +274,7 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             placeIsland()
         }
         try { windowManager.updateViewLayout(composeView, params) } catch (_: Throwable) {}
+        updateHidden()
     }
 
     private fun applyPanelFlags() {
@@ -322,6 +333,29 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
+        if (hiddenNow) params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+    }
+
+    private var statusBarHidden = false
+    private var landscape = false
+    private var hiddenNow = false
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        landscape = newConfig.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        updateHidden()
+    }
+
+    /** Острівець зникає в горизонтальному і повноекранному режимі (ігри, відео), коли панель закрита. */
+    private fun updateHidden() {
+        val v = composeView ?: return
+        val hide = island && !panelOpen && params.width != WindowManager.LayoutParams.WRAP_CONTENT && (landscape || statusBarHidden)
+        if (hide == hiddenNow) return
+        hiddenNow = hide
+        v.animate().alpha(if (hide) 0f else 1f).setDuration(160).start()
+        params.flags = if (hide) params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            else params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+        try { windowManager.updateViewLayout(v, params) } catch (_: Throwable) {}
     }
 
     private var islandWpx = 0

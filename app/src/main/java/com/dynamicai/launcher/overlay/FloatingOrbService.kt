@@ -110,6 +110,13 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         if (island) {
             // Джерела острівця: батарея, музика, сповіщення, ліхтарик
             try { registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) } catch (_: Throwable) {}
+            // Екран блокування і AOD: острівець ховається, панель закривається
+            try {
+                registerReceiver(screenReceiver, IntentFilter().apply {
+                    addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON); addAction(Intent.ACTION_USER_PRESENT)
+                })
+            } catch (_: Throwable) {}
+            refreshLocked()
             MediaHub.ensureStarted(applicationContext)
             IslandHub.syncAll(applicationContext)
             // Нове сповіщення будить персонажа
@@ -259,6 +266,7 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     private fun setPanel(open: Boolean) {
+        if (open) { refreshLocked(); if (lockedNow) return }   // не відкривати на екрані блокування
         if (panelOpen == open) return
         panelOpen = open
         panelFocusable = false
@@ -337,6 +345,22 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     private var statusBarHidden = false
+    /** Екран вимкнено (AOD) або заблоковано — острівця не видно. */
+    private var lockedNow = false
+
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) {
+            refreshLocked()
+            if (lockedNow && panelOpen) setPanel(false)
+            updateHidden()
+        }
+    }
+
+    private fun refreshLocked() {
+        val km = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+        val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        lockedNow = !pm.isInteractive || km.isKeyguardLocked
+    }
     private var landscape = false
     private var hiddenNow = false
 
@@ -349,7 +373,7 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     /** Острівець зникає в горизонтальному і повноекранному режимі (ігри, відео), коли панель закрита. */
     private fun updateHidden() {
         val v = composeView ?: return
-        val hide = island && !panelOpen && params.width != WindowManager.LayoutParams.WRAP_CONTENT && (landscape || statusBarHidden)
+        val hide = island && ((!panelOpen && params.width != WindowManager.LayoutParams.WRAP_CONTENT && (landscape || statusBarHidden)) || lockedNow)
         if (hide == hiddenNow) return
         hiddenNow = hide
         v.animate().alpha(if (hide) 0f else 1f).setDuration(160).start()
@@ -521,6 +545,7 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         super.onDestroy()
         speechRecognizer?.destroy()
         if (island) try { unregisterReceiver(batteryReceiver) } catch (_: Throwable) {}
+        if (island) try { unregisterReceiver(screenReceiver) } catch (_: Throwable) {}
         tts.shutdown()
         instance = null
         try { composeView?.let { windowManager.removeView(it) } } catch (_: Throwable) {}

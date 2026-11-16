@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.llm
 
+import com.dynamicai.launcher.Edition
 import android.util.Log
 import com.dynamicai.launcher.command.Command as C
 import android.content.Context
@@ -72,6 +73,7 @@ class ChatEngine(
     /** Усі питання (крім екрана й макросів) йдуть у хмару — локальну модель не потрібно завантажувати наперед. */
     fun cloudOnly(): Boolean {
         val s = SettingsStorage(context).load()
+        if (Edition.CLOUD_ONLY) return CloudLlm.hasKey(s)
         return s.cloudEnabled && CloudLlm.hasKey(s) && s.cloudMode == "always"
     }
 
@@ -126,8 +128,10 @@ class ChatEngine(
     fun cloudPreferred(question: String): Boolean {
         val s = SettingsStorage(context).load()
         if (!s.cloudEnabled || !CloudLlm.hasKey(s)) return false
-        if (System.currentTimeMillis() < cloudCooldownUntil) return false
         val t = question.lowercase()
+        // Хмарна версія: локальної моделі немає — у хмару йде все, крім тексту з екрана
+        if (Edition.CLOUD_ONLY) return !SCREEN_ASK.containsMatchIn(t)
+        if (System.currentTimeMillis() < cloudCooldownUntil) return false
         if (SCREEN_ASK.containsMatchIn(t)) return false           // текст екрана не залишає пристрій
         if (MacroBuilder.looksLikeRequest(question)) return false  // макроси збирає локальна модель
         return when (s.cloudMode) {
@@ -860,7 +864,7 @@ class ChatEngine(
     fun cloudAgentEligible(question: String): Boolean {
         val s = SettingsStorage(context).load()
         if (!s.cloudEnabled || !CloudLlm.hasKey(s)) return false
-        if (System.currentTimeMillis() < cloudCooldownUntil) return false
+        if (!Edition.CLOUD_ONLY && System.currentTimeMillis() < cloudCooldownUntil) return false
         if (SCREEN_ASK.containsMatchIn(question.lowercase())) return false
         if (MacroBuilder.looksLikeRequest(question)) return false
         return agentEngine.looksActionable(question)

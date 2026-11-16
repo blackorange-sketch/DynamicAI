@@ -252,6 +252,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun ensureLlmLoaded(): Boolean = modelOpMutex.withLock { ensureLlmLoadedLocked() }
 
     private suspend fun ensureLlmLoadedLocked(): Boolean {
+        if (Edition.CLOUD_ONLY) return false   // хмарна версія — локальних рушіїв немає
         if (llm.isReady) return true
 
         // === MNN special case ===
@@ -890,6 +891,16 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             val settings = settingsStorage.load()
             val cloudAgent = chatEngine.cloudAgentEligible(text)
             val localOk = settings.useLlm && localModelPresent() && !chatEngine.cloudOnly()
+            if (Edition.CLOUD_ONLY && !cloudAgent) {
+                // Хмарна версія: не команда — відповідає хмарна модель
+                viewModelScope.launch {
+                    _response.value = "☁️ Думаю…"
+                    val r = chatEngine.simpleAnswer(text)
+                    _response.value = if (r == ChatEngine.CLOUD_FAILED) "Хмара недоступна. Перевірте інтернет і ключ у Налаштування → ШІ → Хмара." else r
+                    if (r != ChatEngine.CLOUD_FAILED && settings.useTts) tts.speak(r)
+                }
+                return
+            }
             if (!cloudAgent && !localOk) {
                 _response.value = "Не розумію команду: \"$text\""
                 return

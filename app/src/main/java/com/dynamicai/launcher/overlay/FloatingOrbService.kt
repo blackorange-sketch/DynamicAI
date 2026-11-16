@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.overlay
 
+import com.dynamicai.launcher.Edition
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -392,6 +393,10 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                 if (chatEngine.cloudAgentEligible(text)) {
                     val r = chatEngine.cloudAgent(text, history)
                     if (r != ChatEngine.CLOUD_FAILED) answer = r
+                }
+                if (answer == null && Edition.CLOUD_ONLY) {
+                    val r = chatEngine.simpleAnswer(text, history = history)
+                    answer = if (r == ChatEngine.CLOUD_FAILED) "Хмара недоступна. Перевірте інтернет і ключ." else r
                 }
                 if (answer == null) {
                     if (!com.dynamicai.launcher.AppListViewModel.getSharedLlm(applicationContext).isReady) {

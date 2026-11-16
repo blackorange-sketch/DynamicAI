@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.ui
 
+import com.dynamicai.launcher.Edition
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.PickVisualMediaRequest
@@ -138,7 +139,7 @@ fun SettingsScreen(
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 LlmBackendChip("Асистент", "assistant", aiTab) { aiTab = it }
-                LlmBackendChip("Моделі", "models", aiTab) { aiTab = it }
+                LlmBackendChip(if (Edition.CLOUD_ONLY) "Хмара" else "Моделі", "models", aiTab) { aiTab = it }
                 LlmBackendChip("Голос", "voice", aiTab) { aiTab = it }
             }
         }

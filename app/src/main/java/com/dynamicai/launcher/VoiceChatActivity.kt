@@ -1050,6 +1050,11 @@ fun processQuery(
             val cloudFirst = vm.chatEngine.cloudPreferred(text)
             suspend fun localOrFail(): Boolean {
                 if (vm.ensureLlmLoaded()) return true
+                if (Edition.CLOUD_ONLY) {
+                    onMessage(ChatMessage("error", "Хмарна модель недоступна. Перевірте інтернет і ключ Gemini/Groq у налаштуваннях.", "retry"))
+                    onStateChange(VoiceState.LISTENING)
+                    return false
+                }
                 onMessage(ChatMessage("error", "Модель не завантажилась. Перезапустіть рушій або оберіть іншу модель зверху.", "restart"))
                 onStateChange(VoiceState.SPEAKING)
                 vm.tts.speakWithCallback("Модель не завантажилась.") { onStateChange(VoiceState.LISTENING) }

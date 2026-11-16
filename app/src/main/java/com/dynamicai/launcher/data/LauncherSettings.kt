@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.data
 
+import com.dynamicai.launcher.Edition
 import android.content.Context
 
 data class LauncherSettings(
@@ -184,7 +185,7 @@ class SettingsStorage(context: Context) {
             answerLanguage = prefs.getString("answerLanguage", "uk") ?: "uk",
             answerStyle = prefs.getString("answerStyle", "short") ?: "short",
             autoSearch = prefs.getBoolean("autoSearch", true),
-            cloudEnabled = prefs.getBoolean("cloudEnabled", false),
+            cloudEnabled = Edition.CLOUD_ONLY || prefs.getBoolean("cloudEnabled", false),
             cloudMode = prefs.getString("cloudMode", "auto") ?: "auto",
             geminiKey = prefs.getString("geminiKey", "") ?: "",
             // Старе типове значення gemini-flash-latest недоступне на безкоштовному рівні — замінюємо на актуальну Flash-Lite

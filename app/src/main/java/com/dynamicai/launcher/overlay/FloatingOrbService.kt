@@ -111,7 +111,6 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             // Джерела острівця: батарея, музика, сповіщення, ліхтарик
             try { registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) } catch (_: Throwable) {}
             MediaHub.ensureStarted(applicationContext)
-            IslandActions.init(applicationContext)
             IslandHub.syncAll(applicationContext)
             // Нове сповіщення будить персонажа
             scope.launch { IslandHub.peek.collect { if (it != null) wake() } }
@@ -184,15 +183,6 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                     updateWindowSize(true)
                                 },
                                 onVoice = { setPanel(false); startListening() },
-                                onScreenshot = {
-                                    setPanel(false)
-                                    scope.launch {
-                                        delay(450)
-                                        if (!IslandActions.screenshot(applicationContext)) {
-                                            Toast.makeText(applicationContext, "Для скріншота увімкніть спец. можливості DynamicAI або Shizuku", Toast.LENGTH_LONG).show()
-                                        }
-                                    }
-                                },
                                 onReplyFocus = { setPanelFocusable(it) }
                             )
                         } else {
@@ -200,7 +190,8 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                 mood = mood, micLevel = { micLevel },
                                 onTap = { wake(); setPanel(true) },
                                 onLongPress = { startListening() },
-                                onSwipeDown = { wake(); setPanel(true) }
+                                onSwipeDown = { wake(); setPanel(true) },
+                                onWindowSize = { w, h -> setIslandWindow(w.value, h.value) }
                             )
                         }
                     } else FloatingOrb(
@@ -262,14 +253,14 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         panelOpen = open
         panelFocusable = false
         if (open) {
-            val density = resources.displayMetrics.density
+            // На весь екран: анімація панелі не змінює розмір вікна (без ривків), дотик по затемненню закриває
             params.width = WindowManager.LayoutParams.MATCH_PARENT
+            params.height = WindowManager.LayoutParams.MATCH_PARENT
             params.gravity = Gravity.TOP
             params.x = 0
-            params.y = (6 * density).toInt()
+            params.y = 0
             applyPanelFlags()
         } else {
-            params.width = WindowManager.LayoutParams.WRAP_CONTENT
             placeIsland()
         }
         try { windowManager.updateViewLayout(composeView, params) } catch (_: Throwable) {}
@@ -299,6 +290,8 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             params.y = 0
             // Робимо вікно фокусованим, щоб працювала клавіатура
             params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            params.width = WindowManager.LayoutParams.WRAP_CONTENT
+            params.height = WindowManager.LayoutParams.WRAP_CONTENT
         } else {
             // При згортанні повертаємо на місце
             params.gravity = Gravity.TOP or Gravity.START
@@ -306,6 +299,7 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             params.y = currentY.roundToInt()
             params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
             params.width = WindowManager.LayoutParams.WRAP_CONTENT
+            params.height = WindowManager.LayoutParams.WRAP_CONTENT
             if (island) placeIsland()
         }
         windowManager.updateViewLayout(composeView, params)
@@ -316,7 +310,9 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         val density = resources.displayMetrics.density
         val sbId = resources.getIdentifier("status_bar_height", "dimen", "android")
         val statusBar = if (sbId > 0) resources.getDimensionPixelSize(sbId) else (24 * density).toInt()
-        val islandH = (34 * density).toInt()
+        val islandH = (ISLAND_H.value * density).toInt()
+        params.width = islandWpx.takeIf { it > 0 } ?: (108 * density).toInt()
+        params.height = islandHpx.takeIf { it > 0 } ?: islandH
         params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
         params.x = 0
         // Без спецможливостей статус-бар перехоплює дотики — ставимо острівець одразу під ним
@@ -326,6 +322,21 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
+    }
+
+    private var islandWpx = 0
+    private var islandHpx = 0
+
+    /** Розмір вікна компактного острівця (dp). Викликається двічі на перехід: перед анімацією і після неї. */
+    private fun setIslandWindow(wDp: Float, hDp: Float) {
+        val d = resources.displayMetrics.density
+        val w = (wDp * d).toInt(); val h = (hDp * d).toInt()
+        if (w == islandWpx && h == islandHpx) return
+        islandWpx = w; islandHpx = h
+        if (panelOpen || !island) return
+        params.width = w
+        params.height = h
+        try { windowManager.updateViewLayout(composeView, params) } catch (_: Throwable) {}
     }
 
     /** Будь-яка взаємодія будить персонажа. */

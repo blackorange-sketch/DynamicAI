@@ -7,6 +7,11 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.scaleIn
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.unit.Dp
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -100,20 +105,26 @@ private fun rememberNow(active: Boolean): Long {
 
 // ======================= Компактний острівець =======================
 
+/** Висота капсули: вписується у статус-бар біля камери і не закриває годинник та значки. */
+val ISLAND_H = 30.dp
+
 @Composable
 fun IslandCompact(
     mood: BuddyMood,
     micLevel: () -> Float,
     onTap: () -> Unit,
     onLongPress: () -> Unit,
-    onSwipeDown: () -> Unit
+    onSwipeDown: () -> Unit,
+    /** Потрібний розмір вікна (dp). Вікно змінюється лише двічі на перехід, анімація — всередині нього. */
+    onWindowSize: (Dp, Dp) -> Unit
 ) {
     val peek by IslandHub.peek.collectAsState()
     val live by IslandHub.live.collectAsState()
     val notifs by IslandHub.notifs.collectAsState()
     val np by MediaHub.state.collectAsState()
+    val screenW = LocalConfiguration.current.screenWidthDp.dp
 
-    val topLive = live.minByOrNull { livePriority(it.kind) }
+    val topLive = live.filter { liveLabel(it, System.currentTimeMillis()).isNotBlank() }.minByOrNull { livePriority(it.kind) }
     val agentBusy = mood == BuddyMood.LISTEN || mood == BuddyMood.THINK || mood == BuddyMood.SPEAK
     val mode = when {
         peek != null -> "peek"
@@ -122,75 +133,120 @@ fun IslandCompact(
         np?.playing == true -> "music"
         else -> "idle"
     }
-    val now = rememberNow(topLive != null && topLive.kind != LiveItem.Kind.PROGRESS && topLive.kind != LiveItem.Kind.NAV)
+    val now = rememberNow(mode == "live" && topLive?.kind != LiveItem.Kind.PROGRESS && topLive?.kind != LiveItem.Kind.NAV)
 
-    // Ширина бічних частин однакова — камера завжди посередині капсули
-    val side = when (mode) { "peek" -> 118.dp; "live" -> 84.dp; "music" -> 56.dp; else -> 40.dp }
+    // Цільові розміри: компактні стани вузькі (видно годинник і значки), «визирання» — картка вниз
+    val tw = when (mode) {
+        "peek" -> (screenW - 20.dp).coerceAtMost(420.dp)
+        "live" -> 150.dp
+        "music" -> 128.dp
+        "agent" -> 118.dp
+        else -> if (notifs.isNotEmpty()) 118.dp else 108.dp
+    }
+    val th = if (mode == "peek") 64.dp else ISLAND_H
+    val sizeSpec = spring<Dp>(dampingRatio = 0.82f, stiffness = 700f)
+    val w by animateDpAsState(tw, sizeSpec, label = "iw")
+    val h by animateDpAsState(th, sizeSpec, label = "ih")
 
-    Row(
-        Modifier
-            .clip(RoundedCornerShape(50))
-            .background(IslandBlack)
-            .animateContentSize(spring(dampingRatio = 0.78f, stiffness = 360f))
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { onTap() }, onLongPress = { onLongPress() })
-            }
-            .pointerInput(Unit) {
-                detectVerticalDragGestures { _, dy -> if (dy > 12f) onSwipeDown() }
-            }
-            .height(34.dp)
-            .padding(horizontal = 5.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Ліва частина: персонаж + іконка
-        Row(Modifier.width(side), verticalAlignment = Alignment.CenterVertically) {
-            OrbBuddy(mood = mood, size = 30.dp, micLevel = micLevel, onTap = onTap, onLongPress = onLongPress)
-            when (mode) {
-                "peek" -> peek?.let { p -> SmallIcon(p.icon, p.emoji) }
-                "live" -> topLive?.let { SmallIcon(it.icon, liveEmoji(it.kind)) }
-                "music" -> np?.let { SmallIcon(it.art, "🎵", rounded = 6) }
-            }
-        }
-        Spacer(Modifier.width(34.dp)) // камера
-        // Права частина
-        Box(Modifier.width(side), contentAlignment = Alignment.CenterEnd) {
-            AnimatedContent(targetState = mode, transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) }, label = "island") { m ->
-                when (m) {
-                    "peek" -> peek?.let { p ->
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(p.title, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            if (p.text.isNotBlank()) Text(p.text, color = Soft, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        }
-                    } ?: Spacer(Modifier)
-                    "agent" -> Box(Modifier.size(22.dp, 30.dp), contentAlignment = Alignment.Center) { IslandGlyph(mood, micLevel) }
-                    "live" -> topLive?.let { item ->
-                        val txt = when (item.kind) {
-                            LiveItem.Kind.PROGRESS -> "${((item.progress ?: 0f) * 100).toInt()}%"
-                            LiveItem.Kind.NAV -> item.title.ifBlank { item.text }
-                            else -> chronoText(item, now)
-                        }
-                        Text(
-                            txt, maxLines = 1, overflow = TextOverflow.Ellipsis, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                            color = when (item.kind) {
-                                LiveItem.Kind.CALL -> AppTheme.colors.success
-                                LiveItem.Kind.TIMER -> Color(0xFFFFB74D)
-                                else -> Color.White
+    // Вікно: спершу більше з двох розмірів (щоб анімація не обрізалась), після анімації — точний розмір
+    val lastW = remember { mutableStateOf(tw) }
+    val lastH = remember { mutableStateOf(th) }
+    LaunchedEffect(tw, th) {
+        onWindowSize(maxOf(lastW.value, tw), maxOf(lastH.value, th))
+        lastW.value = tw; lastH.value = th
+        delay(420)
+        onWindowSize(tw, th)
+    }
+
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Box(
+            Modifier
+                .size(w, h)
+                .clip(RoundedCornerShape(minOf(h / 2, 26.dp)))
+                .background(IslandBlack)
+                .pointerInput(Unit) { detectTapGestures(onTap = { onTap() }, onLongPress = { onLongPress() }) }
+                .pointerInput(Unit) { detectVerticalDragGestures { _, dy -> if (dy > 10f) onSwipeDown() } }
+        ) {
+            AnimatedContent(
+                targetState = mode,
+                transitionSpec = { fadeIn(tween(140, delayMillis = 60)) togetherWith fadeOut(tween(90)) },
+                contentAlignment = Alignment.Center,
+                label = "island"
+            ) { m ->
+                if (m == "peek") {
+                    peek?.let { p -> PeekContent(p, mood, micLevel) } ?: Spacer(Modifier.fillMaxSize())
+                } else {
+                    Row(
+                        Modifier.fillMaxSize().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Ліворуч від камери: персонаж (+ іконка)
+                        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                            OrbBuddy(mood = mood, size = 26.dp, micLevel = micLevel, onTap = onTap, onLongPress = onLongPress)
+                            when (m) {
+                                "live" -> topLive?.let { SmallIcon(it.icon, liveEmoji(it.kind)) }
+                                "music" -> np?.let { SmallIcon(it.art, "🎵", rounded = 5) }
                             }
-                        )
-                    } ?: Spacer(Modifier)
-                    "music" -> EqBars(Modifier.size(22.dp, 16.dp))
-                    else -> Box(Modifier.size(22.dp, 30.dp), contentAlignment = Alignment.Center) {
-                        if (notifs.isNotEmpty()) {
-                            Box(
-                                Modifier.clip(CircleShape).background(AppTheme.colors.accent).padding(horizontal = 5.dp, vertical = 1.dp),
-                                contentAlignment = Alignment.Center
-                            ) { Text("${notifs.size.coerceAtMost(99)}", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold) }
-                        } else IslandGlyph(mood, micLevel)
+                        }
+                        Spacer(Modifier.width(30.dp)) // камера
+                        // Праворуч від камери: стан
+                        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                            when (m) {
+                                "agent" -> IslandGlyph(mood, micLevel)
+                                "live" -> topLive?.let { item ->
+                                    Text(
+                                        liveLabel(item, now), maxLines = 1, overflow = TextOverflow.Clip,
+                                        fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                        color = when (item.kind) {
+                                            LiveItem.Kind.CALL -> AppTheme.colors.success
+                                            LiveItem.Kind.TIMER -> Color(0xFFFFB74D)
+                                            else -> Color.White
+                                        },
+                                        modifier = Modifier.padding(end = 4.dp)
+                                    )
+                                }
+                                "music" -> EqBars(Modifier.padding(end = 4.dp).size(20.dp, 14.dp))
+                                else -> if (notifs.isNotEmpty()) {
+                                    Box(
+                                        Modifier.padding(end = 3.dp).clip(CircleShape).background(AppTheme.colors.accent)
+                                            .padding(horizontal = 6.dp, vertical = 1.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) { Text("${notifs.size.coerceAtMost(99)}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                                } else IslandGlyph(mood, micLevel)
+                            }
+                        }
                     }
                 }
             }
         }
     }
+}
+
+/** «Визирання»: картка з аватаром, заголовком і текстом. */
+@Composable
+private fun PeekContent(p: IslandPeek, mood: BuddyMood, micLevel: () -> Float) {
+    Row(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(40.dp).clip(CircleShape).background(Faint), contentAlignment = Alignment.Center) {
+            if (p.icon != null) {
+                val img = remember(p.icon) { p.icon.asImageBitmap() }
+                Image(img, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            } else Text(p.emoji ?: "🔔", fontSize = 18.sp)
+        }
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(p.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (p.text.isNotBlank()) Text(p.text, color = Soft, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Spacer(Modifier.width(8.dp))
+        OrbBuddy(mood = if (mood == BuddyMood.SLEEP) BuddyMood.IDLE else mood, size = 30.dp, micLevel = micLevel)
+    }
+}
+
+/** Короткий текст живої активності для капсули (порожній — нема чого показувати). */
+private fun liveLabel(item: LiveItem, now: Long): String = when (item.kind) {
+    LiveItem.Kind.PROGRESS -> item.progress?.let { "${(it * 100).toInt()}%" }.orEmpty()
+    LiveItem.Kind.NAV -> item.title.ifBlank { item.text }.take(12)
+    else -> chronoText(item, now)
 }
 
 private fun liveEmoji(k: LiveItem.Kind) = when (k) {
@@ -270,7 +326,6 @@ fun IslandPanel(
     onClose: () -> Unit,
     onOpenChat: () -> Unit,
     onVoice: () -> Unit,
-    onScreenshot: () -> Unit,
     onReplyFocus: (Boolean) -> Unit
 ) {
     val ctx = LocalContext.current
@@ -278,28 +333,38 @@ fun IslandPanel(
     val notifs by IslandHub.notifs.collectAsState()
     val battery by IslandHub.battery.collectAsState()
     val np by MediaHub.state.collectAsState()
-    val torch by IslandActions.torch.collectAsState()
-    var dnd by remember { mutableStateOf(IslandActions.dndOn(ctx)) }
     val hasListener = remember { TriggerPermissions.hasNotificationListener(ctx) }
     val weather = remember { WeatherRepository(ctx).loadCachedWeather() }
     val now = rememberNow(true)
-    val maxH = (LocalConfiguration.current.screenHeightDp * 0.78f).dp
+    val maxH = (LocalConfiguration.current.screenHeightDp * 0.8f).dp
 
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
+    val scrim by animateFloatAsState(if (visible) 0.35f else 0f, tween(200), label = "scrim")
 
+    // Вікно на весь екран: анімація не змінює його розмір (плавно), дотик по затемненню закриває панель
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = scrim))
+            .pointerInput(Unit) { detectTapGestures { onClose() } }
+    ) {
     AnimatedVisibility(
         visible = visible,
-        enter = expandVertically(spring(dampingRatio = 0.82f, stiffness = 420f), expandFrom = Alignment.Top) + fadeIn(tween(160)),
-        exit = shrinkVertically(tween(180), shrinkTowards = Alignment.Top) + fadeOut(tween(140))
+        enter = fadeIn(tween(110)) + scaleIn(
+            initialScale = 0.6f, transformOrigin = TransformOrigin(0.5f, 0f),
+            animationSpec = spring(dampingRatio = 0.78f, stiffness = 650f)
+        ),
+        exit = fadeOut(tween(90))
     ) {
         Column(
             Modifier
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = 8.dp, vertical = 6.dp)
                 .fillMaxWidth()
                 .heightIn(max = maxH)
                 .clip(RoundedCornerShape(30.dp))
                 .background(PanelBlack)
+                .pointerInput(Unit) { detectTapGestures { } } // дотики по панелі не закривають її
                 .verticalScroll(rememberScrollState())
                 .padding(14.dp)
         ) {
@@ -322,26 +387,12 @@ fun IslandPanel(
                 }
                 battery?.let { b -> Chip((if (b.charging) "⚡" else if (b.level <= 15) "🪫" else "🔋") + " ${b.level}%") }
             }
-
-            Spacer(Modifier.height(14.dp))
-
-            // --- Швидкі дії ---
-            val actions = listOf(
-                QuickAction("Чат", Icons.Default.ChatBubble, false) { onOpenChat() },
-                QuickAction("Голос", Icons.Default.Mic, false) { onVoice() },
-                QuickAction("Ліхтарик", Icons.Default.FlashlightOn, torch) { IslandActions.toggleTorch(ctx) },
-                QuickAction("Інтернет", Icons.Default.Wifi, false) { IslandActions.internetPanel(ctx); onClose() },
-                QuickAction("Bluetooth", Icons.Default.Bluetooth, false) { IslandActions.bluetooth(ctx); onClose() },
-                QuickAction("Не турбувати", Icons.Default.DoNotDisturbOn, dnd) { IslandActions.toggleDnd(ctx)?.let { dnd = it } ?: onClose() },
-                QuickAction("Скріншот", Icons.Default.Screenshot, false) { onScreenshot() },
-                QuickAction("Камера", Icons.Default.PhotoCamera, false) { IslandActions.camera(ctx); onClose() },
-            )
-            actions.chunked(4).forEach { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    row.forEach { a -> QuickButton(a, Modifier.weight(1f)) }
-                }
-                Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ActionPill("💬  Чат з асистентом", Modifier.weight(1f)) { onOpenChat() }
+                ActionPill("🎤  Голос", Modifier.weight(0.6f)) { onVoice() }
             }
+            Spacer(Modifier.height(12.dp))
 
             // --- Живі активності ---
             live.sortedBy { livePriority(it.kind) }.forEach { item ->
@@ -377,7 +428,7 @@ fun IslandPanel(
                 Section {
                     Row(
                         Modifier.fillMaxWidth().clickable {
-                            IslandActions.start(ctx, android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); onClose()
+                            try { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Throwable) {}; onClose()
                         }.padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -408,20 +459,15 @@ fun IslandPanel(
             ) { Box(Modifier.size(36.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.3f))) }
         }
     }
+    }
 }
 
-private data class QuickAction(val label: String, val icon: ImageVector, val on: Boolean, val run: () -> Unit)
-
 @Composable
-private fun QuickButton(a: QuickAction, modifier: Modifier) {
-    Column(modifier.clip(RoundedCornerShape(16.dp)).clickable { a.run() }.padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            Modifier.size(46.dp).clip(CircleShape).background(if (a.on) AppTheme.colors.accent else Faint),
-            contentAlignment = Alignment.Center
-        ) { Icon(a.icon, a.label, tint = Color.White, modifier = Modifier.size(22.dp)) }
-        Spacer(Modifier.height(4.dp))
-        Text(a.label, color = Soft, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
+private fun ActionPill(text: String, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier.clip(RoundedCornerShape(50)).background(Faint).clickable { onClick() }.padding(vertical = 11.dp),
+        contentAlignment = Alignment.Center
+    ) { Text(text, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1) }
 }
 
 @Composable

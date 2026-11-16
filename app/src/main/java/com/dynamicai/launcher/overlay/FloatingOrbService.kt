@@ -9,6 +9,11 @@ import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import android.os.BatteryManager
+import android.view.MotionEvent
+import com.dynamicai.launcher.music.MediaHub
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -67,6 +72,19 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     private var moodJob: Job? = null
     /** Стиль: острівець угорі біля камери або плаваючий персонаж. */
     private var island = true
+    /** Розгорнута панель острівця (сповіщення, музика, швидкі дії). */
+    private var panelOpen by mutableStateOf(false)
+    private var panelFocusable = false
+
+    private val batteryReceiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) {
+            val level = i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
+            val scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
+            val status = i.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+            val charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+            if (level >= 0) IslandHub.setBattery(level * 100 / scale, charging)
+        }
+    }
     private lateinit var chatEngine: ChatEngine
     private lateinit var tts: TtsManager
     private var speechRecognizer: SpeechRecognizer? = null
@@ -83,6 +101,15 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         island = getSharedPreferences("floating_orb", Context.MODE_PRIVATE).getString("style", "island") == "island"
         createOverlay()
+        if (island) {
+            // Джерела острівця: батарея, музика, сповіщення, ліхтарик
+            try { registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) } catch (_: Throwable) {}
+            MediaHub.ensureStarted(applicationContext)
+            IslandActions.init(applicationContext)
+            IslandHub.syncAll(applicationContext)
+            // Нове сповіщення будить персонажа
+            scope.launch { IslandHub.peek.collect { if (it != null) wake() } }
+        }
         // Після 2 хв бездіяльності персонаж засинає (і майже не малює кадрів)
         scope.launch {
             while (isActive) {
@@ -128,13 +155,50 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             setContent {
                 StoredAppTheme {
                     var isExpanded by remember { mutableStateOf(false) }
-                    FloatingOrb(
+                    // «Визирання» острівця гасне саме
+                    val peek by IslandHub.peek.collectAsState()
+                    LaunchedEffect(peek?.id) {
+                        val p = peek ?: return@LaunchedEffect
+                        delay(4500)
+                        IslandHub.clearPeek(p.id)
+                    }
+                    if (island && !isExpanded) {
+                        if (panelOpen) {
+                            IslandPanel(
+                                mood = mood, micLevel = { micLevel },
+                                onClose = { setPanel(false) },
+                                onOpenChat = {
+                                    setPanel(false)
+                                    isExpanded = true
+                                    updateWindowSize(true)
+                                },
+                                onVoice = { setPanel(false); startListening() },
+                                onScreenshot = {
+                                    setPanel(false)
+                                    scope.launch {
+                                        delay(450)
+                                        if (!IslandActions.screenshot(applicationContext)) {
+                                            Toast.makeText(applicationContext, "Для скріншота увімкніть спец. можливості DynamicAI або Shizuku", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                },
+                                onReplyFocus = { setPanelFocusable(it) }
+                            )
+                        } else {
+                            IslandCompact(
+                                mood = mood, micLevel = { micLevel },
+                                onTap = { wake(); setPanel(true) },
+                                onLongPress = { startListening() },
+                                onSwipeDown = { wake(); setPanel(true) }
+                            )
+                        }
+                    } else FloatingOrb(
                         isExpanded = isExpanded,
                         messages = ChatHistoryManager.history.map { it.role to it.content },
                         isThinking = isThinking,
                         mood = mood,
                         micLevel = { micLevel },
-                        island = island,
+                        island = false,
                         onExpandChange = {
                             wake()
                             isExpanded = it
@@ -163,7 +227,46 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             }
         }
 
+        // Дотик поза панеллю закриває її
+        composeView?.setOnTouchListener { _, e ->
+            if (e.action == MotionEvent.ACTION_OUTSIDE && panelOpen) setPanel(false)
+            false
+        }
         windowManager.addView(composeView, params)
+    }
+
+    private fun setPanel(open: Boolean) {
+        if (panelOpen == open) return
+        panelOpen = open
+        panelFocusable = false
+        if (open) {
+            val density = resources.displayMetrics.density
+            params.width = WindowManager.LayoutParams.MATCH_PARENT
+            params.gravity = Gravity.TOP
+            params.x = 0
+            params.y = (6 * density).toInt()
+            applyPanelFlags()
+        } else {
+            params.width = WindowManager.LayoutParams.WRAP_CONTENT
+            placeIsland()
+        }
+        try { windowManager.updateViewLayout(composeView, params) } catch (_: Throwable) {}
+    }
+
+    private fun applyPanelFlags() {
+        var f = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH or
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        if (!panelFocusable) f = f or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+        params.flags = f
+        params.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+    }
+
+    /** Поле відповіді на сповіщення потребує клавіатури — вікно тимчасово стає фокусованим. */
+    private fun setPanelFocusable(focusable: Boolean) {
+        if (!panelOpen || panelFocusable == focusable) return
+        panelFocusable = focusable
+        applyPanelFlags()
+        try { windowManager.updateViewLayout(composeView, params) } catch (_: Throwable) {}
     }
 
     private fun updateWindowSize(expanded: Boolean) {
@@ -180,6 +283,7 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             params.x = currentX.roundToInt()
             params.y = currentY.roundToInt()
             params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            params.width = WindowManager.LayoutParams.WRAP_CONTENT
             if (island) placeIsland()
         }
         windowManager.updateViewLayout(composeView, params)
@@ -339,6 +443,7 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     override fun onDestroy() {
         super.onDestroy()
         speechRecognizer?.destroy()
+        if (island) try { unregisterReceiver(batteryReceiver) } catch (_: Throwable) {}
         tts.shutdown()
         composeView?.let { windowManager.removeView(it) }
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED

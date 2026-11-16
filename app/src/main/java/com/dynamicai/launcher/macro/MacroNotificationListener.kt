@@ -3,6 +3,7 @@ package com.dynamicai.launcher.macro
 import android.app.Notification
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import com.dynamicai.launcher.overlay.IslandHub
 import com.dynamicai.launcher.suggestion.TelegramIndex
 
 /** Передає вхідні сповіщення інших додатків у тригери макросів («notification:пакет:текст»). */
@@ -11,9 +12,18 @@ class MacroNotificationListener : NotificationListenerService() {
         @Volatile var instance: MacroNotificationListener? = null
     }
 
-    override fun onListenerConnected() { instance = this }
+    override fun onListenerConnected() {
+        instance = this
+        try { IslandHub.syncAll(this) } catch (_: Throwable) {}
+    }
     override fun onListenerDisconnected() { if (instance === this) instance = null }
+    override fun onNotificationRemoved(sbn: StatusBarNotification) {
+        try { IslandHub.onRemoved(sbn) } catch (_: Throwable) {}
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        // Острівець отримує все (і постійні — таймери, дзвінки), фільтрує сам
+        try { IslandHub.onPosted(this, sbn) } catch (_: Throwable) {}
         try {
             if (sbn.packageName == packageName) return
             val n = sbn.notification ?: return

@@ -32,7 +32,6 @@ endif()
 FetchContent_Declare(
     llama
     URL https://github.com/ggml-org/llama.cpp/archive/refs/tags/v1.0.0.tar.gz
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(llama)
 

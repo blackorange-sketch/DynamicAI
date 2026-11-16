@@ -187,7 +187,7 @@ internal fun ColumnScope.SettingsAiSection(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            listOf("all" to "Усі", "litert" to "LiteRT", "mnn" to "MNN").forEach { (key, label) ->
+            listOf("all" to "Усі", "litert" to "LiteRT", "mnn" to "MNN", "gguf" to "GGUF").forEach { (key, label) ->
                 val selected = modelFilter == key
                 Box(
                     modifier = Modifier
@@ -448,6 +448,11 @@ internal fun ColumnScope.SettingsAiSection(
             }
         }
 
+        // === GGUF (llama.cpp) ===
+        if (modelFilter == "all" || modelFilter == "gguf") {
+            GgufModelsCard(vm, settings, onSettingsChange, downloadedIds) { modelToDelete = it }
+        }
+
         // === MNN Models ===
         if (modelFilter == "all" || modelFilter == "mnn") {
             // Список і розміри беремо з ModelRepository (єдине джерело правди)
@@ -528,12 +533,12 @@ internal fun ColumnScope.SettingsAiSection(
 
             val filteredModels = ModelRepository.AVAILABLE_MODELS.filter { m ->
             when (modelFilter) {
-                "litert" -> !m.id.startsWith("mnn-")
-                "mnn" -> m.id.startsWith("mnn-")
+                "litert" -> m.engine == "litert"
+                "mnn", "gguf" -> false
                 else -> true
             }
         }
-        filteredModels.filterNot { it.id.startsWith("mnn-") }.forEach { model ->
+        filteredModels.filter { it.engine == "litert" }.forEach { model ->
                 val isDownloaded = model.id in downloadedIds
                 val isSelected = model.id == vm.currentModelId
                 

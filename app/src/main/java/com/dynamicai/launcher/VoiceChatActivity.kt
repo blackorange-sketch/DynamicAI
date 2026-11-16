@@ -645,7 +645,8 @@ private fun ModelChip(vm: AppListViewModel) {
     LaunchedEffect(open) { if (open) vm.refreshDownloadedModels() }
     val models = ModelRepository.AVAILABLE_MODELS
     val current = models.find { it.id == vm.currentModelId }
-    val backend = when (settings.llmBackend) { "gpu" -> "GPU"; "cpu" -> "CPU"; else -> "Auto" }
+    val backend = if (vm.currentModelId.startsWith("gguf-")) "llama.cpp"
+        else when (settings.llmBackend) { "gpu" -> "GPU"; "cpu" -> "CPU"; else -> "Auto" }
     val dot = when {
         restarting -> AppTheme.colors.warning
         ready -> AppTheme.colors.success

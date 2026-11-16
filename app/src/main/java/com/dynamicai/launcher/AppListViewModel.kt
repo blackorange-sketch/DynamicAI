@@ -415,7 +415,10 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                 ModelRepository.refreshImported(app)
                 _ggufImport.value = "✓ Імпортовано ${target.name}"
                 _downloadTrigger.value++
-                withContext(Dispatchers.Main) { setCurrentModel("gguf-file-${target.name}") }
+                // Файл збігся з готовою моделлю (той самий .gguf скачано вручну) — активуємо її, а не «імпортовану»
+                val id = ModelRepository.AVAILABLE_MODELS.firstOrNull { it.fileName == "${ModelRepository.GGUF_DIR}/${target.name}" }?.id
+                    ?: "gguf-file-${target.name}"
+                withContext(Dispatchers.Main) { setCurrentModel(id) }
             } catch (t: Throwable) {
                 Log.e("LLM_DEBUG", "GGUF import failed: ${t.message}", t)
                 _ggufImport.value = "✗ Помилка: ${t.message}"

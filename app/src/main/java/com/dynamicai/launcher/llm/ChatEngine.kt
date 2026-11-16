@@ -871,6 +871,18 @@ class ChatEngine(
     }
 
     /** Керування телефоном через Gemini/Groq: хмара обирає інструмент, виконуємо його на пристрої. CLOUD_FAILED — хмара недоступна. */
+    /** Відповідь хмарою незалежно від режиму «авто» — коли локальна модель не завантажена. */
+    suspend fun cloudFallback(question: String, history: String = ""): String {
+        val s = SettingsStorage(context).load()
+        if (!s.cloudEnabled || !CloudLlm.hasKey(s)) return CLOUD_FAILED
+        return try {
+            cloudAnswer(question, null, history, null)?.takeIf { it.isNotBlank() } ?: CLOUD_FAILED
+        } catch (e: Exception) {
+            Log.w("ChatEngine", "cloudFallback: ${e.message}")
+            CLOUD_FAILED
+        }
+    }
+
     suspend fun cloudAgent(question: String, history: String = ""): String {
         val s = SettingsStorage(context).load()
         return try {

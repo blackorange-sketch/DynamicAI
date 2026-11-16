@@ -409,9 +409,14 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                     val r = chatEngine.simpleAnswer(text, history = history)
                     answer = if (r == ChatEngine.CLOUD_FAILED) "Хмара недоступна. Перевірте інтернет і ключ." else r
                 }
+                // Локальна модель не завантажена — пробуємо хмару
+                if (answer == null && !com.dynamicai.launcher.AppListViewModel.getSharedLlm(applicationContext).isReady) {
+                    val r = chatEngine.cloudFallback(text, history)
+                    if (r != ChatEngine.CLOUD_FAILED) answer = r
+                }
                 if (answer == null) {
                     if (!com.dynamicai.launcher.AppListViewModel.getSharedLlm(applicationContext).isReady) {
-                        val err = "Модель ШІ не завантажена."
+                        val err = "Локальна модель не завантажена, а хмара недоступна (перевірте ключ і інтернет)."
                         ChatHistoryManager.addMessage("assistant", err)
                         isThinking = false
                         flash(BuddyMood.ERROR, 2200)

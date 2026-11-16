@@ -121,7 +121,7 @@ fun FloatingOrb(
                                     modifier = Modifier
                                         .widthIn(max = 240.dp)
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(if (isUser) AppTheme.colors.accentDark.copy(alpha = 0.4f) else AppTheme.colors.glassBorder.copy(alpha = 0.7f))
+                                        .background(if (isUser) AppTheme.colors.accentDark.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.10f))
                                         .padding(10.dp)
                                 ) {
                                     Text(text, color = AppTheme.colors.textPrimary, fontSize = 13.sp)
@@ -142,7 +142,7 @@ fun FloatingOrb(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(20.dp))
-                            .background(AppTheme.colors.glassBorder.copy(alpha = 0.7f))
+                            .background(Color.White.copy(alpha = 0.10f))
                             .padding(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {

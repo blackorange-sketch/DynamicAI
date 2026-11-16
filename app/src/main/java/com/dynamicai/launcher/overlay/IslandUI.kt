@@ -10,6 +10,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.unit.Dp
 import androidx.compose.animation.core.tween
@@ -358,13 +359,25 @@ fun IslandPanel(
 
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
-    val scrim by animateFloatAsState(if (visible) 0.22f else 0f, tween(200), label = "scrim")
+    val scrim by animateFloatAsState(if (visible) 0.22f else 0f, tween(170), label = "scrim")
+    // Закриття у два кроки: спершу панель зникає, і лише потім вікно стискається до острівця
+    // (інакше на мить видно «з'їхавшу» обрізану панель)
+    val scope = rememberCoroutineScope()
+    var closing by remember { mutableStateOf(false) }
+    val dismissThen: (() -> Unit) -> Unit = { after ->
+        if (!closing) {
+            closing = true
+            visible = false
+            scope.launch { delay(170); after() }
+        }
+    }
+    val close = { dismissThen(onClose) }
 
     Box(
         Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = scrim))
-            .pointerInput(Unit) { detectTapGestures { onClose() } },
+            .pointerInput(Unit) { detectTapGestures { close() } },
         contentAlignment = Alignment.TopCenter
     ) {
         AnimatedVisibility(
@@ -373,7 +386,9 @@ fun IslandPanel(
                 initialScale = 0.5f, transformOrigin = TransformOrigin(0.5f, 0f),
                 animationSpec = spring(dampingRatio = 0.78f, stiffness = 650f)
             ),
-            exit = fadeOut(tween(90))
+            exit = fadeOut(tween(140)) + scaleOut(
+                targetScale = 0.6f, transformOrigin = TransformOrigin(0.5f, 0f), animationSpec = tween(170)
+            )
         ) {
             Column(
                 Modifier
@@ -383,7 +398,7 @@ fun IslandPanel(
                     .background(PanelGlass)
                     .border(1.dp, GlassEdge, RoundedCornerShape(32.dp))
                     .pointerInput(Unit) { detectTapGestures { } } // дотики по картці не закривають її
-                    .pointerInput(Unit) { detectVerticalDragGestures { _, dy -> if (dy < -16f) onClose() } }
+                    .pointerInput(Unit) { detectVerticalDragGestures { _, dy -> if (dy < -16f) close() } }
                     .padding(top = 12.dp, bottom = 8.dp)
             ) {
                 HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth().height(pageH)) { i ->
@@ -391,8 +406,8 @@ fun IslandPanel(
                         Modifier.fillMaxSize().padding(horizontal = 12.dp).verticalScroll(rememberScrollState())
                     ) {
                         when (pages.getOrNull(i)) {
-                            "home" -> HomePage(mood, micLevel, now, weather, battery, live, onOpenChat, onVoice, onClose)
-                            "notifs" -> NotifsPage(notifs, hasListener, onClose, onReplyFocus)
+                            "home" -> HomePage(mood, micLevel, now, weather, battery, live, { dismissThen(onOpenChat) }, { dismissThen(onVoice) }, close)
+                            "notifs" -> NotifsPage(notifs, hasListener, close, onReplyFocus)
                             "music" -> np?.let { NowPlayingCard(it) }
                         }
                     }

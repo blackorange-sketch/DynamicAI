@@ -398,23 +398,23 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Голосовий асистент", color = AppTheme.colors.textPrimary, fontSize = AppDims.textTitle, fontWeight = FontWeight.SemiBold)
+                Text("Голосовий асистент", color = AppTheme.colors.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = {
+                    IconButton(modifier = Modifier.size(38.dp), onClick = {
                         imagePicker.launch(
                             androidx.activity.result.PickVisualMediaRequest(
                                 androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
                             )
                         )
                     }) {
-                        Text("🖼", fontSize = 20.sp)
+                        Text("🖼", fontSize = 16.sp)
                     }
-                    IconButton(onClick = { showArchive = true }) {
-                        Text("🕘", fontSize = 20.sp)
+                    IconButton(modifier = Modifier.size(38.dp), onClick = { showArchive = true }) {
+                        Text("🕘", fontSize = 16.sp)
                     }
                     if (visible.isNotEmpty()) {
-                        IconButton(onClick = { showClearDialog = true }) {
-                            Text("＋", color = AppTheme.colors.textSecondary, fontSize = 26.sp)
+                        IconButton(modifier = Modifier.size(38.dp), onClick = { showClearDialog = true }) {
+                            Text("＋", color = AppTheme.colors.textSecondary, fontSize = 20.sp)
                         }
                     }
                     GlassCloseButton(onClick = onClose)
@@ -468,7 +468,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
                             .background(AppTheme.colors.accentDark.copy(alpha = 0.15f))
                             .padding(horizontal = AppDims.spaceM, vertical = 6.dp)
                     ) {
-                        Text(currentStatus.content, color = AppTheme.colors.accent, fontSize = 13.sp)
+                        Text(currentStatus.content, color = AppTheme.colors.accent, fontSize = 12.sp)
                     }
                 }
             }
@@ -555,47 +555,47 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp))
+                    .clip(RoundedCornerShape(22.dp))
                     .background(AppTheme.colors.glassBackground)
-                    .border(1.dp, AppTheme.colors.glassBorder, RoundedCornerShape(24.dp))
-                    .padding(AppDims.spaceS),
+                    .border(1.dp, AppTheme.colors.glassBorder, RoundedCornerShape(22.dp))
+                    .padding(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 BasicTextField(
                     value = query,
                     onValueChange = { query = it },
                     modifier = Modifier.weight(1f).padding(horizontal = AppDims.spaceM),
-                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = AppDims.textBodyLarge),
+                    textStyle = TextStyle(color = AppTheme.colors.textPrimary, fontSize = 14.sp),
                     cursorBrush = SolidColor(AppTheme.colors.accent),
                     decorationBox = { inner ->
-                        if (query.isEmpty()) Text("Запитай або скажи…", color = AppTheme.colors.textMuted, fontSize = AppDims.textBodyLarge)
+                        if (query.isEmpty()) Text("Запитай або скажи…", color = AppTheme.colors.textMuted, fontSize = 14.sp)
                         inner()
                     }
                 )
                 if (busy) {
                     // Стоп: зупиняє очікування відповіді та озвучення
                     Box(
-                        modifier = Modifier.size(44.dp).clip(CircleShape).background(AppTheme.colors.danger.copy(alpha = 0.18f)).clickable { stopGeneration() },
+                        modifier = Modifier.size(36.dp).clip(CircleShape).background(AppTheme.colors.danger.copy(alpha = 0.18f)).clickable { stopGeneration() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Box(modifier = Modifier.size(14.dp).clip(RoundedCornerShape(3.dp)).background(AppTheme.colors.danger))
+                        Box(modifier = Modifier.size(12.dp).clip(RoundedCornerShape(3.dp)).background(AppTheme.colors.danger))
                     }
                 } else {
                     Box(
-                        modifier = Modifier.size(44.dp).clip(CircleShape).background(AppTheme.colors.accent.copy(alpha = 0.18f)).clickable {
+                        modifier = Modifier.size(36.dp).clip(CircleShape).background(AppTheme.colors.accent.copy(alpha = 0.18f)).clickable {
                             if (query.isNotBlank() || pendingImage != null) {
                                 sendQuery(query)
                                 query = ""
                             }
                         },
                         contentAlignment = Alignment.Center
-                    ) { Icon(Icons.Default.Send, contentDescription = "Надіслати", tint = AppTheme.colors.accent) }
+                    ) { Icon(Icons.Default.Send, contentDescription = "Надіслати", tint = AppTheme.colors.accent, modifier = Modifier.size(18.dp)) }
                 }
 
                 Box(
-                    modifier = Modifier.size(44.dp).clip(CircleShape).background(if (voiceState == VoiceState.LISTENING) AppTheme.colors.success.copy(alpha = 0.2f) else Color.Transparent).clickable { startListening() },
+                    modifier = Modifier.size(36.dp).clip(CircleShape).background(if (voiceState == VoiceState.LISTENING) AppTheme.colors.success.copy(alpha = 0.2f) else Color.Transparent).clickable { startListening() },
                     contentAlignment = Alignment.Center
-                ) { Icon(MicIcon, contentDescription = "Мікрофон", tint = if (voiceState == VoiceState.LISTENING) AppTheme.colors.success else AppTheme.colors.textSecondary) }
+                ) { Icon(MicIcon, contentDescription = "Мікрофон", tint = if (voiceState == VoiceState.LISTENING) AppTheme.colors.success else AppTheme.colors.textSecondary, modifier = Modifier.size(20.dp)) }
             }
 
             Spacer(modifier = Modifier.height(AppDims.spaceM))
@@ -668,16 +668,16 @@ private fun ModelChip(vm: AppListViewModel) {
                 .background(AppTheme.colors.glassBackground)
                 .border(1.dp, AppTheme.colors.glassBorder, RoundedCornerShape(AppDims.radiusS))
                 .clickable { open = true }
-                .padding(horizontal = AppDims.spaceM, vertical = 6.dp),
+                .padding(horizontal = 10.dp, vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(dot))
             Spacer(Modifier.width(AppDims.spaceS))
             Text(
                 (current?.name ?: vm.currentModelId) + " · " + state,
-                color = AppTheme.colors.textPrimary, fontSize = AppDims.textSmall, maxLines = 1
+                color = AppTheme.colors.textPrimary, fontSize = 11.sp, maxLines = 1
             )
-            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = AppTheme.colors.textMuted)
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = AppTheme.colors.textMuted, modifier = Modifier.size(18.dp))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             val available = models.filter { it.id in downloaded }
@@ -714,7 +714,7 @@ private fun MessageBubble(msg: ChatMessage, maxWidth: Dp, onAction: (String) -> 
             if (parts.size >= 2 && parts[1].startsWith("http")) parts[0].trim() to parts[1].trim() else null
         }
     }
-    val shape = if (isUser) RoundedCornerShape(20.dp, 20.dp, 4.dp, 20.dp) else RoundedCornerShape(20.dp, 20.dp, 20.dp, 4.dp)
+    val shape = if (isUser) RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp) else RoundedCornerShape(18.dp, 18.dp, 18.dp, 4.dp)
     val bg = when { isError -> c.danger.copy(alpha = 0.12f); isUser -> c.accent.copy(alpha = 0.20f); else -> c.glassBackground }
     val border = when { isError -> c.danger.copy(alpha = 0.5f); isUser -> c.accent.copy(alpha = 0.4f); else -> c.glassBorder }
 
@@ -730,7 +730,7 @@ private fun MessageBubble(msg: ChatMessage, maxWidth: Dp, onAction: (String) -> 
                     .background(bg)
                     .border(1.dp, border, shape)
                     .pointerInput(msg) { detectTapGestures(onLongPress = { menu = true }) }
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 // Погоду, курс валют і маршрут показуємо карткою; решту — текстом
                 val card = remember(bodyText) { if (isUser || isError) null else com.dynamicai.launcher.ui.parseChatCard(bodyText) }
@@ -738,8 +738,8 @@ private fun MessageBubble(msg: ChatMessage, maxWidth: Dp, onAction: (String) -> 
                 else Text(
                     bodyText,
                     color = if (isError) c.danger else c.textPrimary,
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp,
+                    fontSize = 13.5.sp,
+                    lineHeight = 19.sp,
                     fontWeight = if (isUser) FontWeight.Medium else FontWeight.Normal
                 )
                 if (sources.isNotEmpty()) {
@@ -955,9 +955,9 @@ fun LiquidChip(label: String, color: Color, onClick: () -> Unit) {
             .background(color.copy(alpha = 0.2f))
             .border(0.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
-        Text(label, color = AppTheme.colors.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = AppTheme.colors.textPrimary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
     }
 }
 

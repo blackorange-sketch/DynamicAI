@@ -139,7 +139,7 @@ dependencies {
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation("androidx.savedstate:savedstate-ktx:1.2.1")
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.18.1")
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.19.1")
     implementation("com.alphacephei:vosk-android:0.3.47")
     implementation("net.java.dev.jna:jna:5.13.0@aar")
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")

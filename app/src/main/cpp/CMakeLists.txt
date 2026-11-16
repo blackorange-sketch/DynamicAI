@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Static llama/ggml archives end up inside a shared library.
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# llama.cpp is fetched at configure time (pinned tag) and linked statically into one .so.
+# llama.cpp is fetched at configure time (pinned build tag) and linked statically into one .so.
 include(FetchContent)
 
 set(BUILD_SHARED_LIBS     OFF CACHE BOOL "" FORCE)
@@ -17,6 +17,8 @@ set(LLAMA_BUILD_EXAMPLES  OFF CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_SERVER    OFF CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_APP       OFF CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_UI        OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_HTML      OFF CACHE BOOL "" FORCE)
+set(LLAMA_BUILD_IS_DEV    OFF CACHE BOOL "" FORCE)
 set(LLAMA_OPENSSL         OFF CACHE BOOL "" FORCE)
 
 set(GGML_NATIVE           OFF CACHE BOOL "" FORCE)
@@ -31,7 +33,7 @@ endif()
 
 FetchContent_Declare(
     llama
-    URL https://github.com/ggml-org/llama.cpp/archive/refs/tags/v1.0.0.tar.gz
+    URL https://github.com/ggml-org/llama.cpp/archive/refs/tags/v1.0.0-b12359-b1b770d.tar.gz
 )
 FetchContent_MakeAvailable(llama)
 

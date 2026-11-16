@@ -67,15 +67,13 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         )
     }
 
-    @OptIn(ExperimentalApi::class)
-    private fun applySpeculativeDecoding(enabled: Boolean) {
-        try {
-            ExperimentalFlags.enableSpeculativeDecoding = enabled
-            Log.e("LITERT_CFG", "enableSpeculativeDecoding=$enabled")
-        } catch (t: Throwable) {
-            Log.e("LITERT_CFG", "enableSpeculativeDecoding failed: ${t.message}")
+    /** LiteRT-LM 0.19: спекулятивне декодування (MTP) задається в EngineConfig замість глобального прапорця. */
+    private fun speculativeConfig(enabled: Boolean?): com.google.ai.edge.litertlm.SpeculativeDecodingConfig? =
+        enabled?.let {
+            com.google.ai.edge.litertlm.SpeculativeDecodingConfig(
+                if (it) com.google.ai.edge.litertlm.SpeculativeDecodingMode.ON else com.google.ai.edge.litertlm.SpeculativeDecodingMode.OFF
+            )
         }
-    }
 
     suspend fun initialize(modelFile: File): Boolean = withContext(Dispatchers.IO) {
         if (_isReady) return@withContext true
@@ -96,7 +94,7 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
         // Спроба 1: GPU (через системний OpenCL, з дозволами в маніфесті)
         attempts.add("Backend.GPU()" to {
             val ov = readOverrides()
-            ov.mtp?.let { applySpeculativeDecoding(it) }
+            val spec = speculativeConfig(ov.mtp)
             // Усі кеші LiteRT живуть у папках litert_* (їх легко очистити кнопкою в налаштуваннях)
             val cacheTag = if (ov.separateCache) {
                 "litert_${modelFile.nameWithoutExtension}_${ov.activation ?: "default"}_mtp${ov.mtp ?: "default"}"
@@ -110,18 +108,21 @@ class LiteRtLlmEngine(private val context: Context) : LlmEngine {
                     modelPath = modelFile.absolutePath,
                     backend = Backend.GPU(),
                     activationDataType = ActivationDataType.FLOAT32,
-                    cacheDir = cachePath
+                    cacheDir = cachePath,
+                    speculativeDecodingConfig = spec
                 )
                 "FLOAT16" -> EngineConfig(
                     modelPath = modelFile.absolutePath,
                     backend = Backend.GPU(),
                     activationDataType = ActivationDataType.FLOAT16,
-                    cacheDir = cachePath
+                    cacheDir = cachePath,
+                    speculativeDecodingConfig = spec
                 )
                 else -> EngineConfig(
                     modelPath = modelFile.absolutePath,
                     backend = Backend.GPU(),
-                    cacheDir = cachePath
+                    cacheDir = cachePath,
+                    speculativeDecodingConfig = spec
                 )
             }
             val e = Engine(config)

@@ -100,9 +100,9 @@ internal fun ColumnScope.SettingsAiSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Плаваюча куля JARVIS", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
+                    Text("Асистент на екрані", color = AppTheme.colors.textPrimary, fontSize = 14.sp)
                     Text(
-                        if (orbEnabled) "Активна — куля на екрані" else "Вимкнена",
+                        if (orbEnabled) "Активний — персонаж на екрані" else "Вимкнений",
                         color = AppTheme.colors.textSecondary, fontSize = 11.sp
                     )
                 }
@@ -133,6 +133,31 @@ internal fun ColumnScope.SettingsAiSection(
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = AppTheme.colors.success
                     )
+                )
+            }
+            // Вигляд: острівець біля камери або плаваючий персонаж
+            var orbStyle by remember { mutableStateOf(prefs.getString("style", "island") ?: "island") }
+            Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                Text("Вигляд", color = AppTheme.colors.textSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("island" to "Острівець угорі", "floating" to "Плаваючий").forEach { (value, label) ->
+                        LlmBackendChip(label, value, orbStyle) {
+                            if (orbStyle == value) return@LlmBackendChip
+                            orbStyle = value
+                            prefs.edit().putString("style", value).apply()
+                            // Перезапуск сервісу, щоб вікно перебудувалось
+                            if (orbEnabled) {
+                                val intent = Intent(ctx, FloatingOrbService::class.java)
+                                ctx.stopService(intent)
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(intent) else ctx.startService(intent)
+                            }
+                        }
+                    }
+                }
+                Text(
+                    "Натисни — чат, утримуй — голос, подвійний дотик — запаморочиться. Після 2 хв спокою засинає.",
+                    color = AppTheme.colors.textMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 6.dp)
                 )
             }
         }

@@ -42,14 +42,12 @@ fun FloatingOrb(
     onDrag: (Float, Float) -> Unit,
     onSendMessage: (String) -> Unit,
     onMicClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    mood: BuddyMood = if (isThinking) BuddyMood.THINK else BuddyMood.IDLE,
+    micLevel: () -> Float = { 0f },
+    island: Boolean = false,
+    hint: String? = null
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "orb")
-    val pulse by infiniteTransition.animateFloat(
-        initialValue = 0.9f, targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "pulse"
-    )
-
     var query by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
 
@@ -70,38 +68,20 @@ fun FloatingOrb(
         contentAlignment = Alignment.Center
     ) {
         if (!isExpanded) {
-            // Маленька куля (Зона натискання 64dp, візуал 48dp)
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .then(dragModifier)
-                    .clickable { onExpandChange(true) },
-                contentAlignment = Alignment.Center
-            ) {
-                val primaryColor = AppTheme.colors.successLight
-                val _orbTextPrimary = AppTheme.colors.textPrimary
-                Canvas(modifier = Modifier.size(48.dp)) {
-                    val center = this.center
-                    val baseRadius = size.minDimension * 0.4f
-
-                    // Дуже делікатне світіння (ледь помітне)
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(primaryColor.copy(alpha = 0.15f), Color.Transparent),
-                            center = center, radius = baseRadius * 1.5f
-                        ),
-                        radius = baseRadius * 1.5f, center = center
+            if (island) {
+                // Острівець угорі біля камери
+                OrbIsland(
+                    mood = mood, text = hint, micLevel = micLevel,
+                    onTap = { onExpandChange(true) }, onLongPress = onMicClick
+                )
+            } else {
+                // Персонаж (зона дотику трохи більша за малюнок)
+                Box(modifier = Modifier.size(72.dp), contentAlignment = Alignment.Center) {
+                    OrbBuddy(
+                        mood = mood, size = 64.dp, micLevel = micLevel,
+                        onTap = { onExpandChange(true) }, onLongPress = onMicClick,
+                        onDrag = onDrag
                     )
-                    // Ядро
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(_orbTextPrimary.copy(alpha = 0.9f), primaryColor.copy(alpha = 0.6f), Color.Transparent),
-                            center = Offset(center.x - baseRadius * 0.2f, center.y - baseRadius * 0.2f), radius = baseRadius * 0.7f * pulse
-                        ),
-                        radius = baseRadius * 0.7f * pulse, center = center
-                    )
-                    // Тонке кільце
-                    drawCircle(color = primaryColor.copy(alpha = 0.5f), radius = baseRadius * 1.1f, center = center, style = Stroke(width = 1.dp.toPx()))
                 }
             }
         } else {
@@ -125,8 +105,8 @@ fun FloatingOrb(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (isThinking) AppTheme.colors.accentDark else AppTheme.colors.success))
-                            Spacer(Modifier.width(8.dp))
+                            OrbBuddy(mood = mood, size = 30.dp, micLevel = micLevel, onLongPress = onMicClick)
+                            Spacer(Modifier.width(6.dp))
                             Text("JARVIS", color = AppTheme.colors.textPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         }
                         Text("✕", color = AppTheme.colors.textSecondary, fontSize = 18.sp, modifier = Modifier.clickable(indication = LocalIndication.current, interactionSource = remember { MutableInteractionSource() }) { onExpandChange(false) })

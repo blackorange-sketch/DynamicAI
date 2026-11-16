@@ -12,6 +12,9 @@ import android.os.IBinder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import android.widget.Toast
 import android.view.Gravity
 import android.util.DisplayMetrics
@@ -58,6 +61,12 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     
     private val scope = CoroutineScope(Dispatchers.Main)
     private var isThinking by mutableStateOf(false)
+    private var mood by mutableStateOf(BuddyMood.IDLE)
+    private var micLevel by mutableFloatStateOf(0f)
+    private var lastActive = System.currentTimeMillis()
+    private var moodJob: Job? = null
+    /** Стиль: острівець угорі біля камери або плаваючий персонаж. */
+    private var island = true
     private lateinit var chatEngine: ChatEngine
     private lateinit var tts: TtsManager
     private var speechRecognizer: SpeechRecognizer? = null
@@ -72,7 +81,15 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         tts = TtsManager(applicationContext)
 
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        island = getSharedPreferences("floating_orb", Context.MODE_PRIVATE).getString("style", "island") == "island"
         createOverlay()
+        // Після 2 хв бездіяльності персонаж засинає (і майже не малює кадрів)
+        scope.launch {
+            while (isActive) {
+                delay(15_000)
+                if (mood == BuddyMood.IDLE && System.currentTimeMillis() - lastActive > 120_000) mood = BuddyMood.SLEEP
+            }
+        }
         lifecycleRegistry.currentState = Lifecycle.State.RESUMED
     }
 
@@ -102,6 +119,7 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             x = currentX.toInt()
             y = currentY.toInt()
         }
+        if (island) placeIsland()
 
         composeView = ComposeView(this).apply {
             setViewTreeLifecycleOwner(this@FloatingOrbService)
@@ -114,7 +132,11 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         isExpanded = isExpanded,
                         messages = ChatHistoryManager.history.map { it.role to it.content },
                         isThinking = isThinking,
+                        mood = mood,
+                        micLevel = { micLevel },
+                        island = island,
                         onExpandChange = {
+                            wake()
                             isExpanded = it
                             updateWindowSize(it)
                         },
@@ -158,8 +180,54 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             params.x = currentX.roundToInt()
             params.y = currentY.roundToInt()
             params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+            if (island) placeIsland()
         }
         windowManager.updateViewLayout(composeView, params)
+    }
+
+    /** Острівець: по центру вгорі, у смузі статус-бару навколо камери. */
+    private fun placeIsland() {
+        val density = resources.displayMetrics.density
+        val sbId = resources.getIdentifier("status_bar_height", "dimen", "android")
+        val statusBar = if (sbId > 0) resources.getDimensionPixelSize(sbId) else (24 * density).toInt()
+        val islandH = (34 * density).toInt()
+        params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+        params.x = 0
+        params.y = ((statusBar - islandH) / 2).coerceAtLeast(0)
+        params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
+    }
+
+    /** Будь-яка взаємодія будить персонажа. */
+    private fun wake() {
+        lastActive = System.currentTimeMillis()
+        if (mood == BuddyMood.SLEEP) mood = BuddyMood.IDLE
+    }
+
+    /** Показати настрій на час, потім повернутись у спокій. */
+    private fun flash(m: BuddyMood, ms: Long) {
+        moodJob?.cancel()
+        mood = m
+        moodJob = scope.launch {
+            delay(ms)
+            if (mood == m) mood = BuddyMood.IDLE
+        }
+    }
+
+    /** Відповідь готова: стрибок радості, потім «говорить», поки звучить озвучка. */
+    private fun deliver(answer: String) {
+        moodJob?.cancel()
+        mood = BuddyMood.HAPPY
+        moodJob = scope.launch {
+            delay(900)
+            mood = BuddyMood.SPEAK
+            tts.speakWithCallback(answer) {
+                scope.launch { if (mood == BuddyMood.SPEAK) mood = BuddyMood.IDLE; lastActive = System.currentTimeMillis() }
+            }
+        }
     }
 
     private fun startForegroundNotification() {
@@ -183,27 +251,40 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
 
 
     private fun processQuery(text: String) {
+        wake()
         ChatHistoryManager.addMessage("user", text)
         isThinking = true
+        moodJob?.cancel()
+        mood = BuddyMood.THINK
         scope.launch {
             try {
-                if (!com.dynamicai.launcher.AppListViewModel.getSharedLlm(applicationContext).isReady) {
-                    val err = "Модель ШІ не завантажена."
-                    ChatHistoryManager.addMessage("assistant", err)
-                    isThinking = false
-                    tts.speak(err)
-                    return@launch
+                val history = ChatHistoryManager.history.takeLast(10).joinToString("\n") {
+                    if (it.role == "user") "Користувач: ${it.content}" else "Асистент: ${it.content}"
                 }
-                val history = ChatHistoryManager.history.takeLast(10).joinToString("\n") { 
-                    if (it.role == "user") "Користувач: ${it.content}" else "Асистент: ${it.content}" 
+                // Спершу хмарний агент (не потребує локальної моделі), потім локальний
+                var answer: String? = null
+                if (chatEngine.cloudAgentEligible(text)) {
+                    val r = chatEngine.cloudAgent(text, history)
+                    if (r != ChatEngine.CLOUD_FAILED) answer = r
                 }
-                val answer = chatEngine.answerWithAgent(text, history)
+                if (answer == null) {
+                    if (!com.dynamicai.launcher.AppListViewModel.getSharedLlm(applicationContext).isReady) {
+                        val err = "Модель ШІ не завантажена."
+                        ChatHistoryManager.addMessage("assistant", err)
+                        isThinking = false
+                        flash(BuddyMood.ERROR, 2200)
+                        tts.speak(err)
+                        return@launch
+                    }
+                    answer = chatEngine.answerWithAgent(text, history)
+                }
                 ChatHistoryManager.addMessage("assistant", answer)
                 isThinking = false
-                tts.speak(answer)
+                deliver(answer)
             } catch (e: Exception) {
                 ChatHistoryManager.addMessage("assistant", "Помилка: ${e.message}")
                 isThinking = false
+                flash(BuddyMood.ERROR, 2200)
             }
         }
     }
@@ -214,20 +295,34 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
             return
         }
         if (!SpeechRecognizer.isRecognitionAvailable(this)) return
+        wake()
         speechRecognizer?.destroy()
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
             setRecognitionListener(object : RecognitionListener {
-                override fun onReadyForSpeech(params: Bundle?) {}
+                override fun onReadyForSpeech(params: Bundle?) {
+                    moodJob?.cancel()
+                    mood = BuddyMood.LISTEN
+                }
                 override fun onBeginningOfSpeech() {
                     if (tts.isReady) tts.stop()
                 }
-                override fun onRmsChanged(rmsdB: Float) {}
+                override fun onRmsChanged(rmsdB: Float) {
+                    // rmsdB зазвичай −2…10 — нормуємо в 0…1 для очей і аури
+                    micLevel = ((rmsdB + 2f) / 12f).coerceIn(0f, 1f)
+                }
                 override fun onBufferReceived(buffer: ByteArray?) {}
-                override fun onEndOfSpeech() {}
-                override fun onError(error: Int) { isThinking = false }
+                override fun onEndOfSpeech() {
+                    micLevel = 0f
+                    mood = BuddyMood.THINK
+                }
+                override fun onError(error: Int) {
+                    isThinking = false
+                    micLevel = 0f
+                    flash(BuddyMood.ERROR, 1500)
+                }
                 override fun onResults(results: Bundle?) {
                     val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull() ?: ""
-                    if (text.isNotBlank()) processQuery(text)
+                    if (text.isNotBlank()) processQuery(text) else mood = BuddyMood.IDLE
                 }
                 override fun onPartialResults(partialResults: Bundle?) {}
                 override fun onEvent(eventType: Int, params: Bundle?) {}

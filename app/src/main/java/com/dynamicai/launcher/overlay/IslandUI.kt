@@ -21,6 +21,10 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -77,8 +81,10 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.sin
 
-private val IslandBlack = Color(0xFF000000)
-private val PanelBlack = Color(0xFF0B0B0F)
+// Напівпрозоре «скло», як док і віджети лаунчера
+private val IslandBlack = Color(0xFF07070B).copy(alpha = 0.80f)
+private val PanelGlass = Color(0xFF101016).copy(alpha = 0.86f)
+private val GlassEdge = Color.White.copy(alpha = 0.08f)
 private val Soft = Color.White.copy(alpha = 0.62f)
 private val Faint = Color.White.copy(alpha = 0.10f)
 
@@ -164,6 +170,7 @@ fun IslandCompact(
                 .size(w, h)
                 .clip(RoundedCornerShape(minOf(h / 2, 26.dp)))
                 .background(IslandBlack)
+                .border(0.5.dp, GlassEdge, RoundedCornerShape(minOf(h / 2, 26.dp)))
                 .pointerInput(Unit) { detectTapGestures(onTap = { onTap() }, onLongPress = { onLongPress() }) }
                 .pointerInput(Unit) { detectVerticalDragGestures { _, dy -> if (dy > 10f) onSwipeDown() } }
         ) {
@@ -336,130 +343,152 @@ fun IslandPanel(
     val hasListener = remember { TriggerPermissions.hasNotificationListener(ctx) }
     val weather = remember { WeatherRepository(ctx).loadCachedWeather() }
     val now = rememberNow(true)
-    val maxH = (LocalConfiguration.current.screenHeightDp * 0.8f).dp
+    val conf = LocalConfiguration.current
+    // Як в iOS: невелика картка біля камери, а не на весь екран
+    val panelW = (conf.screenWidthDp.dp - 28.dp).coerceAtMost(380.dp)
+    val pageH = 196.dp
+
+    // Сторінки гортаються вбік: огляд, сповіщення, музика (якщо щось грає)
+    val pages = buildList {
+        add("home")
+        add("notifs")
+        if (np?.title?.isNotBlank() == true) add("music")
+    }
+    val pager = rememberPagerState { pages.size }
 
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
-    val scrim by animateFloatAsState(if (visible) 0.35f else 0f, tween(200), label = "scrim")
+    val scrim by animateFloatAsState(if (visible) 0.22f else 0f, tween(200), label = "scrim")
 
-    // Вікно на весь екран: анімація не змінює його розмір (плавно), дотик по затемненню закриває панель
     Box(
         Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = scrim))
-            .pointerInput(Unit) { detectTapGestures { onClose() } }
+            .pointerInput(Unit) { detectTapGestures { onClose() } },
+        contentAlignment = Alignment.TopCenter
     ) {
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn(tween(110)) + scaleIn(
-            initialScale = 0.6f, transformOrigin = TransformOrigin(0.5f, 0f),
-            animationSpec = spring(dampingRatio = 0.78f, stiffness = 650f)
-        ),
-        exit = fadeOut(tween(90))
-    ) {
-        Column(
-            Modifier
-                .padding(horizontal = 8.dp, vertical = 6.dp)
-                .fillMaxWidth()
-                .heightIn(max = maxH)
-                .clip(RoundedCornerShape(30.dp))
-                .background(PanelBlack)
-                .pointerInput(Unit) { detectTapGestures { } } // дотики по панелі не закривають її
-                .verticalScroll(rememberScrollState())
-                .padding(14.dp)
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(tween(110)) + scaleIn(
+                initialScale = 0.5f, transformOrigin = TransformOrigin(0.5f, 0f),
+                animationSpec = spring(dampingRatio = 0.78f, stiffness = 650f)
+            ),
+            exit = fadeOut(tween(90))
         ) {
-            // --- Шапка: персонаж, час, погода, заряд ---
-            Row(
+            Column(
                 Modifier
-                    .fillMaxWidth()
-                    .pointerInput(Unit) { detectVerticalDragGestures { _, dy -> if (dy < -14f) onClose() } },
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(top = 6.dp)
+                    .width(panelW)
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(PanelGlass)
+                    .border(1.dp, GlassEdge, RoundedCornerShape(32.dp))
+                    .pointerInput(Unit) { detectTapGestures { } } // дотики по картці не закривають її
+                    .pointerInput(Unit) { detectVerticalDragGestures { _, dy -> if (dy < -16f) onClose() } }
+                    .padding(top = 12.dp, bottom = 8.dp)
             ) {
-                OrbBuddy(mood = mood, size = 44.dp, micLevel = micLevel, onTap = onOpenChat, onLongPress = onVoice)
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(now)), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Text(SimpleDateFormat("EEEE, d MMMM", Locale("uk")).format(Date(now)), color = Soft, fontSize = 11.sp)
-                }
-                (weather as? WeatherState.Data)?.let { w ->
-                    Chip("${w.icon} ${w.tempC}°")
-                    Spacer(Modifier.width(6.dp))
-                }
-                battery?.let { b -> Chip((if (b.charging) "⚡" else if (b.level <= 15) "🪫" else "🔋") + " ${b.level}%") }
-            }
-            Spacer(Modifier.height(10.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ActionPill("💬  Чат з асистентом", Modifier.weight(1f)) { onOpenChat() }
-                ActionPill("🎤  Голос", Modifier.weight(0.6f)) { onVoice() }
-            }
-            Spacer(Modifier.height(12.dp))
-
-            // --- Живі активності ---
-            live.sortedBy { livePriority(it.kind) }.forEach { item ->
-                Section {
-                    Row(
-                        Modifier.fillMaxWidth().clickable { IslandHub.open(ctx, item.intent, item.pkg); onClose() }.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth().height(pageH)) { i ->
+                    Column(
+                        Modifier.fillMaxSize().padding(horizontal = 12.dp).verticalScroll(rememberScrollState())
                     ) {
-                        Avatar(item.icon, liveEmoji(item.kind))
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(item.title.ifBlank { item.app }, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            if (item.text.isNotBlank()) Text(item.text, color = Soft, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            item.progress?.let { p ->
-                                LinearProgressIndicator(
-                                    progress = { p }, color = AppTheme.colors.accent, trackColor = Faint,
-                                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp).height(3.dp).clip(RoundedCornerShape(2.dp))
-                                )
-                            }
-                        }
-                        if (item.kind == LiveItem.Kind.TIMER || item.kind == LiveItem.Kind.STOPWATCH || item.kind == LiveItem.Kind.CALL) {
-                            Text(chronoText(item, now), color = if (item.kind == LiveItem.Kind.TIMER) Color(0xFFFFB74D) else AppTheme.colors.success, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        when (pages.getOrNull(i)) {
+                            "home" -> HomePage(mood, micLevel, now, weather, battery, live, onOpenChat, onVoice, onClose)
+                            "notifs" -> NotifsPage(notifs, hasListener, onClose, onReplyFocus)
+                            "music" -> np?.let { NowPlayingCard(it) }
                         }
                     }
                 }
-            }
-
-            // --- Музика ---
-            np?.takeIf { it.title.isNotBlank() }?.let { NowPlayingCard(it) }
-
-            // --- Сповіщення ---
-            if (!hasListener) {
-                Section {
-                    Row(
-                        Modifier.fillMaxWidth().clickable {
-                            try { ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Throwable) {}; onClose()
-                        }.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.NotificationsOff, null, tint = AppTheme.colors.warning)
-                        Spacer(Modifier.width(10.dp))
-                        Text("Дайте доступ до сповіщень, щоб бачити їх тут", color = Color.White, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                        Text("Надати", color = AppTheme.colors.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                // Крапки сторінок
+                Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.Center) {
+                    pages.forEachIndexed { i, _ ->
+                        val sel = pager.currentPage == i
+                        val dw by animateDpAsState(if (sel) 16.dp else 6.dp, spring(stiffness = 600f), label = "dot")
+                        Box(
+                            Modifier.padding(horizontal = 3.dp).size(dw, 6.dp).clip(RoundedCornerShape(3.dp))
+                                .background(Color.White.copy(alpha = if (sel) 0.85f else 0.3f))
+                        )
                     }
                 }
-            } else if (notifs.isNotEmpty()) {
-                Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 6.dp, start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Сповіщення · ${notifs.size}", color = Soft, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    if (notifs.any { it.clearable }) {
-                        Text("Очистити", color = AppTheme.colors.accent, fontSize = 12.sp, modifier = Modifier.clickable { IslandHub.dismissAll() }.padding(4.dp))
-                    }
-                }
-                notifs.take(8).forEach { n ->
-                    key(n.key) { NotifRow(n, onClose, onReplyFocus) }
-                }
-            } else {
-                Text("Нових сповіщень немає", color = Soft, fontSize = 12.sp, modifier = Modifier.padding(6.dp))
             }
-
-            // Ручка-закривачка
-            Box(
-                Modifier.fillMaxWidth().padding(top = 8.dp).clickable { onClose() }.padding(6.dp),
-                contentAlignment = Alignment.Center
-            ) { Box(Modifier.size(36.dp, 4.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.3f))) }
         }
     }
+}
+
+@Composable
+private fun HomePage(
+    mood: BuddyMood, micLevel: () -> Float, now: Long, weather: WeatherState?, battery: BatteryInfo?,
+    live: List<LiveItem>, onOpenChat: () -> Unit, onVoice: () -> Unit, onClose: () -> Unit
+) {
+    val ctx = LocalContext.current
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        OrbBuddy(mood = mood, size = 38.dp, micLevel = micLevel, onTap = onOpenChat, onLongPress = onVoice)
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Text(SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(now)), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(SimpleDateFormat("EEEE, d MMMM", Locale("uk")).format(Date(now)), color = Soft, fontSize = 11.sp, maxLines = 1)
+        }
+        Column(horizontalAlignment = Alignment.End) {
+            (weather as? WeatherState.Data)?.let { w -> Text("${w.icon} ${w.tempC}°", color = Color.White, fontSize = 12.sp) }
+            battery?.let { b ->
+                Text((if (b.charging) "⚡ " else if (b.level <= 15) "🪫 " else "🔋 ") + "${b.level}%", color = Soft, fontSize = 12.sp)
+            }
+        }
     }
+    Spacer(Modifier.height(10.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ActionPill("💬  Чат", Modifier.weight(1f)) { onOpenChat() }
+        ActionPill("🎤  Голос", Modifier.weight(1f)) { onVoice() }
+    }
+    Spacer(Modifier.height(8.dp))
+    live.sortedBy { livePriority(it.kind) }.take(3).forEach { item ->
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).clickable { IslandHub.open(ctx, item.intent, item.pkg); onClose() }
+                .padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Avatar(item.icon, liveEmoji(item.kind))
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(item.title.ifBlank { item.app }, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                item.progress?.let { p ->
+                    LinearProgressIndicator(
+                        progress = { p }, color = AppTheme.colors.accent, trackColor = Faint,
+                        modifier = Modifier.fillMaxWidth().padding(top = 5.dp).height(3.dp).clip(RoundedCornerShape(2.dp))
+                    )
+                } ?: if (item.text.isNotBlank()) Text(item.text, color = Soft, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) else Unit
+            }
+            if (item.kind == LiveItem.Kind.TIMER || item.kind == LiveItem.Kind.STOPWATCH || item.kind == LiveItem.Kind.CALL) {
+                Text(chronoText(item, now), color = if (item.kind == LiveItem.Kind.TIMER) Color(0xFFFFB74D) else AppTheme.colors.success, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotifsPage(notifs: List<IslandNotif>, hasListener: Boolean, onClose: () -> Unit, onReplyFocus: (Boolean) -> Unit) {
+    val ctx = LocalContext.current
+    if (!hasListener) {
+        Column(Modifier.fillMaxWidth().padding(top = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Щоб бачити сповіщення тут, дайте доступ до них", color = Color.White, fontSize = 13.sp)
+            Spacer(Modifier.height(10.dp))
+            ActionPill("Надати доступ", Modifier.fillMaxWidth(0.7f)) {
+                try {
+                    ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (_: Throwable) {}
+                onClose()
+            }
+        }
+        return
+    }
+    Row(Modifier.fillMaxWidth().padding(bottom = 4.dp, start = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("Сповіщення" + if (notifs.isNotEmpty()) " · ${notifs.size}" else "", color = Soft, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        if (notifs.any { it.clearable }) {
+            Text("Очистити", color = AppTheme.colors.accent, fontSize = 12.sp, modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { IslandHub.dismissAll() }.padding(4.dp))
+        }
+    }
+    if (notifs.isEmpty()) {
+        Text("Нових сповіщень немає", color = Soft, fontSize = 12.sp, modifier = Modifier.padding(top = 30.dp).fillMaxWidth(), textAlign = TextAlign.Center)
+    }
+    notifs.take(12).forEach { n -> key(n.key) { NotifRow(n, onClose, onReplyFocus) } }
 }
 
 @Composable

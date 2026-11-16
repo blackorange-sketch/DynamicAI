@@ -723,7 +723,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     onOpenMacroManager = { showMacroManager = true },
                     onOpenNotes = { showNotesScreen = true },
                     onTestLlm = { prompt -> if (vm.ensureLlmLoaded()) vm.chatEngine.simpleAnswer(prompt) else null },
-                    llmDownloaded = vm.downloader.isDownloaded,
+                    llmDownloaded = vm.localModelPresent(),
                     llmReady = llmReady,
                     versionName = BuildConfig.VERSION_NAME,
                     initialCategory = category,

@@ -278,6 +278,29 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         
+        // === llama.cpp (GGUF): власна бібліотека в APK, модуль LiteRT не потрібен ===
+        if (currentModelId.startsWith("gguf-")) {
+            ModelRepository.refreshImported(getApplication())
+            val model = ModelRepository.AVAILABLE_MODELS.find { it.id == currentModelId }
+            val file = model?.let { ModelRepository.getModelFile(getApplication(), it) }
+            if (file == null || !file.exists()) {
+                Log.e("LLM_DEBUG", "GGUF model not found: $currentModelId")
+                _llmReady.value = false
+                return false
+            }
+            return try {
+                val ok = llm.initialize(file)
+                _llmReady.value = ok
+                if (!ok) _llmStatusText.value = "✗ ${llm.lastError}"
+                MemLog.note(getApplication(), "LLM_LOAD gguf ok=$ok")
+                ok
+            } catch (t: Throwable) {
+                Log.e("LLM_DEBUG", "GGUF init failed: ${t.message}", t)
+                _llmReady.value = false
+                false
+            }
+        }
+
         // Спочатку завантажуємо нативну бібліотеку LLM
         if (!NativeLibManager.ensureLlmLoaded(getApplication())) {
             Log.e("LLM_DEBUG", "Failed to load LLM native lib")
@@ -319,6 +342,88 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
     /** ID моделей, які реально є на диску (повністю). Оновлюється при кожному `_downloadTrigger`. */
     private val _downloadedModelIds = MutableStateFlow<Set<String>>(emptySet())
     val downloadedModelIds: StateFlow<Set<String>> = _downloadedModelIds.asStateFlow()
+
+    /** Чи є на диску обрана локальна модель (будь-якого рушія). */
+    fun localModelPresent(): Boolean = currentModelId in _downloadedModelIds.value ||
+        ModelRepository.AVAILABLE_MODELS.find { it.id == currentModelId }
+            ?.let { ModelRepository.getModelFile(getApplication(), it).exists() } == true
+
+    private val _ggufImport = MutableStateFlow<String?>(null)
+    /** Стан імпорту власного GGUF: null — немає, інакше текст для UI. */
+    val ggufImport: StateFlow<String?> = _ggufImport.asStateFlow()
+
+    /** Копіює обраний користувачем .gguf у filesDir/gguf_models і робить його активною моделлю. */
+    fun importGguf(uri: android.net.Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val app = getApplication<Application>()
+            try {
+                val cr = app.contentResolver
+                var name = "model.gguf"
+                var size = -1L
+                cr.query(uri, null, null, null, null)?.use { c ->
+                    if (c.moveToFirst()) {
+                        val ni = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                        val si = c.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                        if (ni >= 0) c.getString(ni)?.let { name = it }
+                        if (si >= 0 && !c.isNull(si)) size = c.getLong(si)
+                    }
+                }
+                name = name.replace(Regex("[^A-Za-z0-9._-]"), "_")
+                if (!name.endsWith(".gguf", ignoreCase = true)) name += ".gguf"
+                val dir = File(app.filesDir, ModelRepository.GGUF_DIR).apply { mkdirs() }
+                val target = File(dir, name)
+                val tmp = File(dir, "$name.part")
+                if (size > 0 && dir.usableSpace < size + 200_000_000L) {
+                    _ggufImport.value = "✗ Замало місця: потрібно ${size / 1_000_000} МБ"
+                    return@launch
+                }
+                cr.openInputStream(uri)?.use { input ->
+                    val head = ByteArray(4)
+                    tmp.outputStream().use { out ->
+                        var copied = 0L
+                        var lastShown = -1L
+                        val buf = ByteArray(1 shl 20)
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            if (copied == 0L) System.arraycopy(buf, 0, head, 0, minOf(4, n))
+                            out.write(buf, 0, n)
+                            copied += n
+                            val mb = copied / 50_000_000L
+                            if (mb != lastShown) {
+                                lastShown = mb
+                                _ggufImport.value = if (size > 0) "Копіювання ${copied * 100 / size}% (${copied / 1_000_000} / ${size / 1_000_000} МБ)"
+                                    else "Копіювання ${copied / 1_000_000} МБ…"
+                            }
+                        }
+                    }
+                    if (String(head, Charsets.US_ASCII) != "GGUF") {
+                        tmp.delete()
+                        _ggufImport.value = "✗ Це не GGUF-файл"
+                        return@launch
+                    }
+                } ?: run {
+                    _ggufImport.value = "✗ Не вдалося відкрити файл"
+                    return@launch
+                }
+                if (target.exists()) target.delete()
+                if (!tmp.renameTo(target)) {
+                    tmp.delete()
+                    _ggufImport.value = "✗ Не вдалося зберегти файл"
+                    return@launch
+                }
+                ModelRepository.refreshImported(app)
+                _ggufImport.value = "✓ Імпортовано ${target.name}"
+                _downloadTrigger.value++
+                withContext(Dispatchers.Main) { setCurrentModel("gguf-file-${target.name}") }
+            } catch (t: Throwable) {
+                Log.e("LLM_DEBUG", "GGUF import failed: ${t.message}", t)
+                _ggufImport.value = "✗ Помилка: ${t.message}"
+            }
+        }
+    }
+
+    fun clearGgufImport() { _ggufImport.value = null }
 
     fun refreshDownloadedModels() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -781,7 +886,7 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
             // Перевіряємо toggle + готовність LLM (через файл, БЕЗ engine)
             val settings = settingsStorage.load()
             val cloudAgent = chatEngine.cloudAgentEligible(text)
-            val localOk = settings.useLlm && downloader.isDownloaded && !chatEngine.cloudOnly()
+            val localOk = settings.useLlm && localModelPresent() && !chatEngine.cloudOnly()
             if (!cloudAgent && !localOk) {
                 _response.value = "Не розумію команду: \"$text\""
                 return

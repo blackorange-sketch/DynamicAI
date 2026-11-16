@@ -32,6 +32,24 @@ android {
         versionCode = (System.getenv("VERSION_CODE")?.toIntOrNull()) ?: 1
         versionName = System.getenv("VERSION_NAME") ?: "0.1.0"
         resourceConfigurations += listOf("uk", "en")
+
+        // llama.cpp (GGUF-рушій): збирається з app/src/main/cpp, вихідники llama.cpp CMake завантажує сам
+        externalNativeBuild {
+            cmake {
+                arguments += listOf(
+                    "-DCMAKE_BUILD_TYPE=Release",
+                    // libc++ статично: у jniLibs уже лежить libc++_shared.so від MNN, щоб не було конфлікту
+                    "-DANDROID_STL=c++_static"
+                )
+                cppFlags += listOf("-O3")
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+        }
     }
 
     signingConfigs {

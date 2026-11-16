@@ -10,6 +10,11 @@
     native <methods>;
 }
 
+# ==== llama.cpp JNI: нативний код викликає onBytes за іменем ====
+-keep class com.dynamicai.launcher.llm.LlamaCppNative { *; }
+-keep interface com.dynamicai.launcher.llm.LlamaCppNative$TokenCallback { *; }
+-keep class * implements com.dynamicai.launcher.llm.LlamaCppNative$TokenCallback { *; }
+
 # ==== Shizuku ====
 -keep class moe.shizuku.** { *; }
 -keep class rikka.shizuku.** { *; }

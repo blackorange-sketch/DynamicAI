@@ -13,11 +13,55 @@ data class LlmModel(
     val sizeBytes: Long,
     val fileName: String,
     val supportedBackends: List<String> = listOf("CPU", "GPU"),
-    val engine: String = "litert"  // "litert" | "mnn"
+    val engine: String = "litert"  // "litert" | "mnn" | "gguf"
 )
 
 object ModelRepository {
-    val AVAILABLE_MODELS = listOf(
+    /** Папка GGUF-моделей (і завантажених, і імпортованих) у filesDir. */
+    const val GGUF_DIR = "gguf_models"
+
+    private fun gguf(id: String, name: String, url: String, size: Long) = LlmModel(
+        id = "gguf-$id", name = name, url = url, sizeBytes = size,
+        fileName = "$GGUF_DIR/${url.substringAfterLast('/')}",
+        supportedBackends = listOf("CPU"), engine = "gguf"
+    )
+
+    /** Готові GGUF для llama.cpp (Q4_K_M — найкращий баланс якості й швидкості на телефоні). */
+    private val GGUF_MODELS = listOf(
+        gguf("qwen3-1.7b", "Qwen3 1.7B Q4_K_M",
+            "https://huggingface.co/unsloth/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q4_K_M.gguf", 1_110_000_000L),
+        gguf("qwen3-4b-2507", "Qwen3 4B Instruct 2507 Q4_K_M",
+            "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q4_K_M.gguf", 2_500_000_000L),
+        gguf("qwen2.5-1.5b", "Qwen2.5 1.5B Instruct Q4_K_M",
+            "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf", 1_120_000_000L),
+        gguf("gemma3-1b", "Gemma 3 1B Q4_K_M",
+            "https://huggingface.co/unsloth/gemma-3-1b-it-GGUF/resolve/main/gemma-3-1b-it-Q4_K_M.gguf", 806_000_000L),
+        gguf("llama3.2-3b", "Llama 3.2 3B Instruct Q4_K_M",
+            "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf", 2_020_000_000L),
+    )
+
+    /** Власні .gguf, імпортовані користувачем (оновлюється через [refreshImported]). */
+    @Volatile private var imported: List<LlmModel> = emptyList()
+
+    /** Перечитує gguf_models/: файли, яких немає серед готових, стають «імпортованими» моделями. */
+    fun refreshImported(context: Context) {
+        val known = GGUF_MODELS.map { it.fileName }.toSet()
+        val dir = File(context.filesDir, GGUF_DIR)
+        imported = dir.listFiles().orEmpty()
+            .filter { it.isFile && it.name.endsWith(".gguf", ignoreCase = true) && "$GGUF_DIR/${it.name}" !in known }
+            .sortedBy { it.name.lowercase() }
+            .map { f ->
+                LlmModel(
+                    id = "gguf-file-${f.name}", name = f.name.removeSuffix(".gguf"), url = "",
+                    sizeBytes = f.length(), fileName = "$GGUF_DIR/${f.name}",
+                    supportedBackends = listOf("CPU"), engine = "gguf"
+                )
+            }
+    }
+
+    val AVAILABLE_MODELS: List<LlmModel> get() = BASE_MODELS + GGUF_MODELS + imported
+
+    private val BASE_MODELS = listOf(
         LlmModel(
             id = "gemma-4-E2B-cpu",
             name = "Gemma 4 E2B",
@@ -166,6 +210,7 @@ object ModelRepository {
                     )
 
     fun getDownloadedModels(context: Context): List<LlmModel> {
+        refreshImported(context)
         return AVAILABLE_MODELS.filter { model ->
             if (model.id.startsWith("mnn-")) {
                 val dir = File(File(context.filesDir, "mnn_models"), model.fileName)

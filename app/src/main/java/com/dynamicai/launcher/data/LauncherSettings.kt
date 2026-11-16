@@ -57,6 +57,8 @@ data class LauncherSettings(
     val appTheme: String = "glass_dark", // "glass_dark" | "glass_light"
     // LiteRT GPU (експериментальні): точність активацій, speculative decoding, окремий кеш
     val litertActivation: String = "default",  // "default" | "float32" | "float16"
+    val llamaThreads: Int = 4,                 // llama.cpp: потоки CPU (2–8)
+    val llamaContext: Int = 4096,              // llama.cpp: розмір контексту в токенах
     val litertMtp: String = "default",         // "default" | "on" | "off"
     val litertSeparateCache: Boolean = false,
     val maxResponseTokens: Int = 256,          // ліміт довжини відповіді (MNN: токени; усі: обрізання за реченням)
@@ -153,6 +155,8 @@ class SettingsStorage(context: Context) {
         browserSuggest = prefs.getBoolean("browserSuggest", false),
             appTheme = prefs.getString("appTheme", "glass_dark") ?: "glass_dark",
             litertActivation = prefs.getString("litertActivation", "default") ?: "default",
+            llamaThreads = prefs.getInt("llamaThreads", 4),
+            llamaContext = prefs.getInt("llamaContext", 4096),
             litertMtp = prefs.getString("litertMtp", "default") ?: "default",
             litertSeparateCache = prefs.getBoolean("litertSeparateCache", false),
             maxResponseTokens = prefs.getInt("maxResponseTokens", 256),
@@ -250,6 +254,8 @@ class SettingsStorage(context: Context) {
             .putBoolean("browserSuggest", s.browserSuggest)
             .putString("appTheme", s.appTheme)
             .putString("litertActivation", s.litertActivation)
+            .putInt("llamaThreads", s.llamaThreads)
+            .putInt("llamaContext", s.llamaContext)
             .putString("litertMtp", s.litertMtp)
             .putBoolean("litertSeparateCache", s.litertSeparateCache)
             .putInt("maxResponseTokens", s.maxResponseTokens)

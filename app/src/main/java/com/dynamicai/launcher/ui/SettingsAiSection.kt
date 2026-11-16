@@ -156,9 +156,20 @@ internal fun ColumnScope.SettingsAiSection(
                     }
                 }
                 Text(
-                    "Натисни — чат, утримуй — голос, подвійний дотик — запаморочиться. Після 2 хв спокою засинає.",
+                    if (orbStyle == "island") "Натисни або потягни вниз — панель (сповіщення, музика, швидкі дії), утримуй — голос."
+                    else "Натисни — чат, утримуй — голос, подвійний дотик — запаморочиться. Після 2 хв спокою засинає.",
                     color = AppTheme.colors.textMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 6.dp)
                 )
+                if (orbStyle == "island" && !com.dynamicai.launcher.accessibility.AppAutomationService.isEnabled()) {
+                    Text(
+                        "Статус-бар перехоплює дотики біля камери, тому зараз острівець стоїть під ним. " +
+                            "Увімкніть спеціальні можливості DynamicAI — і він переїде до камери.",
+                        color = AppTheme.colors.warning, fontSize = 11.sp, modifier = Modifier.padding(top = 6.dp)
+                    )
+                    TextButton(onClick = {
+                        ctx.startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }) { Text("Відкрити спеціальні можливості", color = AppTheme.colors.accent, fontSize = 12.sp) }
+                }
             }
         }
         }

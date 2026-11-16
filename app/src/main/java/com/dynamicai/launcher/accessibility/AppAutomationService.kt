@@ -38,6 +38,8 @@ class AppAutomationService : AccessibilityService() {
         }
         serviceInfo = info
         Log.d(TAG, "Service connected")
+        // Острівець переїжджає у шар спецможливостей (над статус-баром)
+        android.os.Handler(mainLooper).post { com.dynamicai.launcher.overlay.FloatingOrbService.instance?.rebuildOverlay() }
     }
 
     @Volatile private var imeVisible = false
@@ -61,6 +63,8 @@ class AppAutomationService : AccessibilityService() {
     
     override fun onDestroy() {
         instance = null
+        // Наші вікна зникли разом зі службою — острівець повертається у звичайний overlay
+        android.os.Handler(mainLooper).post { com.dynamicai.launcher.overlay.FloatingOrbService.instance?.rebuildOverlay() }
         super.onDestroy()
     }
 

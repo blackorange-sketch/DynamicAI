@@ -49,6 +49,11 @@ import com.dynamicai.launcher.voice.OfflineSpeech
 import com.dynamicai.launcher.voice.TtsManager
 
 class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
+    companion object {
+        @Volatile var instance: FloatingOrbService? = null
+    }
+    /** Вікно додане через службу спеціальних можливостей (шар над статус-баром — дотики біля камери працюють). */
+    private var overAccessibility = false
     private lateinit var windowManager: WindowManager
     private var composeView: ComposeView? = null
     private lateinit var params: WindowManager.LayoutParams
@@ -98,7 +103,7 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         chatEngine = com.dynamicai.launcher.AppListViewModel.getSharedChatEngine(applicationContext)
         tts = TtsManager(applicationContext)
 
-        windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        instance = this
         island = getSharedPreferences("floating_orb", Context.MODE_PRIVATE).getString("style", "island") == "island"
         createOverlay()
         if (island) {
@@ -121,10 +126,15 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
 
     private fun createOverlay() {
-        val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            WindowManager.LayoutParams.TYPE_PHONE
+        // Статус-бар лежить над звичайними overlay-вікнами і забирає дотики біля камери.
+        // Вікно спецможливостей (TYPE_ACCESSIBILITY_OVERLAY) — вище за нього, тож острівець ставимо туди, якщо служба увімкнена.
+        val acc = if (island) com.dynamicai.launcher.accessibility.AppAutomationService.instance else null
+        overAccessibility = acc != null
+        windowManager = (acc ?: this).getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val type = when {
+            overAccessibility -> WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.O -> WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else -> WindowManager.LayoutParams.TYPE_PHONE
         }
 
         val displayMetrics = resources.displayMetrics
@@ -235,6 +245,17 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         windowManager.addView(composeView, params)
     }
 
+    /** Перебудувати вікно (увімкнули/вимкнули службу спецможливостей). */
+    fun rebuildOverlay() {
+        if (!island) return
+        val old = composeView
+        try { old?.let { windowManager.removeViewImmediate(it) } } catch (_: Throwable) {}
+        composeView = null
+        panelOpen = false
+        panelFocusable = false
+        try { createOverlay() } catch (t: Throwable) { android.util.Log.e("FloatingOrb", "rebuild failed: ${t.message}") }
+    }
+
     private fun setPanel(open: Boolean) {
         if (panelOpen == open) return
         panelOpen = open
@@ -297,7 +318,8 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         val islandH = (34 * density).toInt()
         params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
         params.x = 0
-        params.y = ((statusBar - islandH) / 2).coerceAtLeast(0)
+        // Без спецможливостей статус-бар перехоплює дотики — ставимо острівець одразу під ним
+        params.y = if (overAccessibility) ((statusBar - islandH) / 2).coerceAtLeast(0) else statusBar + (2 * density).toInt()
         params.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -445,7 +467,8 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         speechRecognizer?.destroy()
         if (island) try { unregisterReceiver(batteryReceiver) } catch (_: Throwable) {}
         tts.shutdown()
-        composeView?.let { windowManager.removeView(it) }
+        instance = null
+        try { composeView?.let { windowManager.removeView(it) } } catch (_: Throwable) {}
         lifecycleRegistry.currentState = Lifecycle.State.DESTROYED
     }
 

@@ -5,5 +5,5 @@ package com.dynamicai.launcher
  * усі відповіді й керування телефоном — через Gemini/Groq.
  */
 object Edition {
-    const val CLOUD_ONLY = false
+    const val CLOUD_ONLY = true
 }

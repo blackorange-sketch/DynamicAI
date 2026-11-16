@@ -58,7 +58,6 @@ import com.dynamicai.launcher.command.CommandParser
 import com.dynamicai.launcher.command.CommandResult
 import com.dynamicai.launcher.command.FuzzyMatcher
 import com.dynamicai.launcher.command.SettingsRoutes
-import com.dynamicai.launcher.llm.LiteRtLlmEngine
 import com.dynamicai.launcher.llm.ModelDownloader
 import com.dynamicai.launcher.ocr.RegionSelectorOverlay
 import com.dynamicai.launcher.ocr.ScreenTranslateOverlay
@@ -84,7 +83,6 @@ class FloatingDockService : Service() {
     private var searchOverlayParams: WindowManager.LayoutParams? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private val commandParser by lazy { CommandParser() }
-    private val llmEngine by lazy { LiteRtLlmEngine(applicationContext) }
     private val modelDownloader by lazy { ModelDownloader(applicationContext) }
 
     private val commandExecutor by lazy { CommandExecutorProvider.get(applicationContext) }
@@ -730,7 +728,7 @@ class FloatingDockService : Service() {
                             Log.e("FloatingDock", "Region: $rect")
                             // Невелика затримка щоб overlay зник з екрана перед скріншотом
                             delay(150)
-                            val translator = ScreenTranslator(app, llmEngine)
+                            val translator = ScreenTranslator(app, null)
                             val blocks = translator.captureRegionAndTranslate(
                                 rect = rect,
                                 ocrLangs = "ukr+eng+pol",

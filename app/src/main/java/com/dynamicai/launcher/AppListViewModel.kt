@@ -51,7 +51,6 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateOf
 import com.dynamicai.launcher.command.Command
 import com.dynamicai.launcher.data.AppsCache
-import com.dynamicai.launcher.llm.LiteRtLlmEngine
 import com.dynamicai.launcher.llm.LlmModel
 import com.dynamicai.launcher.llm.ModelRepository
 import com.dynamicai.launcher.macro.FocusModes
@@ -226,10 +225,6 @@ class AppListViewModel(app: Application) : AndroidViewModel(app) {
                     withContext(Dispatchers.IO) {
                         try { llm.close() } catch (t: Throwable) {
                             Log.e("LLM_DEBUG", "close failed: ${t.message}")
-                        }
-                        if (clearGpuCache) {
-                            val n = LiteRtLlmEngine.clearGpuCache(getApplication())
-                            _llmStatusText.value = "Кеш GPU очищено ($n)"
                         }
                         System.gc()
                     }

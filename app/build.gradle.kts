@@ -26,31 +26,15 @@ android {
             abiFilters.add("arm64-v8a")
         }
 
-        applicationId = "com.dynamicai.launcher"
+        // Хмарна версія ставиться поруч зі звичайною
+        applicationId = "com.dynamicai.launcher.cloud"
         minSdk = 33
         targetSdk = 35
         versionCode = (System.getenv("VERSION_CODE")?.toIntOrNull()) ?: 1
         versionName = System.getenv("VERSION_NAME") ?: "0.1.0"
         resourceConfigurations += listOf("uk", "en")
-
-        // llama.cpp (GGUF-рушій): збирається з app/src/main/cpp, вихідники llama.cpp CMake завантажує сам
-        externalNativeBuild {
-            cmake {
-                arguments += listOf(
-                    "-DCMAKE_BUILD_TYPE=Release",
-                    // libc++ статично: у jniLibs уже лежить libc++_shared.so від MNN, щоб не було конфлікту
-                    "-DANDROID_STL=c++_static"
-                )
-                cppFlags += listOf("-O3")
-            }
-        }
     }
 
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-        }
-    }
 
     signingConfigs {
         create("release") {
@@ -139,7 +123,6 @@ dependencies {
     implementation("dev.rikka.shizuku:api:13.1.5")
     implementation("dev.rikka.shizuku:provider:13.1.5")
     implementation("androidx.savedstate:savedstate-ktx:1.2.1")
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.18.1")
     implementation("com.alphacephei:vosk-android:0.3.47")
     implementation("net.java.dev.jna:jna:5.13.0@aar")
     implementation("cz.adaptech.tesseract4android:tesseract4android:4.9.0")

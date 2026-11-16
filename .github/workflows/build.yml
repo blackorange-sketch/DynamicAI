@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [ main, feature/mnn-engine ]
+    branches: [ main, feature/mnn-engine, feature/cloud-only ]
   workflow_dispatch:
 
 jobs:

@@ -396,10 +396,6 @@ internal fun ColumnScope.SettingsAiSection(
             }
         }
 
-        // === GGUF (llama.cpp) ===
-        if (modelFilter == "all" || modelFilter == "gguf") {
-            GgufModelsCard(vm, settings, onSettingsChange, downloadedIds) { modelToDelete = it }
-        }
 
         // === MNN Models ===
         if (modelFilter == "all" || modelFilter == "mnn") {

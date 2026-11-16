@@ -83,7 +83,7 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 // Напівпрозоре «скло», як док і віджети лаунчера
-private val IslandBlack = Color(0xFF07070B).copy(alpha = 0.80f)
+private val IslandBlack = Color(0xFF07070B).copy(alpha = 0.86f)
 private val PanelGlass = Color(0xFF101016).copy(alpha = 0.86f)
 private val GlassEdge = Color.White.copy(alpha = 0.08f)
 private val Soft = Color.White.copy(alpha = 0.62f)
@@ -347,14 +347,10 @@ fun IslandPanel(
     val conf = LocalConfiguration.current
     // Як в iOS: невелика картка біля камери, а не на весь екран
     val panelW = (conf.screenWidthDp.dp - 28.dp).coerceAtMost(380.dp)
-    val pageH = 196.dp
+    val pageH = 236.dp
 
-    // Сторінки гортаються вбік: огляд, сповіщення, музика (якщо щось грає)
-    val pages = buildList {
-        add("home")
-        add("notifs")
-        if (np?.title?.isNotBlank() == true) add("music")
-    }
+    // Сторінки гортаються вбік: 1 — головне і сповіщення, 2 — віджети (погода, події, пристрій, музика)
+    val pages = listOf("home", "widgets")
     val pager = rememberPagerState { pages.size }
 
     var visible by remember { mutableStateOf(false) }
@@ -395,8 +391,10 @@ fun IslandPanel(
                     .padding(top = 6.dp)
                     .width(panelW)
                     .clip(RoundedCornerShape(32.dp))
-                    .background(PanelGlass)
-                    .border(1.dp, GlassEdge, RoundedCornerShape(32.dp))
+                    // Той самий тон «скла», що й док і віджети лаунчера; підкладка ховає те, що під панеллю
+                    .background(AppTheme.colors.background.copy(alpha = 0.92f))
+                    .background(AppTheme.colors.glassBackground)
+                    .border(1.dp, AppTheme.colors.glassBorder, RoundedCornerShape(32.dp))
                     .pointerInput(Unit) { detectTapGestures { } } // дотики по картці не закривають її
                     .pointerInput(Unit) { detectVerticalDragGestures { _, dy -> if (dy < -16f) close() } }
                     .padding(top = 12.dp, bottom = 8.dp)
@@ -406,9 +404,12 @@ fun IslandPanel(
                         Modifier.fillMaxSize().padding(horizontal = 12.dp).verticalScroll(rememberScrollState())
                     ) {
                         when (pages.getOrNull(i)) {
-                            "home" -> HomePage(mood, micLevel, now, weather, battery, live, { dismissThen(onOpenChat) }, { dismissThen(onVoice) }, close)
-                            "notifs" -> NotifsPage(notifs, hasListener, close, onReplyFocus)
-                            "music" -> np?.let { NowPlayingCard(it) }
+                            "home" -> {
+                                HomePage(mood, micLevel, now, weather, battery, live, { dismissThen(onOpenChat) }, { dismissThen(onVoice) }, close)
+                                Spacer(Modifier.height(6.dp))
+                                NotifsPage(notifs, hasListener, close, onReplyFocus)
+                            }
+                            "widgets" -> WidgetsPage(weather, np, close)
                         }
                     }
                 }
@@ -478,11 +479,130 @@ private fun HomePage(
     }
 }
 
+/** Друга сторінка: погода з прогнозом, найближчі події, стан пристрою, музика. */
+@Composable
+private fun WidgetsPage(weather: WeatherState?, np: NowPlaying?, onClose: () -> Unit) {
+    val ctx = LocalContext.current
+    val events = produceState<List<Pair<String, String>>>(emptyList()) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { upcomingEvents(ctx) }
+    }.value
+    val stats = produceState<com.dynamicai.launcher.system.SystemStats.Snapshot?>(null) {
+        while (isActive) {
+            value = try { com.dynamicai.launcher.system.SystemStats.snapshot(ctx) } catch (_: Throwable) { null }
+            delay(3000)
+        }
+    }.value
+
+    // Погода
+    (weather as? WeatherState.Data)?.let { w ->
+        Section {
+            Column(Modifier.padding(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(w.icon, fontSize = 26.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("${w.tempC}° · ${w.description}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${w.tempMin}°…${w.tempMax}° · відчувається ${w.feelsLike}°", color = Soft, fontSize = 11.sp, maxLines = 1)
+                    }
+                }
+                if (w.forecast.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        w.forecast.take(5).forEach { d ->
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(d.dayName.take(3), color = Soft, fontSize = 10.sp)
+                                Text(d.icon, fontSize = 16.sp)
+                                Text("${d.tempMax}°", color = Color.White, fontSize = 11.sp)
+                                Text("${d.tempMin}°", color = Soft, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Події
+    Section {
+        Column(Modifier.fillMaxWidth().clickable {
+            try {
+                ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.provider.CalendarContract.CONTENT_URI.buildUpon().appendPath("time").build())
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            } catch (_: Throwable) {}
+            onClose()
+        }.padding(12.dp)) {
+            Text("📅  Найближчі події", color = Soft, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(4.dp))
+            if (events.isEmpty()) Text("Нічого на найближчу добу", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp)
+            events.take(3).forEach { (time, title) ->
+                Row(Modifier.padding(vertical = 2.dp)) {
+                    Text(time, color = AppTheme.colors.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(64.dp))
+                    Text(title, color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+    }
+    // Пристрій
+    stats?.let { st ->
+        Section {
+            Column(Modifier.padding(12.dp)) {
+                MiniBar("Заряд", "${st.batteryPct}%" + if (st.charging) " ⚡" else "", st.batteryPct / 100f)
+                MiniBar("Пам'ять", "${st.ramUsedMb / 1024f}".take(4) + " / ${st.ramTotalMb / 1024} ГБ", if (st.ramTotalMb > 0) st.ramUsedMb.toFloat() / st.ramTotalMb else 0f)
+                MiniBar("Сховище", "${st.storageUsedGb.toInt()} / ${st.storageTotalGb.toInt()} ГБ", if (st.storageTotalGb > 0) st.storageUsedGb / st.storageTotalGb else 0f)
+            }
+        }
+    }
+    // Музика
+    np?.takeIf { it.title.isNotBlank() }?.let { NowPlayingCard(it) }
+}
+
+@Composable
+private fun MiniBar(label: String, value: String, frac: Float) {
+    Column(Modifier.padding(vertical = 3.dp)) {
+        Row {
+            Text(label, color = Soft, fontSize = 11.sp, modifier = Modifier.weight(1f))
+            Text(value, color = Color.White, fontSize = 11.sp)
+        }
+        LinearProgressIndicator(
+            progress = { frac.coerceIn(0f, 1f) },
+            color = when { frac > 0.9f -> AppTheme.colors.danger; frac > 0.75f -> AppTheme.colors.warning; else -> AppTheme.colors.accent },
+            trackColor = Faint,
+            modifier = Modifier.fillMaxWidth().padding(top = 3.dp).height(4.dp).clip(RoundedCornerShape(2.dp))
+        )
+    }
+}
+
+/** Події календаря на найближчі 24 години: (час/«весь день», назва). */
+private fun upcomingEvents(ctx: android.content.Context): List<Pair<String, String>> {
+    if (ctx.checkSelfPermission(android.Manifest.permission.READ_CALENDAR) != android.content.pm.PackageManager.PERMISSION_GRANTED) return emptyList()
+    val now = System.currentTimeMillis()
+    val uri = android.provider.CalendarContract.Instances.CONTENT_URI.buildUpon()
+        .appendPath(now.toString()).appendPath((now + 24 * 3600_000L).toString()).build()
+    val out = mutableListOf<Pair<String, String>>()
+    try {
+        ctx.contentResolver.query(
+            uri,
+            arrayOf(android.provider.CalendarContract.Instances.TITLE, android.provider.CalendarContract.Instances.BEGIN,
+                android.provider.CalendarContract.Instances.END, android.provider.CalendarContract.Instances.ALL_DAY),
+            null, null, android.provider.CalendarContract.Instances.BEGIN + " ASC"
+        )?.use { c ->
+            val fmt = SimpleDateFormat("HH:mm", Locale.getDefault())
+            while (c.moveToNext() && out.size < 5) {
+                val end = c.getLong(2)
+                if (end < now) continue
+                val title = c.getString(0)?.takeIf { it.isNotBlank() } ?: "Подія"
+                val time = if (c.getInt(3) != 0) "весь день" else fmt.format(Date(c.getLong(1)))
+                out += time to title
+            }
+        }
+    } catch (_: Throwable) {}
+    return out
+}
+
 @Composable
 private fun NotifsPage(notifs: List<IslandNotif>, hasListener: Boolean, onClose: () -> Unit, onReplyFocus: (Boolean) -> Unit) {
     val ctx = LocalContext.current
     if (!hasListener) {
-        Column(Modifier.fillMaxWidth().padding(top = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Щоб бачити сповіщення тут, дайте доступ до них", color = Color.White, fontSize = 13.sp)
             Spacer(Modifier.height(10.dp))
             ActionPill("Надати доступ", Modifier.fillMaxWidth(0.7f)) {
@@ -501,7 +621,7 @@ private fun NotifsPage(notifs: List<IslandNotif>, hasListener: Boolean, onClose:
         }
     }
     if (notifs.isEmpty()) {
-        Text("Нових сповіщень немає", color = Soft, fontSize = 12.sp, modifier = Modifier.padding(top = 30.dp).fillMaxWidth(), textAlign = TextAlign.Center)
+        Text("Нових сповіщень немає", color = Soft, fontSize = 12.sp, modifier = Modifier.padding(vertical = 12.dp).fillMaxWidth(), textAlign = TextAlign.Center)
     }
     notifs.take(12).forEach { n -> key(n.key) { NotifRow(n, onClose, onReplyFocus) } }
 }

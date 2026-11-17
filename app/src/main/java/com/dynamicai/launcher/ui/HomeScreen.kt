@@ -1059,7 +1059,9 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             }
 
             // Проактивна підказка: подія календаря, низький заряд, дощ уранці, пізня година
-            if (settings.proactiveHints && !searchActive && !listVisible && !isLandscape) {
+            // Якщо працює острівець — підказки показуються в його панелі, а не над пошуком
+            val islandOn = com.dynamicai.launcher.overlay.FloatingOrbService.instance?.islandActive == true
+            if (settings.proactiveHints && !searchActive && !listVisible && !isLandscape && !islandOn) {
                 ProactiveHintCard(weather)
             }
 

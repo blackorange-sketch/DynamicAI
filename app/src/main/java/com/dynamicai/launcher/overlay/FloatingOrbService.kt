@@ -180,27 +180,25 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                         IslandHub.clearPeek(p.id)
                     }
                     if (island && !isExpanded) {
-                        if (panelOpen) {
-                            IslandPanel(
-                                mood = mood, micLevel = { micLevel },
-                                onClose = { setPanel(false) },
-                                onOpenChat = {
-                                    setPanel(false)
-                                    isExpanded = true
-                                    updateWindowSize(true)
-                                },
-                                onVoice = { setPanel(false); startListening() },
-                                onReplyFocus = { setPanelFocusable(it) }
-                            )
-                        } else {
-                            IslandCompact(
-                                mood = mood, micLevel = { micLevel },
-                                onTap = { wake(); setPanel(true) },
-                                onLongPress = { startListening() },
-                                onSwipeDown = { wake(); setPanel(true) },
-                                onWindowSize = { w, h -> setIslandWindow(w.value, h.value) }
-                            )
-                        }
+                        IslandHost(
+                            mood = mood, micLevel = { micLevel },
+                            expanded = panelOpen,
+                            fullWidth = overAccessibility,
+                            onOpen = { wake(); setPanel(true) },
+                            onCollapsed = { setPanel(false) },
+                            onOpenChat = {
+                                isExpanded = true
+                                updateWindowSize(true)
+                            },
+                            onVoice = { startListening() },
+                            onReplyFocus = { setPanelFocusable(it) },
+                            onShade = {
+                                // Свайп униз поза капсулою — системна шторка (вікно острівця перекриває статус-бар)
+                                com.dynamicai.launcher.accessibility.AppAutomationService.instance
+                                    ?.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
+                            },
+                            onWindowSize = { w, h -> setIslandWindow(w.value, h.value) }
+                        )
                     } else FloatingOrb(
                         isExpanded = isExpanded,
                         messages = ChatHistoryManager.history.map { it.role to it.content },
@@ -271,12 +269,10 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         panelOpen = open
         panelFocusable = false
         if (open) {
-            // На весь екран: анімація панелі не змінює розмір вікна (без ривків), дотик по затемненню закриває
-            params.width = WindowManager.LayoutParams.MATCH_PARENT
+            // Вікно росте лише вниз: та сама ширина і той самий верх, що й у острівця —
+            // капсула лишається на місці й морфиться в панель без ривка
+            placeIsland()
             params.height = WindowManager.LayoutParams.MATCH_PARENT
-            params.gravity = Gravity.TOP
-            params.x = 0
-            params.y = 0
             applyPanelFlags()
         } else {
             placeIsland()
@@ -330,7 +326,9 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         val sbId = resources.getIdentifier("status_bar_height", "dimen", "android")
         val statusBar = if (sbId > 0) resources.getDimensionPixelSize(sbId) else (24 * density).toInt()
         val islandH = (ISLAND_H.value * density).toInt()
-        params.width = islandWpx.takeIf { it > 0 } ?: (108 * density).toInt()
+        // Шар спецможливостей: вікно на всю ширину, змінюється лише висота (ширина не «смикається»)
+        params.width = if (overAccessibility) WindowManager.LayoutParams.MATCH_PARENT
+            else islandWpx.takeIf { it > 0 } ?: (108 * density).toInt()
         params.height = islandHpx.takeIf { it > 0 } ?: islandH
         params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
         params.x = 0
@@ -390,9 +388,11 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         val d = resources.displayMetrics.density
         val w = (wDp * d).toInt(); val h = (hDp * d).toInt()
         if (w == islandWpx && h == islandHpx) return
+        val heightOnly = overAccessibility && h == islandHpx
         islandWpx = w; islandHpx = h
         if (panelOpen || !island) return
-        params.width = w
+        if (heightOnly) return   // на всю ширину: ширина вікна не змінюється
+        params.width = if (overAccessibility) WindowManager.LayoutParams.MATCH_PARENT else w
         params.height = h
         try { windowManager.updateViewLayout(composeView, params) } catch (_: Throwable) {}
     }

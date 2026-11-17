@@ -26,6 +26,7 @@ import android.view.Gravity
 import android.util.DisplayMetrics
 import android.view.WindowManager
 import kotlin.math.roundToInt
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.Lifecycle
@@ -55,6 +56,8 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
     }
     /** Вікно додане через службу спеціальних можливостей (шар над статус-баром — дотики біля камери працюють). */
     private var overAccessibility = false
+    /** Острівець показаний (для головного екрана: підказки переїхали в панель). */
+    val islandActive: Boolean get() = island && composeView != null
     private lateinit var windowManager: WindowManager
     private var composeView: ComposeView? = null
     private lateinit var params: WindowManager.LayoutParams
@@ -197,7 +200,8 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
                                 com.dynamicai.launcher.accessibility.AppAutomationService.instance
                                     ?.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
                             },
-                            onWindowSize = { w, h -> setIslandWindow(w.value, h.value) }
+                            onWindowSize = { w, h -> setIslandWindow(w.value, h.value) },
+                            openOffsetY = openOffsetDp().dp
                         )
                     } else FloatingOrb(
                         isExpanded = isExpanded,
@@ -395,6 +399,16 @@ class FloatingOrbService : Service(), LifecycleOwner, ViewModelStoreOwner, Saved
         params.width = if (overAccessibility) WindowManager.LayoutParams.MATCH_PARENT else w
         params.height = h
         try { windowManager.updateViewLayout(composeView, params) } catch (_: Throwable) {}
+    }
+
+    /** Панель опускається під статус-бар (годинник і значки лишаються видимими). */
+    private fun openOffsetDp(): Float {
+        val d = resources.displayMetrics.density
+        val sbId = resources.getIdentifier("status_bar_height", "dimen", "android")
+        val statusBar = if (sbId > 0) resources.getDimensionPixelSize(sbId) else (24 * d).toInt()
+        val islandH = (ISLAND_H.value * d).toInt()
+        val islandY = if (overAccessibility) ((statusBar - islandH) / 2).coerceAtLeast(0) else statusBar + (2 * d).toInt()
+        return ((statusBar - islandY) / d + 6f).coerceAtLeast(6f)
     }
 
     /** Будь-яка взаємодія будить персонажа. */

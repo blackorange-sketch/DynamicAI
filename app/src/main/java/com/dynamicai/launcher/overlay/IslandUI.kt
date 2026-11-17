@@ -62,6 +62,10 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -139,7 +143,9 @@ fun IslandHost(
     onReplyFocus: (Boolean) -> Unit,
     onShade: () -> Unit,
     /** Потрібний розмір вікна (dp) для компактних станів: спершу більший, після анімації — точний. */
-    onWindowSize: (Dp, Dp) -> Unit
+    onWindowSize: (Dp, Dp) -> Unit,
+    /** На скільки опустити розгорнуту панель, щоб вона стала під статус-бар (годинник лишається видно). */
+    openOffsetY: Dp = 0.dp
 ) {
     val scope = rememberCoroutineScope()
     val peek by IslandHub.peek.collectAsState()
@@ -161,13 +167,9 @@ fun IslandHost(
     }
     val close = { closeThen {} }
 
-    // Нове сповіщення — персонаж радісно підстрибує
-    var excited by remember { mutableStateOf(false) }
-    LaunchedEffect(peek?.id) {
-        if (peek == null) return@LaunchedEffect
-        excited = true; delay(900); excited = false
-    }
-    val shownMood = if (excited && (mood == BuddyMood.IDLE || mood == BuddyMood.SLEEP)) BuddyMood.HAPPY else mood
+    // Нове сповіщення — персонаж дивується («!» і підскок)
+    val pulse = peek?.id ?: 0L
+    val shownMood = mood
 
     val topLive = live.filter { liveLabel(it, System.currentTimeMillis()).isNotBlank() }.minByOrNull { livePriority(it.kind) }
     val agentBusy = mood == BuddyMood.LISTEN || mood == BuddyMood.THINK || mood == BuddyMood.SPEAK
@@ -181,18 +183,30 @@ fun IslandHost(
     }
     val now = rememberNow(mode == "live" && topLive?.kind != LiveItem.Kind.PROGRESS && topLive?.kind != LiveItem.Kind.NAV)
 
+    val density = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    val liveStyle = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.SemiBold, fontFeatureSettings = "tnum")
     val panelW = (screenW - 16.dp).coerceAtMost(400.dp)
-    val panelH = 352.dp
+    // Висота панелі — за вмістом поточної сторінки (повідомляє ExpandedContent)
+    var openH by remember { mutableStateOf(320.dp) }
     val peekW = (screenW - 20.dp).coerceAtMost(420.dp)
+    // Ширина капсули — за вмістом: ліва і права частини однакові (камера посередині),
+    // кожна — за ширшим із двох боків. Лічильник сповіщень вміщується в мінімальну ширину.
+    val liveText = if (mode == "live" && topLive != null) liveLabel(topLive, now) else ""
+    val leftW = 34.dp + if (mode == "live" || mode == "music") 26.dp else 0.dp
+    val rightW = when (mode) {
+        "live" -> with(density) { measurer.measure(liveText, liveStyle).size.width.toDp() } + 10.dp
+        "music" -> 26.dp
+        else -> 24.dp
+    }
+    val side = maxOf(leftW, rightW, 36.dp)
     val tw = when (mode) {
         "open" -> panelW
         "peek" -> peekW
-        "live" -> 150.dp
-        "music" -> 128.dp
-        "agent" -> 118.dp
-        else -> if (notifs.isNotEmpty()) 118.dp else 108.dp
+        else -> side * 2 + 30.dp
     }
-    val th = when (mode) { "open" -> panelH; "peek" -> 64.dp; else -> ISLAND_H }
+    val th = when (mode) { "open" -> openH; "peek" -> 64.dp; else -> ISLAND_H }
+    val offY by animateDpAsState(if (mode == "open") openOffsetY else 0.dp, spring(dampingRatio = 0.8f, stiffness = 420f), label = "oy")
     val tr = when (mode) { "open" -> 34.dp; "peek" -> 30.dp; else -> ISLAND_H / 2 }
 
     // Пружини: розкриття — м'яке з легким «желе», дрібні зміни — швидкі
@@ -241,6 +255,7 @@ fun IslandHost(
     ) {
         Box(
             Modifier
+                .offset(y = offY)
                 .size(w, h)
                 .clip(RoundedCornerShape(r))
                 .background(bg)
@@ -269,17 +284,18 @@ fun IslandHost(
             ) { m ->
                 when (m) {
                     "open" -> ExpandedContent(
-                        Modifier.requiredSize(panelW, panelH),
+                        Modifier.requiredWidth(panelW).wrapContentHeight(unbounded = true, align = Alignment.Top),
                         now = now, live = live, notifs = notifs, np = np,
-                        onClose = close, onReplyFocus = onReplyFocus
+                        onClose = close, onReplyFocus = onReplyFocus,
+                        onHeight = { hh -> openH = hh }
                     )
                     "peek" -> peek?.let { p -> PeekContent(Modifier.requiredSize(peekW, 64.dp), p) } ?: Spacer(Modifier)
                     else -> Row(
-                        Modifier.requiredSize(tw, ISLAND_H).padding(start = 34.dp, end = 4.dp),
+                        Modifier.requiredSize(tw, ISLAND_H),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Ліворуч від камери: іконка (персонаж — окремим шаром)
-                        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                        // Ліворуч від камери: місце під персонажа (окремий шар) + іконка
+                        Row(Modifier.width(side).padding(start = 34.dp), verticalAlignment = Alignment.CenterVertically) {
                             when (m) {
                                 "live" -> topLive?.let { SmallIcon(it.icon, liveEmoji(it.kind)) }
                                 "music" -> np?.let { SmallIcon(it.art, "🎵", rounded = 5) }
@@ -287,28 +303,33 @@ fun IslandHost(
                         }
                         Spacer(Modifier.width(30.dp)) // камера
                         // Праворуч від камери: стан
-                        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                        Box(Modifier.width(side).padding(end = 6.dp), contentAlignment = Alignment.CenterEnd) {
                             when (m) {
                                 "agent" -> IslandGlyph(mood, micLevel)
                                 "live" -> topLive?.let { item ->
                                     Text(
-                                        liveLabel(item, now), maxLines = 1, overflow = TextOverflow.Clip,
-                                        fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+                                        liveLabel(item, now), maxLines = 1, softWrap = false, overflow = TextOverflow.Clip,
+                                        style = liveStyle,
                                         color = when (item.kind) {
                                             LiveItem.Kind.CALL -> AppTheme.colors.success
                                             LiveItem.Kind.TIMER -> Color(0xFFFFB74D)
                                             else -> Color.White
                                         },
-                                        modifier = Modifier.padding(end = 4.dp)
                                     )
                                 }
-                                "music" -> EqBars(Modifier.padding(end = 4.dp).size(20.dp, 14.dp))
+                                "music" -> EqBars(Modifier.size(20.dp, 14.dp))
                                 else -> if (notifs.isNotEmpty()) {
+                                    // Компактний лічильник: не ширший за значок стану, острів не розтягує
                                     Box(
-                                        Modifier.padding(end = 3.dp).clip(CircleShape).background(AppTheme.colors.accent)
-                                            .padding(horizontal = 6.dp, vertical = 1.dp),
+                                        Modifier.heightIn(min = 16.dp).widthIn(min = 16.dp).clip(RoundedCornerShape(8.dp))
+                                            .background(AppTheme.colors.accent).padding(horizontal = 4.dp),
                                         contentAlignment = Alignment.Center
-                                    ) { Text("${notifs.size.coerceAtMost(99)}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                                    ) {
+                                        Text(
+                                            if (notifs.size > 9) "9+" else "${notifs.size}", color = Color.White,
+                                            fontSize = 9.sp, fontWeight = FontWeight.Bold, lineHeight = 10.sp
+                                        )
+                                    }
                                 } else IslandGlyph(mood, micLevel)
                             }
                         }
@@ -321,6 +342,7 @@ fun IslandHost(
                 size = buddyS,
                 micLevel = micLevel,
                 modifier = Modifier.offset(buddyX, buddyY),
+                pulse = pulse,
                 onTap = { if (isOpen) closeThen(onOpenChat) else onOpen() },
                 onLongPress = { if (isOpen) closeThen(onVoice) else onVoice() }
             )
@@ -337,16 +359,25 @@ private fun ExpandedContent(
     notifs: List<IslandNotif>,
     np: NowPlaying?,
     onClose: () -> Unit,
-    onReplyFocus: (Boolean) -> Unit
+    onReplyFocus: (Boolean) -> Unit,
+    onHeight: (Dp) -> Unit
 ) {
     val ctx = LocalContext.current
+    val density = LocalDensity.current
+    val maxPager = (LocalConfiguration.current.screenHeightDp * 0.62f).dp
+    // Природна висота кожної сторінки → висота пейджера = поточна сторінка (у межах)
+    val pageHeights = remember { mutableStateMapOf<Int, Dp>() }
     val battery by IslandHub.battery.collectAsState()
     val hasListener = remember { TriggerPermissions.hasNotificationListener(ctx) }
     val weather = remember { WeatherRepository(ctx).loadCachedWeather() }
     val pages = listOf("home", "widgets")
     val pager = rememberPagerState { pages.size }
 
-    Column(modifier.padding(top = 14.dp, bottom = 8.dp)) {
+    Column(
+        modifier
+            .onSizeChanged { onHeight(with(density) { it.height.toDp() }) }
+            .padding(top = 14.dp, bottom = 8.dp)
+    ) {
         // Шапка: ліворуч місце для персонажа (він — окремий шар і «приїжджає» сюди з капсули)
         Row(Modifier.fillMaxWidth().padding(start = 76.dp, end = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -365,14 +396,21 @@ private fun ExpandedContent(
             color = Color.White.copy(alpha = 0.35f), fontSize = 10.sp,
             modifier = Modifier.padding(start = 76.dp, top = 2.dp, bottom = 8.dp)
         )
-        HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth().weight(1f)) { i ->
-            Column(Modifier.fillMaxSize().padding(horizontal = 12.dp).verticalScroll(rememberScrollState())) {
-                when (pages[i]) {
-                    "home" -> {
-                        LiveList(live, now, onClose)
-                        NotifsPage(notifs, hasListener, onClose, onReplyFocus)
+        val pagerH = (pageHeights[pager.currentPage] ?: 200.dp).coerceIn(90.dp, maxPager)
+        HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth().height(pagerH)) { i ->
+            Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+                        .onSizeChanged { pageHeights[i] = with(density) { it.height.toDp() } }
+                ) {
+                    when (pages[i]) {
+                        "home" -> {
+                            SuggestionsBlock(weather, onClose)
+                            LiveList(live, now, onClose)
+                            NotifsPage(notifs, hasListener, onClose, onReplyFocus)
+                        }
+                        "widgets" -> WidgetsPage(weather, np, onClose)
                     }
-                    "widgets" -> WidgetsPage(weather, np, onClose)
                 }
             }
         }
@@ -479,6 +517,70 @@ private fun IslandGlyph(mood: BuddyMood, micLevel: () -> Float) {
             BuddyMood.ERROR -> drawCircle(colors.danger, radius = w * 0.22f)
             BuddyMood.HAPPY -> drawCircle(colors.success, radius = w * 0.22f)
             else -> drawCircle(colors.accent.copy(alpha = 0.6f), radius = w * 0.14f)
+        }
+    }
+}
+
+/** Пропозиції (перенесені з-над пошуку): проактивна підказка і часті програми. */
+@Composable
+private fun SuggestionsBlock(weather: WeatherState?, onClose: () -> Unit) {
+    val ctx = LocalContext.current
+    var hint by remember { mutableStateOf<com.dynamicai.launcher.suggestion.Hint?>(null) }
+    LaunchedEffect(Unit) {
+        hint = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            try { com.dynamicai.launcher.suggestion.ProactiveHints.current(ctx, weather) } catch (_: Throwable) { null }
+        }
+    }
+    data class Fav(val pkg: String, val label: String, val icon: androidx.compose.ui.graphics.ImageBitmap)
+    val favs = produceState<List<Fav>>(emptyList()) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val pm = ctx.packageManager
+            com.dynamicai.launcher.suggestion.AppUsage.top(ctx, 10).mapNotNull { pkg ->
+                try {
+                    if (pm.getLaunchIntentForPackage(pkg) == null) return@mapNotNull null
+                    val ai = pm.getApplicationInfo(pkg, 0)
+                    Fav(pkg, pm.getApplicationLabel(ai).toString(), pm.getApplicationIcon(ai).toBitmap(96, 96).asImageBitmap())
+                } catch (_: Throwable) { null }
+            }.take(5)
+        }
+    }.value
+
+    hint?.let { h ->
+        Row(
+            Modifier.fillMaxWidth().padding(bottom = 8.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = 0.06f))
+                .clickable { com.dynamicai.launcher.ui.runProactiveHint(ctx, h); hint = null; onClose() }
+                .padding(horizontal = 12.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(h.icon, fontSize = 18.sp)
+            Spacer(Modifier.width(10.dp))
+            Text(h.text, color = Color.White, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Spacer(Modifier.width(8.dp))
+            Text(h.actionLabel, color = AppTheme.colors.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.width(6.dp))
+            Box(Modifier.size(26.dp).clip(CircleShape).clickable {
+                com.dynamicai.launcher.suggestion.ProactiveHints.snooze(ctx, h); hint = null
+            }, contentAlignment = Alignment.Center) { Icon(Icons.Default.Close, "Сховати", tint = Soft, modifier = Modifier.size(14.dp)) }
+        }
+    }
+    if (favs.isNotEmpty()) {
+        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+            favs.forEach { f ->
+                Column(
+                    Modifier.width(58.dp).clip(RoundedCornerShape(14.dp)).clickable {
+                        ctx.packageManager.getLaunchIntentForPackage(f.pkg)?.let {
+                            it.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            try { ctx.startActivity(it) } catch (_: Throwable) {}
+                        }
+                        com.dynamicai.launcher.suggestion.AppUsage.bump(ctx, f.pkg)
+                        onClose()
+                    }.padding(vertical = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Image(f.icon, f.label, Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)))
+                    Text(f.label, color = Soft, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
+                }
+            }
         }
     }
 }

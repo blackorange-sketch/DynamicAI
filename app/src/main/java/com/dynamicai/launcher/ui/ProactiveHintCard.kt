@@ -44,6 +44,23 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /** Картка проактивної підказки на головному екрані: текст, одна дія і закриття. Перевіряється раз на хвилину. */
+/** Виконати дію підказки (відкрити подію, сховище або запустити інструмент) і відкласти її. */
+fun runProactiveHint(ctx: android.content.Context, h: Hint) {
+    try {
+        when {
+            h.special.startsWith("calendar:") -> {
+                val begin = h.special.removePrefix("calendar:").toLongOrNull() ?: System.currentTimeMillis()
+                val uri = ContentUris.withAppendedId(CalendarContract.CONTENT_URI.buildUpon().appendPath("time").build(), begin)
+                ctx.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+            h.special == "storage" ->
+                ctx.startActivity(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            h.tool.isNotBlank() -> MacroLauncher.runTool(ctx, h.tool, "hint:" + h.id.substringBefore(':'))
+        }
+    } catch (_: Throwable) {}
+    ProactiveHints.snooze(ctx, h)
+}
+
 @Composable
 fun ProactiveHintCard(weather: WeatherState, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
@@ -60,18 +77,7 @@ fun ProactiveHintCard(weather: WeatherState, modifier: Modifier = Modifier) {
     }
     fun close(h: Hint) { ProactiveHints.snooze(ctx, h); hint = null }
     fun act(h: Hint) {
-        try {
-            when {
-                h.special.startsWith("calendar:") -> {
-                    val begin = h.special.removePrefix("calendar:").toLongOrNull() ?: System.currentTimeMillis()
-                    val uri = ContentUris.withAppendedId(CalendarContract.CONTENT_URI.buildUpon().appendPath("time").build(), begin)
-                    ctx.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                }
-                h.special == "storage" ->
-                    ctx.startActivity(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                h.tool.isNotBlank() -> MacroLauncher.runTool(ctx, h.tool, "hint:" + h.id.substringBefore(':'))
-            }
-        } catch (_: Throwable) {}
+        runProactiveHint(ctx, h)
         close(h)
     }
     AnimatedVisibility(

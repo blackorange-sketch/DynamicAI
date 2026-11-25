@@ -160,7 +160,7 @@ fun Dock(
                         }, Modifier.pressable { onLaunch(item) }) {
                     item.bitmap?.let {
                         Icon(
-                            bitmap = it.asImageBitmap(),
+                            bitmap = remember(it) { it.asImageBitmap() },
                             contentDescription = item.label,
                             tint = Color.Unspecified,
                             modifier = Modifier.size((iconSizeDp * 0.6f).dp)
@@ -183,7 +183,7 @@ fun Dock(
                         )
                     ) {
                         Icon(
-                            bitmap = it.asImageBitmap(),
+                            bitmap = remember(it) { it.asImageBitmap() },
                             contentDescription = item.label,
                             tint = Color.Unspecified,
                             modifier = Modifier.size(iconSizeDp.dp).iconShape()

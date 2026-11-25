@@ -1,0 +1,22 @@
+# Baseline Profile DynamicAI: «гарячий» код лаунчера компілюється заздалегідь (AOT),
+# а не інтерпретується/JIT-иться при перших запусках і прокрутках.
+# Профілі Compose, Material3, Foundation тощо вже вбудовані в самі бібліотеки AndroidX.
+# Для APK, встановленого вручну, профіль застосовує androidx.profileinstaller (є в кожній Compose-програмі).
+
+# Запуск і головний екран
+HSPLcom/dynamicai/launcher/MainActivity**->**(**)**
+HSPLcom/dynamicai/launcher/AppListViewModel**->**(**)**
+HSPLcom/dynamicai/launcher/DynamicApp**->**(**)**
+
+# Інтерфейс: головний екран, док, шухляда, папки, віджети, тема, анімації
+HSPLcom/dynamicai/launcher/ui/**->**(**)**
+
+# Острівець і персонаж
+HSPLcom/dynamicai/launcher/overlay/**->**(**)**
+
+# Дані, які читаються при кожному показі екрана
+HSPLcom/dynamicai/launcher/data/**->**(**)**
+HSPLcom/dynamicai/launcher/folder/**->**(**)**
+HSPLcom/dynamicai/launcher/widget/**->**(**)**
+HSPLcom/dynamicai/launcher/suggestion/**->**(**)**
+HSPLcom/dynamicai/launcher/music/**->**(**)**

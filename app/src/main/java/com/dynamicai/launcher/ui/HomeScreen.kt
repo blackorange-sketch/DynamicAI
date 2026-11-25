@@ -147,7 +147,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
     val folders by vm.folders.collectAsStateWithLifecycle()
     val weather by vm.weather.collectAsStateWithLifecycle()
     val recentTasks by vm.recentTasks.collectAsStateWithLifecycle()
-    val downloadProgress by vm.downloadProgress.collectAsStateWithLifecycle()
     val llmReady by vm.llmReady.collectAsStateWithLifecycle()
     val dockAppeared by vm.dockAppeared.collectAsStateWithLifecycle()
 
@@ -1125,7 +1124,7 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                     Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                         frequent.forEach { a ->
                             Image(
-                                bitmap = (a.bitmap ?: a.icon.toBitmap(96, 96)).asImageBitmap(),
+                                bitmap = remember(a.bitmap, a.icon) { (a.bitmap ?: a.icon.toBitmap(96, 96)).asImageBitmap() },
                                 contentDescription = a.label,
                                 modifier = Modifier
                                     .size(46.dp)

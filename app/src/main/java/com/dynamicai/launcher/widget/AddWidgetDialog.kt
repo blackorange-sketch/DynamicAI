@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.widget
 
+import com.dynamicai.launcher.ui.AnimatedAlertDialog
 import com.dynamicai.launcher.ui.popIn
 import com.dynamicai.launcher.ui.theme.AppTheme
 import androidx.compose.foundation.background
@@ -31,7 +32,7 @@ fun AddWidgetDialog(
     var selectedPage by remember { mutableStateOf(0) }
     var pagesAvailable by remember { mutableStateOf(currentPageCount.coerceAtLeast(1)) }
 
-    AlertDialog(
+    AnimatedAlertDialog(
         modifier = Modifier.popIn(),
         onDismissRequest = onDismiss,
         containerColor = AppTheme.colors.surface,

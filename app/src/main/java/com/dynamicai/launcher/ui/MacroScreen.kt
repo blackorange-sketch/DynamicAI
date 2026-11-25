@@ -93,7 +93,7 @@ fun MacroScreen(
     }
 
     if (showEditor) {
-        AlertDialog(
+        AnimatedAlertDialog(
             onDismissRequest = { showEditor = false },
             title = { Text(if (editId == null) "Новий макрос" else "Редагувати", color = AppTheme.colors.textPrimary) },
             text = {

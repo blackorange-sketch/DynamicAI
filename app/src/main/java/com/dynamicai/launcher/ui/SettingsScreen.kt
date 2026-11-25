@@ -146,7 +146,7 @@ fun SettingsScreen(
             var showOverlayPermDialog by remember { mutableStateOf(false) }
 
         if (showOverlayPermDialog) {
-            AlertDialog(
+            AnimatedAlertDialog(
                 onDismissRequest = { showOverlayPermDialog = false },
                 title = { Text("Дозвіл для голосової активації", color = AppTheme.colors.textPrimary) },
                 text = {
@@ -387,7 +387,7 @@ internal fun HiddenAppsSection(vm: com.dynamicai.launcher.AppListViewModel) {
         ActionRow("Керувати прихованими (${hidden.size})", Icons.Default.Info, AppTheme.colors.textMuted) { open = true }
     }
     if (open) {
-        AlertDialog(
+        AnimatedAlertDialog(
             onDismissRequest = { open = false },
             containerColor = AppTheme.colors.surface,
             title = { Text("Приховані застосунки", color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
@@ -445,7 +445,7 @@ internal fun GestureRow(title: String, value: String, onPick: (String) -> Unit) 
     if (macroName != null) Text("⚡ $macroName", color = AppTheme.colors.successLight, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
     if (showMacros) {
         val macros = remember { MacroStorage(ctx).get() }
-        AlertDialog(
+        AnimatedAlertDialog(
             onDismissRequest = { showMacros = false },
             containerColor = AppTheme.colors.surface,
             title = { Text("Який макрос запускати?", color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
@@ -506,7 +506,7 @@ internal fun BackupSettingsBlock() {
     }
     if (status.isNotBlank()) Text(status, color = AppTheme.colors.textPrimary, fontSize = 12.sp)
     if (askRestart) {
-        AlertDialog(
+        AnimatedAlertDialog(
             onDismissRequest = { askRestart = false },
             containerColor = AppTheme.colors.surface,
             title = { Text("Копію відновлено", color = AppTheme.colors.textPrimary) },

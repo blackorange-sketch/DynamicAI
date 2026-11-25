@@ -1,5 +1,6 @@
 package com.dynamicai.launcher
 
+import com.dynamicai.launcher.ui.AnimatedAlertDialog
 import com.dynamicai.launcher.ui.theme.AppTheme
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -273,7 +274,7 @@ private fun ChampionPickerDialog(
         else champions.filter { it.id.contains(query, ignoreCase = true) || repo.localizedChampionName(it).contains(query, ignoreCase = true) }
     }
     
-    AlertDialog(
+    AnimatedAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title, color = AppTheme.colors.textPrimary) },
         text = {

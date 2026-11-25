@@ -2,6 +2,9 @@ package com.dynamicai.launcher.ui
 
 import com.dynamicai.launcher.ui.theme.AppTheme
 import com.dynamicai.launcher.ui.theme.DynamicAITheme
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.AnimatedContent
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
@@ -556,17 +559,6 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         Configuration.ORIENTATION_LANDSCAPE
     val landscapePane = isLandscape && !searchActive && !listVisible
 
-    if (showWeatherDetail) {
-        ScreenEnter {
-            WeatherDetailScreen(
-                state = weather,
-                cityName = settings.cityName,
-                backgroundAlphaPercent = settings.backgroundAlphaPercent,
-                onClose = { showWeatherDetail = false }
-            )
-        }
-        return@DynamicAITheme
-    }
 
     if (showAddWidgetDialog) {
         AddWidgetDialog(
@@ -609,131 +601,12 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         )
     }
 
-    if (showNotesScreen) {
-        ScreenEnter { NotesScreen(onClose = { showNotesScreen = false }) }
-        return@DynamicAITheme
-    }
 
-    if (showMacroManager) {
-        ScreenEnter {
-            MacroScreen(
-                onClose = { showMacroManager = false },
-                carBtName = settings.carBtName,
-                onCarChange = { vm.updateSettings(settings.copy(carBtName = it)) }
-            )
-        }
-        return@DynamicAITheme
-    }
 
-    if (showFolderManager) {
-        FolderManagerScreen(
-            folders = folders,
-            apps = apps,
-            onAddApp = { folderId, pkg -> vm.addToFolder(folderId, pkg) },
-            onRemoveApp = { folderId, pkg -> vm.removeFromFolder(folderId, pkg) },
-            onDeleteFolder = { vm.deleteFolder(it) },
-            onCreateFolder = { vm.createFolder(it, emptyList()) },
-            onClose = { showFolderManager = false }
-        )
-        return@DynamicAITheme
-    }
 
-    if (showRecent) {
-        LaunchedEffect(Unit) { vm.loadRecentTasks() }
-        RecentScreen(
-            tasks = recentTasks,
-            onLaunch = { pkg ->
-                apps.firstOrNull { it.packageName == pkg }?.let { launchAppWithAnimation(it) }
-                    ?: run {
-                        val intent = ctx.packageManager.getLaunchIntentForPackage(pkg)
-                        intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        try { ctx.startActivity(intent) } catch (_: Exception) {}
-                    }
-            },
-            onForceStop = { vm.forceStopApp(it) },
-            onClearAll = { vm.forceStopAll() },
-            onDismiss = { showRecent = false },
-            visible = true
-        )
-        return@DynamicAITheme
-    }
 
-    if (showDockEditor) {
-        DockEditorScreen(
-            apps = apps,
-            dockPkgs = dockPkgs,
-            hidden = hidden,
-            onToggle = { vm.toggleDock(it) },
-            onMove = { id, delta -> vm.moveDock(id, delta) },
-            folderNames = folders.associate { "folder:" + it.id to it.name },
-            onClose = { showDockEditor = false }
-        )
-        return@DynamicAITheme
-    }
 
-    if (showWallpaper) {
-        WallpaperScreen(
-            settings = settings,
-            onSettingsChange = { vm.updateSettings(it) },
-            onClose = { showWallpaper = false }
-        )
-        return@DynamicAITheme
-    }
 
-    if (showSettings) {
-        Crossfade(targetState = currentSettingsCategory, animationSpec = tween(220, easing = Motion.Standard), label = "settingsNav") { category ->
-        if (category == null) {
-            SettingsMenuScreen(
-                onCategorySelected = { currentSettingsCategory = it },
-                onClose = { showSettings = false },
-                backgroundAlpha = settings.backgroundAlphaPercent / 100f
-            )
-        } else {
-            Box(modifier = Modifier.fillMaxSize()) {
-                SettingsScreen(
-                    vm = vm,
-                    settings = settings,
-                    onSettingsChange = { vm.updateSettings(it) },
-                    hiddenCount = hidden.size,
-                    foldersCount = folders.size,
-                    onClearHistory = { vm.clearHistory() },
-                    onRefreshContacts = { vm.loadContacts() },
-                    onClearHidden = { vm.clearHidden() },
-                    onDownloadLlm = { vm.downloadModel() },
-                    overlayActive = overlayActive,
-                    overlayPermissionGranted = overlayPermissionGranted,
-                    onToggleOverlay = {
-                        if (overlayActive) {
-                            FloatingDockService.stop(ctx)
-                            overlayActive = false
-                            ctx.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
-                                .edit().putBoolean("overlayEnabled", false).commit()
-                        } else {
-                            FloatingDockService.start(ctx)
-                            overlayActive = true
-                            ctx.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
-                                .edit().putBoolean("overlayEnabled", true).commit()
-                        }
-                    },
-                    onRequestOverlayPermission = { requestOverlayPermission() },
-                    onOpenWallpaper = { showWallpaper = true },
-                    onOpenDockEditor = { showDockEditor = true },
-                    onOpenFolderManager = { showFolderManager = true },
-                    onOpenMacroManager = { showMacroManager = true },
-                    onOpenNotes = { showNotesScreen = true },
-                    onTestLlm = { prompt -> if (vm.ensureLlmLoaded()) vm.chatEngine.simpleAnswer(prompt) else null },
-                    llmDownloaded = vm.localModelPresent(),
-                    llmReady = llmReady,
-                    versionName = BuildConfig.VERSION_NAME,
-                    initialCategory = category,
-                    onBackToMenu = { currentSettingsCategory = null },
-                    onClose = { showSettings = false }
-                )
-            }
-        }
-        }  // Crossfade
-        return@DynamicAITheme
-    }
 
     val openNotesReq by vm.openNotesRequest.collectAsStateWithLifecycle()
     LaunchedEffect(openNotesReq) {
@@ -763,6 +636,42 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
         launchingApp = null
     }
 
+    // Повернення на головний екран із програми: робочий стіл м'яко «наближається» (з 105% і напівпрозорості),
+    // доповнюючи системну анімацію закриття програми
+    val homeReturn = remember { androidx.compose.animation.core.Animatable(1f) }
+    LaunchedEffect(lifecycleOwner) {
+        var wasStopped = false
+        lifecycleOwner.lifecycle.currentStateFlow.collect { st ->
+            if (!st.isAtLeast(Lifecycle.State.STARTED)) {
+                wasStopped = true
+            } else if (wasStopped) {
+                wasStopped = false
+                if (settingsNow.animSpeedPercent > 0 && launchingApp == null) {
+                    homeReturn.snapTo(0f)
+                    homeReturn.animateTo(1f, spring(dampingRatio = 0.86f, stiffness = 320f))
+                } else homeReturn.snapTo(1f)
+            }
+        }
+    }
+
+    val activeScreen: String? = when {
+        showWeatherDetail -> "weather"
+        showNotesScreen -> "notes"
+        showMacroManager -> "macros"
+        showFolderManager -> "folders"
+        showRecent -> "recent"
+        showDockEditor -> "dock"
+        showWallpaper -> "wallpaper"
+        showSettings -> "settings"
+        else -> null
+    }
+    // 0 — головний екран, 1 — відкрито розділ: головний відступає вглиб і гасне (повністю невидимий не малюється)
+    val screenDepth by animateFloatAsState(
+        if (activeScreen != null) 1f else 0f,
+        spring(dampingRatio = 0.9f, stiffness = 380f),
+        label = "screenDepth"
+    )
+
     val launchFade by animateFloatAsState(
         targetValue = if (launchingApp != null) 0f else 1f,
         animationSpec = tween(300, easing = FastOutSlowInEasing),
@@ -775,8 +684,10 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
             .graphicsLayer {
                 // Як в iOS: головний екран трохи зменшується, тьмяніє й розмивається, поки відкривається додаток
                 val t = 1f - launchFade
-                alpha = 1f - 0.5f * t
-                val s = 1f - 0.07f * t
+                val d = screenDepth
+                val rr = homeReturn.value
+                alpha = (1f - 0.5f * t) * (1f - d).coerceIn(0f, 1f) * (0.35f + 0.65f * rr)
+                val s = (1f - 0.07f * t) * (1f - 0.06f * d) * (1.05f - 0.05f * rr)
                 scaleX = s
                 scaleY = s
                 if (t > 0.02f && Build.VERSION.SDK_INT >= 31) {
@@ -1491,6 +1402,172 @@ fun HomeScreen(vm: AppListViewModel = viewModel(), hubEvent: com.dynamicai.launc
                         uninstallApp(ctx, app.packageName); menuApp = null
                     }
                 }
+            }
+        }
+    }
+
+
+    // ===== Повноекранні розділи поверх головного екрана =====
+    // Головний екран не зникає, а м'яко відступає вглиб; розділ виростає поверх і так само ховається.
+    // Перехід між розділами (налаштування → шпалери/док/папки…) — горизонтальний, як навігація вглиб.
+    AnimatedContent(
+        targetState = activeScreen,
+        transitionSpec = {
+            val from = initialState
+            val to = targetState
+            when {
+                from == null -> (fadeIn(tween(200, easing = Motion.Decel)) +
+                    scaleIn(spring(dampingRatio = 0.86f, stiffness = 420f), initialScale = 0.92f)) togetherWith
+                    fadeOut(tween(1))
+                to == null -> fadeIn(tween(1)) togetherWith
+                    (fadeOut(tween(170, easing = Motion.Accel)) + scaleOut(tween(200, easing = Motion.Accel), targetScale = 0.94f))
+                to == "settings" -> // назад у налаштування
+                    (slideInHorizontally(spring(dampingRatio = 0.9f, stiffness = 420f)) { -it / 4 } + fadeIn(tween(200))) togetherWith
+                        (slideOutHorizontally(tween(220, easing = Motion.Accel)) { it / 3 } + fadeOut(tween(160)))
+                else -> // глибше
+                    (slideInHorizontally(spring(dampingRatio = 0.9f, stiffness = 420f)) { it / 3 } + fadeIn(tween(200))) togetherWith
+                        (slideOutHorizontally(tween(220, easing = Motion.Accel)) { -it / 4 } + fadeOut(tween(160)))
+            }.using(SizeTransform(clip = false))
+        },
+        label = "screens"
+    ) { screen ->
+        if (screen != null) {
+            // Перехоплює дотики, щоб вони не потрапляли на головний екран під розділом
+            Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { } }) {
+            when (screen) {
+                "weather" -> {
+                Box(Modifier.fillMaxSize()) {
+                    WeatherDetailScreen(
+                        state = weather,
+                        cityName = settings.cityName,
+                        backgroundAlphaPercent = settings.backgroundAlphaPercent,
+                        onClose = { showWeatherDetail = false }
+                    )
+                }
+                }
+                "notes" -> {
+                Box(Modifier.fillMaxSize()) { NotesScreen(onClose = { showNotesScreen = false }) }
+                }
+                "macros" -> {
+                Box(Modifier.fillMaxSize()) {
+                    MacroScreen(
+                        onClose = { showMacroManager = false },
+                        carBtName = settings.carBtName,
+                        onCarChange = { vm.updateSettings(settings.copy(carBtName = it)) }
+                    )
+                }
+                }
+                "folders" -> {
+                FolderManagerScreen(
+                    folders = folders,
+                    apps = apps,
+                    onAddApp = { folderId, pkg -> vm.addToFolder(folderId, pkg) },
+                    onRemoveApp = { folderId, pkg -> vm.removeFromFolder(folderId, pkg) },
+                    onDeleteFolder = { vm.deleteFolder(it) },
+                    onCreateFolder = { vm.createFolder(it, emptyList()) },
+                    onClose = { showFolderManager = false }
+                )
+                }
+                "recent" -> {
+                LaunchedEffect(Unit) { vm.loadRecentTasks() }
+                RecentScreen(
+                    tasks = recentTasks,
+                    onLaunch = { pkg ->
+                        apps.firstOrNull { it.packageName == pkg }?.let { launchAppWithAnimation(it) }
+                            ?: run {
+                                val intent = ctx.packageManager.getLaunchIntentForPackage(pkg)
+                                intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                try { ctx.startActivity(intent) } catch (_: Exception) {}
+                            }
+                    },
+                    onForceStop = { vm.forceStopApp(it) },
+                    onClearAll = { vm.forceStopAll() },
+                    onDismiss = { showRecent = false },
+                    visible = true
+                )
+                }
+                "dock" -> {
+                DockEditorScreen(
+                    apps = apps,
+                    dockPkgs = dockPkgs,
+                    hidden = hidden,
+                    onToggle = { vm.toggleDock(it) },
+                    onMove = { id, delta -> vm.moveDock(id, delta) },
+                    folderNames = folders.associate { "folder:" + it.id to it.name },
+                    onClose = { showDockEditor = false }
+                )
+                }
+                "wallpaper" -> {
+                WallpaperScreen(
+                    settings = settings,
+                    onSettingsChange = { vm.updateSettings(it) },
+                    onClose = { showWallpaper = false }
+                )
+                }
+                "settings" -> {
+                AnimatedContent(
+                    targetState = currentSettingsCategory,
+                    transitionSpec = {
+                        // Меню → розділ: вглиб (справа); розділ → меню: назад (зліва)
+                        val forward = targetState != null
+                        val dir = if (forward) 1 else -1
+                        (slideInHorizontally(spring(dampingRatio = 0.9f, stiffness = 420f)) { dir * it / 3 } + fadeIn(tween(200))) togetherWith
+                            (slideOutHorizontally(tween(220, easing = Motion.Accel)) { -dir * it / 4 } + fadeOut(tween(150)))
+                    },
+                    label = "settingsNav"
+                ) { category ->
+                if (category == null) {
+                    SettingsMenuScreen(
+                        onCategorySelected = { currentSettingsCategory = it },
+                        onClose = { showSettings = false },
+                        backgroundAlpha = settings.backgroundAlphaPercent / 100f
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        SettingsScreen(
+                            vm = vm,
+                            settings = settings,
+                            onSettingsChange = { vm.updateSettings(it) },
+                            hiddenCount = hidden.size,
+                            foldersCount = folders.size,
+                            onClearHistory = { vm.clearHistory() },
+                            onRefreshContacts = { vm.loadContacts() },
+                            onClearHidden = { vm.clearHidden() },
+                            onDownloadLlm = { vm.downloadModel() },
+                            overlayActive = overlayActive,
+                            overlayPermissionGranted = overlayPermissionGranted,
+                            onToggleOverlay = {
+                                if (overlayActive) {
+                                    FloatingDockService.stop(ctx)
+                                    overlayActive = false
+                                    ctx.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
+                                        .edit().putBoolean("overlayEnabled", false).commit()
+                                } else {
+                                    FloatingDockService.start(ctx)
+                                    overlayActive = true
+                                    ctx.getSharedPreferences("dynamicai_settings", Context.MODE_PRIVATE)
+                                        .edit().putBoolean("overlayEnabled", true).commit()
+                                }
+                            },
+                            onRequestOverlayPermission = { requestOverlayPermission() },
+                            onOpenWallpaper = { showWallpaper = true },
+                            onOpenDockEditor = { showDockEditor = true },
+                            onOpenFolderManager = { showFolderManager = true },
+                            onOpenMacroManager = { showMacroManager = true },
+                            onOpenNotes = { showNotesScreen = true },
+                            onTestLlm = { prompt -> if (vm.ensureLlmLoaded()) vm.chatEngine.simpleAnswer(prompt) else null },
+                            llmDownloaded = vm.localModelPresent(),
+                            llmReady = llmReady,
+                            versionName = BuildConfig.VERSION_NAME,
+                            initialCategory = category,
+                            onBackToMenu = { currentSettingsCategory = null },
+                            onClose = { showSettings = false }
+                        )
+                    }
+                }
+                }  // AnimatedContent (settingsNav)
+                }
+            }
             }
         }
     }

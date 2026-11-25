@@ -105,7 +105,7 @@ fun FolderManagerScreen(
 
     // Діалог створення папки
     if (showCreateDialog) {
-        AlertDialog(
+        AnimatedAlertDialog(
             onDismissRequest = { showCreateDialog = false; newFolderName = "" },
             title = { Text("Нова папка", color = AppTheme.colors.textPrimary) },
             text = {
@@ -152,7 +152,7 @@ fun FolderManagerScreen(
     // Діалог вибору застосунку для додавання
     addingToFolder?.let { folder ->
         val availableApps = apps.filter { it.packageName !in folder.packageNames }
-        AlertDialog(
+        AnimatedAlertDialog(
             onDismissRequest = { addingToFolder = null },
             title = { Text("Додати до «${folder.name}»", color = AppTheme.colors.textPrimary) },
             text = {

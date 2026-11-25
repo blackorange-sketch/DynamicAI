@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.widget
 
+import com.dynamicai.launcher.ui.AnimatedAlertDialog
 import android.appwidget.AppWidgetProviderInfo
 import android.content.Context
 import android.graphics.Bitmap
@@ -144,7 +145,7 @@ fun SystemWidgetPickerDialog(onPick: (AppWidgetProviderInfo) -> Unit, onDismiss:
         val q = filter.trim().lowercase()
         entries?.filter { q.isEmpty() || it.app.lowercase().contains(q) || it.label.lowercase().contains(q) }
     }
-    AlertDialog(
+    AnimatedAlertDialog(
         modifier = Modifier.popIn(),
         onDismissRequest = onDismiss,
         containerColor = c.surface,

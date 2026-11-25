@@ -30,4 +30,10 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowIsFloating">false</item>
     </style>
+
+    <!-- Анімації вікон діалогів (поява/зникнення), ставляться з DialogWindowMotion() -->
+    <style name="DynamicAIDialogMotion">
+        <item name="android:windowEnterAnimation">@anim/dialog_in</item>
+        <item name="android:windowExitAnimation">@anim/dialog_out</item>
+    </style>
 </resources>

@@ -97,7 +97,7 @@ fun NotesScreen(
     }
 
     if (showEditor) {
-        AlertDialog(
+        AnimatedAlertDialog(
             onDismissRequest = { showEditor = false },
             title = { Text("Нотатка", color = AppTheme.colors.textPrimary) },
             text = {

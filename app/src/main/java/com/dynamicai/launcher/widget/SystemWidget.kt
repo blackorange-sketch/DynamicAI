@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.widget
 
+import com.dynamicai.launcher.ui.AnimatedAlertDialog
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.Image
@@ -151,6 +152,7 @@ private fun SystemDetailsDialog(snap: SystemStats.Snapshot?, onDismiss: () -> Un
     }
 
     Dialog(onDismissRequest = onDismiss) {
+        com.dynamicai.launcher.ui.DialogWindowMotion()
         Column(
             Modifier
                 .fillMaxWidth()
@@ -227,7 +229,7 @@ private fun SystemDetailsDialog(snap: SystemStats.Snapshot?, onDismiss: () -> Un
     }
 
     confirmStop?.let { r ->
-        AlertDialog(
+        AnimatedAlertDialog(
             onDismissRequest = { confirmStop = null },
             title = { Text("Зупинити ${r.label}?") },
             text = { Text("Додаток буде примусово закрито (${r.value}).") },

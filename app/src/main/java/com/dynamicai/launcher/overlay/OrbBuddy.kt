@@ -110,8 +110,14 @@ fun OrbBuddy(
             while (isActive) { delay(700); zTick++ }
         } else {
             val start = withFrameMillis { it } - (time * 1000).toLong()
+            // У спокої дихання й погляд малюються ~30 к/с замість 120: те саме на око, а GPU і батарея відпочивають.
+            // Жести (Animatable) і так ідуть на повній частоті.
+            val minStep = if (mood == BuddyMood.IDLE) 33L else 0L
+            var last = 0L
             while (isActive) {
-                withFrameMillis { now -> time = (now - start) / 1000f }
+                withFrameMillis { now ->
+                    if (now - last >= minStep) { time = (now - start) / 1000f; last = now }
+                }
             }
         }
     }

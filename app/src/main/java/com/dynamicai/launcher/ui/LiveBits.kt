@@ -63,25 +63,27 @@ fun RollingText(
     }
 }
 
-/** Індикатор сторінок: активна крапка витягується в риску й перетікає слідом за пальцем. */
+/** Індикатор сторінок: активна крапка витягується в риску й перетікає слідом за пальцем.
+ *  Положення пейджера читається лише у фазі малювання — під час свайпу нічого не перекомпоновується. */
 @Composable
 fun PageDots(pagerState: PagerState, pageCount: Int, modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        val pos = pagerState.currentPage + pagerState.currentPageOffsetFraction
-        for (p in 0 until pageCount) {
-            val sel = (1f - kotlin.math.abs(pos - p)).coerceIn(0f, 1f)
-            Box(
-                Modifier
-                    .padding(horizontal = 3.dp)
-                    .height(6.dp)
-                    .width((6f + 14f * sel).dp)
-                    .clip(CircleShape)
-                    .background(AppTheme.colors.textPrimary.copy(alpha = 0.35f + 0.65f * sel))
-            )
+    val color = AppTheme.colors.textPrimary
+    Box(modifier, contentAlignment = Alignment.Center) {
+        androidx.compose.foundation.Canvas(Modifier.width((pageCount * 12 + 14).dp).height(6.dp)) {
+            val pos = pagerState.currentPage + pagerState.currentPageOffsetFraction
+            val dot = 6.dp.toPx(); val gap = 6.dp.toPx(); val extra = 14.dp.toPx()
+            var x = ((size.width - (pageCount * dot + (pageCount - 1) * gap + extra)) / 2f).coerceAtLeast(0f)
+            for (p in 0 until pageCount) {
+                val sel = (1f - kotlin.math.abs(pos - p)).coerceIn(0f, 1f)
+                val w = dot + extra * sel
+                drawRoundRect(
+                    color = color.copy(alpha = 0.35f + 0.65f * sel),
+                    topLeft = androidx.compose.ui.geometry.Offset(x, 0f),
+                    size = androidx.compose.ui.geometry.Size(w, dot),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(dot / 2f)
+                )
+                x += w + gap
+            }
         }
     }
 }

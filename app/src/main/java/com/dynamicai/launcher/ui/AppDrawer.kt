@@ -280,7 +280,7 @@ internal fun AppGridItem(
         }
         IconPlate(iconSizeDp) {
             Icon(
-                bitmap = app.bitmap!!.asImageBitmap(),
+                bitmap = remember(app.bitmap) { app.bitmap!!.asImageBitmap() },
                 contentDescription = app.label,
                 modifier = Modifier.size(iconSizeDp.dp).iconShape(),
                 tint = Color.Unspecified

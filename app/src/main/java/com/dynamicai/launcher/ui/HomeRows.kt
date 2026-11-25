@@ -272,7 +272,7 @@ fun AppRow(
         // Єдина підкладка під іконку
         IconPlate(iconSizeDp) {
             Icon(
-                bitmap = (app.bitmap ?: app.icon.toBitmap(96, 96)).asImageBitmap(),
+                bitmap = remember(app.bitmap, app.icon) { (app.bitmap ?: app.icon.toBitmap(96, 96)).asImageBitmap() },
                 contentDescription = app.label,
                 modifier = Modifier.size(iconSizeDp.dp).iconShape(),
                 tint = Color.Unspecified

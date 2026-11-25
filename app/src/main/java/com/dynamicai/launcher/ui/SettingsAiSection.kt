@@ -249,7 +249,7 @@ internal fun ColumnScope.SettingsAiSection(
         val downloadedIds by vm.downloadedModelIds.collectAsStateWithLifecycle()
         var modelToDelete by remember { mutableStateOf<LlmModel?>(null) }
         modelToDelete?.let { m ->
-            AlertDialog(
+            AnimatedAlertDialog(
                 onDismissRequest = { modelToDelete = null },
                 containerColor = AppTheme.colors.surface,
                 title = { Text("Видалити модель?", color = AppTheme.colors.textPrimary) },

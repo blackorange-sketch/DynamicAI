@@ -1,5 +1,6 @@
 package com.dynamicai.launcher
 
+import com.dynamicai.launcher.ui.AnimatedAlertDialog
 import com.dynamicai.launcher.ui.theme.AppTheme
 import android.app.Activity
 import android.content.Intent
@@ -292,7 +293,7 @@ private fun OverlaySearchScreen(onClose: () -> Unit) {
             )
 
             menuApp?.let { app ->
-                AlertDialog(
+                AnimatedAlertDialog(
                     onDismissRequest = { menuApp = null },
                     title = { Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
                     text = {

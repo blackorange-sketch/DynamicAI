@@ -90,7 +90,7 @@ fun ChatArchiveScreen(onOpen: (SavedChat) -> Unit, onClose: () -> Unit) {
             }
         }
         confirmDelete?.let { c ->
-            AlertDialog(
+            AnimatedAlertDialog(
                 onDismissRequest = { confirmDelete = null },
                 containerColor = AppTheme.colors.surface,
                 title = { Text("Видалити розмову?", color = AppTheme.colors.textPrimary) },

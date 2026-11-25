@@ -127,7 +127,7 @@ fun ModuleManagerScreen(onClose: () -> Unit) {
         }
 
         if (showDeleteDialog != null) {
-            AlertDialog(
+            AnimatedAlertDialog(
                 onDismissRequest = { showDeleteDialog = null },
                 containerColor = AppTheme.colors.surface,
                 title = { Text("Видалити модуль?", color = AppTheme.colors.textPrimary) },

@@ -131,7 +131,7 @@ private fun CancelButton(label: String = "Скасувати", onClick: () -> Un
 @Composable
 fun CreateFolderDialog(app: AppInfo, onCreate: (String) -> Unit, onDismiss: () -> Unit) {
     var name by remember { mutableStateOf("") }
-    AlertDialog(
+    AnimatedAlertDialog(
         modifier = Modifier.popIn(),
         onDismissRequest = onDismiss,
         title = { Text("Нова папка", color = AppTheme.colors.textPrimary) },
@@ -156,7 +156,7 @@ fun CreateFolderDialog(app: AppInfo, onCreate: (String) -> Unit, onDismiss: () -
 /** Вибір папки, куди додати застосунок. */
 @Composable
 fun AddToFolderDialog(app: AppInfo, folders: List<Folder>, onPick: (Folder) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    AnimatedAlertDialog(
         modifier = Modifier.popIn(),
         onDismissRequest = onDismiss,
         title = { Text("Додати ${app.label} до…", color = AppTheme.colors.textPrimary) },
@@ -178,7 +178,7 @@ fun AddToFolderDialog(app: AppInfo, folders: List<Folder>, onPick: (Folder) -> U
 /** Довге натискання на застосунок у папці. */
 @Composable
 fun FolderAppMenuDialog(app: AppInfo, onRemove: () -> Unit, onLaunch: () -> Unit, onMore: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    AnimatedAlertDialog(
         modifier = Modifier.popIn(),
         onDismissRequest = onDismiss,
         title = { Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
@@ -198,7 +198,7 @@ fun FolderAppMenuDialog(app: AppInfo, onRemove: () -> Unit, onLaunch: () -> Unit
 /** Довге натискання на заголовок папки. */
 @Composable
 fun FolderHeaderDialog(folder: Folder, onDelete: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    AnimatedAlertDialog(
         modifier = Modifier.popIn(),
         onDismissRequest = onDismiss,
         title = { Text(folder.name, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
@@ -225,7 +225,7 @@ fun SmartFolderDialog(onPick: (smart: String, name: String) -> Unit, onDismiss: 
         Triple("cat:tools", "🧰 Інструменти", "Інструменти"),
         Triple("cat:maps", "🗺 Навігація", "Навігація")
     )
-    AlertDialog(
+    AnimatedAlertDialog(
         modifier = Modifier.popIn(),
         onDismissRequest = onDismiss,
         title = { Text("Розумна папка", color = AppTheme.colors.textPrimary) },
@@ -250,7 +250,7 @@ fun SmartFolderDialog(onPick: (smart: String, name: String) -> Unit, onDismiss: 
 fun NewFolderDialog(apps: List<AppInfo>, onCreate: (String, List<String>) -> Unit, onDismiss: () -> Unit) {
     var name by remember { mutableStateOf("") }
     var selection by remember { mutableStateOf<Set<String>>(emptySet()) }
-    AlertDialog(
+    AnimatedAlertDialog(
         modifier = Modifier.popIn(),
         onDismissRequest = onDismiss,
         title = { Text("Нова папка", color = AppTheme.colors.textPrimary) },
@@ -339,7 +339,7 @@ fun OpenFolderDialog(
     onDismiss: () -> Unit
 ) {
     val folderApps = remember(apps, folder) { apps.filter { it.packageName in folder.packageNames } }
-    AlertDialog(
+    AnimatedAlertDialog(
         modifier = Modifier.popIn(),
         onDismissRequest = onDismiss,
         title = { Text(folder.name, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },
@@ -365,7 +365,7 @@ fun OpenFolderDialog(
 /** Кілька застосунків підійшли під команду — користувач обирає потрібний. */
 @Composable
 fun AppChoiceDialog(candidates: List<AppInfo>, onChosen: (AppInfo) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    AnimatedAlertDialog(
         modifier = Modifier.popIn(),
         onDismissRequest = onDismiss,
         title = { Text("Обери застосунок", color = AppTheme.colors.textPrimary) },

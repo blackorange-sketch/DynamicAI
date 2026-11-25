@@ -1,5 +1,6 @@
 package com.dynamicai.launcher
 
+import com.dynamicai.launcher.ui.AnimatedAlertDialog
 import android.content.Context
 import com.dynamicai.launcher.ui.theme.AppTheme
 import android.content.Intent
@@ -426,7 +427,7 @@ fun VoiceChatScreen(vm: AppListViewModel, onClose: () -> Unit, initialQuery: Str
             Spacer(modifier = Modifier.height(AppDims.spaceM))
 
             if (showClearDialog) {
-                AlertDialog(
+                AnimatedAlertDialog(
                     onDismissRequest = { showClearDialog = false },
                     containerColor = AppTheme.colors.surface,
                     title = { Text("Нова розмова?", color = AppTheme.colors.textPrimary) },

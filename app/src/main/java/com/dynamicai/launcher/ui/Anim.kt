@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.animation.core.CubicBezierEasing
 
 /** Єдині криві руху: швидкий старт із м'яким гальмуванням для появи, розгін для зникнення. */
@@ -38,19 +39,34 @@ fun Modifier.appearStagger(index: Int): Modifier = composed {
     }
 }
 
-/** Пружинне «вискакування» вікна/діалогу: масштаб 0.88 → 1 і поява. */
-fun Modifier.popIn(): Modifier = composed {
+/** Пружинне «вискакування» вікна/меню: масштаб 0.88 → 1 і поява; closing = true — швидко стискається й гасне. */
+fun Modifier.popIn(closing: Boolean = false, origin: TransformOrigin = TransformOrigin(0.5f, 0.6f)): Modifier = composed {
     var go by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { go = true }
     val p by animateFloatAsState(
-        if (go) 1f else 0f,
-        spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow),
+        if (go && !closing) 1f else 0f,
+        if (closing) androidx.compose.animation.core.tween(150, easing = Motion.Accel)
+        else spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessMediumLow),
         label = "popIn"
     )
     graphicsLayer {
         alpha = p.coerceIn(0f, 1f)
         val s = 0.88f + 0.12f * p
         scaleX = s; scaleY = s
-        transformOrigin = TransformOrigin(0.5f, 0.6f)
+        transformOrigin = origin
+    }
+}
+
+/** Закриття з анімацією: спершу [closing] = true (popIn програє зникнення), за 150 мс — onDismiss. */
+@Composable
+fun rememberAnimatedDismiss(onDismiss: () -> Unit): Pair<Boolean, () -> Unit> {
+    var closing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val current by rememberUpdatedState(onDismiss)
+    return closing to {
+        if (!closing) {
+            closing = true
+            scope.launch { delay(150); current() }
+        }
     }
 }

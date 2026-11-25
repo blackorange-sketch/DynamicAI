@@ -1,5 +1,6 @@
 package com.dynamicai.launcher.macro
 
+import com.dynamicai.launcher.ui.AnimatedAlertDialog
 import com.dynamicai.launcher.ui.theme.AppTheme
 import android.content.Intent
 import androidx.compose.foundation.background
@@ -429,7 +430,7 @@ fun MacroScreen(onClose: () -> Unit, carBtName: String = "", onCarChange: (Strin
         }
 
         resultLog?.let { log ->
-            AlertDialog(
+            AnimatedAlertDialog(
                 onDismissRequest = { resultLog = null },
                 containerColor = AppTheme.colors.backdropStart,
                 title = { Text("Результат", color = AppTheme.colors.textPrimary) },
@@ -487,7 +488,7 @@ fun BtDevicePickerDialog(title: String, current: String, anyLabel: String, onPic
     val permLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { names = pairedBtNames(ctx) }
-    AlertDialog(
+    AnimatedAlertDialog(
         onDismissRequest = onDismiss,
         containerColor = AppTheme.colors.backdropStart,
         title = { Text(title, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
@@ -594,7 +595,7 @@ fun NfcScanDialog(onPick: (String) -> Unit, onDismiss: () -> Unit) {
         }
         onDispose { try { if (adapter != null && a != null) adapter.disableReaderMode(a) } catch (_: Throwable) {} }
     }
-    AlertDialog(
+    AnimatedAlertDialog(
         onDismissRequest = onDismiss,
         containerColor = AppTheme.colors.backdropStart,
         title = { Text("🏷 NFC-мітка", color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
@@ -631,7 +632,7 @@ fun PermissionNeedDialog(need: TriggerPermissions.Need, onClose: () -> Unit) {
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { onClose() }
-    AlertDialog(
+    AnimatedAlertDialog(
         onDismissRequest = onClose,
         containerColor = AppTheme.colors.backdropStart,
         title = { Text(need.title, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
@@ -899,7 +900,7 @@ fun MacroEditorScreen(
 
         pendingTrigger?.let { spec ->
             val values = remember(spec) { mutableStateListOf<String>().apply { addAll(spec.params.map { it.second }) } }
-            AlertDialog(
+            AnimatedAlertDialog(
                 onDismissRequest = { pendingTrigger = null },
                 containerColor = AppTheme.colors.backdropStart,
                 title = { Text(spec.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
@@ -918,7 +919,7 @@ fun MacroEditorScreen(
 
         pendingSpec?.let { spec ->
             val values = remember(spec) { mutableStateListOf<String>().apply { addAll(spec.params.map { it.second }) } }
-            AlertDialog(
+            AnimatedAlertDialog(
                 onDismissRequest = { pendingSpec = null },
                 containerColor = AppTheme.colors.backdropStart,
                 title = { Text(spec.label, color = AppTheme.colors.textPrimary, fontSize = 16.sp) },
@@ -936,7 +937,7 @@ fun MacroEditorScreen(
         }
 
         if (editIndex != -1) {
-            AlertDialog(
+            AnimatedAlertDialog(
                 onDismissRequest = { editIndex = -1 },
                 containerColor = AppTheme.colors.backdropStart,
                 title = { Text(if (editIndex == -2) "Свій крок" else "Редагувати крок", color = AppTheme.colors.textPrimary, fontSize = 16.sp) },

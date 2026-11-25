@@ -546,7 +546,7 @@ private fun AppPickerDialog(
         if (query.isBlank()) apps
         else apps.filter { it.label.contains(query, ignoreCase = true) }
     }
-    AlertDialog(
+    AnimatedAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Обрати: $title", color = AppTheme.colors.textPrimary) },
         text = {

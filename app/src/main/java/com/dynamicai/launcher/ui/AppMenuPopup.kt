@@ -97,14 +97,16 @@ fun AppMenuPopup(
         value = withContext(Dispatchers.IO) { AppShortcuts.load(ctx, app.packageName) }
     }
     val gap = with(LocalDensity.current) { 8.dp.roundToPx() }
+    // Дотик поза меню / «Назад» — меню стискається й гасне, а не зникає миттєво
+    val (closing, dismiss) = rememberAnimatedDismiss(onDismiss)
     Popup(
         popupPositionProvider = remember(anchor) { AnchorPositionProvider(anchor, gap) },
-        onDismissRequest = onDismiss,
+        onDismissRequest = dismiss,
         properties = PopupProperties(focusable = true)
     ) {
         Column(
             Modifier
-                .popIn()
+                .popIn(closing)
                 .width(264.dp)
                 .shadow(16.dp, RoundedCornerShape(22.dp))
                 .clip(RoundedCornerShape(22.dp))
@@ -156,14 +158,15 @@ fun LauncherMenuPopup(
     items: List<MenuItemSpec>
 ) {
     val gap = with(LocalDensity.current) { 8.dp.roundToPx() }
+    val (closing, dismiss) = rememberAnimatedDismiss(onDismiss)
     Popup(
         popupPositionProvider = remember(anchor) { AnchorPositionProvider(anchor, gap) },
-        onDismissRequest = onDismiss,
+        onDismissRequest = dismiss,
         properties = PopupProperties(focusable = true)
     ) {
         Column(
             Modifier
-                .popIn()
+                .popIn(closing)
                 .width(300.dp)
                 .shadow(18.dp, RoundedCornerShape(26.dp))
                 .clip(RoundedCornerShape(26.dp))

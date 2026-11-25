@@ -150,7 +150,7 @@ fun NotesWidget(
     }
 
     if (showAddDialog) {
-        AlertDialog(
+        AnimatedAlertDialog(
             onDismissRequest = { showAddDialog = false },
             title = { Text("Нова нотатка", color = AppTheme.colors.textPrimary) },
             text = {

@@ -98,7 +98,7 @@ fun AppContextMenu(
     onHide: () -> Unit,
     onInfo: () -> Unit
 ) {
-    AlertDialog(
+    AnimatedAlertDialog(
         modifier = Modifier.popIn(),
         onDismissRequest = onDismiss,
         title = { Text(app.label, color = AppTheme.colors.textPrimary, fontSize = 18.sp) },

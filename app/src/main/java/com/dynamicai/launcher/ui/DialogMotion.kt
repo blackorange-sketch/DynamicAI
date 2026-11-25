@@ -22,7 +22,7 @@ import com.dynamicai.launcher.R
 fun DialogWindowMotion() {
     val view = LocalView.current
     SideEffect {
-        (view.parent as? DialogWindowProvider)?.window?.setWindowAnimations(R.style.DynamicAI_DialogMotion)
+        (view.parent as? DialogWindowProvider)?.window?.setWindowAnimations(R.style.DynamicAIDialogMotion)
     }
 }
 
